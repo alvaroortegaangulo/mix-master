@@ -18,7 +18,7 @@ async function sendMixRequest(files: File[]): Promise<MixResponse> {
   const formData = new FormData();
   files.forEach((f) => formData.append("files", f));
 
-  const res = await fetch("https://TU_BACKEND_URL/mix", {
+  const res = await fetch("https://backend-de7a.onrender.com", {
     method: "POST",
     body: formData,
   });
