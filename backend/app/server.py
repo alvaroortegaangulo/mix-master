@@ -21,7 +21,7 @@ app = FastAPI(title="Mix & Master API")
 # CORS para que NextJS pueda llamar sin problemas
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # en producción, pon tu dominio
+    allow_origins=["https://frontend-vrev.onrender.com"],  # en producción, pon tu dominio
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
