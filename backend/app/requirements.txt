@@ -1,0 +1,24 @@
+# Núcleo numérico / audio base
+numpy
+soundfile
+
+# Análisis avanzado de audio
+essentia
+
+# Procesado de efectos (EQ, compresor, etc.)
+pedalboard
+pyrubberband
+
+# Loudness y nivelado
+pyloudnorm
+
+# ML / Deep Learning (lo puedes usar más adelante)
+torch
+torchvision
+torchaudio
+
+# Backend web
+fastapi
+uvicorn[standard]
+python-multipart   # para uploads de ficheros
+pydantic
