@@ -36,5 +36,5 @@ COPY . .
 # Variable para que tu módulo config.paths resuelva rutas correctamente
 ENV APP_PROJECT_ROOT=/app
 
-# Comando por defecto: ejecutar tu main
-CMD ["python", "main.py"]
+# Comando por defecto: lanzar API FastAPI
+CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "8000"]

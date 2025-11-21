@@ -1,7 +1,7 @@
 import os
 
 # Ruta del directorio raíz que quieres analizar
-ROOT_DIR = r"C:\app"  # Cambia esto por la ruta que quieras
+ROOT_DIR = r"C:\mix-master"  # Cambia esto por la ruta que quieras
 
 
 def print_tree(path: str, prefix: str = "") -> None:
