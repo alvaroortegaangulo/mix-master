@@ -36,3 +36,6 @@ Thumbs.db
 # Docker
 *.pid
 *.sock
+
+#wavs
+backend/app/media/
