@@ -18,10 +18,15 @@ JOBS_ROOT.mkdir(parents=True, exist_ok=True)
 
 app = FastAPI(title="Mix & Master API")
 
+origins = [
+    "http://localhost:3000",
+    "https://frontend-vrev.onrender.com",
+]
+
 # CORS para que NextJS pueda llamar sin problemas
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://frontend-vrev.onrender.com"],  # en producción, pon tu dominio
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -70,8 +75,8 @@ async def mix_tracks(
     )
 
     # Construir URL pública relativa (la servirá StaticFiles)
-    full_song_rel = result.full_song_path.name  # p.ej. "full_song.wav"
-    full_song_url = f"/files/{job_id}/work/{full_song_rel}"
+    full_song_rel = result.full_song_path.relative_to(JOBS_ROOT)
+    full_song_url = f"/files/{full_song_rel.as_posix()}"
 
     # Convertir dataclasses a dict
     metrics_dict = asdict(result.metrics)
