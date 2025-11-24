@@ -30,7 +30,7 @@ def _analyze_single_file(path: Path) -> DcOffsetResult:
     Calcula la media de las muestras por canal (DC offset) y algunos metadatos básicos.
     """
     # always_2d=True -> shape: (n_muestras, n_canales)
-    audio, sr = sf.read(path, always_2d=True)
+    audio, sr = sf.read(path, dtype="float32", always_2d=True)
     num_channels = audio.shape[1]
     num_samples = audio.shape[0]
 

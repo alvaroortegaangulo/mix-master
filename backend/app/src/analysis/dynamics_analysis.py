@@ -236,7 +236,7 @@ def analyze_dynamics(media_dir: Path) -> List[DynamicsAnalysisResult]:
     results: List[DynamicsAnalysisResult] = []
 
     for wav_path in sorted(media_dir.glob("*.wav")):
-        audio, sr = sf.read(wav_path, always_2d=True)
+        audio, sr = sf.read(wav_path, dtype="float32", always_2d=True)
         num_samples, num_channels = audio.shape
         duration_seconds = float(num_samples) / float(sr) if num_samples > 0 else 0.0
 

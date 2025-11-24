@@ -62,7 +62,7 @@ def _analyze_single_file(
     - Calcula peak, RMS, Loudness (Stevens) y ReplayGain con Essentia.
     """
     # always_2d -> audio.shape = (n_samples, n_channels)
-    audio, sr = sf.read(path, always_2d=True)
+    audio, sr = sf.read(path, dtype="float32", always_2d=True)
 
     num_samples, num_channels = audio.shape
     duration_seconds = float(num_samples) / float(sr)
