@@ -796,6 +796,7 @@ def run_full_pipeline(
     media_dir: Path,
     temp_root: Path,
     progress_callback: Optional[ProgressCallback] = None,
+    enabled_stage_keys: Optional[list[str]] = None,   # <--- NUEVO
 ) -> FullPipelineResult:
     """
     Ejecuta TODO el pipeline de mezcla sobre los stems de media_dir,
@@ -831,8 +832,19 @@ def run_full_pipeline(
         current_media_dir=media_dir,
     )
 
-    # Ejecución secuencial de STAGES vía execute_stage
-    for idx, stage_conf in enumerate(STAGES, start=1):
+    # Si nos pasan lista de stages, filtramos STAGES
+    if enabled_stage_keys:
+        enabled_set = set(enabled_stage_keys)
+        stages_to_run = [s for s in STAGES if s["key"] in enabled_set]
+    else:
+        stages_to_run = STAGES
+
+    total_stages = len(stages_to_run)
+
+    # donde antes usabas STAGES directamente en el bucle, usa stages_to_run
+    for idx, stage_def in enumerate(stages_to_run, start=1):
+        stage_key = stage_def["key"]
+        stage_label = stage_def.get("label", stage_key)
         execute_stage(idx, stage_conf, ctx, progress_callback)
 
     # Validación mínima de resultados imprescindibles

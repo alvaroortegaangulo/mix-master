@@ -6,7 +6,7 @@ from uuid import uuid4
 
 from celery import states
 from celery.result import AsyncResult
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, HTTPException, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
@@ -149,24 +149,36 @@ def get_pipeline_stages():
 
 
 @app.post("/mix")
-async def mix_tracks(files: list[UploadFile] = File(...)):
-    """Endpoint principal de mezcla/master (stems como multipart/form-data)."""
+async def mix_tracks(
+    files: list[UploadFile] = File(...),
+    stages_json: str | None = Form(None),   # <--- NUEVO
+):
     job_id, media_dir, temp_root = _create_job_dirs()
 
-    # Guardar stems en disco para que el pipeline (en el worker) los use
+    # Guardar stems...
     for f in files:
         dest_path = media_dir / f.filename
         with dest_path.open("wb") as out:
             out.write(await f.read())
 
-    # Lanzar la tarea Celery. task_id=job_id para poder consultar luego el estado.
+    # Parsear la selección de stages (si viene)
+    enabled_stage_keys: list[str] | None = None
+    if stages_json:
+        try:
+            parsed = json.loads(stages_json)
+            if isinstance(parsed, list):
+                enabled_stage_keys = [str(k) for k in parsed]
+        except Exception as exc:
+            logger.warning("No se pudo parsear stages_json=%r: %s", stages_json, exc)
+
+    # Lanzar Celery con esa lista
     run_full_pipeline_task.apply_async(
-        args=[job_id, str(media_dir), str(temp_root)],
+        args=[job_id, str(media_dir), str(temp_root), enabled_stage_keys],
         task_id=job_id,
     )
 
-    # Devolvemos solo el jobId; el cliente consultará /jobs/{job_id}
     return {"jobId": job_id}
+
 
 
 @app.post("/jobs")

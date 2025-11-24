@@ -15,12 +15,27 @@ PROJECT_ROOT = Path(__file__).resolve().parent
 
 
 @celery_app.task(bind=True)
-def run_full_pipeline_task(self, job_id: str, media_dir: str, temp_root: str) -> Dict[str, Any]:
+def run_full_pipeline_task(
+    self,
+    job_id: str,
+    media_dir: str,
+    temp_root: str,
+    enabled_stage_keys: list[str] | None = None,  # <--- NUEVO PARÁMETRO OPCIONAL
+) -> Dict[str, Any]:
     """
-    Tarea Celery que ejecuta el pipeline completo.
-    - job_id: lo usamos también como task_id desde server.py.
-    - media_dir: carpeta de stems de entrada (…/temp/<job_id>/media).
-    - temp_root: carpeta de trabajo interna (…/temp/<job_id>/work).
+    Tarea Celery que ejecuta el pipeline completo (o un subconjunto de stages).
+
+    Parámetros
+    ----------
+    job_id:
+        Identificador del job; se usa también como task_id desde server.py.
+    media_dir:
+        Carpeta de stems de entrada (…/temp/<job_id>/media).
+    temp_root:
+        Carpeta de trabajo interna (…/temp/<job_id>/work).
+    enabled_stage_keys:
+        Lista opcional de claves de etapa (stage["key"]) a ejecutar.
+        Si es None o lista vacía, se ejecutan todas las etapas definidas en STAGES.
     """
     media_dir_path = Path(media_dir)
     temp_root_path = Path(temp_root)
@@ -57,6 +72,7 @@ def run_full_pipeline_task(self, job_id: str, media_dir: str, temp_root: str) ->
             media_dir=media_dir_path,
             temp_root=temp_root_path,
             progress_callback=progress_cb,
+            enabled_stage_keys=enabled_stage_keys,  # <--- PASAMOS LA LISTA AL PIPELINE
         )
     except Exception as exc:
         # Marcamos fallo en Celery con información básica

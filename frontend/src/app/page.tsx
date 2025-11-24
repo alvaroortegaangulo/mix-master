@@ -1,8 +1,14 @@
 // frontend/src/app/page.tsx
 "use client";
 
-import { useState } from "react";
-import { startMixJob, fetchJobStatus, type JobStatus } from "../lib/mixApi";
+import { useState, useEffect } from "react";
+import {
+  startMixJob,
+  fetchJobStatus,
+  type JobStatus,
+  fetchPipelineStages,
+  type PipelineStage,
+} from "../lib/mixApi";
 import { UploadDropzone } from "../components/UploadDropzone";
 import { MixResultPanel } from "../components/MixResultPanel";
 
@@ -11,6 +17,42 @@ export default function HomePage() {
   const [loading, setLoading] = useState(false);
   const [jobStatus, setJobStatus] = useState<JobStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [availableStages, setAvailableStages] = useState<PipelineStage[]>([]);
+  const [selectedStageKeys, setSelectedStageKeys] = useState<string[]>([]);
+  const [showStageSelector, setShowStageSelector] = useState(true);
+
+
+  useEffect(() => {
+    async function loadStages() {
+      try {
+        const stages = await fetchPipelineStages();
+        setAvailableStages(stages);
+        // Por defecto, todas las etapas activadas
+        setSelectedStageKeys(stages.map((s) => s.key));
+      } catch (err: any) {
+        console.error("Error fetching pipeline stages", err);
+        // No es crítico para mezclar, así que solo mostramos error suave
+      }
+    }
+    void loadStages();
+  }, []);
+
+
+
+  const toggleStage = (key: string) => {
+    setSelectedStageKeys((prev) =>
+      prev.includes(key) ? prev.filter((k) => k !== key) : [...prev, key],
+    );
+  };
+
+  const selectAllStages = () => {
+    setSelectedStageKeys(availableStages.map((s) => s.key));
+  };
+
+  const clearStages = () => {
+    setSelectedStageKeys([]);
+  };
+
 
   const handleFilesSelected = (selected: File[]) => {
     setFiles(selected);
@@ -21,13 +63,20 @@ export default function HomePage() {
   const hasFiles = files.length > 0;
 
   const handleGenerateMix = async () => {
-    setError(null);
+    if (!files.length) return;
     setLoading(true);
+    setError(null);
     setJobStatus(null);
 
     try {
       // 1) Arrancar job
-      const { jobId } = await startMixJob(files);
+      const enabled =
+        selectedStageKeys.length > 0 ? selectedStageKeys : undefined;
+
+      const { jobId } = await startMixJob(files, enabled);
+
+      // A partir de aquí, escondemos el panel de selección para este job
+      setShowStageSelector(false);
 
       // Estado inicial
       setJobStatus({
@@ -100,6 +149,66 @@ export default function HomePage() {
               disabled={loading}
               filesCount={files.length}
             />
+
+
+            {showStageSelector && availableStages.length > 0 && (
+              <section className="mt-6 rounded-xl border border-slate-800/70 bg-slate-900/60 p-4">
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-300">
+                    Pipeline steps
+                  </h3>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={selectAllStages}
+                      className="rounded-full bg-slate-800 px-2.5 py-1 text-[11px] text-slate-200 hover:bg-slate-700"
+                    >
+                      All
+                    </button>
+                    <button
+                      type="button"
+                      onClick={clearStages}
+                      className="rounded-full bg-slate-800 px-2.5 py-1 text-[11px] text-slate-200 hover:bg-slate-700"
+                    >
+                      None
+                    </button>
+                  </div>
+                </div>
+
+                <div className="mt-3 space-y-2">
+                  {availableStages.map((stage) => (
+                    <label
+                      key={stage.key}
+                      className="flex cursor-pointer items-start gap-2 rounded-lg bg-slate-950/60 px-3 py-2 text-xs text-slate-200 hover:bg-slate-900"
+                    >
+                      <input
+                        type="checkbox"
+                        className="mt-[2px] h-3.5 w-3.5 rounded border-slate-600 bg-slate-900"
+                        checked={selectedStageKeys.includes(stage.key)}
+                        onChange={() => toggleStage(stage.key)}
+                      />
+                      <div>
+                        <span className="font-semibold">
+                          Stage {stage.index}: {stage.label}
+                        </span>
+                        {stage.description && (
+                          <p className="mt-0.5 text-[11px] text-slate-400">
+                            {stage.description}
+                          </p>
+                        )}
+                      </div>
+                    </label>
+                  ))}
+                </div>
+
+                <p className="mt-2 text-[11px] text-slate-500">
+                  Las etapas desmarcadas se saltarán en el pipeline. El orden
+                  y la lógica de cada etapa siguen viniendo de{" "}
+                  <code className="rounded bg-slate-950 px-1">pipeline.py</code>.
+                </p>
+              </section>
+            )}
+
 
             <div className="mt-8 flex justify-center">
               <button

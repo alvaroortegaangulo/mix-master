@@ -173,9 +173,16 @@ function mapBackendStatusToJobStatus(raw: any, baseUrl: string): JobStatus {
 }
 
 // 1) Arrancar job (POST /mix)
-export async function startMixJob(files: File[]): Promise<{ jobId: string }> {
+export async function startMixJob(
+  files: File[],
+  enabledStageKeys?: string[],
+): Promise<{ jobId: string }> {
   const formData = new FormData();
   files.forEach((f) => formData.append("files", f));
+
+  if (enabledStageKeys && enabledStageKeys.length > 0) {
+    formData.append("stages_json", JSON.stringify(enabledStageKeys));
+  }
 
   const baseUrl = getBackendBaseUrl();
   const res = await fetch(`${baseUrl}/mix`, {
@@ -190,6 +197,7 @@ export async function startMixJob(files: File[]): Promise<{ jobId: string }> {
   const data = (await res.json()) as { jobId: string };
   return { jobId: data.jobId };
 }
+
 
 // 2) Consultar estado del job (GET /jobs/{jobId})
 export async function fetchJobStatus(jobId: string): Promise<JobStatus> {
@@ -207,3 +215,32 @@ export async function fetchJobStatus(jobId: string): Promise<JobStatus> {
   const raw = await res.json();
   return mapBackendStatusToJobStatus(raw, baseUrl);
 }
+
+
+
+
+
+export type PipelineStage = {
+  key: string;
+  label: string;
+  description: string;
+  index: number;
+  mediaSubdir: string | null;
+  updatesCurrentDir: boolean;
+  previewMixRelPath: string | null;
+};
+
+export async function fetchPipelineStages(): Promise<PipelineStage[]> {
+  const baseUrl = getBackendBaseUrl();
+  const res = await fetch(`${baseUrl}/pipeline/stages`, { method: "GET" });
+
+  if (!res.ok) {
+    throw new Error(
+      `Error fetching pipeline stages: ${res.status} ${res.statusText}`,
+    );
+  }
+
+  const data = (await res.json()) as PipelineStage[];
+  return data.sort((a, b) => a.index - b.index);
+}
+
