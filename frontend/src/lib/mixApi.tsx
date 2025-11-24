@@ -2,6 +2,7 @@
 
 export type MixResult = {
   jobId: string;
+  originalFullSongUrl: string;
   fullSongUrl: string;
   metrics: {
     tempo_bpm: number;
@@ -70,6 +71,10 @@ export async function fetchJobStatus(jobId: string): Promise<JobStatus> {
   // Si hay resultado y fullSongUrl es relativo, pegamos la base
   if (data.result && data.result.fullSongUrl && !data.result.fullSongUrl.startsWith("http")) {
     data.result.fullSongUrl = `${baseUrl}${data.result.fullSongUrl}`;
+  }
+
+  if (data.result?.originalFullSongUrl && !data.result.originalFullSongUrl.startsWith("http")) {
+    data.result.originalFullSongUrl = `${baseUrl}${data.result.originalFullSongUrl}`;
   }
 
   return data;

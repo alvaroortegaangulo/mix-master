@@ -84,6 +84,7 @@ class FullPipelineResult:
     Resultado de alto nivel del pipeline completo de mezcla.
     Este objeto es lo que usará la API para construir la respuesta JSON.
     """
+    original_full_song_path: Path
     full_song_path: Path
 
     temp_root: Path
@@ -337,6 +338,16 @@ def run_full_pipeline(
     logger.info("[7/7] Iniciando mixdown final desde %s", dynamics_media_dir)
     _report(7, "mixdown", "Rendering final full mix")
 
+
+    log_mem("before_original_mixdown")
+    original_full_song_render: FullSongRenderResult = mix_corrected_stems_to_full_song(
+        output_media_dir=media_dir,
+        full_song_name="original_full_song.wav",
+    )
+    log_mem("after_original_mixdown")
+
+
+
     log_mem("before_mixdown")
     full_song_render: FullSongRenderResult = mix_corrected_stems_to_full_song(
         output_media_dir=dynamics_media_dir,
@@ -368,6 +379,7 @@ def run_full_pipeline(
     logger.info("=== run_full_pipeline finalizado correctamente ===")
 
     return FullPipelineResult(
+        original_full_song_path=original_full_song_render.output_path,
         full_song_path=full_song_render.output_path,
         temp_root=temp_root,
         input_media_dir=media_dir,

@@ -146,10 +146,15 @@ def _run_pipeline_job(job_id: str, media_dir: Path, temp_root: Path) -> None:
         # Construir URL al WAV final (como ya tenías)
         relative_path = result.full_song_path.relative_to(JOBS_ROOT)
         full_song_url = f"/files/{relative_path.as_posix()}"
+
+        orig_rel = result.original_full_song_path.relative_to(JOBS_ROOT)
+        original_full_song_url = f"/files/{orig_rel.as_posix()}"
+
         metrics_dict = asdict(result.metrics)
 
         job_result = {
             "jobId": job_id,
+            "originalFullSongUrl": original_full_song_url,
             "fullSongUrl": full_song_url,
             "metrics": metrics_dict,
         }
