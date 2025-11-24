@@ -14,6 +14,9 @@ from pedalboard.io import AudioFile
 
 from src.utils.mixdown import mix_corrected_stems_to_full_song, FullSongRenderResult
 
+from src.utils.stage_base import BaseCorrectionStage
+
+
 # ----------------------------------------------------------------------
 # Modelos de datos
 # ----------------------------------------------------------------------
@@ -323,6 +326,63 @@ def write_loudness_correction_log(
 # Punto de entrada de alto nivel
 # ----------------------------------------------------------------------
 
+class LoudnessCorrectionStage(
+    BaseCorrectionStage[LoudnessAnalysisRow, LoudnessCorrectionResult]
+):
+    """
+    Etapa de corrección de loudness basada en BaseCorrectionStage.
+
+    Adicionalmente:
+      - Mezcla los stems corregidos a full_song.wav.
+      - Permite elegir modo "rms" o "replaygain".
+    """
+
+    def __init__(
+        self,
+        analysis_csv_path: Path,
+        input_media_dir: Path,
+        output_media_dir: Path,
+        mode: str = "rms",
+    ) -> None:
+        super().__init__(
+            analysis_csv_path=analysis_csv_path,
+            input_media_dir=input_media_dir,
+            output_media_dir=output_media_dir,
+        )
+        self.mode = mode
+
+    def load_rows(self) -> List[LoudnessAnalysisRow]:
+        return load_loudness_analysis(self.analysis_csv_path)
+
+    def process_row(self, row: LoudnessAnalysisRow) -> LoudnessCorrectionResult:
+        return _apply_loudness_correction_to_file(
+            row=row,
+            input_media_dir=self.input_media_dir,
+            output_media_dir=self.output_media_dir,
+            mode=self.mode,
+        )
+
+    def write_log(self, results: List[LoudnessCorrectionResult]) -> Path:
+        """
+        Implementación por si alguien usa stage.run() directamente.
+        Mezcla los stems y genera full_song.wav, pero devuelve solo la ruta al CSV.
+        """
+        full_song_result = mix_corrected_stems_to_full_song(self.output_media_dir)
+        log_csv_path = self.output_media_dir / "loudness_correction_log.csv"
+        write_loudness_correction_log(results, full_song_result, log_csv_path)
+        return log_csv_path
+
+    def run(self) -> Tuple[Path, Path]:
+        """
+        Ejecuta la etapa de loudness y devuelve:
+            (ruta_csv_log_correccion, ruta_full_song_corregido)
+        """
+        stem_results = self.process_all_rows()
+        full_song_result = mix_corrected_stems_to_full_song(self.output_media_dir)
+        log_csv_path = self.output_media_dir / "loudness_correction_log.csv"
+        write_loudness_correction_log(stem_results, full_song_result, log_csv_path)
+        return log_csv_path, full_song_result.output_path
+
 
 def run_loudness_correction(
     analysis_csv_path: Path,
@@ -331,35 +391,14 @@ def run_loudness_correction(
     mode: str = "rms",
 ) -> Tuple[Path, Path]:
     """
-    Ejecuta la corrección de loudness de todos los stems y genera full_song.wav.
+    Punto de entrada de alto nivel para la corrección de loudness.
 
-    :param analysis_csv_path: Ruta a loudness_analysis.csv.
-    :param input_media_dir: Carpeta con los WAV de entrada (stems).
-    :param output_media_dir: Carpeta donde se guardarán los WAV corregidos
-                             y el full_song.wav.
-    :param mode: "rms" (por defecto) o "replaygain".
-    :return: (ruta_csv_log_correccion, ruta_full_song_wav)
+    Implementado mediante LoudnessCorrectionStage para unificar el patrón de etapas.
     """
-    rows = load_loudness_analysis(analysis_csv_path)
-
-    stem_results: List[LoudnessCorrectionResult] = []
-
-    for row in rows:
-        # En tu diseño actual ya no hay full_song.wav de entrada,
-        # pero mantenemos el campo por compatibilidad.
-        result = _apply_loudness_correction_to_file(
-            row=row,
-            input_media_dir=input_media_dir,
-            output_media_dir=output_media_dir,
-            mode=mode,
-        )
-        stem_results.append(result)
-
-    # Mezclar stems corregidos -> full_song.wav
-    full_song_result = mix_corrected_stems_to_full_song(output_media_dir)
-
-    # Escribir log en la misma carpeta de media/loudness
-    log_csv_path = output_media_dir / "loudness_correction_log.csv"
-    write_loudness_correction_log(stem_results, full_song_result, log_csv_path)
-
-    return log_csv_path, full_song_result.output_path
+    stage = LoudnessCorrectionStage(
+        analysis_csv_path=analysis_csv_path,
+        input_media_dir=input_media_dir,
+        output_media_dir=output_media_dir,
+        mode=mode,
+    )
+    return stage.run()

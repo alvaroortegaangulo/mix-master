@@ -12,6 +12,7 @@ import numpy as np
 from pedalboard import Pedalboard, HighpassFilter, PeakFilter
 from pedalboard.io import AudioFile
 
+from src.utils.stage_base import BaseCorrectionStage
 
 # ----------------------------------------------------------------------
 # Modelos de datos
@@ -365,6 +366,57 @@ def write_spectral_cleanup_log(
 # Punto de entrada de alto nivel
 # ----------------------------------------------------------------------
 
+class SpectralCleanupStage(
+    BaseCorrectionStage[SpectralCleanupRow, SpectralCleanupCorrectionResult]
+):
+    """
+    Etapa de limpieza espectral (HPF + notches) usando BaseCorrectionStage.
+
+    Se apoya en:
+      - load_spectral_cleanup_csv
+      - _apply_spectral_cleanup_to_file
+      - write_spectral_cleanup_log
+    """
+
+    def __init__(
+        self,
+        analysis_csv_path: Path,
+        input_media_dir: Path,
+        output_media_dir: Path,
+        max_notches: int = 4,
+    ) -> None:
+        super().__init__(
+            analysis_csv_path=analysis_csv_path,
+            input_media_dir=input_media_dir,
+            output_media_dir=output_media_dir,
+        )
+        self.max_notches = max_notches
+
+    def load_rows(self) -> List[SpectralCleanupRow]:
+        return load_spectral_cleanup_csv(
+            csv_path=self.analysis_csv_path,
+            max_notches=self.max_notches,
+        )
+
+    def process_row(
+        self,
+        row: SpectralCleanupRow,
+    ) -> SpectralCleanupCorrectionResult:
+        return _apply_spectral_cleanup_to_file(
+            row=row,
+            input_media_dir=self.input_media_dir,
+            output_media_dir=self.output_media_dir,
+        )
+
+    def write_log(
+        self,
+        results: List[SpectralCleanupCorrectionResult],
+    ) -> Path:
+        log_csv_path = self.output_media_dir / "spectral_cleanup_correction_log.csv"
+        write_spectral_cleanup_log(results, log_csv_path)
+        return log_csv_path
+
+
 
 def run_spectral_cleanup_correction(
     analysis_csv_path: Path,
@@ -373,23 +425,15 @@ def run_spectral_cleanup_correction(
     max_notches: int = 4,
 ) -> Path:
     """
-    Ejecuta la corrección espectral (HPF + notches) de todos los stems.
+    Punto de entrada de alto nivel para la limpieza espectral.
 
-    :param analysis_csv_path: Ruta al CSV de análisis espectral.
-    :param input_media_dir: Carpeta con los WAV de entrada (stems ya normalizados).
-    :param output_media_dir: Carpeta donde se guardarán los WAV corregidos.
-    :param max_notches: Máximo de notches a aplicar por stem.
-    :return: Ruta al CSV de log de corrección.
+    Usa SpectralCleanupStage (BaseCorrectionStage) para aplicar HPF + notches
+    a todos los stems y generar el log de corrección.
     """
-    rows = load_spectral_cleanup_csv(analysis_csv_path, max_notches=max_notches)
-
-    results: List[SpectralCleanupCorrectionResult] = []
-
-    for row in rows:
-        result = _apply_spectral_cleanup_to_file(row, input_media_dir, output_media_dir)
-        results.append(result)
-
-    log_csv_path = output_media_dir / "spectral_cleanup_correction_log.csv"
-    write_spectral_cleanup_log(results, log_csv_path)
-
-    return log_csv_path
+    stage = SpectralCleanupStage(
+        analysis_csv_path=analysis_csv_path,
+        input_media_dir=input_media_dir,
+        output_media_dir=output_media_dir,
+        max_notches=max_notches,
+    )
+    return stage.run()

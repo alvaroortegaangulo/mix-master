@@ -11,6 +11,8 @@ from typing import List
 import numpy as np
 import soundfile as sf
 
+from src.utils.stage_base import BaseCorrectionStage
+
 
 @dataclass
 class DcOffsetAnalysisRow:
@@ -260,29 +262,50 @@ def write_correction_log(results: List[DcOffsetCorrectionResult], log_csv_path: 
             })
 
 
+class DcOffsetCorrectionStage(
+    BaseCorrectionStage[DcOffsetAnalysisRow, DcOffsetCorrectionResult]
+):
+    """
+    Etapa de corrección de DC offset usando el patrón BaseCorrectionStage.
+
+    Reutiliza:
+      - load_dc_offset_analysis  -> lectura del CSV de análisis.
+      - _correct_single_file     -> corrección de cada WAV.
+      - write_correction_log     -> escritura del log.
+    """
+
+    def load_rows(self) -> List[DcOffsetAnalysisRow]:
+        return load_dc_offset_analysis(self.analysis_csv_path)
+
+    def process_row(self, row: DcOffsetAnalysisRow) -> DcOffsetCorrectionResult:
+        return _correct_single_file(
+            row=row,
+            media_root=self.input_media_dir,
+            output_dir=self.output_media_dir,
+        )
+
+    def write_log(self, results: List[DcOffsetCorrectionResult]) -> Path:
+        log_csv_path = self.output_media_dir / "dc_offset_correction_log.csv"
+        write_correction_log(results, log_csv_path)
+        return log_csv_path
+
+
 def run_dc_offset_correction(
     analysis_csv_path: Path,
     media_dir: Path,
     output_dc_media_dir: Path,
 ) -> Path:
     """
-    Punto de entrada de alto nivel:
+    Punto de entrada de alto nivel para la corrección de DC offset.
 
-    - Lee el CSV de análisis de DC offset.
-    - Corrige todos los WAV encontrados en el CSV.
-    - Escribe los WAV corregidos en output_dc_media_dir.
-    - Genera un log CSV en esa misma carpeta.
-
-    :return: Ruta al CSV de log de corrección.
+    Esta versión delega en DcOffsetCorrectionStage (BaseCorrectionStage) para:
+      - leer el CSV de análisis,
+      - corregir cada archivo,
+      - escribir el CSV de log.
     """
-    rows = load_dc_offset_analysis(analysis_csv_path)
-
-    results: List[DcOffsetCorrectionResult] = []
-    for row in rows:
-        result = _correct_single_file(row, media_dir, output_dc_media_dir)
-        results.append(result)
-
-    log_csv_path = output_dc_media_dir / "dc_offset_correction_log.csv"
-    write_correction_log(results, log_csv_path)
-
-    return log_csv_path
+    stage = DcOffsetCorrectionStage(
+        analysis_csv_path=analysis_csv_path,
+        input_media_dir=media_dir,
+        output_media_dir=output_dc_media_dir,
+    )
+    return stage.run()

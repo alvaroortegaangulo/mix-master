@@ -345,7 +345,7 @@ def run_vocal_tuning_autotune(
     allowed_pcs = _scale_pitch_classes(song_key, song_scale)
 
     # 2) Cargamos vocal.wav (esperado mono, pero aceptamos multi y lo reducimos)
-    audio, sr = sf.read(str(vocal_input_path), always_2d=True)
+    audio, sr = sf.read(str(vocal_input_path), dtype="float32", always_2d=True)
     num_samples, num_channels = audio.shape
 
     if num_channels == 1:
