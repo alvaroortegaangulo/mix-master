@@ -23,6 +23,8 @@ export type JobStatus = {
   error?: string;
 };
 
+export type MixResponse = MixResult;
+
 function getBackendBaseUrl(): string {
   const fromEnv = process.env.NEXT_PUBLIC_BACKEND_URL?.trim();
   if (fromEnv && fromEnv.length > 0) {
