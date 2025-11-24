@@ -3,8 +3,7 @@ version: "3.9"
 services:
   redis:
     image: redis:7
-    ports:
-      - "6379:6379"
+    restart: unless-stopped
 
   web:
     build: .
@@ -13,19 +12,17 @@ services:
       - REDIS_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
     ports:
-      - "8000:8000"
+      - "80:8000"          # expone la API en el puerto 80 del VPS
     volumes:
       - ./media:/app/media
       - ./temp:/app/temp
     depends_on:
       - redis
     restart: unless-stopped
-    # opcional, si el Dockerfile no tiene WORKDIR /app:
-    # working_dir: /app
 
   worker:
     build: .
-    command: celery -A celery_app.celery_app worker --loglevel=info --concurrency=1
+    command: celery -A celery_app.celery_app worker --loglevel=info --concurrency=3
     environment:
       - REDIS_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
@@ -35,5 +32,3 @@ services:
     depends_on:
       - redis
     restart: unless-stopped
-    # opcional:
-    # working_dir: /app
