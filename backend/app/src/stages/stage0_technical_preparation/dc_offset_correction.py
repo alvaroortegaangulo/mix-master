@@ -88,11 +88,8 @@ def _correct_single_file(
     output_dir: Path,
 ) -> DcOffsetCorrectionResult:
     """
-    Aplica corrección de DC offset a un archivo concreto y escribe la copia corregida.
-
-    :param row: Datos de análisis para este archivo.
-    :param media_root: Carpeta raíz donde están los WAV originales (p.ej. C:\\mix\\media).
-    :param output_dir: Carpeta donde se escribirán los WAV corregidos.
+    Aplica corrección de DC offset a un archivo concreto y escribe la copia corregida,
+    usando procesamiento en streaming para evitar cargar todo el WAV en memoria.
     """
     input_path = (media_root / row.relative_path).resolve()
     if not input_path.exists():
@@ -101,55 +98,94 @@ def _correct_single_file(
     output_dir.mkdir(parents=True, exist_ok=True)
     output_path = (output_dir / row.filename).resolve()
 
-    # Leer audio como matriz (n_muestras, n_canales)
-    audio, sr = sf.read(input_path, always_2d=True)
-    if sr != row.sample_rate:
-        # No es crítico, pero lo anotamos mentalmente: el fichero ha cambiado desde el análisis
-        pass
+    # Abrimos el fichero de entrada una primera vez para obtener metadatos
+    with sf.SoundFile(str(input_path), mode="r") as f_in:
+        sr = f_in.samplerate
+        num_channels = f_in.channels
+        subtype = f_in.subtype
+        total_frames = f_in.frames
 
-    num_channels = audio.shape[1]
-
-    # Pico original
-    original_peak = float(np.max(np.abs(audio)))
-    original_peak_db = _dbfs(original_peak)
-
-    # Offsets a aplicar (si el CSV no coincide en nº de canales, recalculamos)
+    # Offsets a aplicar (si el CSV no coincide en nº de canales, recalculamos en streaming)
     if len(row.dc_offsets) == num_channels:
-        offsets = np.array(row.dc_offsets, dtype=np.float64)[np.newaxis, :]  # shape (1, C)
+        offsets = np.asarray(row.dc_offsets, dtype=np.float32)  # shape (C,)
     else:
-        offsets = audio.mean(axis=0, keepdims=True)  # recalcular por si acaso
+        # Fallback raro: recalcular offsets en una pasada streaming
+        sums = np.zeros(num_channels, dtype=np.float64)
+        frame_count = 0
+        block_size = 65536
 
-    # Corrección: restar el DC offset por canal
-    corrected_audio = audio - offsets
+        with sf.SoundFile(str(input_path), mode="r") as f_in:
+            while True:
+                block = f_in.read(block_size, dtype="float32", always_2d=True)
+                if block.size == 0:
+                    break
+                sums += block.sum(axis=0, dtype=np.float64)
+                frame_count += block.shape[0]
 
-    # Recalcular offset tras corrección
-    corrected_offsets = corrected_audio.mean(axis=0)
-    corrected_max_abs_dc = float(np.max(np.abs(corrected_offsets)))
+        if frame_count > 0:
+            offsets = (sums / frame_count).astype(np.float32)
+        else:
+            offsets = np.zeros(num_channels, dtype=np.float32)
 
-    # Picos después de la corrección
-    corrected_peak = float(np.max(np.abs(corrected_audio)))
+    # ------------------------------------------------------------------
+    # Procesado en streaming: leer bloque, restar offset, escribir bloque
+    # ------------------------------------------------------------------
+    original_peak = 0.0
+    corrected_peak = 0.0
+    corrected_sums = np.zeros(num_channels, dtype=np.float64)
+    corrected_frame_count = 0
+    block_size = 65536
+
+    with sf.SoundFile(str(input_path), mode="r") as f_in, \
+         sf.SoundFile(
+             str(output_path),
+             mode="w",
+             samplerate=sr,
+             channels=num_channels,
+             subtype=subtype,
+         ) as f_out:
+
+        while True:
+            block = f_in.read(block_size, dtype="float32", always_2d=True)
+            if block.size == 0:
+                break
+
+            # Pico original (antes de corrección)
+            original_peak = max(original_peak, float(np.max(np.abs(block))))
+
+            # Restar offsets por canal
+            corrected_block = block - offsets[np.newaxis, :]
+
+            # Pico corregido
+            corrected_peak = max(
+                corrected_peak,
+                float(np.max(np.abs(corrected_block)))
+            )
+
+            # Acumular para calcular offset corregido medio
+            corrected_sums += corrected_block.sum(axis=0, dtype=np.float64)
+            corrected_frame_count += corrected_block.shape[0]
+
+            # Escribir bloque corregido
+            f_out.write(corrected_block)
+
+    if corrected_frame_count > 0:
+        corrected_offsets = (corrected_sums / corrected_frame_count).astype(np.float64)
+        corrected_max_abs_dc = float(np.max(np.abs(corrected_offsets)))
+    else:
+        corrected_offsets = np.zeros(num_channels, dtype=np.float64)
+        corrected_max_abs_dc = 0.0
+
+    original_peak_db = _dbfs(original_peak)
     corrected_peak_db = _dbfs(corrected_peak)
-
-    # Marcar si el archivo queda por encima del rango típico [-1, 1]
     clipped_after = corrected_peak > 1.0
-
-    # Escribir a disco preservando subtype en la medida de lo posible
-    info = sf.info(input_path)
-    subtype = info.subtype or None
-
-    sf.write(
-        file=output_path,
-        data=corrected_audio,
-        samplerate=info.samplerate,
-        subtype=subtype,
-    )
 
     return DcOffsetCorrectionResult(
         filename=row.filename,
         input_path=input_path,
         output_path=output_path,
         is_full_song=row.is_full_song,
-        sample_rate=info.samplerate,
+        sample_rate=sr,
         num_channels=num_channels,
         duration_seconds=row.duration_seconds,
         original_dc_offsets=row.dc_offsets,
