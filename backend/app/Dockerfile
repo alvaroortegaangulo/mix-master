@@ -33,6 +33,9 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # (main.py, src/, etc.)
 COPY . .
 
+RUN chmod +x start.sh
+CMD ["./start.sh"]
+
 # Variable para que tu módulo config.paths resuelva rutas correctamente
 ENV APP_PROJECT_ROOT=/app
 
