@@ -78,6 +78,10 @@ def _compute_average_spectrum(
     """
     Calcula el espectro medio de magnitud (en lineal) de un audio mono.
     Devuelve (freqs, avg_mag).
+
+    Implementación optimizada en memoria:
+      - No guarda todos los espectros de todos los frames.
+      - Acumula la magnitud de forma incremental y promedia al final.
     """
     n_samples = audio_mono.shape[0]
     if n_samples < frame_size:
@@ -87,20 +91,29 @@ def _compute_average_spectrum(
 
     window = np.hanning(frame_size).astype(np.float32)
 
-    mags = []
+    sum_mag: Optional[np.ndarray] = None
+    frame_count = 0
+
     for start in range(0, n_samples - frame_size + 1, hop_size):
         frame = audio_mono[start:start + frame_size] * window
         spectrum = np.fft.rfft(frame)
-        mag = np.abs(spectrum)
-        mags.append(mag)
+        mag = np.abs(spectrum).astype(np.float32)
 
-    if not mags:
+        if sum_mag is None:
+            sum_mag = mag
+        else:
+            sum_mag += mag
+
+        frame_count += 1
+
+    if sum_mag is None or frame_count == 0:
         avg_mag = np.zeros(frame_size // 2 + 1, dtype=np.float32)
     else:
-        avg_mag = np.mean(np.stack(mags, axis=0), axis=0)
+        avg_mag = sum_mag / float(frame_count)
 
     freqs = np.fft.rfftfreq(frame_size, d=1.0 / sr)
     return freqs, avg_mag
+
 
 
 def _band_energy_ratio(freqs: np.ndarray, mag: np.ndarray, f_lo: float, f_hi: float) -> float:
@@ -223,7 +236,7 @@ def analyze_spectral_cleanup(media_dir: Path) -> List[SpectralCleanupResult]:
     results: List[SpectralCleanupResult] = []
 
     for wav_path in sorted(media_dir.glob("*.wav")):
-        audio, sr = sf.read(wav_path, always_2d=True)
+        audio, sr = sf.read(wav_path, dtype="float32", always_2d=True)
         num_samples, num_channels = audio.shape
         duration_seconds = float(num_samples) / float(sr) if num_samples > 0 else 0.0
 

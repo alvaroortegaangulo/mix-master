@@ -2,6 +2,9 @@
 numpy
 soundfile
 
+# memoria
+psutil
+
 # Análisis avanzado de audio
 essentia
 

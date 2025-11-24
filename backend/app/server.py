@@ -1,7 +1,10 @@
 # /app/server.py
 from __future__ import annotations
 
-from dataclasses import asdict
+from dataclasses import dataclass, asdict
+from typing import Literal, Optional, Dict
+import threading
+import logging
 from datetime import datetime
 from pathlib import Path
 from uuid import uuid4
@@ -9,8 +12,13 @@ from uuid import uuid4
 from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi import BackgroundTasks, HTTPException
 
 from src.pipeline import run_full_pipeline
+
+logger = logging.getLogger(__name__)
+
+JobStatusType = Literal["queued", "running", "done", "error"]
 
 PROJECT_ROOT = Path(__file__).resolve().parent
 JOBS_ROOT = PROJECT_ROOT / "temp_jobs"
@@ -31,6 +39,22 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@dataclass
+class JobState:
+    status: JobStatusType
+    stage_index: int
+    total_stages: int
+    stage_key: str
+    message: str
+    progress: float  # 0.0–100.0
+    error_message: Optional[str] = None
+    result: Optional[dict] = None  # aquí guardaremos fullSongUrl + metrics
+
+JOBS: Dict[str, JobState] = {}
+JOBS_LOCK = threading.Lock()
+
 
 # Servir ficheros de audio generados (downloads)
 app.mount("/files", StaticFiles(directory=str(JOBS_ROOT)), name="files")
@@ -86,8 +110,125 @@ def _create_job_dirs() -> tuple[str, Path, Path]:
     return job_id, media_dir, temp_root
 
 
+
+def _run_pipeline_job(job_id: str, media_dir: Path, temp_root: Path) -> None:
+    def progress_cb(stage_index: int, total_stages: int, stage_key: str, message: str) -> None:
+        progress = (stage_index / max(total_stages, 1)) * 100.0
+        with JOBS_LOCK:
+            st = JOBS.get(job_id)
+            if not st:
+                st = JobState(
+                    status="running",
+                    stage_index=stage_index,
+                    total_stages=total_stages,
+                    stage_key=stage_key,
+                    message=message,
+                    progress=progress,
+                )
+                JOBS[job_id] = st
+            else:
+                st.status = "running"
+                st.stage_index = stage_index
+                st.total_stages = total_stages
+                st.stage_key = stage_key
+                st.message = message
+                st.progress = progress
+
+    try:
+        logger.info("Job %s: starting pipeline", job_id)
+        result = run_full_pipeline(
+            project_root=PROJECT_ROOT,
+            media_dir=media_dir,
+            temp_root=temp_root,
+            progress_callback=progress_cb,
+        )
+
+        # Construir URL al WAV final (como ya tenías)
+        relative_path = result.full_song_path.relative_to(JOBS_ROOT)
+        full_song_url = f"/files/{relative_path.as_posix()}"
+        metrics_dict = asdict(result.metrics)
+
+        job_result = {
+            "jobId": job_id,
+            "fullSongUrl": full_song_url,
+            "metrics": metrics_dict,
+        }
+
+        with JOBS_LOCK:
+            st = JOBS.get(job_id)
+            if not st:
+                st = JobState(
+                    status="done",
+                    stage_index=result.metrics and 7 or 0,
+                    total_stages=7,
+                    stage_key="done",
+                    message="Job completed",
+                    progress=100.0,
+                    result=job_result,
+                )
+                JOBS[job_id] = st
+            else:
+                st.status = "done"
+                st.stage_index = st.total_stages
+                st.stage_key = "done"
+                st.message = "Job completed"
+                st.progress = 100.0
+                st.result = job_result
+
+        logger.info("Job %s: completed successfully", job_id)
+
+    except Exception as exc:
+        logger.exception("Job %s failed: %s", job_id, exc)
+        with JOBS_LOCK:
+            st = JOBS.get(job_id)
+            if not st:
+                st = JobState(
+                    status="error",
+                    stage_index=0,
+                    total_stages=7,
+                    stage_key="error",
+                    message="Job failed",
+                    progress=0.0,
+                    error_message=str(exc),
+                )
+                JOBS[job_id] = st
+            else:
+                st.status = "error"
+                st.stage_key = "error"
+                st.message = "Job failed"
+                st.error_message = str(exc)
+
+
+
+@app.get("/jobs/{job_id}/status")
+def get_job_status(job_id: str):
+    with JOBS_LOCK:
+        st = JOBS.get(job_id)
+
+    if not st:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    payload = {
+        "jobId": job_id,
+        "status": st.status,
+        "stageIndex": st.stage_index,
+        "totalStages": st.total_stages,
+        "stageKey": st.stage_key,
+        "message": st.message,
+        "progress": st.progress,
+    }
+
+    if st.status == "done" and st.result:
+        payload["result"] = st.result
+    if st.error_message:
+        payload["error"] = st.error_message
+
+    return payload
+
+
 @app.post("/mix")
 async def mix_tracks(
+    background_tasks: BackgroundTasks,
     files: list[UploadFile] = File(...),
 ):
     """
@@ -104,23 +245,20 @@ async def mix_tracks(
         with dest_path.open("wb") as out:
             out.write(await f.read())
 
-    # Ejecutar el pipeline
-    result = run_full_pipeline(
-        project_root=PROJECT_ROOT,
-        media_dir=media_dir,
-        temp_root=temp_root,
-        # export_csv=False,  # si añades el parámetro
-    )
+    # Estado inicial del job
+    with JOBS_LOCK:
+        JOBS[job_id] = JobState(
+            status="queued",
+            stage_index=0,
+            total_stages=7,
+            stage_key="queued",
+            message="Job queued",
+            progress=0.0,
+        )
 
-    # Construir URL pública relativa (la servirá StaticFiles)
-    full_song_rel = result.full_song_path.relative_to(JOBS_ROOT)
-    full_song_url = f"/files/{full_song_rel.as_posix()}"
 
-    # Convertir dataclasses a dict
-    metrics_dict = asdict(result.metrics)
+    # Lanzar el pipeline en background
+    background_tasks.add_task(_run_pipeline_job, job_id, media_dir, temp_root)
 
-    return {
-        "jobId": job_id,
-        "fullSongUrl": full_song_url,
-        "metrics": metrics_dict,
-    }
+    # Devolvemos sólo el jobId
+    return {"jobId": job_id}

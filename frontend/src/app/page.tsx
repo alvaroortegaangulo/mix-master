@@ -2,37 +2,76 @@
 "use client";
 
 import { useState } from "react";
-import { sendMixRequest, type MixResponse } from "../lib/mixApi";
+import { startMixJob, fetchJobStatus, type JobStatus } from "../lib/mixApi";
 import { UploadDropzone } from "../components/UploadDropzone";
 import { MixResultPanel } from "../components/MixResultPanel";
 
 export default function HomePage() {
   const [files, setFiles] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<MixResponse | null>(null);
+  const [jobStatus, setJobStatus] = useState<JobStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const handleFilesSelected = (selected: File[]) => {
     setFiles(selected);
-    setResult(null);
+    setJobStatus(null);
     setError(null);
   };
+
+  const hasFiles = files.length > 0;
 
   const handleGenerateMix = async () => {
     setError(null);
     setLoading(true);
+    setJobStatus(null);
 
     try {
-      const res = await sendMixRequest(files);
-      setResult(res);
+      // 1) Arrancar job
+      const { jobId } = await startMixJob(files);
+
+      // Estado inicial
+      setJobStatus({
+        jobId,
+        status: "queued",
+        stageIndex: 0,
+        totalStages: 7,
+        stageKey: "queued",
+        message: "Job queued...",
+        progress: 0,
+      });
+
+      // 2) Polling del estado hasta que termine
+      while (true) {
+        const status = await fetchJobStatus(jobId);
+        setJobStatus(status);
+
+        if (status.status === "done") {
+          setLoading(false);
+          break;
+        }
+        if (status.status === "error") {
+          setLoading(false);
+          setError(status.error ?? "Error processing mix");
+          break;
+        }
+
+        // Esperar 1 segundo antes del siguiente poll
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      }
     } catch (err: any) {
       setError(err.message ?? "Unknown error");
-    } finally {
       setLoading(false);
     }
   };
 
-  const hasFiles = files.length > 0;
+  // Resultado final (cuando status === "done" y hay result)
+  const result = jobStatus?.status === "done" && jobStatus.result ? jobStatus.result : null;
+
+  // Texto de progreso para el log
+  const progressText =
+    jobStatus && (jobStatus.status === "queued" || jobStatus.status === "running")
+      ? `[${jobStatus.progress.toFixed(0)}%] Step ${jobStatus.stageIndex}/${jobStatus.totalStages} – ${jobStatus.message}`
+      : null;
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
@@ -43,24 +82,17 @@ export default function HomePage() {
             <div className="h-7 w-7 rounded-full bg-teal-400/90 flex items-center justify-center text-slate-950 text-lg font-bold">
               A
             </div>
-            <span className="text-lg font-semibold tracking-tight">
-              Audio Alchemy
-            </span>
+            <span className="text-lg font-semibold tracking-tight">Audio Alchemy</span>
           </div>
         </div>
       </header>
 
-      {/* Main content */}
       <main className="flex flex-1 items-center justify-center px-4">
         <div className="w-full max-w-3xl">
           <section className="rounded-2xl border border-slate-800/80 bg-slate-900/70 p-8 shadow-xl">
             <div className="text-center mb-8">
-              <h1 className="text-3xl font-bold text-slate-50 mb-2">
-                Upload Your Stems
-              </h1>
-              <p className="text-slate-400">
-                Drag and drop your audio files to begin the magic.
-              </p>
+              <h1 className="text-3xl font-bold text-slate-50 mb-2">Upload Your Stems</h1>
+              <p className="text-slate-400">Drag and drop your audio files to begin the magic.</p>
             </div>
 
             <UploadDropzone
@@ -80,12 +112,21 @@ export default function HomePage() {
                   "transition hover:bg-teal-400 hover:shadow-lg disabled:opacity-60 disabled:cursor-not-allowed",
                 ].join(" ")}
               >
-                {loading ? "Generating mix..." : "Generate AI Mix"}
+                {loading ? "Processing..." : "Generate AI Mix"}
               </button>
             </div>
 
+            {/* Línea de log con etapa y porcentaje */}
+            {progressText && (
+              <p className="mt-4 text-center text-sm text-slate-300 font-mono">
+                {progressText}
+              </p>
+            )}
+
             {error && (
-              <p className="mt-4 text-center text-sm text-red-400">{error}</p>
+              <p className="mt-4 text-center text-sm text-red-400">
+                {error}
+              </p>
             )}
           </section>
 

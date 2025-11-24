@@ -1,34 +1,38 @@
 // frontend/src/lib/mixApi.ts
 
-export type MixResponse = {
+export type MixResult = {
   jobId: string;
-  fullSongUrl: string; // en la respuesta final SIEMPRE será absoluta
+  fullSongUrl: string;
   metrics: {
     tempo_bpm: number;
     key: string;
     scale: string;
-    // añade aquí el resto de campos que devuelve tu backend
+    // ...añade el resto de campos que devuelva el backend
   };
 };
 
-/**
- * Resuelve la URL base del backend, preparada para:
- * - Render: NEXT_PUBLIC_BACKEND_URL (p.ej. https://backend-de7a.onrender.com)
- * - Local:  fallback a http://127.0.0.1:8000 si la env no está definida
- */
+export type JobStatus = {
+  jobId: string;
+  status: "queued" | "running" | "done" | "error";
+  stageIndex: number;
+  totalStages: number;
+  stageKey: string;
+  message: string;
+  progress: number; // 0–100
+  result?: MixResult;
+  error?: string;
+};
+
 function getBackendBaseUrl(): string {
   const fromEnv = process.env.NEXT_PUBLIC_BACKEND_URL?.trim();
-
   if (fromEnv && fromEnv.length > 0) {
-    // quitamos barra final para evitar dobles barras
     return fromEnv.replace(/\/+$/, "");
   }
-
-  // Fallback razonable para desarrollo local
   return "http://127.0.0.1:8000";
 }
 
-export async function sendMixRequest(files: File[]): Promise<MixResponse> {
+// 1) Arrancar job
+export async function startMixJob(files: File[]): Promise<{ jobId: string }> {
   const formData = new FormData();
   files.forEach((f) => formData.append("files", f));
 
@@ -40,19 +44,31 @@ export async function sendMixRequest(files: File[]): Promise<MixResponse> {
   });
 
   if (!res.ok) {
-    throw new Error(`Error en mezcla: ${res.status} ${res.statusText}`);
+    throw new Error(`Error starting mix job: ${res.status} ${res.statusText}`);
   }
 
-  // Respuesta tal y como la envía el backend (fullSongUrl puede ser relativa o absoluta)
-  const data = (await res.json()) as MixResponse;
+  const data = (await res.json()) as { jobId: string };
+  return data;
+}
 
-  // Si el backend devuelve /files/..., pegamos la base del backend
-  const fullSongUrl = data.fullSongUrl.startsWith("http")
-    ? data.fullSongUrl
-    : `${baseUrl}${data.fullSongUrl}`;
+// 2) Consultar estado
+export async function fetchJobStatus(jobId: string): Promise<JobStatus> {
+  const baseUrl = getBackendBaseUrl();
 
-  return {
-    ...data,
-    fullSongUrl,
-  };
+  const res = await fetch(`${baseUrl}/jobs/${jobId}/status`, {
+    method: "GET",
+  });
+
+  if (!res.ok) {
+    throw new Error(`Error fetching job status: ${res.status} ${res.statusText}`);
+  }
+
+  const data = (await res.json()) as JobStatus;
+
+  // Si hay resultado y fullSongUrl es relativo, pegamos la base
+  if (data.result && data.result.fullSongUrl && !data.result.fullSongUrl.startsWith("http")) {
+    data.result.fullSongUrl = `${baseUrl}${data.result.fullSongUrl}`;
+  }
+
+  return data;
 }
