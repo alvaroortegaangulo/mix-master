@@ -1,27 +1,25 @@
-# /app/server.py
 from __future__ import annotations
 
-from dataclasses import dataclass, asdict
-from typing import Literal, Optional, Dict
-import threading
 import logging
-from datetime import datetime
 from pathlib import Path
 from uuid import uuid4
 
-from fastapi import FastAPI, UploadFile, File
+from celery import states
+from celery.result import AsyncResult
+from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi import BackgroundTasks, HTTPException
 
-from src.pipeline import run_full_pipeline
+from celery_app import celery_app
+from tasks import run_full_pipeline_task
 
 logger = logging.getLogger(__name__)
 
-JobStatusType = Literal["queued", "running", "done", "error"]
-
+# Raíz del proyecto dentro del contenedor (/app)
 PROJECT_ROOT = Path(__file__).resolve().parent
-JOBS_ROOT = PROJECT_ROOT / "temp_jobs"
+
+# Carpeta donde se guardan todos los trabajos (compartida entre web y worker)
+JOBS_ROOT = PROJECT_ROOT / "temp"
 JOBS_ROOT.mkdir(parents=True, exist_ok=True)
 
 app = FastAPI(title="Mix & Master API")
@@ -40,32 +38,26 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
-@dataclass
-class JobState:
-    status: JobStatusType
-    stage_index: int
-    total_stages: int
-    stage_key: str
-    message: str
-    progress: float  # 0.0–100.0
-    error_message: Optional[str] = None
-    result: Optional[dict] = None  # aquí guardaremos fullSongUrl + metrics
-
-JOBS: Dict[str, JobState] = {}
-JOBS_LOCK = threading.Lock()
-
-
-# Servir ficheros de audio generados (downloads)
+# Servir ficheros de audio generados (downloads). Apunta a JOBS_ROOT.
 app.mount("/files", StaticFiles(directory=str(JOBS_ROOT)), name="files")
+
+
+def _create_job_dirs() -> tuple[str, Path, Path]:
+    """Crea la estructura de carpetas para un nuevo job y devuelve (job_id, media_dir, temp_root)."""
+    job_id = str(uuid4())
+    job_root = JOBS_ROOT / job_id
+    media_dir = job_root / "media"
+    temp_root = job_root / "work"
+
+    media_dir.mkdir(parents=True, exist_ok=True)
+    temp_root.mkdir(parents=True, exist_ok=True)
+
+    return job_id, media_dir, temp_root
 
 
 @app.get("/jobs/{job_id}/tree")
 def get_job_tree(job_id: str):
-    """
-    Devuelve el árbol de directorios y ficheros para un job concreto.
-    Útil para debug: verlo en /docs o en el navegador.
-    """
+    """Devuelve el árbol de directorios y ficheros para un job concreto (debug)."""
     job_root = JOBS_ROOT / job_id
     if not job_root.exists():
         raise HTTPException(status_code=404, detail="Job not found")
@@ -98,172 +90,85 @@ def get_job_tree(job_id: str):
     }
 
 
-def _create_job_dirs() -> tuple[str, Path, Path]:
-    job_id = str(uuid4())
-    job_root = JOBS_ROOT / job_id
-    media_dir = job_root / "media"
-    temp_root = job_root / "work"
+@app.get("/jobs/{job_id}")
+def get_job_status(job_id: str):
+    """Devuelve el estado del job consultando a Celery (Redis)."""
+    async_result = AsyncResult(job_id, app=celery_app)
 
-    media_dir.mkdir(parents=True, exist_ok=True)
-    temp_root.mkdir(parents=True, exist_ok=True)
-
-    return job_id, media_dir, temp_root
-
-
-
-def _run_pipeline_job(job_id: str, media_dir: Path, temp_root: Path) -> None:
-    def progress_cb(stage_index: int, total_stages: int, stage_key: str, message: str) -> None:
-        progress = (stage_index / max(total_stages, 1)) * 100.0
-        with JOBS_LOCK:
-            st = JOBS.get(job_id)
-            if not st:
-                st = JobState(
-                    status="running",
-                    stage_index=stage_index,
-                    total_stages=total_stages,
-                    stage_key=stage_key,
-                    message=message,
-                    progress=progress,
-                )
-                JOBS[job_id] = st
-            else:
-                st.status = "running"
-                st.stage_index = stage_index
-                st.total_stages = total_stages
-                st.stage_key = stage_key
-                st.message = message
-                st.progress = progress
-
-    try:
-        logger.info("Job %s: starting pipeline", job_id)
-        result = run_full_pipeline(
-            project_root=PROJECT_ROOT,
-            media_dir=media_dir,
-            temp_root=temp_root,
-            progress_callback=progress_cb,
-        )
-
-        # Construir URL al WAV final (como ya tenías)
-        relative_path = result.full_song_path.relative_to(JOBS_ROOT)
-        full_song_url = f"/files/{relative_path.as_posix()}"
-
-        orig_rel = result.original_full_song_path.relative_to(JOBS_ROOT)
-        original_full_song_url = f"/files/{orig_rel.as_posix()}"
-
-        metrics_dict = asdict(result.metrics)
-
-        job_result = {
+    # PENDING = Celery aún no lo ha tocado (puede estar en cola)
+    if async_result.state == states.PENDING:
+        return {
             "jobId": job_id,
-            "originalFullSongUrl": original_full_song_url,
-            "fullSongUrl": full_song_url,
-            "metrics": metrics_dict,
+            "status": "pending",
+            "message": "Job pending in queue",
         }
 
-        with JOBS_LOCK:
-            st = JOBS.get(job_id)
-            if not st:
-                st = JobState(
-                    status="done",
-                    stage_index=result.metrics and 7 or 0,
-                    total_stages=7,
-                    stage_key="done",
-                    message="Job completed",
-                    progress=100.0,
-                    result=job_result,
-                )
-                JOBS[job_id] = st
-            else:
-                st.status = "done"
-                st.stage_index = st.total_stages
-                st.stage_key = "done"
-                st.message = "Job completed"
-                st.progress = 100.0
-                st.result = job_result
+    # PROGRESS = estado custom que hemos puesto en update_state en la tarea
+    if async_result.state == "PROGRESS":
+        meta = async_result.info or {}
+        return {
+            "jobId": job_id,
+            "status": "running",
+            **meta,
+        }
 
-        logger.info("Job %s: completed successfully", job_id)
+    # SUCCESS = job terminado
+    if async_result.state == states.SUCCESS:
+        result = async_result.result or {}
+        return {
+            "jobId": job_id,
+            "status": "finished",
+            **result,
+        }
 
-    except Exception as exc:
-        logger.exception("Job %s failed: %s", job_id, exc)
-        with JOBS_LOCK:
-            st = JOBS.get(job_id)
-            if not st:
-                st = JobState(
-                    status="error",
-                    stage_index=0,
-                    total_stages=7,
-                    stage_key="error",
-                    message="Job failed",
-                    progress=0.0,
-                    error_message=str(exc),
-                )
-                JOBS[job_id] = st
-            else:
-                st.status = "error"
-                st.stage_key = "error"
-                st.message = "Job failed"
-                st.error_message = str(exc)
+    # FAILURE = job que ha fallado
+    if async_result.state == states.FAILURE:
+        return {
+            "jobId": job_id,
+            "status": "failed",
+            "error": str(async_result.info),
+        }
 
-
-
-@app.get("/jobs/{job_id}/status")
-def get_job_status(job_id: str):
-    with JOBS_LOCK:
-        st = JOBS.get(job_id)
-
-    if not st:
-        raise HTTPException(status_code=404, detail="Job not found")
-
-    payload = {
+    # Otros estados posibles: RETRY, STARTED...
+    return {
         "jobId": job_id,
-        "status": st.status,
-        "stageIndex": st.stage_index,
-        "totalStages": st.total_stages,
-        "stageKey": st.stage_key,
-        "message": st.message,
-        "progress": st.progress,
+        "status": async_result.state.lower(),
     }
-
-    if st.status == "done" and st.result:
-        payload["result"] = st.result
-    if st.error_message:
-        payload["error"] = st.error_message
-
-    return payload
 
 
 @app.post("/mix")
-async def mix_tracks(
-    background_tasks: BackgroundTasks,
-    files: list[UploadFile] = File(...),
-):
-    """
-    Endpoint principal de mezcla/master.
-    - Recibe stems como multipart/form-data (list[UploadFile]).
-    - Ejecuta run_full_pipeline.
-    - Devuelve métricas + URL del wav final.
-    """
+async def mix_tracks(files: list[UploadFile] = File(...)):
+    """Endpoint principal de mezcla/master (stems como multipart/form-data)."""
     job_id, media_dir, temp_root = _create_job_dirs()
 
-    # Guardar stems en disco para que el pipeline los use
+    # Guardar stems en disco para que el pipeline (en el worker) los use
     for f in files:
         dest_path = media_dir / f.filename
         with dest_path.open("wb") as out:
             out.write(await f.read())
 
-    # Estado inicial del job
-    with JOBS_LOCK:
-        JOBS[job_id] = JobState(
-            status="queued",
-            stage_index=0,
-            total_stages=7,
-            stage_key="queued",
-            message="Job queued",
-            progress=0.0,
-        )
+    # Lanzar la tarea Celery. task_id=job_id para poder consultar luego el estado.
+    run_full_pipeline_task.apply_async(
+        args=[job_id, str(media_dir), str(temp_root)],
+        task_id=job_id,
+    )
+
+    # Devolvemos solo el jobId; el cliente consultará /jobs/{job_id}
+    return {"jobId": job_id}
 
 
-    # Lanzar el pipeline en background
-    background_tasks.add_task(_run_pipeline_job, job_id, media_dir, temp_root)
+@app.post("/jobs")
+async def create_job(file: UploadFile = File(...)):
+    """Variante simple que recibe un único fichero en lugar de varios stems."""
+    job_id, media_dir, temp_root = _create_job_dirs()
 
-    # Devolvemos sólo el jobId
+    dest_path = media_dir / file.filename
+    with dest_path.open("wb") as out:
+        out.write(await file.read())
+
+    run_full_pipeline_task.apply_async(
+        args=[job_id, str(media_dir), str(temp_root)],
+        task_id=job_id,
+    )
+
     return {"jobId": job_id}

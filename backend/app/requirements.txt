@@ -25,3 +25,7 @@ fastapi
 uvicorn[standard]
 python-multipart   # para uploads de ficheros
 pydantic
+
+# Cola de tareas
+celery[redis]
+redis
