@@ -34,12 +34,35 @@ export type JobStatus = {
 
 export type MixResponse = MixResult;
 
-function getBackendBaseUrl(): string {
+export function getBackendBaseUrl(): string {
+  // 1) Si se ha configurado explícitamente, usamos esa URL (opcional)
   const fromEnv = process.env.NEXT_PUBLIC_BACKEND_URL?.trim();
   if (fromEnv && fromEnv.length > 0) {
-    // quitamos barras finales duplicadas
     return fromEnv.replace(/\/+$/, "");
   }
+
+  // 2) Si estamos en el navegador, deducimos según el hostname
+  if (typeof window !== "undefined") {
+    const { protocol, hostname } = window.location;
+
+    // Entorno de desarrollo: frontend en localhost/127.0.0.1:3000
+    if (hostname === "localhost" || hostname === "127.0.0.1") {
+      // Backend local (puerto 8000)
+      return "http://127.0.0.1:8000";
+    }
+
+    // Entorno de producción:
+    // asumimos backend accesible en el MISMO hostname que el frontend,
+    // pero escuchando en el puerto 8000
+    //
+    // Ejemplo:
+    //   frontend: http://161.97.131.133:3000
+    //   backend:  http://161.97.131.133:8000
+    return `${protocol}//${hostname}:8000`;
+  }
+
+  // 3) Fallback para código que se ejecute en el servidor (build, SSR, etc.)
+  //    En la práctica, si llegas aquí, suele ser entorno de desarrollo.
   return "http://127.0.0.1:8000";
 }
 

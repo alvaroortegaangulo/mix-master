@@ -1,15 +1,14 @@
-# Imagen base: Python 3.10 sobre Debian slim (ligera y suficiente para wheels manylinux)
+# Imagen base: Python 3.10 sobre Debian slim
 FROM python:3.10-slim
 
-# Evitamos preguntas en apt
+# Evitar prompts interactivos en apt
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Paquetes del sistema:
-# - build-essential: para compilar algún paquete de pip si lo necesita
+# Paquetes del sistema necesarios para audio y librerías
+# - build-essential: compilar wheels si hace falta
 # - libsndfile1: backend de soundfile
 # - ffmpeg: utilidades de audio/vídeo
-# - librubberband-dev: librería compartida Rubber Band
-# - rubberband-cli: ejecutable 'rubberband' que usa pyrubberband
+# - librubberband-dev / rubberband-cli: para pyrubberband
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         build-essential \
@@ -22,21 +21,21 @@ RUN apt-get update && \
 # Directorio de trabajo dentro del contenedor
 WORKDIR /app
 
-# Copiamos únicamente requirements primero (para cachear instalación de deps)
+# Dependencias de Python
 COPY requirements.txt .
-
-# Mejoramos pip y instalamos dependencias Python
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
-# Ahora copiamos el resto del proyecto
+# Copiamos el código de la app
 COPY . .
 
-# start.sh debe estar en /app (misma carpeta que server.py, celery_app.py, etc.)
-RUN chmod +x start.sh
-
-# Variable para que tu módulo config.paths resuelva rutas correctamente
+# Variable por si tu código la utiliza para resolver rutas
 ENV APP_PROJECT_ROOT=/app
 
-# Comando por defecto: lanzar script que arranca Celery + Uvicorn
-CMD ["./start.sh"]
+# Puerto de FastAPI/Uvicorn
+EXPOSE 8000
+
+# Comando por defecto:
+# - docker run -p 8000:8000 mix-backend
+# En docker-compose se sobreescribe con "command:" para web/worker.
+CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "8000"]

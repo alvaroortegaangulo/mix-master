@@ -1,0 +1,213 @@
+// frontend/src/components/MixPipelinePanel.tsx
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import type { MixResult } from "../lib/mixApi";
+import { getBackendBaseUrl } from "../lib/mixApi";
+
+type Props = {
+  result: MixResult;
+};
+
+type PipelineStage = {
+  key: string;
+  label: string;
+  description: string;
+  index: number;
+  mediaSubdir: string | null;
+  updatesCurrentDir: boolean;
+  previewMixRelPath: string | null;
+};
+
+export function MixPipelinePanel({ result }: Props) {
+  const { originalFullSongUrl, fullSongUrl, jobId } = result;
+
+  const [stages, setStages] = useState<PipelineStage[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [activeKey, setActiveKey] = useState<string>("");
+
+  // Cargar la definición del pipeline desde el backend
+  useEffect(() => {
+    const base = getBackendBaseUrl();
+    const url = `${base}/pipeline/stages`;
+    const controller = new AbortController();
+
+    async function loadStages() {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await fetch(url, { signal: controller.signal });
+        if (!res.ok) {
+          throw new Error(`No se pudo obtener la definición del pipeline (${res.status})`);
+        }
+        const data = (await res.json()) as PipelineStage[];
+
+        // Ordenamos por index por si acaso y guardamos
+        const sorted = [...data].sort((a, b) => a.index - b.index);
+        setStages(sorted);
+
+        // Si no hay etapa activa aún, seleccionamos la última (mastering normalmente)
+        if (!activeKey && sorted.length > 0) {
+          setActiveKey(sorted[sorted.length - 1].key);
+        } else if (activeKey) {
+          // Si hay activa y ya no existe, caemos a la última
+          const stillExists = sorted.some((s) => s.key === activeKey);
+          if (!stillExists && sorted.length > 0) {
+            setActiveKey(sorted[sorted.length - 1].key);
+          }
+        }
+      } catch (err: any) {
+        if (err?.name === "AbortError") return;
+        console.error("Error cargando pipeline stages", err);
+        setError(err?.message ?? "Error cargando la definición del pipeline.");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    void loadStages();
+    return () => controller.abort();
+  }, [activeKey]);
+
+  const activeStage = useMemo(() => {
+    if (!stages.length) return null;
+    return stages.find((s) => s.key === activeKey) ?? stages[stages.length - 1];
+  }, [stages, activeKey]);
+
+  // Calculamos la URL del audio procesado para la etapa activa:
+  //   - buscamos, desde el principio hasta la etapa activa, la última que tenga previewMixRelPath
+  //   - si no hay ninguna, usamos directamente el master final (fullSongUrl)
+  const processedUrl = useMemo(() => {
+    if (!stages.length || !activeStage) return fullSongUrl;
+
+    const base = getBackendBaseUrl();
+    const activeIndex = stages.findIndex((s) => s.key === activeStage.key);
+    if (activeIndex === -1) {
+      return fullSongUrl;
+    }
+
+    const candidate = [...stages]
+      .slice(0, activeIndex + 1)
+      .reverse()
+      .find((s) => s.previewMixRelPath);
+
+    if (candidate && candidate.previewMixRelPath) {
+      return `${base}/files/${encodeURIComponent(
+        jobId,
+      )}${candidate.previewMixRelPath}`;
+    }
+
+    // Fallback: si no hay preview específico, comparamos con el master final
+    return fullSongUrl;
+  }, [stages, activeStage, fullSongUrl, jobId]);
+
+  if (loading && !stages.length) {
+    return (
+      <section className="mt-6 rounded-2xl border border-slate-800/80 bg-slate-900/80 p-4">
+        <p className="text-xs text-slate-400">
+          Cargando definición del pipeline…
+        </p>
+      </section>
+    );
+  }
+
+  if (error) {
+    return (
+      <section className="mt-6 rounded-2xl border border-slate-800/80 bg-slate-900/80 p-4">
+        <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-300">
+          Pipeline
+        </h3>
+        <p className="mt-2 text-xs text-red-400">
+          {error} (endpoint esperado: <code className="bg-slate-950 px-1">
+            /pipeline/stages
+          </code>
+          ).
+        </p>
+      </section>
+    );
+  }
+
+  if (!activeStage) {
+    return null;
+  }
+
+  return (
+    <section className="mt-6 rounded-2xl border border-slate-800/80 bg-slate-900/80 p-4 shadow-inner">
+      <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+        <div>
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-300">
+            Pipeline
+          </h3>
+          <p className="mt-1 text-xs text-slate-400">
+            Explora cómo va evolucionando la mezcla etapa a etapa, comparando
+            siempre la mezcla original con el resultado acumulado hasta la
+            etapa seleccionada.
+          </p>
+        </div>
+      </div>
+
+      {/* Tabs con índice de etapa */}
+      <div className="mt-4 flex flex-wrap gap-2">
+        {stages.map((stage) => {
+          const isActive = stage.key === activeStage.key;
+          return (
+            <button
+              key={stage.key}
+              type="button"
+              onClick={() => setActiveKey(stage.key)}
+              className={[
+                "rounded-full px-3 py-1 text-xs font-medium transition",
+                isActive
+                  ? "bg-indigo-500 text-white shadow-sm"
+                  : "bg-slate-800 text-slate-300 hover:bg-slate-700",
+              ].join(" ")}
+            >
+              {stage.index}
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Contenido de la etapa activa */}
+      <div className="mt-4 rounded-xl bg-slate-950/40 p-4">
+        <p className="text-sm font-semibold text-slate-100">
+          {`Stage ${activeStage.index} · ${activeStage.label}`}
+        </p>
+        <p className="mt-2 text-xs text-slate-300">{activeStage.description}</p>
+
+        <div className="mt-4 grid gap-4 md:grid-cols-2">
+          <div>
+            <p className="mb-1 text-xs font-medium text-slate-200">
+              Original mix (antes del procesamiento)
+            </p>
+            <audio
+              controls
+              src={originalFullSongUrl}
+              className="mt-1 w-full rounded-lg bg-slate-800"
+            />
+          </div>
+          <div>
+            <p className="mb-1 text-xs font-medium text-slate-200">
+              Mix tras esta etapa
+            </p>
+            <audio
+              controls
+              src={processedUrl}
+              className="mt-1 w-full rounded-lg bg-slate-800"
+            />
+            <p className="mt-1 text-[11px] text-slate-500">
+              Esta mezcla refleja todas las etapas desde el inicio hasta{" "}
+              <span className="font-semibold">
+                Stage {activeStage.index} · {activeStage.label}
+              </span>
+              . Si alguna etapa anterior no genera un bounce propio todavía,
+              se usa la mezcla más cercana disponible (por defecto, el master
+              final).
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}

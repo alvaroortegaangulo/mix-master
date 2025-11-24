@@ -5,8 +5,9 @@ from pathlib import Path
 import logging
 import os
 import psutil
+import shutil
 import time
-from typing import Callable, Optional
+from typing import Callable, Optional, Any, Dict, List
 
 # Configuración básica de logging si nadie la ha configurado aún
 logger = logging.getLogger(__name__)
@@ -18,6 +19,7 @@ if not logging.getLogger().hasHandlers():
 
 _process = psutil.Process(os.getpid())
 
+
 def timed(label: str):
     def decorator(fn):
         def wrapper(*args, **kwargs):
@@ -26,7 +28,9 @@ def timed(label: str):
             t1 = time.perf_counter()
             logger.info("[TIMER] %s: %.2f s", label, t1 - t0)
             return result
+
         return wrapper
+
     return decorator
 
 
@@ -39,11 +43,165 @@ def log_mem(label: str) -> None:
         logger.warning("No se pudo leer memoria en %s: %s", label, exc)
 
 
+
+
+def render_mixdown_for_stage(
+    stage_label: str,
+    stems_dir: Path,
+    full_song_name: str = "full_song.wav",
+) -> FullSongRenderResult:
+    """
+    Renderiza un full mix en la carpeta de stems indicada.
+
+    - stage_label: nombre lógico de la etapa (para logs).
+    - stems_dir: carpeta donde están los stems de esa etapa.
+    - full_song_name: nombre del bounce dentro de esa carpeta.
+    """
+    logger.info("[MIXDOWN] %s -> %s (%s)", stage_label, stems_dir, full_song_name)
+    log_mem(f"before_mixdown_{stage_label}")
+
+    result = mix_corrected_stems_to_full_song(
+        output_media_dir=stems_dir,
+        full_song_name=full_song_name,
+    )
+
+    log_mem(f"after_mixdown_{stage_label}")
+    logger.info(
+        "[MIXDOWN] %s completado. Output=%s | peak=%.2f dBFS | rms=%.2f dBFS",
+        stage_label,
+        result.output_path,
+        result.peak_dbfs,
+        result.rms_dbfs,
+    )
+    return result
+
+
 ProgressCallback = Callable[[int, int, str, str], None]
 # args: stage_index, total_stages, stage_key, message
 
 
-# Imports de tus módulos actuales (ajusta rutas reales)
+# --------------------------------------------------------------------
+# API pública para exponer la definición del pipeline al frontend
+# --------------------------------------------------------------------
+
+def get_pipeline_stages_definition() -> List[Dict[str, Any]]:
+    """
+    Devuelve una representación serializable de STAGES para el frontend.
+
+    Cada elemento incluye:
+      - key: identificador interno del stage (p.ej. "dc_offset").
+      - label: etiqueta legible.
+      - description: descripción corta.
+      - index: orden 1-based dentro del pipeline.
+      - mediaSubdir: subdirectorio dentro de temp_root/media para los stems.
+      - updatesCurrentDir: si encadena el current_media_dir.
+      - previewMixRelPath: ruta relativa (desde /files/{jobId}) al bounce de mezcla
+        representativo de esta etapa, si existe (si no, None).
+    """
+    result: List[Dict[str, Any]] = []
+
+    for idx, s in enumerate(STAGES, start=1):
+        key = s.get("key")
+        media_subdir = s.get("media_subdir")
+        updates_current_dir = bool(s.get("updates_current_dir", False))
+
+        # Si la etapa tiene carpeta de media, asumimos que allí habrá un full_song.wav
+        preview_relpath: str | None = None
+        if media_subdir:
+            preview_relpath = f"/work/media/{media_subdir}/full_song.wav"
+
+        result.append(
+            {
+                "key": key,
+                "label": s.get("label", key),
+                "description": s.get("description", ""),
+                "index": idx,
+                "mediaSubdir": media_subdir,
+                "updatesCurrentDir": updates_current_dir,
+                "previewMixRelPath": preview_relpath,
+            }
+        )
+
+    return result
+
+
+
+# --------------------------------------------------------------------
+# Definición de STAGES (orden, rutas y parámetros)
+# --------------------------------------------------------------------
+
+STAGES: List[Dict[str, Any]] = [
+    {
+        "key": "dc_offset",
+        "label": "DC Offset",
+        "description": "Analyzing and correcting DC offset",
+        "media_subdir": "dc_offset",
+        "updates_current_dir": True,
+        "analysis_csv": "dc_offset_analysis.csv",
+    },
+    {
+        "key": "loudness",
+        "label": "Loudness",
+        "description": "Analyzing and normalizing loudness per stem",
+        "media_subdir": "loudness",
+        "updates_current_dir": True,
+        "analysis_csv": "loudness_analysis.csv",
+        "target_rms_dbfs": -18.0,
+    },
+    {
+        "key": "static_mix_eq",
+        "label": "Static Mix EQ",
+        "description": "Applying spectral cleanup and subtractive EQ",
+        "media_subdir": "static_mix_eq",
+        "updates_current_dir": True,
+        "analysis_csv": "spectral_cleanup_analysis.csv",
+        "max_notches": 4,
+    },
+    {
+        "key": "static_mix_dyn",
+        "label": "Static Mix Dynamics",
+        "description": "Applying per-track compression and limiting",
+        "media_subdir": "static_mix_dyn",
+        "updates_current_dir": True,
+        "analysis_csv": "dynamics_analysis.csv",
+    },
+    {
+        "key": "tempo_key",
+        "label": "Tempo & Key",
+        "description": "Analyzing tempo and musical key",
+        "media_subdir": None,          # no crea nuevo directorio de stems
+        "updates_current_dir": False,  # no cambia el current_media_dir
+        "analysis_csv": "key_analysis.csv",
+    },
+    {
+        "key": "vocal_tuning",
+        "label": "Vocal Tuning",
+        "description": "Applying vocal tuning to lead vocal",
+        "media_subdir": "vocal_tuning",
+        "updates_current_dir": False,  # generamos solo la voz afinada, no cambia el dir base de stems
+        "log_csv": "vocal_autotune_log.csv",
+        "vocal_filename": "vocal.wav",
+    },
+    {
+        "key": "mastering",
+        "label": "Mixdown & Mastering",
+        "description": "Rendering final full mix and mastering from stems",
+        "media_subdir": "mastering",
+        "updates_current_dir": False,  # pipeline termina aquí
+        "analysis_csv": "mastering_analysis.csv",
+        "vocal_stage_key": "vocal_tuning",
+        "vocal_filename": "vocal.wav",
+        "original_mix_name": "original_full_song.wav",
+        "premaster_name": "full_song.wav",
+        "mastered_name": "full_song_mastered.wav",
+    },
+]
+
+
+# --------------------------------------------------------------------
+# Imports de módulos de análisis / corrección
+# --------------------------------------------------------------------
+
 from src.analysis.dc_offset_detection import detect_dc_offset, export_dc_offset_to_csv
 from src.stages.stage0_technical_preparation.dc_offset_correction import run_dc_offset_correction
 from src.analysis.loudness_analysis import analyze_loudness, export_loudness_to_csv
@@ -58,7 +216,14 @@ from src.stages.stage0_technical_preparation.vocal_tuning import (
     run_vocal_tuning_autotune,
     export_vocal_autotune_log,
 )
+from src.analysis.mastering_analysis import analyze_mastering, export_mastering_to_csv
+from src.stages.stage10_mastering.mastering_correction import run_mastering_correction
 from src.utils.mixdown import mix_corrected_stems_to_full_song, FullSongRenderResult
+
+
+# --------------------------------------------------------------------
+# Dataclasses de salida
+# --------------------------------------------------------------------
 
 
 @dataclass
@@ -84,6 +249,7 @@ class FullPipelineResult:
     Resultado de alto nivel del pipeline completo de mezcla.
     Este objeto es lo que usará la API para construir la respuesta JSON.
     """
+
     original_full_song_path: Path
     full_song_path: Path
 
@@ -99,6 +265,532 @@ class FullPipelineResult:
     metrics: FullPipelineMetrics
 
 
+@dataclass
+class PipelineContext:
+    """
+    Contexto mutable compartido por todos los stages.
+    - stage_media_dirs: mapea stage_key -> ruta de media de ese stage (si aplica).
+    - current_media_dir: dir con stems "actuales" (se va encadenando).
+    """
+
+    project_root: Path
+    media_dir: Path
+    temp_root: Path
+    analysis_dir: Path
+
+    stage_media_dirs: Dict[str, Path]
+    current_media_dir: Path
+
+    tempo_result: Any | None = None
+    key_result: Any | None = None
+    vocal_tuning_result: Any | None = None
+
+    original_full_song_render: FullSongRenderResult | None = None
+    mastered_full_song_render: FullSongRenderResult | None = None
+    static_mix_dyn_render: FullSongRenderResult | None = None 
+
+# --------------------------------------------------------------------
+# Implementación de cada stage con firma genérica:
+#   stage_X(ctx, stage_conf, input_dir, output_dir)
+# --------------------------------------------------------------------
+
+
+def stage_dc_offset(
+    ctx: PipelineContext,
+    stage_conf: Dict[str, Any],
+    input_dir: Path,
+    output_dir: Path,
+) -> None:
+    analysis_csv = ctx.analysis_dir / stage_conf.get("analysis_csv", "dc_offset_analysis.csv")
+
+    logger.info("Iniciando análisis de DC offset en %s", input_dir)
+    log_mem("before_dc_offset_analysis")
+
+    dc_offset_results = detect_dc_offset(input_dir)
+
+    log_mem("after_dc_offset_analysis")
+    logger.info(
+        "Análisis de DC offset completado (%s resultados)",
+        getattr(dc_offset_results, "__len__", lambda: "n/a")(),
+    )
+
+    export_dc_offset_to_csv(dc_offset_results, analysis_csv)
+    logger.info("CSV de DC offset exportado a %s", analysis_csv)
+
+    log_mem("before_dc_offset_correction")
+    run_dc_offset_correction(
+        analysis_csv,
+        input_dir,
+        output_dir,
+    )
+    log_mem("after_dc_offset_correction")
+    logger.info(
+        "Corrección de DC offset aplicada. Stems corregidos en %s", output_dir
+    )
+
+    # Mixdown post-DC offset → media/dc_offset/full_song.wav
+    dc_offset_mix = render_mixdown_for_stage(
+        stage_label="dc_offset",
+        stems_dir=output_dir,
+    )
+
+
+
+
+def stage_loudness(
+    ctx: PipelineContext,
+    stage_conf: Dict[str, Any],
+    input_dir: Path,
+    output_dir: Path,
+) -> None:
+    analysis_csv = ctx.analysis_dir / stage_conf.get("analysis_csv", "loudness_analysis.csv")
+    target_rms_dbfs = float(stage_conf.get("target_rms_dbfs", -18.0))
+
+    logger.info("Iniciando análisis de loudness por stem (target %.2f dBFS)", target_rms_dbfs)
+
+    log_mem("before_loudness_analysis")
+    loudness_results = analyze_loudness(
+        media_dir=input_dir,
+        target_rms_dbfs=target_rms_dbfs,
+    )
+    log_mem("after_loudness_analysis")
+
+    logger.info(
+        "Análisis de loudness completado (%s resultados)",
+        getattr(loudness_results, "__len__", lambda: "n/a")(),
+    )
+
+    export_loudness_to_csv(loudness_results, analysis_csv)
+    logger.info("CSV de loudness exportado a %s", analysis_csv)
+
+    log_mem("before_loudness_correction")
+    run_loudness_correction(
+        analysis_csv,
+        input_dir,
+        output_dir,
+        mode="rms",
+    )
+    log_mem("after_loudness_correction")
+    logger.info(
+        "Corrección de loudness aplicada. Stems normalizados en %s", output_dir
+    )
+
+    # Mixdown post-Loudness → media/loudness/full_song.wav
+    loudness_mix = render_mixdown_for_stage(
+        stage_label="loudness",
+        stems_dir=output_dir,
+    )
+
+
+
+
+def stage_static_mix_eq(
+    ctx: PipelineContext,
+    stage_conf: Dict[str, Any],
+    input_dir: Path,
+    output_dir: Path,
+) -> None:
+    analysis_csv = ctx.analysis_dir / stage_conf.get(
+        "analysis_csv", "spectral_cleanup_analysis.csv"
+    )
+    max_notches = int(stage_conf.get("max_notches", 4))
+
+    logger.info("Iniciando análisis de limpieza espectral (static mix EQ) en %s", input_dir)
+
+    log_mem("before_spectral_analysis")
+    spectral_cleanup_results = analyze_spectral_cleanup(input_dir)
+    log_mem("after_spectral_analysis")
+
+    logger.info(
+        "Análisis espectral completado (%s resultados)",
+        getattr(spectral_cleanup_results, "__len__", lambda: "n/a")(),
+    )
+
+    export_spectral_cleanup_to_csv(spectral_cleanup_results, analysis_csv)
+    logger.info(
+        "CSV de limpieza espectral exportado a %s", analysis_csv
+    )
+
+    log_mem("before_spectral_correction")
+    run_spectral_cleanup_correction(
+        analysis_csv,
+        input_dir,
+        output_dir,
+        max_notches=max_notches,
+    )
+    log_mem("after_spectral_correction")
+    logger.info(
+        "Corrección espectral aplicada. Stems EQ en %s", output_dir
+    )
+
+    # Mixdown post-Static Mix EQ → media/static_mix_eq/full_song.wav
+    static_mix_eq_mix = render_mixdown_for_stage(
+        stage_label="static_mix_eq",
+        stems_dir=output_dir,
+    )
+
+
+
+
+
+def stage_static_mix_dyn(
+    ctx: PipelineContext,
+    stage_conf: Dict[str, Any],
+    input_dir: Path,
+    output_dir: Path,
+) -> None:
+    analysis_csv = ctx.analysis_dir / stage_conf.get(
+        "analysis_csv", "dynamics_analysis.csv"
+    )
+
+    logger.info("Iniciando análisis de dinámica por pista (static mix dyn) en %s", input_dir)
+
+    log_mem("before_dynamics_analysis")
+    dynamics_results = analyze_dynamics(input_dir)
+    log_mem("after_dynamics_analysis")
+
+    logger.info(
+        "Análisis de dinámica completado (%s resultados)",
+        getattr(dynamics_results, "__len__", lambda: "n/a")(),
+    )
+
+    export_dynamics_to_csv(dynamics_results, analysis_csv)
+    logger.info("CSV de dinámica exportado a %s", analysis_csv)
+
+    log_mem("before_dynamics_correction")
+    run_dynamics_correction(
+        analysis_csv,
+        input_dir,
+        output_dir,
+    )
+    log_mem("after_dynamics_correction")
+
+    logger.info(
+        "Corrección de dinámica aplicada. Stems dinámicos en %s", output_dir
+    )
+
+    # Mixdown post-Static Mix Dynamics (pre-master) → media/static_mix_dyn/full_song.wav
+    static_mix_dyn_mix = render_mixdown_for_stage(
+        stage_label="static_mix_dyn",
+        stems_dir=output_dir,
+    )
+
+    # Guardamos el pre-master (mix dinámico) en el contexto
+    ctx.static_mix_dyn_render = static_mix_dyn_mix
+
+
+def stage_tempo_key(
+    ctx: PipelineContext,
+    stage_conf: Dict[str, Any],
+    input_dir: Path,
+    output_dir: Path,
+) -> None:
+    """
+    Stage de análisis puro. No altera stems (output_dir == input_dir).
+    """
+    analysis_csv = ctx.analysis_dir / stage_conf.get("analysis_csv", "key_analysis.csv")
+
+    logger.info("Iniciando análisis de tempo y tonalidad usando %s", input_dir)
+
+    log_mem("before_tempo_key")
+    tempo_result = analyze_tempo(input_dir)
+    key_result = analyze_key(input_dir)
+    log_mem("after_tempo_key")
+
+    ctx.tempo_result = tempo_result
+    ctx.key_result = key_result
+
+    logger.info(
+        "Tempo detectado: %.2f BPM (conf=%.3f)",
+        tempo_result.bpm,
+        tempo_result.bpm_confidence,
+    )
+    logger.info(
+        "Tonalidad detectada: %s %s (strength=%.3f)",
+        key_result.key,
+        key_result.scale,
+        key_result.strength,
+    )
+
+    export_key_to_csv(key_result, analysis_csv)
+    logger.info("CSV de tonalidad exportado a %s", analysis_csv)
+
+
+
+
+
+def stage_vocal_tuning(
+    ctx: PipelineContext,
+    stage_conf: Dict[str, Any],
+    input_dir: Path,
+    output_dir: Path,
+) -> None:
+    """
+    Stage de afinación vocal.
+    - Lee stems desde input_dir (el current_media_dir en ese momento).
+    - Escribe la voz afinada en output_dir (media/vocal_tuning).
+    - No modifica current_media_dir (sólo añade un "sidecar" con la voz afinada).
+    """
+    log_csv_name = stage_conf.get("log_csv", "vocal_autotune_log.csv")
+    vocal_filename = stage_conf.get("vocal_filename", "vocal.wav")
+    key_csv_path = ctx.analysis_dir / "key_analysis.csv"
+    vocal_autotune_log_path = ctx.analysis_dir / log_csv_name
+
+    logger.info(
+        "Iniciando Auto-Tune de la voz (input=%s, output=%s)", input_dir, output_dir
+    )
+
+    log_mem("before_vocal_tuning")
+    vocal_tuning_result = run_vocal_tuning_autotune(
+        input_media_dir=input_dir,
+        output_media_dir=output_dir,
+        key_csv_path=key_csv_path,
+        vocal_filename=vocal_filename,
+    )
+    log_mem("after_vocal_tuning")
+
+    ctx.vocal_tuning_result = vocal_tuning_result
+
+    logger.info(
+        "Auto-Tune completado. Shift min=%.2f, max=%.2f, mean=%.2f semitonos",
+        vocal_tuning_result.shift_semitones_min,
+        vocal_tuning_result.shift_semitones_max,
+        vocal_tuning_result.shift_semitones_mean,
+    )
+
+    export_vocal_autotune_log(vocal_tuning_result, vocal_autotune_log_path)
+    logger.info("Log de Auto-Tune exportado a %s", vocal_autotune_log_path)
+
+    # ------------------------------------------------------------------
+    # Mixdown específico con la voz afinada → media/vocal_tuning/full_song.wav
+    # ------------------------------------------------------------------
+    logger.info(
+        "[6/7] Preparando mixdown con voz afinada en %s (stems desde %s)",
+        output_dir,
+        input_dir,
+    )
+
+    # Ya tenemos vocal_filename de stage_conf
+    # Copiamos todos los stems dinámicos salvo la voz al directorio de vocal_tuning
+    for stem_path in input_dir.glob("*.wav"):
+        if stem_path.name.lower() == vocal_filename.lower():
+            continue
+        dest = output_dir / stem_path.name
+        try:
+            shutil.copy2(stem_path, dest)
+        except Exception as exc:
+            logger.warning(
+                "No se pudo copiar stem %s a %s: %s",
+                stem_path,
+                dest,
+                exc,
+            )
+
+    # En output_dir deben quedar todos los stems + vocal afinada
+    vocal_tuning_mix = render_mixdown_for_stage(
+        stage_label="vocal_tuning",
+        stems_dir=output_dir,
+    )
+
+
+
+
+def stage_mastering(
+    ctx: PipelineContext,
+    stage_conf: Dict[str, Any],
+    input_dir: Path,
+    output_dir: Path,
+) -> None:
+    """
+    Stage final: mixdown (original + pre-master) + análisis y mastering por stems,
+    + mixdown masterizado.
+    - input_dir: current_media_dir (último stage "transform"), p.ej. static_mix_dyn.
+    - output_dir: media/mastering.
+    - también usa el directorio del stage 'vocal_tuning' si existe.
+    """
+    original_mix_name = stage_conf.get("original_mix_name", "original_full_song.wav")
+    premaster_name = stage_conf.get("premaster_name", "full_song.wav")
+    mastered_name = stage_conf.get("mastered_name", "full_song_mastered.wav")
+    analysis_csv = ctx.analysis_dir / stage_conf.get("analysis_csv", "mastering_analysis.csv")
+    vocal_stage_key = stage_conf.get("vocal_stage_key", "vocal_tuning")
+    vocal_filename = stage_conf.get("vocal_filename", "vocal.wav")
+
+    logger.info(
+        "Iniciando mixdown final y mastering (input=%s, output=%s)",
+        input_dir,
+        output_dir,
+    )
+
+    # Mixdown original (stems de entrada sin procesar)
+    original_full_song_render: FullSongRenderResult = render_mixdown_for_stage(
+        stage_label="original",
+        stems_dir=ctx.media_dir,
+        full_song_name=original_mix_name,
+    )
+
+    log_mem("after_original_mixdown")
+    ctx.original_full_song_render = original_full_song_render
+
+    # Mixdown estático (pre-master) ya se ha renderizado en la etapa 4, si todo va bien
+    if ctx.static_mix_dyn_render is not None:
+        full_song_render: FullSongRenderResult = ctx.static_mix_dyn_render
+        logger.info(
+            "[7/7] Mixdown estático (pre-master) reutilizado. Output=%s | peak=%.2f dBFS | rms=%.2f dBFS",
+            full_song_render.output_path,
+            full_song_render.peak_dbfs,
+            full_song_render.rms_dbfs,
+        )
+    else:
+        # Fallback: lo generamos aquí a partir de input_dir
+        full_song_render = render_mixdown_for_stage(
+            stage_label="static_mix_dyn",
+            stems_dir=input_dir,
+            full_song_name=premaster_name,
+        )
+        logger.info(
+            "[7/7] Mixdown estático (pre-master) generado en mastering. Output=%s | peak=%.2f dBFS | rms=%.2f dBFS",
+            full_song_render.output_path,
+            full_song_render.peak_dbfs,
+            full_song_render.rms_dbfs,
+        )
+
+
+    # Directorio de voz afinada (si existe)
+    vocal_tuning_media_dir = ctx.stage_media_dirs.get(vocal_stage_key, input_dir)
+
+    # Análisis de mastering
+    logger.info(
+        "Iniciando análisis de mastering sobre stems dinámicos (%s) + voz afinada (%s)",
+        input_dir,
+        vocal_tuning_media_dir,
+    )
+    log_mem("before_mastering_analysis")
+    mastering_results = analyze_mastering(
+        media_dir=input_dir,
+        vocal_tuning_media_dir=vocal_tuning_media_dir,
+        vocal_filename=vocal_filename,
+    )
+    log_mem("after_mastering_analysis")
+
+    logger.info(
+        "Análisis de mastering completado (%s resultados)",
+        getattr(mastering_results, "__len__", lambda: "n/a")(),
+    )
+
+    export_mastering_to_csv(mastering_results, analysis_csv)
+    logger.info("CSV de mastering exportado a %s", analysis_csv)
+
+    # Corrección de mastering (por stems)
+    logger.info("Aplicando mastering por stems en %s", output_dir)
+    log_mem("before_mastering_correction")
+    run_mastering_correction(
+        analysis_csv_path=analysis_csv,
+        input_media_dir=input_dir,
+        vocal_tuning_media_dir=vocal_tuning_media_dir,
+        output_media_dir=output_dir,
+        vocal_filename=vocal_filename,
+    )
+    log_mem("after_mastering_correction")
+
+    # Mixdown final masterizado → media/mastering/full_song.wav
+    mastered_full_song_render: FullSongRenderResult = render_mixdown_for_stage(
+        stage_label="mastering",
+        stems_dir=output_dir,
+        full_song_name="full_song.wav",
+    )
+
+    log_mem("after_mastered_mixdown")
+
+    ctx.mastered_full_song_render = mastered_full_song_render
+
+    logger.info(
+        "Mastering mixdown completado. Output=%s | peak=%.2f dBFS | rms=%.2f dBFS",
+        mastered_full_song_render.output_path,
+        mastered_full_song_render.peak_dbfs,
+        mastered_full_song_render.rms_dbfs,
+    )
+
+
+# Mapa clave → función para dispatch dinámico, todas con firma genérica
+STAGE_RUNNERS: Dict[str, Callable[[PipelineContext, Dict[str, Any], Path, Path], None]] = {
+    "dc_offset": stage_dc_offset,
+    "loudness": stage_loudness,
+    "static_mix_eq": stage_static_mix_eq,
+    "static_mix_dyn": stage_static_mix_dyn,
+    "tempo_key": stage_tempo_key,
+    "vocal_tuning": stage_vocal_tuning,
+    "mastering": stage_mastering,
+}
+
+
+# --------------------------------------------------------------------
+# Función genérica reutilizable para todos los stages
+# --------------------------------------------------------------------
+
+
+def execute_stage(
+    index: int,
+    stage_conf: Dict[str, Any],
+    ctx: PipelineContext,
+    progress_callback: Optional[ProgressCallback],
+) -> None:
+    """
+    Ejecuta un stage de forma genérica:
+      - Determina input_dir = ctx.current_media_dir.
+      - Determina output_dir según 'media_subdir' (o reutiliza input_dir).
+      - Lanza el runner correspondiente vía STAGE_RUNNERS.
+      - Actualiza stage_media_dirs y current_media_dir según 'updates_current_dir'.
+    """
+    total_stages = len(STAGES)
+    key = stage_conf["key"]
+    label = stage_conf.get("label", key)
+    description = stage_conf.get("description", "")
+
+    # Reporting
+    logger.info("[%d/%d] %s - %s", index, total_stages, key, label)
+    if progress_callback:
+        progress_callback(index, total_stages, key, description)
+
+    input_dir = ctx.current_media_dir
+    media_subdir = stage_conf.get("media_subdir")
+    updates_current_dir = bool(stage_conf.get("updates_current_dir", False))
+
+    # Calculamos output_dir:
+    #   - Si el stage tiene media_subdir -> media/<media_subdir>.
+    #   - Si no, es un stage "pure analysis" y usamos el mismo input_dir.
+    if media_subdir:
+        output_dir = ctx.temp_root / "media" / media_subdir
+        output_dir.mkdir(parents=True, exist_ok=True)
+    else:
+        output_dir = input_dir  # análisis puro, no cambia stems
+
+    runner = STAGE_RUNNERS.get(key)
+    if runner is None:
+        logger.warning("No hay runner configurado para stage key=%s, se omite", key)
+        return
+
+    # Ejecución con logging de tiempo y memoria homogéneo
+    log_mem(f"{key}_start")
+    t0 = time.perf_counter()
+    runner(ctx, stage_conf, input_dir, output_dir)
+    t1 = time.perf_counter()
+    logger.info("[TIMER] %s: %.2f s", key, t1 - t0)
+    log_mem(f"{key}_end")
+
+    # Guardamos el directorio de media asociado a este stage (si aplica)
+    if media_subdir:
+        ctx.stage_media_dirs[key] = output_dir
+
+    # Encadenamos el current_media_dir solo si este stage lo declara así
+    if updates_current_dir:
+        ctx.current_media_dir = output_dir
+
+
+# --------------------------------------------------------------------
+# Entry point principal
+# --------------------------------------------------------------------
+
+
 def run_full_pipeline(
     project_root: Path,
     media_dir: Path,
@@ -106,266 +798,72 @@ def run_full_pipeline(
     progress_callback: Optional[ProgressCallback] = None,
 ) -> FullPipelineResult:
     """
-    Ejecuta TODO el pipeline de mezcla sobre los stems de media_dir.
+    Ejecuta TODO el pipeline de mezcla sobre los stems de media_dir,
+    utilizando STAGES para ordenar y describir cada fase.
 
-    Pasos:
-      1) DC offset (análisis + corrección).
-      2) Loudness por stem + normalización.
-      3) Limpieza espectral (HPF + notches).
-      4) Control de dinámica por pista.
-      5) Análisis de tempo y tonalidad.
-      6) Auto-Tune de la voz hacia la escala del tema.
-      7) Mixdown de stems finales a full_song.wav.
+    El input_dir de cada stage es SIEMPRE el output del último stage
+    que tenía updates_current_dir=True (encadenado dinámico).
     """
 
-    TOTAL_STAGES = 7  # DC offset, Loudness, Spectral, Dynamics, Tempo/Key, Vocal, Mixdown
-
-    def _report(stage_index: int, stage_key: str, message: str) -> None:
-        if progress_callback:
-            progress_callback(stage_index, TOTAL_STAGES, stage_key, message)
-
     logger.info("=== Iniciando run_full_pipeline ===")
-    _report(0, "start", "Starting pipeline")
+    total_stages = len(STAGES)
+    if progress_callback:
+        progress_callback(0, total_stages, "start", "Starting pipeline")
+
     logger.info("project_root=%s", project_root)
     logger.info("media_dir=%s", media_dir)
     logger.info("temp_root=%s", temp_root)
 
-    # Directorios internos
+    # Directorio de análisis (compartido por todos los stages)
     analysis_dir = temp_root / "analysis"
     analysis_dir.mkdir(parents=True, exist_ok=True)
 
-    dc_offset_media_dir = temp_root / "media" / "dc_offset"
-    loudness_media_dir = temp_root / "media" / "loudness"
-    spectral_media_dir = temp_root / "media" / "static_mix_eq"
-    dynamics_media_dir = temp_root / "media" / "static_mix_dyn"
-    vocal_tuning_media_dir = temp_root / "media" / "vocal_tuning"
-
-    for d in [
-        dc_offset_media_dir,
-        loudness_media_dir,
-        spectral_media_dir,
-        dynamics_media_dir,
-        vocal_tuning_media_dir,
-    ]:
-        d.mkdir(parents=True, exist_ok=True)
-
-    logger.info("Directorios creados:")
-    logger.info("  analysis_dir           = %s", analysis_dir)
-    logger.info("  dc_offset_media_dir    = %s", dc_offset_media_dir)
-    logger.info("  loudness_media_dir     = %s", loudness_media_dir)
-    logger.info("  spectral_media_dir     = %s", spectral_media_dir)
-    logger.info("  dynamics_media_dir     = %s", dynamics_media_dir)
-    logger.info("  vocal_tuning_media_dir = %s", vocal_tuning_media_dir)
-
+    logger.info("analysis_dir = %s", analysis_dir)
     log_mem("start_pipeline")
 
-    # ------------------------------------------------------------------
-    # 1. DC offset
-    # ------------------------------------------------------------------
-    t0 = time.perf_counter()
-    logger.info("[1/7] Iniciando análisis de DC offset en %s", media_dir)
-    _report(1, "dc_offset", "Analyzing and correcting DC offset")
-    log_mem("before_dc_offset_analysis")
-    dc_offset_results = detect_dc_offset(media_dir)
-    log_mem("after_dc_offset_analysis")
-    logger.info("[1/7] Análisis de DC offset completado (%s resultados)", 
-                getattr(dc_offset_results, "__len__", lambda: "n/a")())
-
-    dc_offset_csv_path = analysis_dir / "dc_offset_analysis.csv"
-    export_dc_offset_to_csv(dc_offset_results, dc_offset_csv_path)
-    logger.info("[1/7] CSV de DC offset exportado a %s", dc_offset_csv_path)
-
-    log_mem("before_dc_offset_correction")
-    run_dc_offset_correction(
-        dc_offset_csv_path,
-        media_dir,
-        dc_offset_media_dir,
-    )
-    log_mem("after_dc_offset_correction")
-    logger.info("[1/7] Corrección de DC offset aplicada. Stems corregidos en %s", dc_offset_media_dir)
-    logger.info("[TIMER] DC offset: %.2f s", time.perf_counter() - t0)
-
-    # ------------------------------------------------------------------
-    # 2. Loudness por stem
-    # ------------------------------------------------------------------
-    t0 = time.perf_counter()
-    logger.info("[2/7] Iniciando análisis de loudness por stem")
-    _report(2, "loudness", "Analyzing and normalizing loudness per stem")
-    loudness_csv_path = analysis_dir / "loudness_analysis.csv"
-    target_rms_dbfs = -18.0
-    logger.info("[2/7] Objetivo de RMS: %.2f dBFS", target_rms_dbfs)
-
-    log_mem("before_loudness_analysis")
-    loudness_results = analyze_loudness(
-        media_dir=dc_offset_media_dir,
-        target_rms_dbfs=target_rms_dbfs,
-    )
-    log_mem("after_loudness_analysis")
-    logger.info("[2/7] Análisis de loudness completado (%s resultados)", 
-                getattr(loudness_results, "__len__", lambda: "n/a")())
-
-    export_loudness_to_csv(loudness_results, loudness_csv_path)
-    logger.info("[2/7] CSV de loudness exportado a %s", loudness_csv_path)
-
-    log_mem("before_loudness_correction")
-    run_loudness_correction(
-        loudness_csv_path,
-        dc_offset_media_dir,
-        loudness_media_dir,
-        mode="rms",
-    )
-    log_mem("after_loudness_correction")
-    logger.info("[2/7] Corrección de loudness aplicada. Stems normalizados en %s", loudness_media_dir)
-    logger.info("[TIMER] Loudness: %.2f s", time.perf_counter() - t0)
-
-    # ------------------------------------------------------------------
-    # 3. Limpieza espectral (HPF + EQ sustractiva)
-    # ------------------------------------------------------------------
-    t0 = time.perf_counter()
-    logger.info("[3/7] Iniciando análisis de limpieza espectral")
-    _report(3, "spectral", "Applying spectral cleanup and EQ")
-    spectral_cleanup_csv_path = analysis_dir / "spectral_cleanup_analysis.csv"
-
-    log_mem("before_spectral_analysis")
-    spectral_cleanup_results = analyze_spectral_cleanup(loudness_media_dir)
-    log_mem("after_spectral_analysis")
-    logger.info("[3/7] Análisis espectral completado (%s resultados)", 
-                getattr(spectral_cleanup_results, "__len__", lambda: "n/a")())
-
-    export_spectral_cleanup_to_csv(spectral_cleanup_results, spectral_cleanup_csv_path)
-    logger.info("[3/7] CSV de limpieza espectral exportado a %s", spectral_cleanup_csv_path)
-
-    log_mem("before_spectral_correction")
-    run_spectral_cleanup_correction(
-        spectral_cleanup_csv_path,
-        loudness_media_dir,
-        spectral_media_dir,
-        max_notches=4,
-    )
-    log_mem("after_spectral_correction")
-    logger.info("[3/7] Corrección espectral aplicada. Stems EQ en %s", spectral_media_dir)
-    logger.info("[TIMER] Espectral: %.2f s", time.perf_counter() - t0)
-
-    # ------------------------------------------------------------------
-    # 4. Dinámica por pista (comp + limiter)
-    # ------------------------------------------------------------------
-    t0 = time.perf_counter()
-    logger.info("[4/7] Iniciando análisis de dinámica por pista")
-    _report(4, "dynamics", "Applying dynamics processing (compression/limiting)")
-    dynamics_csv_path = analysis_dir / "dynamics_analysis.csv"
-
-    log_mem("before_dynamics_analysis")
-    dynamics_results = analyze_dynamics(spectral_media_dir)
-    log_mem("after_dynamics_analysis")
-
-    logger.info("[4/7] Análisis de dinámica completado (%s resultados)", 
-                getattr(dynamics_results, "__len__", lambda: "n/a")())
-
-    export_dynamics_to_csv(dynamics_results, dynamics_csv_path)
-    logger.info("[4/7] CSV de dinámica exportado a %s", dynamics_csv_path)
-
-    log_mem("before_dynamics_correction")
-    run_dynamics_correction(
-        dynamics_csv_path,
-        spectral_media_dir,
-        dynamics_media_dir,
-    )
-    log_mem("after_dynamics_correction")
-
-    logger.info("[4/7] Corrección de dinámica aplicada. Stems dinámicos en %s", dynamics_media_dir)
-    logger.info("[TIMER] Dinámica: %.2f s", time.perf_counter() - t0)
-
-    # ------------------------------------------------------------------
-    # 5. Tempo & Key
-    # ------------------------------------------------------------------
-    t0 = time.perf_counter()
-    logger.info("[5/7] Iniciando análisis de tempo y tonalidad usando %s", loudness_media_dir)
-    _report(5, "tempo_key", "Analyzing tempo and musical key")
-
-    log_mem("before_tempo_key")
-    tempo_result = analyze_tempo(loudness_media_dir)
-    key_result = analyze_key(loudness_media_dir)
-    log_mem("after_tempo_key")
-
-    logger.info(
-        "[5/7] Tempo detectado: %.2f BPM (conf=%.3f)",
-        tempo_result.bpm,
-        tempo_result.bpm_confidence,
-    )
-    logger.info(
-        "[5/7] Tonalidad detectada: %s %s (strength=%.3f)",
-        key_result.key,
-        key_result.scale,
-        key_result.strength,
+    # Contexto inicial
+    ctx = PipelineContext(
+        project_root=project_root,
+        media_dir=media_dir,
+        temp_root=temp_root,
+        analysis_dir=analysis_dir,
+        stage_media_dirs={},
+        current_media_dir=media_dir,
     )
 
-    key_csv_path = analysis_dir / "key_analysis.csv"
-    export_key_to_csv(key_result, key_csv_path)
-    logger.info("[5/7] CSV de tonalidad exportado a %s", key_csv_path)
-    logger.info("[TIMER] Tempo & key: %.2f s", time.perf_counter() - t0)
+    # Ejecución secuencial de STAGES vía execute_stage
+    for idx, stage_conf in enumerate(STAGES, start=1):
+        execute_stage(idx, stage_conf, ctx, progress_callback)
 
-    # ------------------------------------------------------------------
-    # 6. Auto-Tune de la voz
-    # ------------------------------------------------------------------
-    t0 = time.perf_counter()
-    logger.info("[6/7] Iniciando Auto-Tune de la voz")
-    _report(6, "vocal_tuning", "Applying vocal tuning to lead vocal")
-    vocal_autotune_log_path = analysis_dir / "vocal_autotune_log.csv"
+    # Validación mínima de resultados imprescindibles
+    if (
+        ctx.tempo_result is None
+        or ctx.key_result is None
+        or ctx.vocal_tuning_result is None
+        or ctx.mastered_full_song_render is None
+        or ctx.original_full_song_render is None
+    ):
+        raise RuntimeError(
+            "Pipeline incompleto: faltan resultados de alguna etapa crítica "
+            "(tempo/key, vocal_tuning o mastering)."
+        )
 
-    log_mem("before_vocal_tuning")
-    vocal_tuning_result = run_vocal_tuning_autotune(
-        input_media_dir=loudness_media_dir,
-        output_media_dir=vocal_tuning_media_dir,
-        key_csv_path=key_csv_path,
-        vocal_filename="vocal.wav",
-    )
-    log_mem("after_vocal_tuning")
+    tempo_result = ctx.tempo_result
+    key_result = ctx.key_result
+    vocal_tuning_result = ctx.vocal_tuning_result
+    mastered_full_song_render = ctx.mastered_full_song_render
+    original_full_song_render = ctx.original_full_song_render
 
-    logger.info(
-        "[6/7] Auto-Tune completado. Shift min=%.2f, max=%.2f, mean=%.2f semitonos",
-        vocal_tuning_result.shift_semitones_min,
-        vocal_tuning_result.shift_semitones_max,
-        vocal_tuning_result.shift_semitones_mean,
-    )
-
-    export_vocal_autotune_log(vocal_tuning_result, vocal_autotune_log_path)
-    logger.info("[6/7] Log de Auto-Tune exportado a %s", vocal_autotune_log_path)
-    logger.info("[TIMER] AutoTune: %.2f s", time.perf_counter() - t0)
-
-    # ------------------------------------------------------------------
-    # 7. Mixdown a full_song.wav
-    # ------------------------------------------------------------------
-    logger.info("[7/7] Iniciando mixdown final desde %s", dynamics_media_dir)
-    _report(7, "mixdown", "Rendering final full mix")
-
-
-    log_mem("before_original_mixdown")
-    original_full_song_render: FullSongRenderResult = mix_corrected_stems_to_full_song(
-        output_media_dir=media_dir,
-        full_song_name="original_full_song.wav",
-    )
-    log_mem("after_original_mixdown")
-
-
-
-    log_mem("before_mixdown")
-    full_song_render: FullSongRenderResult = mix_corrected_stems_to_full_song(
-        output_media_dir=dynamics_media_dir,
-        full_song_name="full_song.wav",
-    )
-    log_mem("after_mixdown")
-
-
-    logger.info(
-        "[7/7] Mixdown completado. Output=%s | peak=%.2f dBFS | rms=%.2f dBFS",
-        full_song_render.output_path,
-        full_song_render.peak_dbfs,
-        full_song_render.rms_dbfs,
-    )
+    # Reconstruimos rutas tipo "*_media_dir" a partir de stage_media_dirs
+    dc_offset_media_dir = ctx.stage_media_dirs.get("dc_offset", media_dir)
+    loudness_media_dir = ctx.stage_media_dirs.get("loudness", dc_offset_media_dir)
+    spectral_media_dir = ctx.stage_media_dirs.get("static_mix_eq", loudness_media_dir)
+    dynamics_media_dir = ctx.stage_media_dirs.get("static_mix_dyn", spectral_media_dir)
+    vocal_tuning_media_dir = ctx.stage_media_dirs.get("vocal_tuning", loudness_media_dir)
 
     metrics = FullPipelineMetrics(
-        final_peak_dbfs=full_song_render.peak_dbfs,
-        final_rms_dbfs=full_song_render.rms_dbfs,
+        final_peak_dbfs=mastered_full_song_render.peak_dbfs,
+        final_rms_dbfs=mastered_full_song_render.rms_dbfs,
         tempo_bpm=tempo_result.bpm,
         tempo_confidence=tempo_result.bpm_confidence,
         key=key_result.key,
@@ -380,7 +878,7 @@ def run_full_pipeline(
 
     return FullPipelineResult(
         original_full_song_path=original_full_song_render.output_path,
-        full_song_path=full_song_render.output_path,
+        full_song_path=mastered_full_song_render.output_path,
         temp_root=temp_root,
         input_media_dir=media_dir,
         dc_offset_media_dir=dc_offset_media_dir,

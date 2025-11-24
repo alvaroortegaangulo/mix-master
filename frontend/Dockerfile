@@ -18,7 +18,7 @@ COPY . .
 
 # IMPORTANTE: aquí metemos la URL pública del backend
 # Sustituye TU_IP por la IP pública del VPS
-ENV NEXT_PUBLIC_BACKEND_URL=http://161.97.131.133:8000
+
 
 # Construimos la app Next
 RUN npm run build

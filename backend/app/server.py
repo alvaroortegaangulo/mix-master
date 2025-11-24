@@ -13,6 +13,8 @@ from fastapi.staticfiles import StaticFiles
 from celery_app import celery_app
 from tasks import run_full_pipeline_task
 
+from src.pipeline import get_pipeline_stages_definition
+
 logger = logging.getLogger(__name__)
 
 # Raíz del proyecto dentro del contenedor (/app)
@@ -134,6 +136,16 @@ def get_job_status(job_id: str):
         "jobId": job_id,
         "status": async_result.state.lower(),
     }
+
+
+@app.get("/pipeline/stages")
+def get_pipeline_stages():
+    """
+    Devuelve la definición del pipeline (orden de stages, etiquetas, etc.)
+    tal y como está configurada en src.pipeline.STAGES.
+    El frontend puede usar esto para pintar el panel "Pipeline" de forma dinámica.
+    """
+    return get_pipeline_stages_definition()
 
 
 @app.post("/mix")
