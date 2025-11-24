@@ -26,7 +26,7 @@ app = FastAPI(title="Mix & Master API")
 
 origins = [
     "http://localhost:3000",
-    "https://frontend-vrev.onrender.com",
+    "http://161.97.131.133:3000",
 ]
 
 # CORS para que NextJS pueda llamar sin problemas
