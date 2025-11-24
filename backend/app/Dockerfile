@@ -30,14 +30,13 @@ RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
 # Ahora copiamos el resto del proyecto
-# (main.py, src/, etc.)
 COPY . .
 
+# start.sh debe estar en /app (misma carpeta que server.py, celery_app.py, etc.)
 RUN chmod +x start.sh
-CMD ["./start.sh"]
 
 # Variable para que tu módulo config.paths resuelva rutas correctamente
 ENV APP_PROJECT_ROOT=/app
 
-# Comando por defecto: lanzar API FastAPI
-CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "8000"]
+# Comando por defecto: lanzar script que arranca Celery + Uvicorn
+CMD ["./start.sh"]
