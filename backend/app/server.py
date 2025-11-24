@@ -36,6 +36,44 @@ app.add_middleware(
 app.mount("/files", StaticFiles(directory=str(JOBS_ROOT)), name="files")
 
 
+@app.get("/jobs/{job_id}/tree")
+def get_job_tree(job_id: str):
+    """
+    Devuelve el árbol de directorios y ficheros para un job concreto.
+    Útil para debug: verlo en /docs o en el navegador.
+    """
+    job_root = JOBS_ROOT / job_id
+    if not job_root.exists():
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    def build_tree(path: Path):
+        children = []
+        for p in sorted(path.iterdir()):
+            if p.is_dir():
+                children.append(
+                    {
+                        "type": "dir",
+                        "name": p.name,
+                        "children": build_tree(p),
+                    }
+                )
+            else:
+                children.append(
+                    {
+                        "type": "file",
+                        "name": p.name,
+                        "size": p.stat().st_size,
+                    }
+                )
+        return children
+
+    return {
+        "jobId": job_id,
+        "root": str(job_root.relative_to(JOBS_ROOT)),
+        "tree": build_tree(job_root),
+    }
+
+
 def _create_job_dirs() -> tuple[str, Path, Path]:
     job_id = str(uuid4())
     job_root = JOBS_ROOT / job_id

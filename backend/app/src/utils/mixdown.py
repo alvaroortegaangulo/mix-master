@@ -34,39 +34,44 @@ class FullSongRenderResult:
 def mix_corrected_stems_to_full_song(
     output_media_dir: Path,
     full_song_name: str = "full_song.wav",
+    block_size: int = 65536,
 ) -> FullSongRenderResult:
     """
-    Mezcla todos los stems WAV de output_media_dir en un único full_song.wav.
+    Mezcla todos los stems WAV de output_media_dir en un único full_song.wav,
+    leyendo por bloques para no cargar todos los stems en memoria.
 
-    Convención de shapes con Pedalboard:
-    - Audio de entrada/salida: (num_channels, num_samples)
-
-    Pasos:
-      1. Lee todos los .wav de la carpeta (excepto full_song.wav si ya existe).
-      2. Homogeniza a estéreo (2 canales).
-      3. Hace padding hasta la longitud máxima y suma.
-      4. Aplica un pequeño ajuste de ganancia si hace falta para evitar clipping.
-      5. Escribe full_song.wav y devuelve métricas.
+    Estrategia:
+      - Pasada 1 (solo lectura): calcula el peak y RMS del mix sin ganancia
+        de seguridad, para decidir el factor de escala (mix_gain_db).
+      - Pasada 2: vuelve a leer por bloques, aplica el scale, escribe el
+        fichero final y calcula métricas "after".
     """
-    full_song_path = (output_media_dir / full_song_name).resolve()
 
-    stem_paths = [
-        p for p in sorted(output_media_dir.glob("*.wav"))
-        if p.name.lower() != full_song_name.lower()
-    ]
+    output_media_dir = Path(output_media_dir)
+    output_media_dir.mkdir(parents=True, exist_ok=True)
+
+    full_song_path = output_media_dir / full_song_name
+
+    # Listar stems: todos los .wav menos el full_song.wav (por si existe)
+    stem_paths = sorted(
+        p for p in output_media_dir.glob("*.wav") if p.name != full_song_name
+    )
 
     if not stem_paths:
-        raise RuntimeError(f"No se encontraron stems WAV en {output_media_dir} para mezclar.")
+        raise RuntimeError(
+            f"No se encontraron stems WAV en {output_media_dir} para el mixdown."
+        )
 
-    audio_tracks: List[np.ndarray] = []
+    # ----------------------------------------------------------------------
+    # 1) Leer SOLO metadatos: sample rate y número de frames de cada stem
+    # ----------------------------------------------------------------------
     sr_ref: Optional[int] = None
+    max_len: int = 0
 
-    # Leer y homogenizar canales a estéreo (shape: 2, N)
     for stem_path in stem_paths:
         with AudioFile(str(stem_path), "r") as f:
-            audio = f.read(f.frames)  # shape: (channels, samples)
             sr = f.samplerate
-            ch = f.num_channels
+            frames = f.frames
 
         if sr_ref is None:
             sr_ref = sr
@@ -76,50 +81,146 @@ def mix_corrected_stems_to_full_song(
                 f"distinto del de referencia {sr_ref} Hz."
             )
 
-        # Aseguramos 2 canales
-        if ch == 1:
-            # (1, N) -> (2, N)
-            audio = np.repeat(audio, 2, axis=0)
-        elif ch > 2:
-            # Nos quedamos con los dos primeros canales
-            audio = audio[:2, :]
+        if frames > max_len:
+            max_len = frames
 
-        audio_tracks.append(audio.astype(np.float32))
+    assert sr_ref is not None, "No se pudo determinar el sample rate de referencia"
 
-    # Número máximo de samples entre todos los stems
-    max_len = max(track.shape[1] for track in audio_tracks)
+    # ----------------------------------------------------------------------
+    # 2) Pasada 1: calcular peak y RMS del mix sin ganancia de seguridad
+    # ----------------------------------------------------------------------
+    peak_before = 0.0
+    sum_squares_before = 0.0
+    total_samples_before = 0  # cuenta canales * samples
 
-    # Mezcla estéreo: shape (2, max_len)
-    mix = np.zeros((2, max_len), dtype=np.float32)
+    files = [AudioFile(str(p), "r") for p in stem_paths]
+    try:
+        while True:
+            # Buffer de mezcla para este bloque: (2, block_size)
+            mix_block = np.zeros((2, block_size), dtype=np.float32)
+            block_len = 0
 
-    for track in audio_tracks:
-        length = track.shape[1]  # número de samples de este stem
-        mix[:, :length] += track
+            for f in files:
+                chunk = f.read(block_size)  # (channels, samples)
+                if chunk.size == 0:
+                    continue
 
-    # Métricas antes de aplicar ganancia de seguridad
-    peak_before = float(np.max(np.abs(mix))) if mix.size > 0 else 0.0
-    rms_before = float(np.sqrt(np.mean(mix**2))) if mix.size > 0 else 0.0
+                ch, n = chunk.shape
+
+                # Homogeneizar a 2 canales
+                if ch == 1:
+                    chunk = np.repeat(chunk, 2, axis=0)
+                elif ch > 2:
+                    chunk = chunk[:2, :]
+
+                n = chunk.shape[1]
+                if n == 0:
+                    continue
+
+                if n > block_len:
+                    block_len = n
+
+                mix_block[:, :n] += chunk.astype(np.float32)
+
+            if block_len == 0:
+                # No queda nada que leer en ningún stem
+                break
+
+            block = mix_block[:, :block_len]
+
+            # Peak por bloque
+            b_peak = float(np.max(np.abs(block)))
+            if b_peak > peak_before:
+                peak_before = b_peak
+
+            # RMS acumulado: mean(mix**2) sobre todos los canales
+            sum_squares_before += float(np.sum(block**2))
+            total_samples_before += block.size  # 2 * block_len
+    finally:
+        for f in files:
+            f.close()
+
+    if total_samples_before > 0:
+        rms_before = float(
+            np.sqrt(sum_squares_before / float(total_samples_before))
+        )
+    else:
+        rms_before = 0.0
 
     clipped_before = peak_before > 1.0
     mix_gain_db = 0.0
+    scale = 1.0
 
-    # Evitar clipping en el master: dejamos un margen de ~0.98
+    # Margen de seguridad: si el peak supera 0 dBFS, escalamos a 0.98
     if peak_before > 1.0:
         scale = 0.98 / peak_before
-        mix *= scale
-        mix_gain_db += _safe_dbfs(scale)
+        mix_gain_db = 20.0 * np.log10(scale)
 
-    peak_after = float(np.max(np.abs(mix))) if mix.size > 0 else 0.0
-    rms_after = float(np.sqrt(np.mean(mix**2))) if mix.size > 0 else 0.0
+    # ----------------------------------------------------------------------
+    # 3) Pasada 2: aplicar scale, escribir WAV final y calcular métricas "after"
+    # ----------------------------------------------------------------------
+    peak_after = 0.0
+    sum_squares_after = 0.0
+    total_samples_after = 0
+
+    files = [AudioFile(str(p), "r") for p in stem_paths]
+    try:
+        with AudioFile(str(full_song_path), "w", sr_ref, 2) as f_out:
+            while True:
+                mix_block = np.zeros((2, block_size), dtype=np.float32)
+                block_len = 0
+
+                for f in files:
+                    chunk = f.read(block_size)
+                    if chunk.size == 0:
+                        continue
+
+                    ch, n = chunk.shape
+
+                    if ch == 1:
+                        chunk = np.repeat(chunk, 2, axis=0)
+                    elif ch > 2:
+                        chunk = chunk[:2, :]
+
+                    n = chunk.shape[1]
+                    if n == 0:
+                        continue
+
+                    if n > block_len:
+                        block_len = n
+
+                    mix_block[:, :n] += chunk.astype(np.float32)
+
+                if block_len == 0:
+                    break
+
+                block = mix_block[:, :block_len] * scale
+
+                # Métricas after
+                b_peak = float(np.max(np.abs(block))) if block.size > 0 else 0.0
+                if b_peak > peak_after:
+                    peak_after = b_peak
+
+                sum_squares_after += float(np.sum(block**2))
+                total_samples_after += block.size
+
+                # Escribir bloque al WAV final
+                f_out.write(block)
+    finally:
+        for f in files:
+            f.close()
+
+    if total_samples_after > 0:
+        rms_after = float(
+            np.sqrt(sum_squares_after / float(total_samples_after))
+        )
+    else:
+        rms_after = 0.0
 
     clipped_after = peak_after > 1.0
 
     peak_dbfs = _safe_dbfs(peak_after)
     rms_dbfs = _safe_dbfs(rms_after)
-
-    assert sr_ref is not None
-    with AudioFile(str(full_song_path), "w", sr_ref, 2) as f:
-        f.write(mix)
 
     duration_seconds = float(max_len) / float(sr_ref)
 
