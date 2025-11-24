@@ -16,9 +16,9 @@ pyrubberband
 pyloudnorm
 
 # ML / Deep Learning (lo puedes usar más adelante)
-torch
-torchvision
-torchaudio
+# torch
+# torchvision
+# torchaudio
 
 # Backend web
 fastapi

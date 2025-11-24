@@ -9,7 +9,7 @@ from typing import List, Optional
 
 import math
 import numpy as np
-from pedalboard import Pedalboard, HighpassFilter
+from pedalboard import Pedalboard, HighpassFilter, PeakFilter
 from pedalboard.io import AudioFile
 
 
@@ -217,55 +217,86 @@ def _apply_spectral_cleanup_to_file(
     output_media_dir.mkdir(parents=True, exist_ok=True)
     output_path = (output_media_dir / row.filename).resolve()
 
-    # Leer audio con Pedalboard
+    # ------------------------------------------------------------------
+    # Leer audio con Pedalboard (float32, shape: (channels, samples))
+    # ------------------------------------------------------------------
     with AudioFile(str(input_path), "r") as f:
-        audio = f.read(f.frames)  # shape: (channels, samples)
+        audio = f.read(f.frames)
         sr = f.samplerate
         num_channels = f.num_channels
 
     audio = audio.astype(np.float32, copy=False)
 
     # Métricas originales
-    original_peak = float(np.max(np.abs(audio))) if audio.size > 0 else 0.0
-    original_rms = float(np.sqrt(np.mean(audio**2))) if audio.size > 0 else 0.0
+    if audio.size > 0:
+        original_peak = float(np.max(np.abs(audio)))
+        original_rms = float(np.sqrt(np.mean(audio**2)))
+    else:
+        original_peak = 0.0
+        original_rms = 0.0
 
     original_peak_dbfs = _safe_dbfs(original_peak)
     original_rms_dbfs = _safe_dbfs(original_rms)
 
-    # --------------------------------------------------------------
-    # 1) Cadena Pedalboard para HPF (si aplica)
-    # --------------------------------------------------------------
+    # ------------------------------------------------------------------
+    # 1) Construir la cadena de efectos: HPF + notches (PeakFilter)
+    # ------------------------------------------------------------------
     effects = []
 
+    # High-pass recomendado por el análisis
     if row.recommended_hpf_cutoff_hz > 0.0:
-        effects.append(HighpassFilter(cutoff_frequency_hz=row.recommended_hpf_cutoff_hz))
-
-    board = Pedalboard(effects)
-    processed = board(audio, sample_rate=sr) if effects else audio
-
-    # --------------------------------------------------------------
-    # 2) Notches sustractivos: aplicados con biquad propio (numpy)
-    # --------------------------------------------------------------
-    processed_with_notches = processed
-    for notch in row.notches:
-        processed_with_notches = _apply_biquad_peaking_eq(
-            processed_with_notches,
-            fs=sr,
-            f0=notch.freq_hz,
-            q=notch.q,
-            gain_db=notch.gain_db,
+        effects.append(
+            HighpassFilter(
+                cutoff_frequency_hz=row.recommended_hpf_cutoff_hz
+            )
         )
 
+    # Notches: usamos PeakFilter de Pedalboard
+    #   - freq_hz  -> cutoff_frequency_hz
+    #   - gain_db  -> gain_db (negativo => notch)
+    #   - q        -> q
+    for notch in row.notches:
+        # Si el gain está muy cerca de 0 dB, nos lo saltamos (no hace nada)
+        if abs(notch.gain_db) < 0.1:
+            continue
+
+        # Proteger de frecuencias fuera de rango
+        if notch.freq_hz <= 0.0 or notch.freq_hz >= sr / 2.0:
+            continue
+
+        effects.append(
+            PeakFilter(
+                cutoff_frequency_hz=notch.freq_hz,
+                gain_db=notch.gain_db,
+                q=notch.q,
+            )
+        )
+
+    # Si no hay efectos, no procesamos nada
+    if effects:
+        board = Pedalboard(effects)
+        processed = board(audio, sample_rate=sr)
+    else:
+        processed = audio
+
+    # ------------------------------------------------------------------
     # Métricas resultantes
-    processed_peak = float(np.max(np.abs(processed_with_notches))) if processed_with_notches.size > 0 else 0.0
-    processed_rms = float(np.sqrt(np.mean(processed_with_notches**2))) if processed_with_notches.size > 0 else 0.0
+    # ------------------------------------------------------------------
+    if processed.size > 0:
+        processed_peak = float(np.max(np.abs(processed)))
+        processed_rms = float(np.sqrt(np.mean(processed**2)))
+    else:
+        processed_peak = 0.0
+        processed_rms = 0.0
 
     resulting_peak_dbfs = _safe_dbfs(processed_peak)
     resulting_rms_dbfs = _safe_dbfs(processed_rms)
 
-    # Escribir archivo corregido
+    # ------------------------------------------------------------------
+    # Guardar WAV corregido
+    # ------------------------------------------------------------------
     with AudioFile(str(output_path), "w", sr, num_channels) as f:
-        f.write(processed_with_notches)
+        f.write(processed.astype(np.float32, copy=False))
 
     return SpectralCleanupCorrectionResult(
         filename=row.filename,
