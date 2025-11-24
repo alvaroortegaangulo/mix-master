@@ -32,3 +32,18 @@ services:
     depends_on:
       - redis
     restart: unless-stopped
+
+
+  frontend:
+    build:
+      context: ../../frontend
+      dockerfile: Dockerfile
+    command: npm run start -- -p 3000
+    environment:
+      # Esto es redundante con el ENV del Dockerfile, pero no estorba
+      - NEXT_PUBLIC_BACKEND_URL=http://TU_IP:8000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - web
+    restart: unless-stopped
