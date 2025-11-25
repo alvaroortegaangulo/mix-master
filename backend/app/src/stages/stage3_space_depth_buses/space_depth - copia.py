@@ -61,89 +61,7 @@ def amplitude_to_dbfs(amplitude: float, floor_db: float = -120.0) -> float:
 
 
 # ---------------------------------------------------------------------------
-# Helpers de tempo: BPM → milisegundos y cuantización musical
-# ---------------------------------------------------------------------------
-
-NOTE_BEAT_FACTORS: Dict[str, float] = {
-    "1/1": 4.0,
-    "1/2": 2.0,
-    "1/2_dotted": 3.0,
-    "1/4": 1.0,
-    "1/4_dotted": 1.5,
-    "1/4_triplet": 2.0 / 3.0,
-    "1/8": 0.5,
-    "1/8_dotted": 0.75,
-    "1/8_triplet": 1.0 / 3.0,
-    "1/16": 0.25,
-    "1/16_dotted": 0.375,
-    "1/16_triplet": 1.0 / 6.0,
-}
-
-
-def tempo_ms_for_note(bpm: float, note: str) -> float:
-    """
-    Devuelve la duración en ms de una subdivisión musical a un BPM dado.
-    Ejemplo: note="1/8" → corchea, note="1/8_dotted" → corchea con puntillo.
-    """
-    if bpm <= 0.0:
-        raise ValueError(f"BPM inválido para tempo_ms_for_note: {bpm}")
-
-    factor = NOTE_BEAT_FACTORS.get(note)
-    if factor is None:
-        raise ValueError(f"Subdivisión musical desconocida: {note}")
-
-    beat_ms = 60000.0 / bpm  # negra
-    return beat_ms * factor
-
-
-def quantize_ms_to_tempo_subdivision(
-    raw_ms: float,
-    bpm: float,
-    candidate_notes: Optional[List[str]] = None,
-) -> Tuple[float, str]:
-    """
-    Dado un tiempo aproximado en ms (de tus presets) y el BPM real,
-    encuentra la subdivisión musical más cercana y devuelve (ms_cuantizado, nombre_nota).
-
-    Si bpm <= 0 o raw_ms <= 0, devuelve el valor original sin cuantizar.
-    """
-    if bpm <= 0.0 or raw_ms <= 0.0:
-        return raw_ms, ""
-
-    if candidate_notes is None:
-        candidate_notes = [
-            "1/16_triplet",
-            "1/16",
-            "1/8_triplet",
-            "1/8",
-            "1/8_dotted",
-            "1/4_triplet",
-            "1/4",
-            "1/4_dotted",
-            "1/2",
-        ]
-
-    best_note = ""
-    best_ms = raw_ms
-    best_err = float("inf")
-
-    for note in candidate_notes:
-        try:
-            ideal_ms = tempo_ms_for_note(bpm, note)
-        except ValueError:
-            continue
-
-        err = abs(ideal_ms - raw_ms)
-        if err < best_err:
-            best_err = err
-            best_note = note
-            best_ms = ideal_ms
-
-    return best_ms, best_note
-
-
-# ---------------------------------------------------------------------------
-# Definición de buses, arquetipos de reverb y stats de audio
+# Definición de buses y arquetipos de reverb
 # ---------------------------------------------------------------------------
 
 
@@ -191,21 +109,6 @@ class StyleOverride:
     hp_hz: Optional[float] = None
     lp_hz: Optional[float] = None
     output_trim_db: Optional[float] = None
-
-
-@dataclass
-class BusAudioStats:
-    """
-    Métricas básicas del audio sumado de un bus, para adaptar send/filtros.
-    """
-
-    peak: float
-    rms: float
-    crest: float
-    spectral_centroid_hz: float
-    low_fraction: float
-    mid_fraction: float
-    high_fraction: float
 
 
 def apply_style_override(
@@ -415,10 +318,16 @@ BUS_DEFINITIONS: Dict[str, BusDefinition] = {
 # Diseño:
 #   STYLE_PRESETS_BY_STYLE_AND_BUS[style_key][bus_key] -> StyleOverride
 #
-# (Se mantiene igual que en tu versión original)
+# Los ajustes están pensados para ser "mezclables" y no para demos
+# extremas: tiempos y send realistas, HP agresivos y plates/halls
+# típicos de esos géneros.
+
+
 STYLE_PRESETS_BY_STYLE_AND_BUS: Dict[str, Dict[str, StyleOverride]] = {
-    # ... TODO: aquí va exactamente el mismo bloque de estilos
-    # que ya tenías en tu script original, lo copio íntegro:
+    # ------------------------------------------------------------------
+    # FLAMENCO / RUMBA: natural, íntimo. Guitarras y voces 1-2 dB más
+    # húmedas; drums algo más secos. FX algo más largos pero filtrados.
+    # ------------------------------------------------------------------
     "flamenco_rumba": {
         "drums": StyleOverride(
             send_level_db=-23.0,
@@ -491,6 +400,11 @@ STYLE_PRESETS_BY_STYLE_AND_BUS: Dict[str, Dict[str, StyleOverride]] = {
             pre_delay_ms=18.0,
         ),
     },
+
+    # ------------------------------------------------------------------
+    # URBAN / TRAP / HIP-HOP: drums/bass muy secos; keys/FX más largos.
+    # Lead con pre-delay largo y hall/plate moderno.
+    # ------------------------------------------------------------------
     "urban_trap": {
         "drums": StyleOverride(
             send_level_db=-24.0,
@@ -561,6 +475,11 @@ STYLE_PRESETS_BY_STYLE_AND_BUS: Dict[str, Dict[str, StyleOverride]] = {
             lp_hz=18500.0,
         ),
     },
+
+    # ------------------------------------------------------------------
+    # ROCK / POP-ROCK: rooms algo mayores en drums, guitarras con plate,
+    # voces con plate corto, FX moderados.
+    # ------------------------------------------------------------------
     "rock": {
         "drums": StyleOverride(
             send_level_db=-21.0,
@@ -613,6 +532,11 @@ STYLE_PRESETS_BY_STYLE_AND_BUS: Dict[str, Dict[str, StyleOverride]] = {
             mod_depth=0.28,
         ),
     },
+
+    # ------------------------------------------------------------------
+    # LATIN POP / REGGAETON: entre flamenco y urban. Algo más húmedo en
+    # voces, pero drums/bass bastante contenidos.
+    # ------------------------------------------------------------------
     "latin_pop": {
         "drums": StyleOverride(
             send_level_db=-22.0,
@@ -668,6 +592,11 @@ STYLE_PRESETS_BY_STYLE_AND_BUS: Dict[str, Dict[str, StyleOverride]] = {
             mod_depth=0.28,
         ),
     },
+
+    # ------------------------------------------------------------------
+    # EDM / CLUB: drums y bass muy secos; keys y FX con halls algo más
+    # largos; voces en hall moderno pero sin exagerar.
+    # ------------------------------------------------------------------
     "edm": {
         "drums": StyleOverride(
             send_level_db=-25.0,
@@ -722,6 +651,11 @@ STYLE_PRESETS_BY_STYLE_AND_BUS: Dict[str, Dict[str, StyleOverride]] = {
             mod_depth=0.32,
         ),
     },
+
+    # ------------------------------------------------------------------
+    # BALLAD / AMBIENT: todo 2-3 dB más húmedo que base, pero con HH
+    # fuertes y halls moderados.
+    # ------------------------------------------------------------------
     "ballad_ambient": {
         "drums": StyleOverride(
             send_level_db=-21.0,
@@ -769,6 +703,11 @@ STYLE_PRESETS_BY_STYLE_AND_BUS: Dict[str, Dict[str, StyleOverride]] = {
             delay_feedback=0.38,
         ),
     },
+
+    # ------------------------------------------------------------------
+    # ACÚSTICO / SINGER-SONGWRITER: todo bastante seco, rooms cortos,
+    # plate moderado en voz y algo de hall en coros.
+    # ------------------------------------------------------------------
     "acoustic": {
         "drums": StyleOverride(
             send_level_db=-23.0,
@@ -855,148 +794,6 @@ def get_bus_definition_for_style(
         return base_cfg
 
     return apply_style_override(base_cfg, override)
-
-
-# ---------------------------------------------------------------------------
-# Ajustes dinámicos: tempo y contenido de audio
-# ---------------------------------------------------------------------------
-
-
-def apply_tempo_to_bus_times(
-    bus_cfg: BusDefinition,
-    tempo_bpm: Optional[float],
-) -> Tuple[BusDefinition, Dict[str, str]]:
-    """
-    Aplica cuantización a tempo sobre pre_delay_ms y delay_ms de un BusDefinition.
-
-    - Si tempo_bpm es None o <= 0, devuelve bus_cfg sin cambios.
-    - Si hay valores > 0 en pre_delay_ms / delay_ms, se cuantizan a la
-      subdivisión musical más cercana (1/16, 1/8, 1/8 puntillo, 1/4, etc.).
-    """
-    if not tempo_bpm or tempo_bpm <= 0.0:
-        return bus_cfg, {}
-
-    cfg = replace(bus_cfg)
-    used_notes: Dict[str, str] = {}
-
-    if cfg.pre_delay_ms > 0.0:
-        new_ms, note = quantize_ms_to_tempo_subdivision(cfg.pre_delay_ms, tempo_bpm)
-        cfg.pre_delay_ms = new_ms
-        used_notes["pre_delay_note"] = note
-
-    if cfg.delay_ms and cfg.delay_ms > 0.0:
-        new_ms, note = quantize_ms_to_tempo_subdivision(cfg.delay_ms, tempo_bpm)
-        cfg.delay_ms = new_ms
-        used_notes["delay_note"] = note
-
-    return cfg, used_notes
-
-
-def analyze_bus_audio(bus_dry: np.ndarray, samplerate: int) -> BusAudioStats:
-    """
-    Calcula métricas simples del audio del bus (suma de stems):
-
-      - peak, rms, crest factor
-      - centroide espectral
-      - fracción de energía en graves / medios / agudos
-    """
-    if bus_dry.ndim != 2:
-        raise ValueError(f"bus_dry con forma inesperada: {bus_dry.shape}")
-
-    if bus_dry.shape[0] > 1:
-        mono = bus_dry.mean(axis=0)
-    else:
-        mono = bus_dry[0]
-
-    mono = mono.astype(np.float32)
-    mono = np.nan_to_num(mono, nan=0.0)
-
-    peak = float(np.max(np.abs(mono)))
-    eps = 1e-12
-    rms = float(np.sqrt(np.mean(mono ** 2) + eps))
-    crest = peak / rms if rms > 0.0 else 0.0
-
-    # Espectro en magnitud
-    fft = np.fft.rfft(mono)
-    mag = np.abs(fft) + eps
-    freqs = np.fft.rfftfreq(mono.size, 1.0 / samplerate)
-
-    spectral_centroid_hz = float(np.sum(freqs * mag) / np.sum(mag))
-
-    # Bandas simples: <200 Hz, 200–4k, >4k
-    low_mask = freqs < 200.0
-    mid_mask = (freqs >= 200.0) & (freqs < 4000.0)
-    high_mask = freqs >= 4000.0
-
-    low_energy = float(np.sum(mag[low_mask]))
-    mid_energy = float(np.sum(mag[mid_mask]))
-    high_energy = float(np.sum(mag[high_mask]))
-
-    total_energy = low_energy + mid_energy + high_energy + eps
-
-    return BusAudioStats(
-        peak=peak,
-        rms=rms,
-        crest=crest,
-        spectral_centroid_hz=spectral_centroid_hz,
-        low_fraction=low_energy / total_energy,
-        mid_fraction=mid_energy / total_energy,
-        high_fraction=high_energy / total_energy,
-    )
-
-
-def apply_audio_driven_adjustments(
-    bus_cfg: BusDefinition,
-    stats: BusAudioStats,
-    bus_key: str,
-) -> BusDefinition:
-    """
-    Ajusta send/filtros del bus según el contenido real del audio.
-
-    Heurística:
-      - crest alto (muy transitorio) → menos reverb (send más negativo).
-      - crest bajo (material sostenido) → algo más de reverb.
-      - mucho grave en la fuente → subimos HP.
-      - fuente muy brillante → bajamos ligeramente LP.
-    """
-    cfg = replace(bus_cfg)
-
-    # --- 1) Ajuste de nivel de envío al FX según crest factor ---
-    crest = stats.crest
-    wet_offset_db = 0.0
-
-    if crest < 4.0:
-        # Pads / fuentes muy sostenidas → un poco más de reverb
-        wet_offset_db = +1.5
-    elif crest > 10.0:
-        # Muy transitorio (drums, percusiones) → secar un poco
-        wet_offset_db = -3.0
-    else:
-        # Interpolación lineal entre +1.5 dB (crest=4) y -1.5 dB (crest=10)
-        t = (crest - 4.0) / (10.0 - 4.0)
-        wet_offset_db = 1.5 + (-3.0) * t
-
-    # En drums/bass lo moderamos para no pasarnos
-    if bus_key in ("drums", "bass"):
-        wet_offset_db *= 0.6
-
-    cfg.send_level_db += wet_offset_db
-
-    # --- 2) HP dinámico ---
-    if cfg.hp_hz:
-        if stats.low_fraction > 0.55:
-            cfg.hp_hz = min(cfg.hp_hz * 1.25, 450.0)  # más agresivo
-        elif stats.low_fraction < 0.20:
-            cfg.hp_hz = max(cfg.hp_hz * 0.85, 60.0)   # más relajado
-
-    # --- 3) LP dinámico ---
-    if cfg.lp_hz:
-        if stats.spectral_centroid_hz > 4000.0:
-            cfg.lp_hz = max(6000.0, cfg.lp_hz * 0.85)
-        elif stats.spectral_centroid_hz < 1500.0:
-            cfg.lp_hz = min(18000.0, cfg.lp_hz * 1.10)
-
-    return cfg
 
 
 # ---------------------------------------------------------------------------
@@ -1209,17 +1006,13 @@ def _render_bus_fx_stem(
     bus_cfg: BusDefinition,
     stem_paths: List[Path],
     output_path: Path,
-    tempo_bpm: Optional[float] = None,
-    enable_audio_adaptive: bool = True,
-) -> Tuple[float, float, BusDefinition, Optional[BusAudioStats], Dict[str, str]]:
+) -> Tuple[float, float]:
     """
     Renderiza un stem de BUS FX 100 % wet:
 
       - Suma todos los stems del bus (dry) en un solo array.
-      - Opcionalmente ajusta pre-delay/delay en función del tempo (tempo_bpm).
-      - Opcionalmente ajusta send y filtros según el contenido del audio.
       - Aplica la cadena de Pedalboard 100 % wet.
-      - Aplica el send_level_db del bus.
+      - Aplica el send_level_db del bus como ganancia.
       - Controla clipping y calcula métricas.
       - Escribe un archivo .wav sólo FX en output_path.
     """
@@ -1228,26 +1021,13 @@ def _render_bus_fx_stem(
 
     bus_dry, samplerate = _sum_stems_for_bus(stem_paths)
 
-    # --- 1) Aplicar tempo (pre-delay / delay) ---
-    tempo_notes: Dict[str, str] = {}
-    cfg_for_tempo, tempo_notes = apply_tempo_to_bus_times(bus_cfg, tempo_bpm)
-
-    # --- 2) Analizar contenido del audio y ajustar ---
-    stats: Optional[BusAudioStats] = None
-    final_cfg = cfg_for_tempo
-
-    if enable_audio_adaptive:
-        stats = analyze_bus_audio(bus_dry, samplerate)
-        final_cfg = apply_audio_driven_adjustments(cfg_for_tempo, stats, bus_key)
-
-    # --- 3) Construir pedalboard con la config final ---
-    board = build_space_pedalboard(final_cfg)
+    board = build_space_pedalboard(bus_cfg)
 
     # FX 100 % wet sobre la suma de dry
     wet = board(bus_dry, samplerate)
 
     # Envío a bus FX en dB
-    send_gain = db_to_linear(final_cfg.send_level_db)
+    send_gain = db_to_linear(bus_cfg.send_level_db)
     wet_scaled = wet * send_gain
 
     # Control anti-clipping
@@ -1276,11 +1056,11 @@ def _render_bus_fx_stem(
         rms_dbfs,
     )
 
-    return peak_dbfs, rms_dbfs, final_cfg, stats, tempo_notes
+    return peak_dbfs, rms_dbfs
 
 
 # ---------------------------------------------------------------------------
-# Entry point de stage: run_space_depth (bus FX)
+# Entry point de stage: run_space_depth (nuevo diseño: genera buses FX)
 # ---------------------------------------------------------------------------
 
 
@@ -1290,8 +1070,6 @@ def run_space_depth(
     analysis_csv_path: Path,
     stem_profiles: Optional[Dict[str, str]] = None,
     bus_styles: Optional[Dict[str, str]] = None,
-    tempo_bpm: Optional[float] = None,
-    enable_audio_adaptive: bool = True,
 ) -> None:
     """
     Stage de Space & Depth (versión bus-FX).
@@ -1301,8 +1079,6 @@ def run_space_depth(
       - Agrupa stems por bus (drums, guitars, lead_vocal...).
       - Para cada bus:
           * Suma los stems del bus en un solo array.
-          * Aplicar cuantización a tempo (pre-delay y delay) si tempo_bpm != None.
-          * Opcionalmente adaptar send/filtros según el contenido del audio del bus.
           * Aplica la cadena de reverb/delay/mod 100 % wet.
           * Aplica el send_level_db del bus.
           * Escribe un stem de bus FX 100 % wet: bus_<bus_key>_space.wav
@@ -1310,6 +1086,12 @@ def run_space_depth(
     El mixdown posterior sumará:
       - los stems secos (copiados)
       - + los stems bus_XXX_space.wav (sólo FX).
+
+    Parámetros:
+      - stem_profiles: dict opcional {stem_name (o base) -> perfil}.
+      - bus_styles: dict opcional {bus_key -> style_key} o {"default": style_key}.
+        Los style_key deben coincidir con los usados en STYLE_PRESETS_BY_STYLE_AND_BUS:
+          flamenco_rumba, urban_trap, rock, latin_pop, edm, ballad_ambient, acoustic.
     """
     stem_profiles = stem_profiles or {}
     bus_styles = bus_styles or {}
@@ -1325,14 +1107,15 @@ def run_space_depth(
         return
 
     logger.info(
-        "[SPACE_DEPTH] Procesando %d stems desde %s -> %s (bus-FX) | tempo_bpm=%s",
+        "[SPACE_DEPTH] Procesando %d stems desde %s -> %s (bus-FX)",
         len(wav_files),
         input_media_dir,
         output_media_dir,
-        tempo_bpm,
     )
 
+    # ------------------------------------------------------------------
     # 1) Copiar stems secos tal cual a output_media_dir
+    # ------------------------------------------------------------------
     for stem_path in wav_files:
         dest = output_media_dir / stem_path.name
         if dest.resolve() == stem_path.resolve():
@@ -1348,7 +1131,9 @@ def run_space_depth(
                 exc,
             )
 
+    # ------------------------------------------------------------------
     # 2) Agrupar stems por bus usando stem_profiles → PROFILE_TO_BUS
+    # ------------------------------------------------------------------
     bus_to_stems: Dict[str, List[Path]] = defaultdict(list)
 
     for stem_path in wav_files:
@@ -1357,7 +1142,9 @@ def run_space_depth(
         bus_key = resolve_bus_for_profile(profile)
         bus_to_stems[bus_key].append(stem_path)
 
+    # ------------------------------------------------------------------
     # 3) CSV de análisis: una fila por BUS FX stem
+    # ------------------------------------------------------------------
     with analysis_csv_path.open("w", newline="", encoding="utf-8") as csv_file:
         writer = csv.writer(csv_file)
         writer.writerow(
@@ -1377,19 +1164,13 @@ def run_space_depth(
                 "lp_hz",
                 "output_peak_dbfs",
                 "output_rms_dbfs",
-                "num_input_stems",
-                "tempo_bpm",
-                "delay_note",
-                "pre_delay_note",
-                "crest_factor",
-                "spectral_centroid_hz",
-                "low_fraction",
-                "mid_fraction",
-                "high_fraction",
+                "num_input_stems",   # cuántos stems secos alimentan este bus
             ]
         )
 
+        # ------------------------------------------------------------------
         # 4) Para cada bus, generar bus FX stem 100 % wet
+        # ------------------------------------------------------------------
         for bus_key, stems_for_bus in bus_to_stems.items():
             if not stems_for_bus:
                 continue
@@ -1397,25 +1178,17 @@ def run_space_depth(
             # Estilo seleccionado para este bus (si lo hay)
             style_key = bus_styles.get(bus_key) or bus_styles.get("default")
 
-            base_bus_cfg = get_bus_definition_for_style(bus_key, style_key)
+            bus_cfg = get_bus_definition_for_style(bus_key, style_key)
 
             bus_fx_name = f"bus_{bus_key}_space.wav"
             output_path = output_media_dir / bus_fx_name
 
             try:
-                (
-                    peak_dbfs,
-                    rms_dbfs,
-                    final_cfg,
-                    stats,
-                    tempo_notes,
-                ) = _render_bus_fx_stem(
+                peak_dbfs, rms_dbfs = _render_bus_fx_stem(
                     bus_key=bus_key,
-                    bus_cfg=base_bus_cfg,
+                    bus_cfg=bus_cfg,
                     stem_paths=stems_for_bus,
                     output_path=output_path,
-                    tempo_bpm=tempo_bpm,
-                    enable_audio_adaptive=enable_audio_adaptive,
                 )
             except Exception as exc:
                 logger.exception(
@@ -1430,27 +1203,19 @@ def run_space_depth(
                     bus_fx_name,
                     bus_key,
                     style_key or "",
-                    final_cfg.reverb_archetype or "",
-                    final_cfg.send_level_db,
-                    final_cfg.pre_delay_ms,
-                    final_cfg.delay_ms or 0.0,
-                    final_cfg.delay_feedback,
-                    final_cfg.mod_type or "",
-                    final_cfg.mod_rate_hz,
-                    final_cfg.mod_depth,
-                    final_cfg.hp_hz or 0.0,
-                    final_cfg.lp_hz or 0.0,
+                    bus_cfg.reverb_archetype or "",
+                    bus_cfg.send_level_db,
+                    bus_cfg.pre_delay_ms,
+                    bus_cfg.delay_ms or 0.0,
+                    bus_cfg.delay_feedback,
+                    bus_cfg.mod_type or "",
+                    bus_cfg.mod_rate_hz,
+                    bus_cfg.mod_depth,
+                    bus_cfg.hp_hz or 0.0,
+                    bus_cfg.lp_hz or 0.0,
                     peak_dbfs,
                     rms_dbfs,
                     len(stems_for_bus),
-                    tempo_bpm or 0.0,
-                    tempo_notes.get("delay_note", ""),
-                    tempo_notes.get("pre_delay_note", ""),
-                    stats.crest if stats else 0.0,
-                    stats.spectral_centroid_hz if stats else 0.0,
-                    stats.low_fraction if stats else 0.0,
-                    stats.mid_fraction if stats else 0.0,
-                    stats.high_fraction if stats else 0.0,
                 ]
             )
 

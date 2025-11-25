@@ -192,6 +192,16 @@ STAGES: List[Dict[str, Any]] = [
         "analysis_csv": "space_depth_analysis.csv",
     },
     {
+        "key": "multiband_eq",
+        "label": "Multiband EQ & Dynamics",
+        "description": "Three-band compression/EQ per stem (low/mid/high)",
+        "media_subdir": "multiband_eq",
+        "updates_current_dir": True,
+        "analysis_csv": "multiband_eq_analysis.csv",
+        "low_mid_crossover_hz": 120.0,
+        "mid_high_crossover_hz": 5000.0,
+    },
+    {
         "key": "mastering",
         "label": "Mixdown & Mastering",
         "description": "Rendering final full mix and mastering from stems",
@@ -229,6 +239,14 @@ from src.analysis.mastering_analysis import analyze_mastering, export_mastering_
 from src.stages.stage10_mastering.mastering_correction import run_mastering_correction
 from src.utils.mixdown import mix_corrected_stems_to_full_song, FullSongRenderResult
 from src.stages.stage3_space_depth_buses.space_depth import run_space_depth
+from src.analysis.multiband_eq_analysis import (
+    analyze_multiband_eq,
+    export_multiband_eq_to_csv,
+)
+from src.stages.stage4_multiband_eq.multiband_eq_correction import (
+    run_multiband_eq_correction,
+)
+
 
 
 # --------------------------------------------------------------------
@@ -618,17 +636,29 @@ def stage_space_depth(
     - Lee los stems desde input_dir (salida de static_mix_dyn).
     - Usa ctx.stem_profiles para mapear cada stem a un bus.
     - Usa ctx.bus_styles para aplicar presets de estilo por bus.
+    - Usa ctx.tempo_result (si existe) para alinear pre-delay/delay al BPM.
     - Escribe stems con profundidad espacial en output_dir.
     """
     analysis_csv = ctx.analysis_dir / stage_conf.get(
         "analysis_csv", "space_depth_analysis.csv"
     )
 
+    # BPM detectado en el stage tempo_key (si se ha ejecutado)
+    tempo_bpm: Optional[float] = None
+    if ctx.tempo_result is not None:
+        try:
+            tempo_bpm = float(ctx.tempo_result.bpm)
+        except Exception as exc:
+            logger.warning(
+                "No se pudo leer BPM desde ctx.tempo_result: %s", exc
+            )
+
     logger.info(
-        "Iniciando Space & Depth (buses de reverb/delay/mod) en %s -> %s | bus_styles=%s",
+        "Iniciando Space & Depth (buses de reverb/delay/mod) en %s -> %s | bus_styles=%s | tempo_bpm=%s",
         input_dir,
         output_dir,
         ctx.bus_styles,
+        tempo_bpm,
     )
 
     log_mem("before_space_depth")
@@ -638,7 +668,9 @@ def stage_space_depth(
         output_media_dir=output_dir,
         analysis_csv_path=analysis_csv,
         stem_profiles=ctx.stem_profiles,
-        bus_styles=ctx.bus_styles,  # <-- aquí se enganchan tus presets
+        bus_styles=ctx.bus_styles,
+        tempo_bpm=tempo_bpm,           # <<< NUEVO: BPM real de la canción
+        enable_audio_adaptive=True,    # <<< NUEVO: activar heurísticas audio-driven
     )
 
     log_mem("after_space_depth")
@@ -653,6 +685,74 @@ def stage_space_depth(
         stage_label="space_depth",
         stems_dir=output_dir,
     )
+
+
+
+def stage_multiband_eq(
+    ctx: PipelineContext,
+    stage_conf: Dict[str, Any],
+    input_dir: Path,
+    output_dir: Path,
+) -> None:
+    """
+    Stage de multiband EQ / comp por stem (low/mid/high).
+    - Lee los stems desde input_dir (salida de space_depth, con buses).
+    - Escribe stems procesados en output_dir (media/multiband_eq).
+    """
+    analysis_csv = ctx.analysis_dir / stage_conf.get(
+        "analysis_csv", "multiband_eq_analysis.csv"
+    )
+
+    low_mid_crossover_hz = float(
+        stage_conf.get("low_mid_crossover_hz", 120.0)
+    )
+    mid_high_crossover_hz = float(
+        stage_conf.get("mid_high_crossover_hz", 5000.0)
+    )
+
+    logger.info(
+        "Iniciando análisis multibanda en %s (low_mid=%.1f Hz, mid_high=%.1f Hz)",
+        input_dir,
+        low_mid_crossover_hz,
+        mid_high_crossover_hz,
+    )
+
+    log_mem("before_multiband_eq_analysis")
+    multiband_results = analyze_multiband_eq(
+        media_dir=input_dir,
+        low_mid_crossover_hz=low_mid_crossover_hz,
+        mid_high_crossover_hz=mid_high_crossover_hz,
+    )
+    log_mem("after_multiband_eq_analysis")
+
+    logger.info(
+        "Análisis multibanda completado (%s resultados)",
+        getattr(multiband_results, "__len__", lambda: "n/a")(),
+    )
+
+    export_multiband_eq_to_csv(multiband_results, analysis_csv)
+    logger.info("CSV de multiband EQ exportado a %s", analysis_csv)
+
+    logger.info(
+        "Aplicando corrección multibanda en %s -> %s",
+        input_dir,
+        output_dir,
+    )
+    log_mem("before_multiband_eq_correction")
+    run_multiband_eq_correction(
+        analysis_csv_path=analysis_csv,
+        input_media_dir=input_dir,
+        output_media_dir=output_dir,
+        low_mid_crossover_hz=low_mid_crossover_hz,
+        mid_high_crossover_hz=mid_high_crossover_hz,
+    )
+    log_mem("after_multiband_eq_correction")
+
+    # Si quieres, puedes generar un bounce de preview:
+    # render_mixdown_for_stage(
+    #     stage_label="multiband_eq",
+    #     stems_dir=output_dir,
+    # )
 
 
 
@@ -782,6 +882,7 @@ STAGE_RUNNERS: Dict[str, Callable[[PipelineContext, Dict[str, Any], Path, Path],
     "tempo_key": stage_tempo_key,
     "vocal_tuning": stage_vocal_tuning,
     "space_depth": stage_space_depth,
+    "multiband_eq": stage_multiband_eq,
     "mastering": stage_mastering,
 }
 
