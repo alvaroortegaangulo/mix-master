@@ -263,6 +263,10 @@ from src.stages.stage0_technical_preparation.vocal_tuning import (
 from src.analysis.mastering_analysis import analyze_mastering, export_mastering_to_csv
 from src.stages.stage10_mastering.mastering_correction import run_mastering_correction
 from src.utils.mixdown import mix_corrected_stems_to_full_song, FullSongRenderResult
+from src.analysis.space_depth_analysis import (
+    analyze_space_depth,
+    export_space_depth_to_csv,
+)
 from src.stages.stage3_space_depth_buses.space_depth import run_space_depth
 from src.analysis.multiband_eq_analysis import (
     analyze_multiband_eq,
@@ -515,7 +519,11 @@ def stage_static_mix_dyn(
     logger.info("Iniciando análisis de dinámica por pista (static mix dyn) en %s", input_dir)
 
     log_mem("before_dynamics_analysis")
-    dynamics_results = analyze_dynamics(input_dir)
+    dynamics_results = analyze_dynamics(
+        media_dir=input_dir,
+        stem_profiles=ctx.stem_profiles,  # mismos perfiles que usas en Space&Depth
+    )
+
     log_mem("after_dynamics_analysis")
 
     logger.info(
@@ -546,6 +554,8 @@ def stage_static_mix_dyn(
 
     # Guardamos el pre-master (mix dinámico) en el contexto
     ctx.static_mix_dyn_render = static_mix_dyn_mix
+
+
 
 
 def stage_tempo_key(
@@ -662,21 +672,12 @@ def stage_vocal_tuning(
     )
 
 
-
 def stage_space_depth(
     ctx: PipelineContext,
     stage_conf: Dict[str, Any],
     input_dir: Path,
     output_dir: Path,
 ) -> None:
-    """
-    Stage de creación de buses de espacio (reverb/delay/modulación).
-    - Lee los stems desde input_dir (salida de static_mix_dyn).
-    - Usa ctx.stem_profiles para mapear cada stem a un bus.
-    - Usa ctx.bus_styles para aplicar presets de estilo por bus.
-    - Usa ctx.tempo_result (si existe) para alinear pre-delay/delay al BPM.
-    - Escribe stems con profundidad espacial en output_dir.
-    """
     analysis_csv = ctx.analysis_dir / stage_conf.get(
         "analysis_csv", "space_depth_analysis.csv"
     )
@@ -687,31 +688,36 @@ def stage_space_depth(
         try:
             tempo_bpm = float(ctx.tempo_result.bpm)
         except Exception as exc:
-            logger.warning(
-                "No se pudo leer BPM desde ctx.tempo_result: %s", exc
-            )
+            logger.warning("No se pudo leer BPM desde ctx.tempo_result: %s", exc)
 
     logger.info(
-        "Iniciando Space & Depth (buses de reverb/delay/mod) en %s -> %s | bus_styles=%s | tempo_bpm=%s",
+        "Iniciando análisis Space & Depth en %s (tempo_bpm=%s, bus_styles=%s)",
         input_dir,
-        output_dir,
-        ctx.bus_styles,
         tempo_bpm,
+        ctx.bus_styles,
     )
 
-    log_mem("before_space_depth")
+    # 1) ANÁLISIS -> CSV
+    rows = analyze_space_depth(
+        media_dir=input_dir,
+        stem_profiles=ctx.stem_profiles,
+        bus_styles=ctx.bus_styles,
+        tempo_bpm=tempo_bpm,
+        enable_audio_adaptive=True,
+    )
+    export_space_depth_to_csv(rows, analysis_csv)
 
+    logger.info(
+        "Space & Depth analysis completado. CSV en %s",
+        analysis_csv,
+    )
+
+    # 2) CORRECCIÓN (aplicar FX buses según el CSV)
     run_space_depth(
         input_media_dir=input_dir,
         output_media_dir=output_dir,
         analysis_csv_path=analysis_csv,
-        stem_profiles=ctx.stem_profiles,
-        bus_styles=ctx.bus_styles,
-        tempo_bpm=tempo_bpm,           # <<< NUEVO: BPM real de la canción
-        enable_audio_adaptive=True,    # <<< NUEVO: activar heurísticas audio-driven
     )
-
-    log_mem("after_space_depth")
 
     logger.info(
         "Space & Depth completado. Stems procesados en %s, CSV en %s",
@@ -723,6 +729,7 @@ def stage_space_depth(
         stage_label="space_depth",
         stems_dir=output_dir,
     )
+
 
 
 

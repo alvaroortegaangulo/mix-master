@@ -823,6 +823,61 @@ STYLE_PRESETS_BY_STYLE_AND_BUS: Dict[str, Dict[str, StyleOverride]] = {
 }
 
 
+
+
+# ---------------------------------------------------------------------------
+# Límites seguros por bus (para mantener Space & Depth sutil y musical)
+# ---------------------------------------------------------------------------
+
+# Rango de send_level_db por bus (valores negativos: más bajo = más seco)
+SEND_LIMITS_BY_BUS: Dict[str, tuple[float, float]] = {
+    #    min_dB,  max_dB
+    "drums":         (-30.0, -20.0),
+    "bass":          (-40.0, -24.0),
+    "guitars":       (-28.0, -18.0),
+    "keys_synth":    (-28.0, -18.0),
+    "lead_vocal":    (-26.0, -18.0),
+    "backing_vocals":(-26.0, -17.0),
+    "fx":            (-24.0, -15.0),
+    "misc":          (-30.0, -20.0),
+}
+
+# Rango de HPF y LPF por bus (Hz) para las colas de FX
+HP_LIMITS_BY_BUS: Dict[str, tuple[float, float]] = {
+    "drums":         (220.0, 480.0),
+    "bass":          (60.0,  160.0),
+    "guitars":       (140.0, 360.0),
+    "keys_synth":    (160.0, 420.0),
+    "lead_vocal":    (120.0, 260.0),
+    "backing_vocals":(140.0, 280.0),
+    "fx":            (200.0, 500.0),
+    "misc":          (140.0, 400.0),
+}
+
+LP_LIMITS_BY_BUS: Dict[str, tuple[float, float]] = {
+    "drums":         (8000.0, 12000.0),
+    "bass":          (5000.0, 9000.0),
+    "guitars":       (10000.0, 16000.0),
+    "keys_synth":    (12000.0, 18000.0),
+    "lead_vocal":    (10000.0, 16000.0),
+    "backing_vocals":(11000.0, 17000.0),
+    "fx":            (14000.0, 20000.0),
+    "misc":          (10000.0, 16000.0),
+}
+
+# Límites globales de feedback de delay
+DELAY_FEEDBACK_LIMITS: tuple[float, float] = (0.05, 0.35)
+
+# Límites de modulación
+MOD_DEPTH_LIMITS: Dict[str, tuple[float, float]] = {
+    "chorus": (0.05, 0.22),
+    "phaser": (0.06, 0.28),
+}
+MOD_RATE_LIMITS: tuple[float, float] = (0.3, 1.2)
+
+
+
+
 def get_bus_definition_for_style(
     bus_key: str,
     style_key: Optional[str],
@@ -949,52 +1004,175 @@ def apply_audio_driven_adjustments(
     bus_cfg: BusDefinition,
     stats: BusAudioStats,
     bus_key: str,
+    tempo_bpm: Optional[float] = None,
+    style_key: Optional[str] = None,
 ) -> BusDefinition:
     """
-    Ajusta send/filtros del bus según el contenido real del audio.
+    Ajusta send/filtros/delay/modulación del bus según:
+      - contenido del audio (crest, espectro, low/mid/high),
+      - tempo de la canción,
+      - estilo (flamenco_rumba, edm, ballad_ambient, ...),
+      - tipo de bus (drums, lead_vocal, fx, ...).
 
-    Heurística:
-      - crest alto (muy transitorio) → menos reverb (send más negativo).
-      - crest bajo (material sostenido) → algo más de reverb.
-      - mucho grave en la fuente → subimos HP.
-      - fuente muy brillante → bajamos ligeramente LP.
+    Siempre respeta límites seguros por bus definidos en:
+      - SEND_LIMITS_BY_BUS
+      - HP_LIMITS_BY_BUS
+      - LP_LIMITS_BY_BUS
+      - DELAY_FEEDBACK_LIMITS
+      - MOD_DEPTH_LIMITS / MOD_RATE_LIMITS
     """
     cfg = replace(bus_cfg)
 
-    # --- 1) Ajuste de nivel de envío al FX según crest factor ---
     crest = stats.crest
-    wet_offset_db = 0.0
+    low = stats.low_fraction
+    high = stats.high_fraction
+    centroid = stats.spectral_centroid_hz
 
-    if crest < 4.0:
-        # Pads / fuentes muy sostenidas → un poco más de reverb
-        wet_offset_db = +1.5
-    elif crest > 10.0:
-        # Muy transitorio (drums, percusiones) → secar un poco
-        wet_offset_db = -3.0
+    # --------------------------------------------------------------
+    # 1) Ajuste de send_level_db (cantidad de reverb/delay)
+    # --------------------------------------------------------------
+    # Base: crest factor → más sostenido => algo más de reverb, muy transitorio => menos
+    # Rango base ± ~2 dB alrededor del preset.
+    if crest <= 4.0:
+        # pads / material súper sostenido
+        crest_offset = +1.0
+    elif crest >= 9.0:
+        # muy transitorio (drums perc agresiva)
+        crest_offset = -2.0
     else:
-        # Interpolación lineal entre +1.5 dB (crest=4) y -1.5 dB (crest=10)
-        t = (crest - 4.0) / (10.0 - 4.0)
-        wet_offset_db = 1.5 + (-3.0) * t
+        # interpolación lineal entre +1.0 (crest=4) y -2.0 (crest=9)
+        t = (crest - 4.0) / (9.0 - 4.0)
+        crest_offset = 1.0 + (-2.0 - 1.0) * t
 
-    # En drums/bass lo moderamos para no pasarnos
+    # Tempo: canciones lentas admiten algo más de FX, rápidas algo menos
+    tempo_offset = 0.0
+    if tempo_bpm and tempo_bpm > 0.0:
+        if tempo_bpm < 80.0:
+            tempo_offset = +0.75
+        elif tempo_bpm > 130.0:
+            tempo_offset = -1.0
+
+    # Estilo: ballad_ambient/edm algo más de FX, acústico/flamenco algo menos
+    style_offset = 0.0
+    style_norm = (style_key or "").strip().lower()
+    if style_norm in ("ballad_ambient", "edm"):
+        style_offset = +0.75
+    elif style_norm in ("acoustic", "flamenco_rumba"):
+        style_offset = -0.5
+
+    wet_offset_db = crest_offset + tempo_offset + style_offset
+
+    # Buses que deben ser más secos por naturaleza
     if bus_key in ("drums", "bass"):
-        wet_offset_db *= 0.6
+        wet_offset_db *= 0.5
 
     cfg.send_level_db += wet_offset_db
 
-    # --- 2) HP dinámico ---
-    if cfg.hp_hz:
-        if stats.low_fraction > 0.55:
-            cfg.hp_hz = min(cfg.hp_hz * 1.25, 450.0)  # más agresivo
-        elif stats.low_fraction < 0.20:
-            cfg.hp_hz = max(cfg.hp_hz * 0.85, 60.0)   # más relajado
+    # Clamp por bus (no queremos nunca más de ~10–15 % de nivel wet relativo)
+    min_send, max_send = SEND_LIMITS_BY_BUS.get(
+        bus_key,
+        (-30.0, -17.0),
+    )
+    cfg.send_level_db = max(min_send, min(cfg.send_level_db, max_send))
 
-    # --- 3) LP dinámico ---
+    # --------------------------------------------------------------
+    # 2) HPF dinámico sobre la cola de FX
+    # --------------------------------------------------------------
+    if cfg.hp_hz:
+        # Más graves en la fuente → subimos HPF
+        if low > 0.55:
+            cfg.hp_hz *= 1.25
+        # Fuente muy ligera en graves → podemos relajar HPF
+        elif low < 0.20:
+            cfg.hp_hz *= 0.9
+
+        hp_min, hp_max = HP_LIMITS_BY_BUS.get(
+            bus_key,
+            (80.0, 450.0),
+        )
+        cfg.hp_hz = float(max(hp_min, min(cfg.hp_hz, hp_max)))
+
+    # --------------------------------------------------------------
+    # 3) LPF dinámico sobre la cola de FX
+    # --------------------------------------------------------------
     if cfg.lp_hz:
-        if stats.spectral_centroid_hz > 4000.0:
-            cfg.lp_hz = max(6000.0, cfg.lp_hz * 0.85)
-        elif stats.spectral_centroid_hz < 1500.0:
-            cfg.lp_hz = min(18000.0, cfg.lp_hz * 1.10)
+        # Fuente muy brillante → recortamos algo de top end
+        if centroid > 4000.0 or high > 0.45:
+            cfg.lp_hz *= 0.9
+        # Fuente oscura → podemos dejar un poco más de aire
+        elif centroid < 1500.0 and high < 0.25:
+            cfg.lp_hz *= 1.08
+
+        lp_min, lp_max = LP_LIMITS_BY_BUS.get(
+            bus_key,
+            (8000.0, 18000.0),
+        )
+        cfg.lp_hz = float(max(lp_min, min(cfg.lp_hz, lp_max)))
+
+    # --------------------------------------------------------------
+    # 4) Delay feedback dinámico
+    # --------------------------------------------------------------
+    if cfg.delay_ms and cfg.delay_ms > 0.0:
+        fb = cfg.delay_feedback
+
+        # Tempo: temas rápidos → menos feedback; lentos → algo más
+        if tempo_bpm and tempo_bpm > 0.0:
+            if tempo_bpm > 130.0:
+                fb *= 0.7
+            elif tempo_bpm < 80.0:
+                fb *= 1.1
+
+        # Material muy transitorio → reducir feedback para que no embarre
+        if crest > 10.0:
+            fb *= 0.8
+
+        # Buses que deben ser discretos en eco
+        if bus_key in ("drums", "bass"):
+            fb *= 0.7
+
+        # Estilos muy ambients pueden permitir algo más
+        if style_norm == "ballad_ambient":
+            fb *= 1.1
+
+        fb_min, fb_max = DELAY_FEEDBACK_LIMITS
+        cfg.delay_feedback = float(max(fb_min, min(fb, fb_max)))
+
+    # --------------------------------------------------------------
+    # 5) Modulación (chorus/phaser) sutil
+    # --------------------------------------------------------------
+    if cfg.mod_type:
+        depth = cfg.mod_depth
+        rate = cfg.mod_rate_hz
+
+        # Si la fuente ya es muy brillante, reducimos un poco la profundidad
+        if high > 0.45:
+            depth *= 0.8
+        elif high < 0.20:
+            depth *= 1.05  # algo más de movimiento en cosas oscuras
+
+        # Voces: mantener chorus muy sutil
+        if cfg.mod_type == "chorus" and bus_key in ("lead_vocal", "backing_vocals"):
+            depth *= 0.8
+
+        # clamp por tipo
+        depth_min, depth_max = MOD_DEPTH_LIMITS.get(
+            cfg.mod_type,
+            (0.05, 0.25),
+        )
+        depth = float(max(depth_min, min(depth, depth_max)))
+
+        # Rate sutil, ligeramente modulado por tempo
+        if tempo_bpm and tempo_bpm > 0.0:
+            if tempo_bpm > 130.0:
+                rate *= 1.1
+            elif tempo_bpm < 80.0:
+                rate *= 0.9
+
+        rate_min, rate_max = MOD_RATE_LIMITS
+        rate = float(max(rate_min, min(rate, rate_max)))
+
+        cfg.mod_depth = depth
+        cfg.mod_rate_hz = rate
 
     return cfg
 
@@ -1280,42 +1458,104 @@ def _render_bus_fx_stem(
 
 
 # ---------------------------------------------------------------------------
-# Entry point de stage: run_space_depth (bus FX)
+# Helper: renderizar un bus FX a partir de una configuración ya fijada
 # ---------------------------------------------------------------------------
 
+def _render_bus_fx_stem_from_cfg(
+    bus_key: str,
+    bus_cfg: BusDefinition,
+    stem_paths: List[Path],
+    output_path: Path,
+) -> tuple[float, float]:
+    """
+    Renderiza un stem de BUS FX 100 % wet usando una configuración YA calculada
+    (por el análisis previo). No hace análisis, no ajusta nada a tempo, etc.
+
+    Pasos:
+      - Suma todos los stems del bus en un solo array.
+      - Aplica la cadena de Pedalboard 100 % wet según bus_cfg.
+      - Aplica el send_level_db del bus.
+      - Controla clipping y calcula peak/rms en dBFS.
+      - Escribe un archivo .wav sólo FX en output_path.
+    """
+    if not stem_paths:
+        raise ValueError(f"No hay stems para el bus {bus_key}")
+
+    # Suma de stems en un solo array (n_channels, n_samples)
+    bus_dry, samplerate = _sum_stems_for_bus(stem_paths)
+
+    # Cadena 100 % wet (HP/LP + pre-delay + reverb + delay + mod + trim final)
+    board = build_space_pedalboard(bus_cfg)
+
+    # Procesado FX 100 % wet sobre la suma dry
+    wet = board(bus_dry, samplerate)
+
+    # Aplicar nivel de envío en dB
+    send_gain = db_to_linear(bus_cfg.send_level_db)
+    wet_scaled = wet * send_gain
+
+    # Control anti-clipping suave
+    peak = float(np.max(np.abs(wet_scaled)))
+    if peak > 0.98:
+        norm_gain = 0.98 / peak
+        wet_scaled *= norm_gain
+        peak = 0.98
+
+    # RMS global
+    rms = float(np.sqrt(np.mean(wet_scaled ** 2.0)))
+
+    # Guardar como (n_samples, n_channels)
+    processed_out = wet_scaled.T
+    sf.write(str(output_path), processed_out, samplerate)
+
+    peak_dbfs = amplitude_to_dbfs(peak)
+    rms_dbfs = amplitude_to_dbfs(rms)
+
+    logger.info(
+        "[SPACE_DEPTH] Bus FX %s -> %s | peak=%.2f dBFS | rms=%.2f dBFS",
+        bus_key,
+        output_path.name,
+        peak_dbfs,
+        rms_dbfs,
+    )
+
+    return peak_dbfs, rms_dbfs
+
+
+# ---------------------------------------------------------------------------
+# Entry point de stage: run_space_depth (corrección desde el CSV de análisis)
+# ---------------------------------------------------------------------------
 
 def run_space_depth(
     input_media_dir: Path,
     output_media_dir: Path,
     analysis_csv_path: Path,
-    stem_profiles: Optional[Dict[str, str]] = None,
-    bus_styles: Optional[Dict[str, str]] = None,
-    tempo_bpm: Optional[float] = None,
-    enable_audio_adaptive: bool = True,
 ) -> None:
     """
-    Stage de Space & Depth (versión bus-FX).
+    Stage de Space & Depth (versión CORRECCIÓN).
 
-    Nuevo diseño:
-      - Copia todos los stems secos de input_media_dir a output_media_dir.
-      - Agrupa stems por bus (drums, guitars, lead_vocal...).
-      - Para cada bus:
-          * Suma los stems del bus en un solo array.
-          * Aplicar cuantización a tempo (pre-delay y delay) si tempo_bpm != None.
-          * Opcionalmente adaptar send/filtros según el contenido del audio del bus.
-          * Aplica la cadena de reverb/delay/mod 100 % wet.
-          * Aplica el send_level_db del bus.
-          * Escribe un stem de bus FX 100 % wet: bus_<bus_key>_space.wav
+    Supone que:
+      - El análisis previo ya ha generado un CSV en analysis_csv_path
+        (p.ej. con analyze_space_depth/export_space_depth_to_csv).
+      - El CSV contiene una fila por bus FX con todos los parámetros ya
+        calculados (reverb_archetype, send_level_db, pre_delay_ms, ...).
 
-    El mixdown posterior sumará:
-      - los stems secos (copiados)
-      - + los stems bus_XXX_space.wav (sólo FX).
+    Este stage:
+      1) Copia todos los stems secos de input_media_dir a output_media_dir.
+      2) Lee el CSV de análisis.
+      3) Para cada fila/bus:
+           - Localiza los stems de ese bus (columna 'stem_names').
+           - Reconstruye un BusDefinition a partir de la fila.
+           - Genera un stem FX 100 % wet: bus_<bus_key>_space.wav
+
+    NO recalcula análisis, ni tempo, ni ajustes audio-driven: únicamente aplica
+    lo que haya decidido el stage de análisis.
     """
-    stem_profiles = stem_profiles or {}
-    bus_styles = bus_styles or {}
-
     output_media_dir.mkdir(parents=True, exist_ok=True)
 
+    # ----------------------------------------------------------------------
+    # 1) Copiar todos los stems secos
+    # ----------------------------------------------------------------------
     wav_files = sorted(input_media_dir.glob("*.wav"))
     if not wav_files:
         logger.warning(
@@ -1325,19 +1565,22 @@ def run_space_depth(
         return
 
     logger.info(
-        "[SPACE_DEPTH] Procesando %d stems desde %s -> %s (bus-FX) | tempo_bpm=%s",
+        "[SPACE_DEPTH] Copiando %d stems secos %s -> %s",
         len(wav_files),
         input_media_dir,
         output_media_dir,
-        tempo_bpm,
     )
 
-    # 1) Copiar stems secos tal cual a output_media_dir
     for stem_path in wav_files:
         dest = output_media_dir / stem_path.name
-        if dest.resolve() == stem_path.resolve():
-            # Caso raro: input_dir == output_dir
-            continue
+        try:
+            if dest.resolve() == stem_path.resolve():
+                # Caso raro: input_dir == output_dir
+                continue
+        except Exception:
+            # Si resolve() falla (p.ej. por permisos), asumimos que podemos copiar
+            pass
+
         try:
             shutil.copy2(stem_path, dest)
         except Exception as exc:
@@ -1348,117 +1591,157 @@ def run_space_depth(
                 exc,
             )
 
-    # 2) Agrupar stems por bus usando stem_profiles → PROFILE_TO_BUS
-    bus_to_stems: Dict[str, List[Path]] = defaultdict(list)
-
-    for stem_path in wav_files:
-        stem_name = stem_path.name
-        profile = guess_profile_for_stem(stem_name, stem_profiles)
-        bus_key = resolve_bus_for_profile(profile)
-        bus_to_stems[bus_key].append(stem_path)
-
-    # 3) CSV de análisis: una fila por BUS FX stem
-    with analysis_csv_path.open("w", newline="", encoding="utf-8") as csv_file:
-        writer = csv.writer(csv_file)
-        writer.writerow(
-            [
-                "stem_name",         # nombre del BUS FX stem (bus_<bus_key>_space.wav)
-                "bus_key",           # drums, guitars, lead_vocal, ...
-                "style_key",         # flamenco_rumba, urban_trap, ...
-                "reverb_archetype",  # room/plate/hall/spring
-                "send_level_db",
-                "pre_delay_ms",
-                "delay_ms",
-                "delay_feedback",
-                "mod_type",
-                "mod_rate_hz",
-                "mod_depth",
-                "hp_hz",
-                "lp_hz",
-                "output_peak_dbfs",
-                "output_rms_dbfs",
-                "num_input_stems",
-                "tempo_bpm",
-                "delay_note",
-                "pre_delay_note",
-                "crest_factor",
-                "spectral_centroid_hz",
-                "low_fraction",
-                "mid_fraction",
-                "high_fraction",
-            ]
+    # ----------------------------------------------------------------------
+    # 2) Leer CSV de análisis
+    # ----------------------------------------------------------------------
+    if not analysis_csv_path.exists():
+        logger.error(
+            "[SPACE_DEPTH] CSV de análisis no encontrado: %s. "
+            "Asegúrate de ejecutar antes el stage de análisis.",
+            analysis_csv_path,
         )
+        return
 
-        # 4) Para cada bus, generar bus FX stem 100 % wet
-        for bus_key, stems_for_bus in bus_to_stems.items():
-            if not stems_for_bus:
+    logger.info("[SPACE_DEPTH] Leyendo análisis desde %s", analysis_csv_path)
+
+    def _parse_float(value: str, default: float = 0.0) -> float:
+        value = (value or "").strip()
+        if not value:
+            return default
+        try:
+            return float(value)
+        except ValueError:
+            return default
+
+    buses_procesados = 0
+
+    with analysis_csv_path.open("r", newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+
+        # Comprobamos mínimamente que está el campo clave
+        if "bus_fx_stem_name" not in reader.fieldnames and "stem_name" not in reader.fieldnames:
+            raise RuntimeError(
+                "[SPACE_DEPTH] El CSV de análisis no contiene "
+                "'bus_fx_stem_name' ni 'stem_name'. Revisa el script de análisis."
+            )
+
+        for row in reader:
+            # Nombre del stem FX resultante
+            bus_fx_stem_name = (
+                (row.get("bus_fx_stem_name") or row.get("stem_name") or "").strip()
+            )
+            if not bus_fx_stem_name:
+                logger.warning(
+                    "[SPACE_DEPTH] Fila sin nombre de bus FX stem, se omite: %s",
+                    row,
+                )
                 continue
 
-            # Estilo seleccionado para este bus (si lo hay)
-            style_key = bus_styles.get(bus_key) or bus_styles.get("default")
+            bus_key = (row.get("bus_key") or "misc").strip()
 
-            base_bus_cfg = get_bus_definition_for_style(bus_key, style_key)
+            # Lista de stems de entrada para este bus (columna 'stem_names')
+            stem_names_field = (row.get("stem_names") or "").strip()
+            if not stem_names_field:
+                logger.warning(
+                    "[SPACE_DEPTH] Fila sin 'stem_names' para bus '%s'; "
+                    "no se puede reconstruir la suma del bus. Se omite.",
+                    bus_key,
+                )
+                continue
 
-            bus_fx_name = f"bus_{bus_key}_space.wav"
-            output_path = output_media_dir / bus_fx_name
+            stem_names = [s.strip() for s in stem_names_field.split("|") if s.strip()]
+            stems_for_bus: List[Path] = []
+
+            for stem_name in stem_names:
+                stem_path = input_media_dir / stem_name
+                if not stem_path.exists():
+                    logger.warning(
+                        "[SPACE_DEPTH] Stem '%s' (bus '%s') no existe en %s; se omite.",
+                        stem_name,
+                        bus_key,
+                        input_media_dir,
+                    )
+                    continue
+                stems_for_bus.append(stem_path)
+
+            if not stems_for_bus:
+                logger.warning(
+                    "[SPACE_DEPTH] Ningún stem válido encontrado para bus '%s'; se omite.",
+                    bus_key,
+                )
+                continue
+
+            # ------------------------------------------------------------------
+            # Reconstruir BusDefinition a partir de la fila del CSV
+            # ------------------------------------------------------------------
+            reverb_arch = (row.get("reverb_archetype") or "").strip() or None
+            send_level_db = _parse_float(row.get("send_level_db"), default=-24.0)
+            pre_delay_ms = _parse_float(row.get("pre_delay_ms"), default=0.0)
+
+            delay_ms_val = _parse_float(row.get("delay_ms"), default=0.0)
+            delay_ms = delay_ms_val if delay_ms_val > 0.0 else None
+
+            delay_feedback = _parse_float(row.get("delay_feedback"), default=0.0)
+
+            mod_type = (row.get("mod_type") or "").strip() or None
+            mod_rate_hz = _parse_float(row.get("mod_rate_hz"), default=0.0)
+            mod_depth = _parse_float(row.get("mod_depth"), default=0.0)
+
+            hp_hz_val = _parse_float(row.get("hp_hz"), default=0.0)
+            hp_hz = hp_hz_val if hp_hz_val > 0.0 else None
+
+            lp_hz_val = _parse_float(row.get("lp_hz"), default=0.0)
+            lp_hz = lp_hz_val if lp_hz_val > 0.0 else None
+
+            bus_cfg = BusDefinition(
+                key=bus_key,
+                description=f"Config desde análisis (style={row.get('style_key', '').strip()})",
+                reverb_archetype=reverb_arch,
+                send_level_db=send_level_db,
+                pre_delay_ms=pre_delay_ms,
+                delay_ms=delay_ms,
+                delay_feedback=delay_feedback,
+                mod_type=mod_type,
+                mod_rate_hz=mod_rate_hz,
+                mod_depth=mod_depth,
+                hp_hz=hp_hz,
+                lp_hz=lp_hz,
+                output_trim_db=0.0,  # opcional: podrías añadirlo al CSV si lo necesitas
+            )
+
+            output_path = output_media_dir / bus_fx_stem_name
 
             try:
-                (
-                    peak_dbfs,
-                    rms_dbfs,
-                    final_cfg,
-                    stats,
-                    tempo_notes,
-                ) = _render_bus_fx_stem(
+                peak_dbfs, rms_dbfs = _render_bus_fx_stem_from_cfg(
                     bus_key=bus_key,
-                    bus_cfg=base_bus_cfg,
+                    bus_cfg=bus_cfg,
                     stem_paths=stems_for_bus,
                     output_path=output_path,
-                    tempo_bpm=tempo_bpm,
-                    enable_audio_adaptive=enable_audio_adaptive,
                 )
+                buses_procesados += 1
             except Exception as exc:
                 logger.exception(
-                    "[SPACE_DEPTH] Error renderizando bus FX %s: %s",
+                    "[SPACE_DEPTH] Error renderizando bus FX '%s': %s",
                     bus_key,
                     exc,
                 )
                 continue
 
-            writer.writerow(
-                [
-                    bus_fx_name,
-                    bus_key,
-                    style_key or "",
-                    final_cfg.reverb_archetype or "",
-                    final_cfg.send_level_db,
-                    final_cfg.pre_delay_ms,
-                    final_cfg.delay_ms or 0.0,
-                    final_cfg.delay_feedback,
-                    final_cfg.mod_type or "",
-                    final_cfg.mod_rate_hz,
-                    final_cfg.mod_depth,
-                    final_cfg.hp_hz or 0.0,
-                    final_cfg.lp_hz or 0.0,
-                    peak_dbfs,
-                    rms_dbfs,
-                    len(stems_for_bus),
-                    tempo_bpm or 0.0,
-                    tempo_notes.get("delay_note", ""),
-                    tempo_notes.get("pre_delay_note", ""),
-                    stats.crest if stats else 0.0,
-                    stats.spectral_centroid_hz if stats else 0.0,
-                    stats.low_fraction if stats else 0.0,
-                    stats.mid_fraction if stats else 0.0,
-                    stats.high_fraction if stats else 0.0,
-                ]
+            logger.info(
+                "[SPACE_DEPTH] Bus '%s' procesado -> %s (peak=%.2f dBFS, rms=%.2f dBFS)",
+                bus_key,
+                output_path.name,
+                peak_dbfs,
+                rms_dbfs,
             )
 
     logger.info(
-        "[SPACE_DEPTH] Completado. Stems secos + buses FX en %s, CSV en %s",
+        "[SPACE_DEPTH] Corrección completada: %d buses FX generados en %s "
+        "(stems secos + buses FX listos para el mixdown).",
+        buses_procesados,
         output_media_dir,
-        analysis_csv_path,
     )
+
 
 
 __all__ = [
