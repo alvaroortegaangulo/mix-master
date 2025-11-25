@@ -214,6 +214,15 @@ STAGES: List[Dict[str, Any]] = [
         "premaster_name": "full_song.wav",
         "mastered_name": "full_song.wav",  # se usa este nombre en render_mixdown_for_stage
 
+        # --- NUEVO: Master Stereo (M/S) ---
+        "master_stereo_enable": True,
+        "master_stereo_analysis_csv": "master_stereo_analysis.csv",
+        "master_stereo_log_csv": "master_stereo_log.csv",
+        # IR opcional para el campo Side (room/cab, etc.) relativa a project_root
+        "master_stereo_side_ir": None,  # ej: "irs/stereo/side_room.wav"
+        # Si None → usa el mix recomendado por el análisis
+        "master_stereo_side_ir_mix_override": None,
+
         # --- NUEVO: configuración de mix-bus color ---
         "mix_bus_color_enable": True,
         "mix_bus_color_analysis_csv": "mix_bus_color_analysis.csv",
@@ -266,10 +275,16 @@ from src.analysis.mix_bus_color_analysis import (
     analyze_mix_bus_color,
     export_mix_bus_color_to_csv,
 )
-from src.stages.stage11_mix_bus_color.mix_bus_color_correction import (
+from src.stages.stage12_mix_bus_color.mix_bus_color_correction import (
     run_mix_bus_color_correction,
 )
-
+from src.analysis.master_stereo_analysis import (
+    analyze_master_stereo,
+    export_master_stereo_to_csv,
+)
+from src.stages.stage11_master_stereo.master_stereo_correction import (
+    run_master_stereo_correction,
+)
 
 
 # --------------------------------------------------------------------
@@ -885,6 +900,76 @@ def stage_mastering(
     )
 
     log_mem("after_mastered_mixdown")
+
+
+    # ------------------------------------------------------------------
+    # Master Stereo (M/S): imagen estéreo sobre el full mix
+    # ------------------------------------------------------------------
+    if stage_conf.get("master_stereo_enable", True):
+        logger.info(
+            "Iniciando master_stereo (Mid/Side) sobre full mix: %s",
+            mastered_full_song_render.output_path,
+        )
+
+        master_stereo_analysis_csv = ctx.analysis_dir / stage_conf.get(
+            "master_stereo_analysis_csv",
+            "master_stereo_analysis.csv",
+        )
+        master_stereo_log_csv = ctx.analysis_dir / stage_conf.get(
+            "master_stereo_log_csv",
+            "master_stereo_log.csv",
+        )
+
+        # 1) Análisis Mid/Side
+        log_mem("before_master_stereo_analysis")
+        ms_result = analyze_master_stereo(mastered_full_song_render.output_path)
+        export_master_stereo_to_csv(ms_result, master_stereo_analysis_csv)
+        log_mem("after_master_stereo_analysis")
+
+        logger.info(
+            "Master_stereo analysis: mid_rms=%.2f dBFS | side_rms=%.2f dBFS | side-mid=%.2f dB | side_gain_rec=%.2f dB",
+            ms_result.mid_rms_dbfs,
+            ms_result.side_rms_dbfs,
+            ms_result.side_to_mid_ratio_db,
+            ms_result.recommended_side_gain_db,
+        )
+
+        # 2) Resolución de IR de Side (opcional)
+        side_ir_rel = stage_conf.get("master_stereo_side_ir")
+        side_ir_path = (
+            (ctx.project_root / side_ir_rel).resolve()
+            if side_ir_rel
+            else None
+        )
+        side_ir_mix_override = stage_conf.get(
+            "master_stereo_side_ir_mix_override",
+            None,
+        )
+
+        # 3) Corrección Mid/Side
+        log_mem("before_master_stereo_correction")
+        ms_corr = run_master_stereo_correction(
+            analysis_csv_path=master_stereo_analysis_csv,
+            log_csv_path=master_stereo_log_csv,
+            side_ir_path=side_ir_path,
+            side_ir_mix_override=side_ir_mix_override,
+            overwrite=True,
+            output_path=mastered_full_song_render.output_path,
+        )
+        log_mem("after_master_stereo_correction")
+
+        logger.info(
+            "Master_stereo aplicado. peak: %.2f -> %.2f dBFS | rms: %.2f -> %.2f dBFS",
+            ms_corr.original_peak_dbfs,
+            ms_corr.resulting_peak_dbfs,
+            ms_corr.original_rms_dbfs,
+            ms_corr.resulting_rms_dbfs,
+        )
+
+        # Actualizamos métricas del render para el resto de la etapa (mix_bus_color, etc.)
+        mastered_full_song_render.peak_dbfs = ms_corr.resulting_peak_dbfs
+        mastered_full_song_render.rms_dbfs = ms_corr.resulting_rms_dbfs
+
 
     # ------------------------------------------------------------------
     # Mix-bus color: saturación + IRs + VST3 sobre el full mix final
