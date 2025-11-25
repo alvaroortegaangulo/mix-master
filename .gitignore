@@ -39,3 +39,6 @@ Thumbs.db
 
 #wavs
 backend/app/media/
+
+#temp
+backend/app/temp/
