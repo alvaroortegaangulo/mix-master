@@ -20,7 +20,8 @@ def run_full_pipeline_task(
     job_id: str,
     media_dir: str,
     temp_root: str,
-    enabled_stage_keys: list[str] | None = None,  # <--- NUEVO PARÁMETRO OPCIONAL
+    enabled_stage_keys: list[str] | None = None,
+    stem_profiles: dict[str, str] | None = None,
 ) -> Dict[str, Any]:
     """
     Tarea Celery que ejecuta el pipeline completo (o un subconjunto de stages).
@@ -72,13 +73,19 @@ def run_full_pipeline_task(
             media_dir=media_dir_path,
             temp_root=temp_root_path,
             progress_callback=progress_cb,
-            enabled_stage_keys=enabled_stage_keys,  # <--- PASAMOS LA LISTA AL PIPELINE
+            enabled_stage_keys=enabled_stage_keys,
+            stem_profiles=stem_profiles,
         )
     except Exception as exc:
         # Marcamos fallo en Celery con información básica
         self.update_state(
             state=states.FAILURE,
-            meta={"jobId": job_id, "error": str(exc)},
+            meta={
+                "jobId": job_id,
+                "exc_type": type(exc).__name__,
+                "exc_message": str(exc),
+                "exc_module": exc.__class__.__module__,
+            },
         )
         raise
 

@@ -183,6 +183,14 @@ STAGES: List[Dict[str, Any]] = [
         "vocal_filename": "vocal.wav",
     },
     {
+        "key": "space_depth",
+        "label": "Space & Depth",
+        "description": "Creating buses and applying room/plate/hall/spring FX",
+        "media_subdir": "space_depth",
+        "updates_current_dir": True,
+        "analysis_csv": "space_depth_analysis.csv",
+    },
+    {
         "key": "mastering",
         "label": "Mixdown & Mastering",
         "description": "Rendering final full mix and mastering from stems",
@@ -219,6 +227,7 @@ from src.stages.stage0_technical_preparation.vocal_tuning import (
 from src.analysis.mastering_analysis import analyze_mastering, export_mastering_to_csv
 from src.stages.stage10_mastering.mastering_correction import run_mastering_correction
 from src.utils.mixdown import mix_corrected_stems_to_full_song, FullSongRenderResult
+from src.stages.stage3_space_depth_buses.space_depth import run_space_depth
 
 
 # --------------------------------------------------------------------
@@ -280,6 +289,8 @@ class PipelineContext:
 
     stage_media_dirs: Dict[str, Path]
     current_media_dir: Path
+
+    stem_profiles: Dict[str, str]
 
     tempo_result: Any | None = None
     key_result: Any | None = None
@@ -594,6 +605,53 @@ def stage_vocal_tuning(
 
 
 
+def stage_space_depth(
+    ctx: PipelineContext,
+    stage_conf: Dict[str, Any],
+    input_dir: Path,
+    output_dir: Path,
+) -> None:
+    """
+    Stage de creación de buses de espacio (reverb/delay/modulación).
+    - Lee los stems desde input_dir (salida de static_mix_dyn).
+    - Usa ctx.stem_profiles para mapear cada stem a un bus.
+    - Escribe stems con profundidad espacial en output_dir.
+    """
+    analysis_csv = ctx.analysis_dir / stage_conf.get(
+        "analysis_csv", "space_depth_analysis.csv"
+    )
+
+    logger.info(
+        "Iniciando Space & Depth (buses de reverb/delay/mod) en %s -> %s",
+        input_dir,
+        output_dir,
+    )
+
+    log_mem("before_space_depth")
+
+    run_space_depth(
+        input_media_dir=input_dir,
+        output_media_dir=output_dir,
+        analysis_csv_path=analysis_csv,
+        stem_profiles=ctx.stem_profiles,
+    )
+
+    log_mem("after_space_depth")
+
+    logger.info(
+        "Space & Depth completado. Stems procesados en %s, CSV en %s",
+        output_dir,
+        analysis_csv,
+    )
+
+    # Mezcla de preview para el frontend: media/space_depth/full_song.wav
+    render_mixdown_for_stage(
+        stage_label="space_depth",
+        stems_dir=output_dir,
+    )
+
+
+
 
 def stage_mastering(
     ctx: PipelineContext,
@@ -719,6 +777,7 @@ STAGE_RUNNERS: Dict[str, Callable[[PipelineContext, Dict[str, Any], Path, Path],
     "static_mix_dyn": stage_static_mix_dyn,
     "tempo_key": stage_tempo_key,
     "vocal_tuning": stage_vocal_tuning,
+    "space_depth": stage_space_depth,
     "mastering": stage_mastering,
 }
 
@@ -730,9 +789,10 @@ STAGE_RUNNERS: Dict[str, Callable[[PipelineContext, Dict[str, Any], Path, Path],
 
 def execute_stage(
     index: int,
+    total_stages: int,
     stage_conf: Dict[str, Any],
     ctx: PipelineContext,
-    progress_callback: Optional[ProgressCallback],
+    progress_callback: Optional[ProgressCallback] = None,
 ) -> None:
     """
     Ejecuta un stage de forma genérica:
@@ -741,13 +801,12 @@ def execute_stage(
       - Lanza el runner correspondiente vía STAGE_RUNNERS.
       - Actualiza stage_media_dirs y current_media_dir según 'updates_current_dir'.
     """
-    total_stages = len(STAGES)
     key = stage_conf["key"]
     label = stage_conf.get("label", key)
     description = stage_conf.get("description", "")
 
-    # Reporting
     logger.info("[%d/%d] %s - %s", index, total_stages, key, label)
+
     if progress_callback:
         progress_callback(index, total_stages, key, description)
 
@@ -755,21 +814,17 @@ def execute_stage(
     media_subdir = stage_conf.get("media_subdir")
     updates_current_dir = bool(stage_conf.get("updates_current_dir", False))
 
-    # Calculamos output_dir:
-    #   - Si el stage tiene media_subdir -> media/<media_subdir>.
-    #   - Si no, es un stage "pure analysis" y usamos el mismo input_dir.
     if media_subdir:
         output_dir = ctx.temp_root / "media" / media_subdir
         output_dir.mkdir(parents=True, exist_ok=True)
     else:
-        output_dir = input_dir  # análisis puro, no cambia stems
+        output_dir = input_dir  # stage solo de análisis
 
     runner = STAGE_RUNNERS.get(key)
     if runner is None:
         logger.warning("No hay runner configurado para stage key=%s, se omite", key)
         return
 
-    # Ejecución con logging de tiempo y memoria homogéneo
     log_mem(f"{key}_start")
     t0 = time.perf_counter()
     runner(ctx, stage_conf, input_dir, output_dir)
@@ -777,13 +832,12 @@ def execute_stage(
     logger.info("[TIMER] %s: %.2f s", key, t1 - t0)
     log_mem(f"{key}_end")
 
-    # Guardamos el directorio de media asociado a este stage (si aplica)
     if media_subdir:
         ctx.stage_media_dirs[key] = output_dir
 
-    # Encadenamos el current_media_dir solo si este stage lo declara así
     if updates_current_dir:
         ctx.current_media_dir = output_dir
+
 
 
 # --------------------------------------------------------------------
@@ -796,21 +850,18 @@ def run_full_pipeline(
     media_dir: Path,
     temp_root: Path,
     progress_callback: Optional[ProgressCallback] = None,
-    enabled_stage_keys: Optional[list[str]] = None,   # <--- NUEVO
+    enabled_stage_keys: Optional[List[str]] = None,
+    stem_profiles: Optional[Dict[str, str]] = None,
 ) -> FullPipelineResult:
     """
     Ejecuta TODO el pipeline de mezcla sobre los stems de media_dir,
     utilizando STAGES para ordenar y describir cada fase.
 
-    El input_dir de cada stage es SIEMPRE el output del último stage
-    que tenía updates_current_dir=True (encadenado dinámico).
+    Si enabled_stage_keys no es None ni vacío, solo se ejecutan los
+    stages cuya 'key' esté en esa lista (respetando el orden de STAGES).
     """
 
     logger.info("=== Iniciando run_full_pipeline ===")
-    total_stages = len(STAGES)
-    if progress_callback:
-        progress_callback(0, total_stages, "start", "Starting pipeline")
-
     logger.info("project_root=%s", project_root)
     logger.info("media_dir=%s", media_dir)
     logger.info("temp_root=%s", temp_root)
@@ -818,7 +869,6 @@ def run_full_pipeline(
     # Directorio de análisis (compartido por todos los stages)
     analysis_dir = temp_root / "analysis"
     analysis_dir.mkdir(parents=True, exist_ok=True)
-
     logger.info("analysis_dir = %s", analysis_dir)
     log_mem("start_pipeline")
 
@@ -830,9 +880,10 @@ def run_full_pipeline(
         analysis_dir=analysis_dir,
         stage_media_dirs={},
         current_media_dir=media_dir,
+        stem_profiles=stem_profiles or {},
     )
 
-    # Si nos pasan lista de stages, filtramos STAGES
+    # Filtrado de stages según enabled_stage_keys
     if enabled_stage_keys:
         enabled_set = set(enabled_stage_keys)
         stages_to_run = [s for s in STAGES if s["key"] in enabled_set]
@@ -840,12 +891,15 @@ def run_full_pipeline(
         stages_to_run = STAGES
 
     total_stages = len(stages_to_run)
+    if total_stages == 0:
+        raise RuntimeError("No hay stages seleccionados para ejecutar el pipeline.")
 
-    # donde antes usabas STAGES directamente en el bucle, usa stages_to_run
-    for idx, stage_def in enumerate(stages_to_run, start=1):
-        stage_key = stage_def["key"]
-        stage_label = stage_def.get("label", stage_key)
-        execute_stage(idx, stage_conf, ctx, progress_callback)
+    if progress_callback:
+        progress_callback(0, total_stages, "start", "Starting pipeline")
+
+    # Ejecución secuencial vía execute_stage
+    for idx, stage_conf in enumerate(stages_to_run, start=1):
+        execute_stage(idx, total_stages, stage_conf, ctx, progress_callback)
 
     # Validación mínima de resultados imprescindibles
     if (
@@ -869,9 +923,15 @@ def run_full_pipeline(
     # Reconstruimos rutas tipo "*_media_dir" a partir de stage_media_dirs
     dc_offset_media_dir = ctx.stage_media_dirs.get("dc_offset", media_dir)
     loudness_media_dir = ctx.stage_media_dirs.get("loudness", dc_offset_media_dir)
-    spectral_media_dir = ctx.stage_media_dirs.get("static_mix_eq", loudness_media_dir)
-    dynamics_media_dir = ctx.stage_media_dirs.get("static_mix_dyn", spectral_media_dir)
-    vocal_tuning_media_dir = ctx.stage_media_dirs.get("vocal_tuning", loudness_media_dir)
+    spectral_media_dir = ctx.stage_media_dirs.get(
+        "static_mix_eq", loudness_media_dir
+    )
+    dynamics_media_dir = ctx.stage_media_dirs.get(
+        "static_mix_dyn", spectral_media_dir
+    )
+    vocal_tuning_media_dir = ctx.stage_media_dirs.get(
+        "vocal_tuning", loudness_media_dir
+    )
 
     metrics = FullPipelineMetrics(
         final_peak_dbfs=mastered_full_song_render.peak_dbfs,

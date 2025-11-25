@@ -34,6 +34,21 @@ export type JobStatus = {
 
 export type MixResponse = MixResult;
 
+
+export type StemProfilePayload = {
+  /** Nombre original del archivo tal y como llega en File.name, con extensión */
+  name: string;
+  /** Perfil seleccionado: drums, bass, lead_vocal, etc. o "auto" */
+  profile: string;
+};
+
+
+export type SpaceDepthBusStylesPayload = {
+  /** Bus lógico -> estilo de depth (flamenco_rumba, urban_trap, rock, etc.) */
+  [busKey: string]: string;
+};
+
+
 export function getBackendBaseUrl(): string {
   // 1) Si se ha configurado explícitamente, usamos esa URL (opcional)
   const fromEnv = process.env.NEXT_PUBLIC_BACKEND_URL?.trim();
@@ -176,12 +191,24 @@ function mapBackendStatusToJobStatus(raw: any, baseUrl: string): JobStatus {
 export async function startMixJob(
   files: File[],
   enabledStageKeys?: string[],
+  stemProfiles?: StemProfilePayload[],
 ): Promise<{ jobId: string }> {
   const formData = new FormData();
   files.forEach((f) => formData.append("files", f));
 
   if (enabledStageKeys && enabledStageKeys.length > 0) {
     formData.append("stages_json", JSON.stringify(enabledStageKeys));
+  }
+
+  if (stemProfiles && stemProfiles.length > 0) {
+    formData.append("stem_profiles_json", JSON.stringify(stemProfiles));
+  }
+
+  if (spaceDepthBusStyles && Object.keys(spaceDepthBusStyles).length > 0) {
+    formData.append(
+      "space_depth_bus_styles_json",
+      JSON.stringify(spaceDepthBusStyles),
+    );
   }
 
   const baseUrl = getBackendBaseUrl();

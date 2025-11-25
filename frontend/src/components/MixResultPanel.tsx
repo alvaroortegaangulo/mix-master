@@ -8,6 +8,11 @@ import { MixPipelinePanel } from "./MixPipelinePanel";
 
 type Props = {
   result: MixResult;
+  /**
+   * Lista de keys de stages del pipeline que se ejecutaron para ESTE job.
+   * Son los mismos que usas en el selector inicial (dc_offset, loudness, static_mix_eq, etc.).
+   */
+  enabledPipelineStageKeys?: string[];
 };
 
 type StageKey =
@@ -33,6 +38,18 @@ type StageOption = {
    */
   getCsvPath: (jobId: string) => string;
 };
+
+
+const PIPELINE_TO_STAGE_KEY: Partial<Record<string, StageKey>> = {
+  dc_offset: "dc_offset",
+  loudness: "loudness",
+  static_mix_eq: "spectral_cleanup",
+  static_mix_dyn: "dynamics",
+  tempo_key: "key",
+  vocal_tuning: "vocal_tuning",
+  mastering: "mastering",
+};
+
 
 const STAGE_OPTIONS: StageOption[] = [
   {
@@ -517,7 +534,10 @@ function explainMasteringRow(row: StageRow): string | null {
 // Componente principal
 // ------------------------------------------------------------------
 
-export function MixResultPanel({ result }: Props) {
+export function MixResultPanel({
+  result,
+  enabledPipelineStageKeys,
+}: Props) {
   const { originalFullSongUrl, fullSongUrl, metrics, jobId } = result;
 
   const [selectedStageKey, setSelectedStageKey] = useState<StageKey | "">("");
@@ -526,9 +546,45 @@ export function MixResultPanel({ result }: Props) {
   const [csvLoading, setCsvLoading] = useState(false);
   const [csvError, setCsvError] = useState<string | null>(null);
 
+  // Filtrar STAGE_OPTIONS en función de los stages realmente ejecutados
+  const stageOptionsForJob = useMemo(() => {
+    if (!enabledPipelineStageKeys || enabledPipelineStageKeys.length === 0) {
+      // Si no nos dicen nada, mostramos todas (comportamiento anterior)
+      return STAGE_OPTIONS;
+    }
+
+
+    const enabledStageKeys = new Set<StageKey>();
+    for (const pipelineKey of enabledPipelineStageKeys) {
+      const mapped = PIPELINE_TO_STAGE_KEY[pipelineKey];
+      if (mapped) {
+        enabledStageKeys.add(mapped);
+      }
+    }
+
+    if (enabledStageKeys.size === 0) {
+      return STAGE_OPTIONS;
+    }
+
+    return STAGE_OPTIONS.filter((opt) => enabledStageKeys.has(opt.key));
+  }, [enabledPipelineStageKeys]);
+
+
+
+  // Si cambia el conjunto de opciones (nuevo job o selección distinta),
+  // y la etapa seleccionada ya no existe, reseteamos el selector.
+  useEffect(() => {
+    if (!selectedStageKey) return;
+    const exists = stageOptionsForJob.some((s) => s.key === selectedStageKey);
+    if (!exists) {
+      setSelectedStageKey("");
+    }
+  }, [stageOptionsForJob, selectedStageKey]);
+
   const selectedStage = useMemo(
-    () => STAGE_OPTIONS.find((s) => s.key === selectedStageKey) ?? null,
-    [selectedStageKey],
+    () =>
+      stageOptionsForJob.find((s) => s.key === selectedStageKey) ?? null,
+    [selectedStageKey, stageOptionsForJob],
   );
 
   // Cargar CSV cuando cambia la etapa
@@ -539,6 +595,7 @@ export function MixResultPanel({ result }: Props) {
       setCsvError(null);
       return;
     }
+
 
     const baseUrl = getBackendBaseUrl();
     const url = `${baseUrl}/files/${encodeURIComponent(
@@ -647,8 +704,11 @@ export function MixResultPanel({ result }: Props) {
       </div>
       
 
-        {/* Panel Pipeline */}
-        <MixPipelinePanel result={result} />
+      {/* Panel Pipeline: solo stages elegidos */}
+      <MixPipelinePanel
+        result={result}
+        enabledPipelineStageKeys={enabledPipelineStageKeys}
+      />
 
 
       {/* Métricas principales */}
