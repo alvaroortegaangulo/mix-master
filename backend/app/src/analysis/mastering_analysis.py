@@ -20,6 +20,41 @@ def _safe_dbfs(value: float, floor: float = -120.0) -> float:
     return 20.0 * np.log10(v)
 
 
+
+def _classify_stem_for_mastering(
+    filename: str,
+    vocal_filename: str,
+) -> tuple[bool, bool, Optional[str]]:
+    """
+    Devuelve (is_vocal, is_bus_fx, bus_key) en función del nombre de archivo.
+
+    - is_vocal: sólo la pista vocal principal (vocal_filename).
+    - is_bus_fx: nombre tipo bus_<bus_key>_space.wav.
+    - bus_key: por ejemplo 'drums', 'guitars', 'lead_vocal', 'fx', etc.
+    """
+    lower = filename.lower()
+    is_vocal = lower == vocal_filename.lower()
+    is_bus_fx = False
+    bus_key: Optional[str] = None
+
+    # Detectar bus FX: bus_<bus_key>_space.wav
+    if lower.startswith("bus_") and "_space" in lower:
+        is_bus_fx = True
+        # quitar extensión
+        stem = Path(filename).stem.lower()  # p.ej. "bus_drums_space"
+        core = stem
+        if core.startswith("bus_"):
+            core = core[4:]  # quita "bus_"
+        if core.endswith("_space"):
+            core = core[:-6]  # quita "_space"
+        bus_key = core or None
+        # Un bus de voces NO es "voz principal" a efectos de mastering
+        is_vocal = False
+
+    return is_vocal, is_bus_fx, bus_key
+
+
+
 @dataclass
 class MasteringResult:
     file_path: Path
@@ -30,6 +65,8 @@ class MasteringResult:
     peak_dbfs: float
     rms_dbfs: float
     is_vocal: bool
+    is_bus_fx: bool
+    bus_key: Optional[str]
 
     recommended_target_peak_dbfs: float
     recommended_drive_db: float
@@ -54,9 +91,11 @@ def analyze_mastering(
     results: List[MasteringResult] = []
 
     for wav_path in sorted(media_dir.glob("*.wav")):
-        is_vocal = wav_path.name.lower() == vocal_filename.lower()
+        is_vocal, is_bus_fx, bus_key = _classify_stem_for_mastering(
+            wav_path.name, vocal_filename
+        )
 
-        # Para el análisis, si es la voz y existe la versión afinada, la usamos
+        # Para el análisis, si es la voz principal y existe la versión afinada, la usamos
         analysis_path = wav_path
         if is_vocal and vocal_tuning_media_dir is not None:
             tuned_path = vocal_tuning_media_dir / vocal_filename
@@ -77,8 +116,16 @@ def analyze_mastering(
         peak_dbfs = _safe_dbfs(peak)
         rms_dbfs = _safe_dbfs(rms)
 
-        # Target de pico recomendado (más conservador en vocal)
-        if is_vocal:
+
+        # Target de pico recomendado:
+        # - buses FX algo más bajos para dejar headroom y no dominar la mezcla
+        # - voz principal algo más conservadora
+        if is_bus_fx:
+            if bus_key == "fx":
+                target_peak = -5.0
+            else:
+                target_peak = -4.0
+        elif is_vocal:
             target_peak = -2.0
         else:
             target_peak = -1.0
@@ -96,11 +143,12 @@ def analyze_mastering(
                 peak_dbfs=peak_dbfs,
                 rms_dbfs=rms_dbfs,
                 is_vocal=is_vocal,
+                is_bus_fx=is_bus_fx,
+                bus_key=bus_key,
                 recommended_target_peak_dbfs=target_peak,
                 recommended_drive_db=drive_db,
             )
         )
-
     return results
 
 
@@ -134,6 +182,8 @@ def export_mastering_to_csv(
         "peak_dbfs",
         "rms_dbfs",
         "is_vocal",
+        "is_bus_fx",
+        "bus_key",
         "recommended_target_peak_dbfs",
         "recommended_drive_db",
     ]
@@ -143,7 +193,7 @@ def export_mastering_to_csv(
         writer.writeheader()
 
         for r in results:
-            writer.writerow(
+                writer.writerow(
                 {
                     "filename": r.file_path.name,
                     "relative_path": r.file_path.name,
@@ -153,6 +203,8 @@ def export_mastering_to_csv(
                     "peak_dbfs": f"{r.peak_dbfs:.2f}",
                     "rms_dbfs": f"{r.rms_dbfs:.2f}",
                     "is_vocal": "1" if r.is_vocal else "0",
+                    "is_bus_fx": "1" if r.is_bus_fx else "0",
+                    "bus_key": r.bus_key or "",
                     "recommended_target_peak_dbfs": f"{r.recommended_target_peak_dbfs:.2f}",
                     "recommended_drive_db": f"{r.recommended_drive_db:.2f}",
                 }

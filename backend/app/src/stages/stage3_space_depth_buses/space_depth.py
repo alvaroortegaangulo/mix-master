@@ -4,8 +4,9 @@ import csv
 import logging
 from dataclasses import dataclass, replace
 from pathlib import Path
-from typing import Dict, Optional, Tuple
-
+import shutil
+from collections import defaultdict
+from typing import Dict, Optional, Tuple, List
 import numpy as np
 
 try:
@@ -917,70 +918,140 @@ def resolve_bus_for_profile(profile: str) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Procesado de un stem
+# Helpers para sumar stems por bus y renderizar buses FX 100 % wet
 # ---------------------------------------------------------------------------
 
 
-def _process_stem_with_bus(
-    stem_path: Path,
-    output_path: Path,
+def _load_stem_as_nc(path: Path) -> Tuple[np.ndarray, int]:
+    """
+    Carga un stem como array (n_channels, n_samples) float32 y devuelve (audio, samplerate).
+    """
+    data, samplerate = sf.read(str(path), always_2d=True)
+    if data.ndim != 2:
+        raise ValueError(f"Formato de audio inesperado para {path}: {data.shape}")
+
+    audio = data.T.astype(np.float32)  # (n_channels, n_samples)
+    return audio, samplerate
+
+
+def _sum_stems_for_bus(stem_paths: List[Path]) -> Tuple[np.ndarray, int]:
+    """
+    Suma todos los stems de un bus en un solo array (n_channels, n_samples).
+
+    - Alinea samplerate y número de canales:
+      - Si hay mezcla mono/estéreo, se hace upmix/downmix sencillo.
+      - Si hay stems de distintas longitudes, se zero-padean al máximo.
+    """
+    if not stem_paths:
+        raise ValueError("No hay stems para este bus")
+
+    audio_list: List[np.ndarray] = []
+    samplerate: Optional[int] = None
+    n_channels: Optional[int] = None
+    max_len = 0
+
+    for stem_path in stem_paths:
+        try:
+            audio, sr = _load_stem_as_nc(stem_path)
+        except Exception as exc:
+            logger.warning("[SPACE_DEPTH] No se pudo leer stem %s: %s", stem_path, exc)
+            continue
+
+        if samplerate is None:
+            samplerate = sr
+        elif sr != samplerate:
+            logger.warning(
+                "[SPACE_DEPTH] Samplerate inconsistente en %s (sr=%s, esperado=%s); se omite",
+                stem_path,
+                sr,
+                samplerate,
+            )
+            continue
+
+        if n_channels is None:
+            n_channels = audio.shape[0]
+        else:
+            if audio.shape[0] != n_channels:
+                # Resolución simple de mono/estéreo
+                if n_channels == 2 and audio.shape[0] == 1:
+                    audio = np.vstack([audio, audio])  # mono -> estéreo
+                elif n_channels == 1 and audio.shape[0] == 2:
+                    audio = audio.mean(axis=0, keepdims=True)  # estéreo -> mono
+                else:
+                    logger.warning(
+                        "[SPACE_DEPTH] Nº de canales incompatible en %s (got=%d, esperado=%d); se omite",
+                        stem_path,
+                        audio.shape[0],
+                        n_channels,
+                    )
+                    continue
+
+        max_len = max(max_len, audio.shape[1])
+        audio_list.append(audio)
+
+    if samplerate is None or n_channels is None or not audio_list:
+        raise RuntimeError("No se pudo construir la suma de stems para el bus")
+
+    bus_sum = np.zeros((n_channels, max_len), dtype=np.float32)
+
+    for audio in audio_list:
+        length = audio.shape[1]
+        bus_sum[:, :length] += audio
+
+    return bus_sum, samplerate
+
+
+def _render_bus_fx_stem(
+    bus_key: str,
     bus_cfg: BusDefinition,
+    stem_paths: List[Path],
+    output_path: Path,
 ) -> Tuple[float, float]:
     """
-    Aplica la cadena de espacio/profundidad del bus a un stem concreto.
+    Renderiza un stem de BUS FX 100 % wet:
 
-    - Lee el stem de stem_path.
-    - Calcula wet = board(dry).
-    - Mezcla out = dry + wet * send_gain (send_gain en lineal a partir de
-      send_level_db).
-    - Normaliza si es necesario para evitar clipping.
-    - Escribe el stem procesado en output_path.
-    - Devuelve (peak_dbfs, rms_dbfs).
+      - Suma todos los stems del bus (dry) en un solo array.
+      - Aplica la cadena de Pedalboard 100 % wet.
+      - Aplica el send_level_db del bus como ganancia.
+      - Controla clipping y calcula métricas.
+      - Escribe un archivo .wav sólo FX en output_path.
     """
-    data, samplerate = sf.read(str(stem_path), always_2d=True)
-    # data.shape = (n_samples, n_channels)
-    if data.ndim != 2:
-        raise ValueError(
-            f"Formato de audio inesperado para {stem_path}: {data.shape}"
-        )
+    if not stem_paths:
+        raise ValueError(f"No hay stems para el bus {bus_key}")
 
-    # Transponer a (n_channels, n_samples) para pedalboard
-    audio = data.T.astype(np.float32)
+    bus_dry, samplerate = _sum_stems_for_bus(stem_paths)
 
-    dry = audio
     board = build_space_pedalboard(bus_cfg)
 
-    # Cadena 100% wet
-    wet = board(dry, samplerate)
+    # FX 100 % wet sobre la suma de dry
+    wet = board(bus_dry, samplerate)
 
     # Envío a bus FX en dB
     send_gain = db_to_linear(bus_cfg.send_level_db)
-
-    # Mezcla tipo envío: dry + (wet * send_gain)
     wet_scaled = wet * send_gain
-    processed = dry + wet_scaled
 
     # Control anti-clipping
-    peak = float(np.max(np.abs(processed)))
+    peak = float(np.max(np.abs(wet_scaled)))
     if peak > 0.98:
         norm_gain = 0.98 / peak
-        processed *= norm_gain
+        wet_scaled *= norm_gain
         peak = 0.98
 
-    # Cálculo de RMS global (todas las canales)
-    rms = float(np.sqrt(np.mean(processed ** 2.0)))
+    # RMS global
+    rms = float(np.sqrt(np.mean(wet_scaled ** 2.0)))
 
-    # Volver a (n_samples, n_channels)
-    processed_out = processed.T
+    # Guardar como (n_samples, n_channels)
+    processed_out = wet_scaled.T
     sf.write(str(output_path), processed_out, samplerate)
 
     peak_dbfs = amplitude_to_dbfs(peak)
     rms_dbfs = amplitude_to_dbfs(rms)
 
     logger.info(
-        "[SPACE_DEPTH] %s | bus=%s | peak=%.2f dBFS | rms=%.2f dBFS",
-        stem_path.name,
-        bus_cfg.key,
+        "[SPACE_DEPTH] Bus FX %s (%d stems) -> %s | peak=%.2f dBFS | rms=%.2f dBFS",
+        bus_key,
+        len(stem_paths),
+        output_path.name,
         peak_dbfs,
         rms_dbfs,
     )
@@ -989,7 +1060,7 @@ def _process_stem_with_bus(
 
 
 # ---------------------------------------------------------------------------
-# Entry point de stage: run_space_depth
+# Entry point de stage: run_space_depth (nuevo diseño: genera buses FX)
 # ---------------------------------------------------------------------------
 
 
@@ -1001,21 +1072,26 @@ def run_space_depth(
     bus_styles: Optional[Dict[str, str]] = None,
 ) -> None:
     """
-    Stage de Space & Depth.
+    Stage de Space & Depth (versión bus-FX).
 
-    - input_media_dir: directorio con los stems de entrada (ya con EQ/dinámica).
-    - output_media_dir: directorio donde se escribirán los stems procesados.
-    - analysis_csv_path: CSV con el mapeo stem→bus, estilo y métricas.
-    - stem_profiles: dict opcional {stem_name (o base) -> perfil}.
-    - bus_styles: dict opcional {bus_key -> style_key}, por ejemplo:
-        {
-          "drums": "flamenco_rumba",
-          "lead_vocal": "urban_trap",
-          "fx": "edm"
-        }
-      Los style_key deben coincidir con los usados en el frontend:
-        flamenco_rumba, urban_trap, rock, latin_pop,
-        edm, ballad_ambient, acoustic.
+    Nuevo diseño:
+      - Copia todos los stems secos de input_media_dir a output_media_dir.
+      - Agrupa stems por bus (drums, guitars, lead_vocal...).
+      - Para cada bus:
+          * Suma los stems del bus en un solo array.
+          * Aplica la cadena de reverb/delay/mod 100 % wet.
+          * Aplica el send_level_db del bus.
+          * Escribe un stem de bus FX 100 % wet: bus_<bus_key>_space.wav
+
+    El mixdown posterior sumará:
+      - los stems secos (copiados)
+      - + los stems bus_XXX_space.wav (sólo FX).
+
+    Parámetros:
+      - stem_profiles: dict opcional {stem_name (o base) -> perfil}.
+      - bus_styles: dict opcional {bus_key -> style_key} o {"default": style_key}.
+        Los style_key deben coincidir con los usados en STYLE_PRESETS_BY_STYLE_AND_BUS:
+          flamenco_rumba, urban_trap, rock, latin_pop, edm, ballad_ambient, acoustic.
     """
     stem_profiles = stem_profiles or {}
     bus_styles = bus_styles or {}
@@ -1031,22 +1107,52 @@ def run_space_depth(
         return
 
     logger.info(
-        "[SPACE_DEPTH] Procesando %d stems desde %s -> %s",
+        "[SPACE_DEPTH] Procesando %d stems desde %s -> %s (bus-FX)",
         len(wav_files),
         input_media_dir,
         output_media_dir,
     )
 
-    # CSV de análisis / documentación
+    # ------------------------------------------------------------------
+    # 1) Copiar stems secos tal cual a output_media_dir
+    # ------------------------------------------------------------------
+    for stem_path in wav_files:
+        dest = output_media_dir / stem_path.name
+        if dest.resolve() == stem_path.resolve():
+            # Caso raro: input_dir == output_dir
+            continue
+        try:
+            shutil.copy2(stem_path, dest)
+        except Exception as exc:
+            logger.warning(
+                "[SPACE_DEPTH] No se pudo copiar stem seco %s -> %s: %s",
+                stem_path,
+                dest,
+                exc,
+            )
+
+    # ------------------------------------------------------------------
+    # 2) Agrupar stems por bus usando stem_profiles → PROFILE_TO_BUS
+    # ------------------------------------------------------------------
+    bus_to_stems: Dict[str, List[Path]] = defaultdict(list)
+
+    for stem_path in wav_files:
+        stem_name = stem_path.name
+        profile = guess_profile_for_stem(stem_name, stem_profiles)
+        bus_key = resolve_bus_for_profile(profile)
+        bus_to_stems[bus_key].append(stem_path)
+
+    # ------------------------------------------------------------------
+    # 3) CSV de análisis: una fila por BUS FX stem
+    # ------------------------------------------------------------------
     with analysis_csv_path.open("w", newline="", encoding="utf-8") as csv_file:
         writer = csv.writer(csv_file)
         writer.writerow(
             [
-                "stem_name",
-                "profile",
-                "bus_key",
-                "style_key",
-                "reverb_archetype",
+                "stem_name",         # nombre del BUS FX stem (bus_<bus_key>_space.wav)
+                "bus_key",           # drums, guitars, lead_vocal, ...
+                "style_key",         # flamenco_rumba, urban_trap, ...
+                "reverb_archetype",  # room/plate/hall/spring
                 "send_level_db",
                 "pre_delay_ms",
                 "delay_ms",
@@ -1058,39 +1164,43 @@ def run_space_depth(
                 "lp_hz",
                 "output_peak_dbfs",
                 "output_rms_dbfs",
+                "num_input_stems",   # cuántos stems secos alimentan este bus
             ]
         )
 
-        for stem_path in wav_files:
-            stem_name = stem_path.name
-            profile = guess_profile_for_stem(stem_name, stem_profiles)
-            bus_key = resolve_bus_for_profile(profile)
+        # ------------------------------------------------------------------
+        # 4) Para cada bus, generar bus FX stem 100 % wet
+        # ------------------------------------------------------------------
+        for bus_key, stems_for_bus in bus_to_stems.items():
+            if not stems_for_bus:
+                continue
 
             # Estilo seleccionado para este bus (si lo hay)
             style_key = bus_styles.get(bus_key) or bus_styles.get("default")
 
             bus_cfg = get_bus_definition_for_style(bus_key, style_key)
 
-            output_path = output_media_dir / stem_name
+            bus_fx_name = f"bus_{bus_key}_space.wav"
+            output_path = output_media_dir / bus_fx_name
 
             try:
-                peak_dbfs, rms_dbfs = _process_stem_with_bus(
-                    stem_path=stem_path,
-                    output_path=output_path,
+                peak_dbfs, rms_dbfs = _render_bus_fx_stem(
+                    bus_key=bus_key,
                     bus_cfg=bus_cfg,
+                    stem_paths=stems_for_bus,
+                    output_path=output_path,
                 )
             except Exception as exc:
                 logger.exception(
-                    "[SPACE_DEPTH] Error procesando stem %s: %s",
-                    stem_name,
+                    "[SPACE_DEPTH] Error renderizando bus FX %s: %s",
+                    bus_key,
                     exc,
                 )
                 continue
 
             writer.writerow(
                 [
-                    stem_name,
-                    profile,
+                    bus_fx_name,
                     bus_key,
                     style_key or "",
                     bus_cfg.reverb_archetype or "",
@@ -1105,12 +1215,12 @@ def run_space_depth(
                     bus_cfg.lp_hz or 0.0,
                     peak_dbfs,
                     rms_dbfs,
+                    len(stems_for_bus),
                 ]
             )
 
     logger.info(
-        "[SPACE_DEPTH] Completado. Stems con espacio/profundidad en %s, "
-        "CSV de análisis en %s",
+        "[SPACE_DEPTH] Completado. Stems secos + buses FX en %s, CSV en %s",
         output_media_dir,
         analysis_csv_path,
     )

@@ -61,10 +61,11 @@ class MasteringRow:
     peak_dbfs: float
     rms_dbfs: float
     is_vocal: bool
+    is_bus_fx: bool
+    bus_key: str | None
 
     recommended_target_peak_dbfs: float
     recommended_drive_db: float
-
 
 @dataclass
 class MasteringCorrectionResult:
@@ -76,12 +77,16 @@ class MasteringCorrectionResult:
     num_channels: int
     duration_seconds: float
     is_vocal: bool
+    is_bus_fx: bool
+    bus_key: str | None
 
     target_peak_dbfs: float
     pre_gain_db: float
     comp_threshold_dbfs: float
     comp_ratio: float
     distortion_drive_db: float
+    hpf_cutoff_hz: float
+    limiter_threshold_db: float
 
     original_peak_dbfs: float
     original_rms_dbfs: float
@@ -112,12 +117,15 @@ def load_mastering_csv(csv_path: Path) -> List[MasteringRow]:
                 peak_dbfs=_parse_float(line.get("peak_dbfs", "-120.0")),
                 rms_dbfs=_parse_float(line.get("rms_dbfs", "-120.0")),
                 is_vocal=_parse_bool(line.get("is_vocal", "0")),
+                is_bus_fx=_parse_bool(line.get("is_bus_fx", "0")),
+                bus_key=(line.get("bus_key") or "").strip() or None,
                 recommended_target_peak_dbfs=_parse_float(
                     line.get("recommended_target_peak_dbfs", "-1.0")
                 ),
                 recommended_drive_db=_parse_float(
                     line.get("recommended_drive_db", "0.0")
                 ),
+
             )
             rows.append(row)
 
@@ -177,42 +185,76 @@ def _apply_mastering_to_file(
     original_rms_dbfs = _safe_dbfs(original_rms)
 
     # --------------------------------------------------------------
-    # Diseño de cadena de mastering
+    # Diseño de cadena de mastering adaptado por perfil
     # --------------------------------------------------------------
     target_peak_dbfs = row.recommended_target_peak_dbfs
 
     # Pre-gain sugerido por el análisis, clamp de seguridad
     pre_gain_db = max(min(row.recommended_drive_db, 12.0), -24.0)
 
-    # Detección simple de kick por nombre de archivo
     filename_lower = row.filename.lower()
     is_kick = "kick" in filename_lower
+    is_bus_fx = row.is_bus_fx
+    bus_key = (row.bus_key or "").lower()
 
-    # Ajustes por tipo de pista
-    if row.is_vocal:
-        # Vocal: compresión algo más marcada pero con poca saturación
+    # Valores por defecto (stems "normales")
+    hpf_cutoff_hz = 25.0
+    limiter_threshold_db = -1.0
+    comp_threshold_dbfs = -16.0
+    comp_ratio = 2.0
+    distortion_drive_db = 2.5
+
+    if row.is_vocal and not is_bus_fx:
+        # Vocal principal: compresión algo más marcada pero con poca saturación,
+        # HPF moderado para limpiar low-end sin adelgazar demasiado.
+        hpf_cutoff_hz = 55.0
         comp_threshold_dbfs = -18.0
         comp_ratio = 2.5
         distortion_drive_db = 1.5
+        limiter_threshold_db = -1.0
+
+    elif is_bus_fx:
+        # Buses FX: reverb/delay 100 % wet procedentes de space_depth.
+        # Tratamiento: mucha limpieza de graves, compresión muy suave,
+        # cero o muy poca saturación y un poco más de headroom.
+        limiter_threshold_db = -3.0
+
+        if bus_key in {"drums", "bass"}:
+            hpf_cutoff_hz = 160.0
+        elif bus_key in {"lead_vocal", "backing_vocals"}:
+            hpf_cutoff_hz = 180.0
+        else:
+            # guitars, keys_synth, fx, misc...
+            hpf_cutoff_hz = 200.0
+
+        comp_threshold_dbfs = -22.0
+        comp_ratio = 1.3
+        distortion_drive_db = 0.0
+
+        # No empujamos tanto al limiter con los buses FX
+        pre_gain_db = max(min(row.recommended_drive_db, 6.0), -12.0)
 
     elif is_kick:
-        # Kick: proteger transitorios → menos compresión y menos saturación
-        # Threshold más alto (menos GR) y ratio suave
+        # Kick directo: proteger transitorios → poca compresión y nada de saturación,
+        # HPF muy bajo, headroom normal pero con menos pre-gain.
+        hpf_cutoff_hz = 25.0
         comp_threshold_dbfs = -10.0
         comp_ratio = 1.3
-        distortion_drive_db = 0.0  # sin saturación adicional
+        distortion_drive_db = 0.0
+        limiter_threshold_db = -1.0
 
-        # Además, reducimos el pre-gain para no empujar tanto al limiter
         pre_gain_db = max(min(row.recommended_drive_db * 0.5, 6.0), -12.0)
 
     else:
-        # Resto de instrumentos: ajuste por defecto
+        # Resto de instrumentos (stems secos)
+        hpf_cutoff_hz = 30.0
         comp_threshold_dbfs = -16.0
         comp_ratio = 2.0
-        distortion_drive_db = 2.5
+        distortion_drive_db = 2.0
+        limiter_threshold_db = -1.0
 
     effects = [
-        HighpassFilter(cutoff_frequency_hz=25.0),
+        HighpassFilter(cutoff_frequency_hz=hpf_cutoff_hz),
         Compressor(
             threshold_db=comp_threshold_dbfs,
             ratio=comp_ratio,
@@ -222,10 +264,11 @@ def _apply_mastering_to_file(
         Distortion(drive_db=distortion_drive_db),
         Gain(gain_db=pre_gain_db),
         Limiter(
-            threshold_db=-1.0,
+            threshold_db=limiter_threshold_db,
             release_ms=100.0,
         ),
     ]
+
 
     board = Pedalboard(effects)
     processed = board(audio, sample_rate=sr)
@@ -254,11 +297,15 @@ def _apply_mastering_to_file(
         num_channels=num_channels,
         duration_seconds=row.duration_seconds,
         is_vocal=row.is_vocal,
+        is_bus_fx=row.is_bus_fx,
+        bus_key=row.bus_key,
         target_peak_dbfs=target_peak_dbfs,
         pre_gain_db=pre_gain_db,
         comp_threshold_dbfs=comp_threshold_dbfs,
         comp_ratio=comp_ratio,
         distortion_drive_db=distortion_drive_db,
+        hpf_cutoff_hz=hpf_cutoff_hz,
+        limiter_threshold_db=limiter_threshold_db,
         original_peak_dbfs=original_peak_dbfs,
         original_rms_dbfs=original_rms_dbfs,
         resulting_peak_dbfs=resulting_peak_dbfs,
@@ -285,11 +332,15 @@ def write_mastering_log(
         "num_channels",
         "duration_seconds",
         "is_vocal",
+        "is_bus_fx",
+        "bus_key",
         "target_peak_dbfs",
         "pre_gain_db",
         "comp_threshold_dbfs",
         "comp_ratio",
         "distortion_drive_db",
+        "hpf_cutoff_hz",
+        "limiter_threshold_db",
         "original_peak_dbfs",
         "original_rms_dbfs",
         "resulting_peak_dbfs",
@@ -310,11 +361,15 @@ def write_mastering_log(
                     "num_channels": r.num_channels,
                     "duration_seconds": f"{r.duration_seconds:.6f}",
                     "is_vocal": "1" if r.is_vocal else "0",
+                    "is_bus_fx": "1" if r.is_bus_fx else "0",
+                    "bus_key": r.bus_key or "",
                     "target_peak_dbfs": f"{r.target_peak_dbfs:.2f}",
                     "pre_gain_db": f"{r.pre_gain_db:.2f}",
                     "comp_threshold_dbfs": f"{r.comp_threshold_dbfs:.2f}",
                     "comp_ratio": f"{r.comp_ratio:.2f}",
                     "distortion_drive_db": f"{r.distortion_drive_db:.2f}",
+                    "hpf_cutoff_hz": f"{r.hpf_cutoff_hz:.1f}",
+                    "limiter_threshold_db": f"{r.limiter_threshold_db:.2f}",
                     "original_peak_dbfs": f"{r.original_peak_dbfs:.2f}",
                     "original_rms_dbfs": f"{r.original_rms_dbfs:.2f}",
                     "resulting_peak_dbfs": f"{r.resulting_peak_dbfs:.2f}",
