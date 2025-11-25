@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import csv
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Dict, Optional, Tuple
 
@@ -41,6 +41,7 @@ logger = logging.getLogger(__name__)
 # Utilidades de conversión
 # ---------------------------------------------------------------------------
 
+
 def db_to_linear(db: float) -> float:
     """
     Convierte dBFS a factor lineal. -inf dB se aproxima a 0.
@@ -62,8 +63,17 @@ def amplitude_to_dbfs(amplitude: float, floor_db: float = -120.0) -> float:
 # Definición de buses y arquetipos de reverb
 # ---------------------------------------------------------------------------
 
+
 @dataclass
 class BusDefinition:
+    """
+    Ajustes base de espacio/profundidad de un bus.
+
+    Estos valores representan un punto de partida "auto" conservador,
+    pensado para no embarrar la mezcla. Los presets de estilo aplican
+    overrides sobre estos valores.
+    """
+
     key: str
     description: str
     reverb_archetype: Optional[str]
@@ -79,36 +89,96 @@ class BusDefinition:
     output_trim_db: float = 0.0
 
 
+@dataclass
+class StyleOverride:
+    """
+    Overrides opcionales de un BusDefinition para un estilo concreto.
+
+    Cualquier campo en None significa "no cambiar el valor base".
+    """
+
+    reverb_archetype: Optional[str] = None
+    send_level_db: Optional[float] = None
+    pre_delay_ms: Optional[float] = None
+    delay_ms: Optional[float] = None
+    delay_feedback: Optional[float] = None
+    mod_type: Optional[str] = None
+    mod_rate_hz: Optional[float] = None
+    mod_depth: Optional[float] = None
+    hp_hz: Optional[float] = None
+    lp_hz: Optional[float] = None
+    output_trim_db: Optional[float] = None
+
+
+def apply_style_override(
+    base: BusDefinition, override: Optional[StyleOverride]
+) -> BusDefinition:
+    """
+    Devuelve una copia de base con los overrides aplicados.
+    """
+    if override is None:
+        return base
+
+    cfg = replace(base)  # copia superficial
+
+    if override.reverb_archetype is not None:
+        cfg.reverb_archetype = override.reverb_archetype
+    if override.send_level_db is not None:
+        cfg.send_level_db = override.send_level_db
+    if override.pre_delay_ms is not None:
+        cfg.pre_delay_ms = override.pre_delay_ms
+    if override.delay_ms is not None:
+        cfg.delay_ms = override.delay_ms
+    if override.delay_feedback is not None:
+        cfg.delay_feedback = override.delay_feedback
+    if override.mod_type is not None:
+        cfg.mod_type = override.mod_type
+    if override.mod_rate_hz is not None:
+        cfg.mod_rate_hz = override.mod_rate_hz
+    if override.mod_depth is not None:
+        cfg.mod_depth = override.mod_depth
+    if override.hp_hz is not None:
+        cfg.hp_hz = override.hp_hz
+    if override.lp_hz is not None:
+        cfg.lp_hz = override.lp_hz
+    if override.output_trim_db is not None:
+        cfg.output_trim_db = override.output_trim_db
+
+    return cfg
+
+
 # Arquetipos de reverb típicos, simulados con pedalboard.Reverb
+# room_size ~= tiempo de cola
+# damping ~= damping de agudos
 REVERB_ARCHETYPES: Dict[str, Dict[str, float]] = {
-    # Room corta, bastante damping, cola rápida
+    # Room corto, cola rápida. Para rooms discretos de batería y espacios pequeños.
     "room": {
-        "room_size": 0.25,
-        "damping": 0.55,
+        "room_size": 0.22,
+        "damping": 0.65,
         "width": 1.0,
     },
-    # Plate clásico: algo más grande, más bright
+    # Plate clásico: algo más largo, brillante pero controlado.
     "plate": {
-        "room_size": 0.35,
+        "room_size": 0.38,
+        "damping": 0.7,
+        "width": 1.0,
+    },
+    # Hall grande y envolvente pero con damping suficiente para no embarrar.
+    "hall": {
+        "room_size": 0.7,
         "damping": 0.75,
         "width": 1.0,
     },
-    # Hall grande y envolvente
-    "hall": {
-        "room_size": 0.75,
-        "damping": 0.6,
-        "width": 1.0,
-    },
-    # Spring aproximado: pequeño, con poco damping y algo más estrecho
+    # Spring aproximado: pequeño, más mid-rangey.
     "spring": {
-        "room_size": 0.20,
-        "damping": 0.35,
-        "width": 0.9,
+        "room_size": 0.24,
+        "damping": 0.55,
+        "width": 0.95,
     },
 }
 
 
-# Mapa de perfiles (frontend) → buses
+# Mapa de perfiles (frontend) → buses internos
 PROFILE_TO_BUS: Dict[str, str] = {
     "drums": "drums",
     "percussion": "drums",
@@ -126,115 +196,730 @@ PROFILE_TO_BUS: Dict[str, str] = {
 }
 
 
+# Configuración base muy conservadora (modo AUTO)
+# Si no hay estilo seleccionado, se usa esto.
 BUS_DEFINITIONS: Dict[str, BusDefinition] = {
     "drums": BusDefinition(
         key="drums",
         description="Tight stereo room reverb para drum/percussion bus",
         reverb_archetype="room",
-        send_level_db=-14.0,
+        send_level_db=-18.0,  # ~12 % de send
         pre_delay_ms=8.0,
-        hp_hz=250.0,
-        lp_hz=12000.0,
+        hp_hz=260.0,
+        lp_hz=11000.0,
     ),
     "bass": BusDefinition(
         key="bass",
         description="Room muy corto y sutil para bajo (casi seco)",
         reverb_archetype="room",
-        send_level_db=-22.0,
+        send_level_db=-26.0,  # muy poco
         pre_delay_ms=5.0,
-        hp_hz=80.0,
-        lp_hz=8000.0,
+        hp_hz=90.0,
+        lp_hz=7500.0,
     ),
     "guitars": BusDefinition(
         key="guitars",
-        description="Plate/spring para guitarras, con delay y chorus ligeros",
+        description="Plate muy controlado para guitarras; cola clara pero discreta",
         reverb_archetype="plate",
-        send_level_db=-16.0,
+        send_level_db=-18.0,
         pre_delay_ms=20.0,
-        delay_ms=380.0,
-        delay_feedback=0.18,
+        delay_ms=260.0,
+        delay_feedback=0.15,
         mod_type="chorus",
-        mod_rate_hz=0.8,
-        mod_depth=0.15,
-        hp_hz=180.0,
-        lp_hz=12000.0,
+        mod_rate_hz=0.7,
+        mod_depth=0.12,
+        hp_hz=200.0,
+        lp_hz=11500.0,
     ),
     "keys_synth": BusDefinition(
         key="keys_synth",
-        description="Hall amplio y largo para pads/keys",
+        description="Hall compacto para pads/keys, sin inundar la mezcla",
         reverb_archetype="hall",
-        send_level_db=-14.0,
-        pre_delay_ms=25.0,
-        delay_ms=420.0,
-        delay_feedback=0.25,
+        send_level_db=-18.0,
+        pre_delay_ms=22.0,
+        delay_ms=320.0,
+        delay_feedback=0.18,
         mod_type="chorus",
         mod_rate_hz=0.6,
-        mod_depth=0.20,
-        hp_hz=200.0,
-        lp_hz=16000.0,
+        mod_depth=0.16,
+        hp_hz=220.0,
+        lp_hz=15000.0,
     ),
     "lead_vocal": BusDefinition(
         key="lead_vocal",
-        description="Vocal plate con pre-delay y slapback suave",
+        description="Vocal plate corto con predelay y slapback muy contenidos",
         reverb_archetype="plate",
-        send_level_db=-12.0,
-        pre_delay_ms=80.0,
-        delay_ms=120.0,
-        delay_feedback=0.22,
+        send_level_db=-16.0,
+        pre_delay_ms=70.0,
+        delay_ms=140.0,
+        delay_feedback=0.20,
         mod_type="chorus",
         mod_rate_hz=0.9,
-        mod_depth=0.12,
-        hp_hz=150.0,
+        mod_depth=0.10,
+        hp_hz=160.0,
         lp_hz=12000.0,
     ),
     "backing_vocals": BusDefinition(
         key="backing_vocals",
-        description="Hall más largo para coros, más húmedos para profundidad",
+        description="Hall moderado para coros, suficientemente atrás pero definido",
         reverb_archetype="hall",
-        send_level_db=-10.0,
+        send_level_db=-14.0,
         pre_delay_ms=40.0,
-        delay_ms=320.0,
-        delay_feedback=0.30,
+        delay_ms=260.0,
+        delay_feedback=0.25,
         mod_type="chorus",
         mod_rate_hz=0.7,
-        mod_depth=0.20,
-        hp_hz=180.0,
-        lp_hz=14000.0,
+        mod_depth=0.18,
+        hp_hz=190.0,
+        lp_hz=13500.0,
     ),
     "fx": BusDefinition(
         key="fx",
-        description="Hall muy largo, casi cinemático, con phaser suave",
+        description="Hall largo para FX, pero filtrado y controlado",
         reverb_archetype="hall",
-        send_level_db=-8.0,
-        pre_delay_ms=30.0,
-        delay_ms=480.0,
-        delay_feedback=0.35,
+        send_level_db=-12.0,
+        pre_delay_ms=28.0,
+        delay_ms=400.0,
+        delay_feedback=0.32,
         mod_type="phaser",
         mod_rate_hz=0.5,
-        mod_depth=0.30,
-        hp_hz=250.0,
-        lp_hz=18000.0,
+        mod_depth=0.28,
+        hp_hz=260.0,
+        lp_hz=17000.0,
     ),
     "misc": BusDefinition(
         key="misc",
-        description="Room/plate neutro para material no clasificado",
+        description="Room neutro para material no clasificado",
         reverb_archetype="room",
-        send_level_db=-18.0,
+        send_level_db=-20.0,
         pre_delay_ms=15.0,
-        hp_hz=200.0,
-        lp_hz=14000.0,
+        hp_hz=220.0,
+        lp_hz=13000.0,
     ),
 }
+
+
+# ---------------------------------------------------------------------------
+# Presets por estilo/bus
+# ---------------------------------------------------------------------------
+
+# Valores de estilo que vienen del frontend:
+#   - "flamenco_rumba"
+#   - "urban_trap"
+#   - "rock"
+#   - "latin_pop"
+#   - "edm"
+#   - "ballad_ambient"
+#   - "acoustic"
+#
+# Diseño:
+#   STYLE_PRESETS_BY_STYLE_AND_BUS[style_key][bus_key] -> StyleOverride
+#
+# Los ajustes están pensados para ser "mezclables" y no para demos
+# extremas: tiempos y send realistas, HP agresivos y plates/halls
+# típicos de esos géneros.
+
+
+STYLE_PRESETS_BY_STYLE_AND_BUS: Dict[str, Dict[str, StyleOverride]] = {
+    # ------------------------------------------------------------------
+    # FLAMENCO / RUMBA: natural, cercano, poco FX en low end.
+    # Voces y guitarras con plate corto; FX algo más largos.
+    # ------------------------------------------------------------------
+    "flamenco_rumba": {
+        "drums": StyleOverride(
+            reverb_archetype="room",
+            send_level_db=-20.0,
+            pre_delay_ms=10.0,
+            hp_hz=320.0,
+            lp_hz=11000.0,
+        ),
+        "bass": StyleOverride(
+            reverb_archetype=None,  # bajo prácticamente seco
+            send_level_db=-40.0,
+            hp_hz=80.0,
+            lp_hz=6500.0,
+        ),
+        "guitars": StyleOverride(
+            reverb_archetype="plate",
+            send_level_db=-18.0,
+            pre_delay_ms=28.0,
+            delay_ms=210.0,  # slap/eco corto
+            delay_feedback=0.16,
+            mod_type="chorus",
+            mod_rate_hz=0.8,
+            mod_depth=0.10,
+            hp_hz=220.0,
+            lp_hz=11500.0,
+        ),
+        "keys_synth": StyleOverride(
+            reverb_archetype="hall",
+            send_level_db=-20.0,
+            pre_delay_ms=24.0,
+            delay_ms=280.0,
+            delay_feedback=0.18,
+            hp_hz=240.0,
+            lp_hz=15000.0,
+        ),
+        "lead_vocal": StyleOverride(
+            reverb_archetype="plate",
+            send_level_db=-16.0,
+            pre_delay_ms=90.0,  # predelay largo para articulación
+            delay_ms=150.0,  # slapback corto
+            delay_feedback=0.22,
+            mod_type="chorus",
+            mod_rate_hz=0.9,
+            mod_depth=0.12,
+            hp_hz=170.0,
+            lp_hz=12000.0,
+        ),
+        "backing_vocals": StyleOverride(
+            reverb_archetype="hall",
+            send_level_db=-14.0,
+            pre_delay_ms=60.0,
+            delay_ms=260.0,
+            delay_feedback=0.26,
+            mod_type="chorus",
+            mod_rate_hz=0.75,
+            mod_depth=0.18,
+            hp_hz=190.0,
+            lp_hz=13500.0,
+        ),
+        "fx": StyleOverride(
+            reverb_archetype="hall",
+            send_level_db=-12.0,
+            pre_delay_ms=40.0,
+            delay_ms=380.0,
+            delay_feedback=0.32,
+            mod_type="phaser",
+            mod_rate_hz=0.5,
+            mod_depth=0.25,
+            hp_hz=260.0,
+            lp_hz=16500.0,
+        ),
+        "misc": StyleOverride(
+            reverb_archetype="room",
+            send_level_db=-20.0,
+            pre_delay_ms=18.0,
+            hp_hz=230.0,
+            lp_hz=13000.0,
+        ),
+    },
+
+    # ------------------------------------------------------------------
+    # URBAN / TRAP / HIP-HOP: bombo y bajo secos, VOX con plate/hall
+    # brillante y predelay largo; FX muy espaciales.
+    # ------------------------------------------------------------------
+    "urban_trap": {
+        "drums": StyleOverride(
+            reverb_archetype="room",
+            send_level_db=-22.0,
+            pre_delay_ms=6.0,
+            hp_hz=350.0,
+            lp_hz=10000.0,
+        ),
+        "bass": StyleOverride(
+            reverb_archetype=None,  # sub seco
+            send_level_db=-50.0,
+            hp_hz=70.0,
+            lp_hz=6000.0,
+        ),
+        "guitars": StyleOverride(
+            reverb_archetype="plate",
+            send_level_db=-20.0,
+            pre_delay_ms=24.0,
+            delay_ms=260.0,
+            delay_feedback=0.20,
+            mod_type="chorus",
+            mod_rate_hz=0.7,
+            mod_depth=0.10,
+            hp_hz=230.0,
+            lp_hz=11500.0,
+        ),
+        "keys_synth": StyleOverride(
+            reverb_archetype="hall",
+            send_level_db=-18.0,
+            pre_delay_ms=30.0,
+            delay_ms=320.0,
+            delay_feedback=0.26,
+            mod_type="chorus",
+            mod_rate_hz=0.55,
+            mod_depth=0.18,
+            hp_hz=260.0,
+            lp_hz=16000.0,
+        ),
+        "lead_vocal": StyleOverride(
+            reverb_archetype="plate",
+            send_level_db=-14.0,
+            pre_delay_ms=100.0,
+            delay_ms=260.0,  # eco 1/8 o 1/4
+            delay_feedback=0.28,
+            mod_type="chorus",
+            mod_rate_hz=1.0,
+            mod_depth=0.12,
+            hp_hz=180.0,
+            lp_hz=12500.0,
+        ),
+        "backing_vocals": StyleOverride(
+            reverb_archetype="hall",
+            send_level_db=-12.0,
+            pre_delay_ms=70.0,
+            delay_ms=320.0,
+            delay_feedback=0.30,
+            mod_type="chorus",
+            mod_rate_hz=0.8,
+            mod_depth=0.18,
+            hp_hz=200.0,
+            lp_hz=13500.0,
+        ),
+        "fx": StyleOverride(
+            reverb_archetype="hall",
+            send_level_db=-10.0,
+            pre_delay_ms=45.0,
+            delay_ms=420.0,
+            delay_feedback=0.38,
+            mod_type="phaser",
+            mod_rate_hz=0.45,
+            mod_depth=0.3,
+            hp_hz=280.0,
+            lp_hz=18000.0,
+        ),
+        "misc": StyleOverride(
+            reverb_archetype="room",
+            send_level_db=-22.0,
+            pre_delay_ms=16.0,
+            hp_hz=250.0,
+            lp_hz=13000.0,
+        ),
+    },
+
+    # ------------------------------------------------------------------
+    # ROCK / POP-ROCK: baterías con room amplio, voces plate medio,
+    # guitarras con plate y delays medianos.
+    # ------------------------------------------------------------------
+    "rock": {
+        "drums": StyleOverride(
+            reverb_archetype="room",
+            send_level_db=-18.0,
+            pre_delay_ms=14.0,
+            hp_hz=280.0,
+            lp_hz=11000.0,
+        ),
+        "bass": StyleOverride(
+            reverb_archetype=None,
+            send_level_db=-45.0,
+            hp_hz=80.0,
+            lp_hz=6500.0,
+        ),
+        "guitars": StyleOverride(
+            reverb_archetype="plate",
+            send_level_db=-18.0,
+            pre_delay_ms=26.0,
+            delay_ms=280.0,
+            delay_feedback=0.20,
+            mod_type="chorus",
+            mod_rate_hz=0.7,
+            mod_depth=0.14,
+            hp_hz=220.0,
+            lp_hz=11500.0,
+        ),
+        "keys_synth": StyleOverride(
+            reverb_archetype="hall",
+            send_level_db=-18.0,
+            pre_delay_ms=24.0,
+            delay_ms=320.0,
+            delay_feedback=0.22,
+            hp_hz=240.0,
+            lp_hz=15000.0,
+        ),
+        "lead_vocal": StyleOverride(
+            reverb_archetype="plate",
+            send_level_db=-16.0,
+            pre_delay_ms=70.0,
+            delay_ms=170.0,
+            delay_feedback=0.22,
+            mod_type="chorus",
+            mod_rate_hz=0.9,
+            mod_depth=0.12,
+            hp_hz=170.0,
+            lp_hz=12000.0,
+        ),
+        "backing_vocals": StyleOverride(
+            reverb_archetype="hall",
+            send_level_db=-14.0,
+            pre_delay_ms=50.0,
+            delay_ms=260.0,
+            delay_feedback=0.26,
+            hp_hz=190.0,
+            lp_hz=13500.0,
+        ),
+        "fx": StyleOverride(
+            reverb_archetype="hall",
+            send_level_db=-12.0,
+            pre_delay_ms=30.0,
+            delay_ms=360.0,
+            delay_feedback=0.35,
+            mod_type="phaser",
+            mod_rate_hz=0.5,
+            mod_depth=0.28,
+            hp_hz=260.0,
+            lp_hz=16500.0,
+        ),
+    },
+
+    # ------------------------------------------------------------------
+    # LATIN POP / REGGAETON: parecido al urban pero algo más suave,
+    # más musical y menos extremo en FX.
+    # ------------------------------------------------------------------
+    "latin_pop": {
+        "drums": StyleOverride(
+            reverb_archetype="room",
+            send_level_db=-20.0,
+            pre_delay_ms=10.0,
+            hp_hz=320.0,
+            lp_hz=10500.0,
+        ),
+        "bass": StyleOverride(
+            reverb_archetype=None,
+            send_level_db=-45.0,
+            hp_hz=80.0,
+            lp_hz=6500.0,
+        ),
+        "guitars": StyleOverride(
+            reverb_archetype="plate",
+            send_level_db=-18.0,
+            pre_delay_ms=24.0,
+            delay_ms=240.0,
+            delay_feedback=0.20,
+            mod_type="chorus",
+            mod_rate_hz=0.7,
+            mod_depth=0.12,
+            hp_hz=220.0,
+            lp_hz=11500.0,
+        ),
+        "keys_synth": StyleOverride(
+            reverb_archetype="hall",
+            send_level_db=-18.0,
+            pre_delay_ms=28.0,
+            delay_ms=300.0,
+            delay_feedback=0.24,
+            hp_hz=240.0,
+            lp_hz=15000.0,
+        ),
+        "lead_vocal": StyleOverride(
+            reverb_archetype="plate",
+            send_level_db=-15.0,
+            pre_delay_ms=90.0,
+            delay_ms=230.0,
+            delay_feedback=0.26,
+            mod_type="chorus",
+            mod_rate_hz=0.9,
+            mod_depth=0.12,
+            hp_hz=180.0,
+            lp_hz=12500.0,
+        ),
+        "backing_vocals": StyleOverride(
+            reverb_archetype="hall",
+            send_level_db=-13.0,
+            pre_delay_ms=60.0,
+            delay_ms=280.0,
+            delay_feedback=0.28,
+            hp_hz=200.0,
+            lp_hz=13500.0,
+        ),
+        "fx": StyleOverride(
+            reverb_archetype="hall",
+            send_level_db=-11.0,
+            pre_delay_ms=40.0,
+            delay_ms=380.0,
+            delay_feedback=0.34,
+            mod_type="phaser",
+            mod_rate_hz=0.45,
+            mod_depth=0.26,
+            hp_hz=270.0,
+            lp_hz=17500.0,
+        ),
+    },
+
+    # ------------------------------------------------------------------
+    # EDM / CLUB: keys y FX muy espaciales, drums secos en low end.
+    # ------------------------------------------------------------------
+    "edm": {
+        "drums": StyleOverride(
+            reverb_archetype="room",
+            send_level_db=-22.0,
+            pre_delay_ms=6.0,
+            hp_hz=380.0,
+            lp_hz=10000.0,
+        ),
+        "bass": StyleOverride(
+            reverb_archetype=None,
+            send_level_db=-55.0,
+            hp_hz=70.0,
+            lp_hz=5500.0,
+        ),
+        "guitars": StyleOverride(
+            reverb_archetype="plate",
+            send_level_db=-20.0,
+            pre_delay_ms=22.0,
+            delay_ms=260.0,
+            delay_feedback=0.24,
+            mod_type="chorus",
+            mod_rate_hz=0.8,
+            mod_depth=0.14,
+            hp_hz=230.0,
+            lp_hz=11500.0,
+        ),
+        "keys_synth": StyleOverride(
+            reverb_archetype="hall",
+            send_level_db=-14.0,
+            pre_delay_ms=35.0,
+            delay_ms=350.0,
+            delay_feedback=0.32,
+            mod_type="chorus",
+            mod_rate_hz=0.65,
+            mod_depth=0.22,
+            hp_hz=260.0,
+            lp_hz=17000.0,
+        ),
+        "lead_vocal": StyleOverride(
+            reverb_archetype="hall",
+            send_level_db=-15.0,
+            pre_delay_ms=90.0,
+            delay_ms=280.0,
+            delay_feedback=0.30,
+            mod_type="chorus",
+            mod_rate_hz=1.0,
+            mod_depth=0.14,
+            hp_hz=190.0,
+            lp_hz=13000.0,
+        ),
+        "backing_vocals": StyleOverride(
+            reverb_archetype="hall",
+            send_level_db=-13.0,
+            pre_delay_ms=60.0,
+            delay_ms=320.0,
+            delay_feedback=0.32,
+            hp_hz=210.0,
+            lp_hz=14000.0,
+        ),
+        "fx": StyleOverride(
+            reverb_archetype="hall",
+            send_level_db=-10.0,
+            pre_delay_ms=40.0,
+            delay_ms=420.0,
+            delay_feedback=0.40,
+            mod_type="phaser",
+            mod_rate_hz=0.5,
+            mod_depth=0.32,
+            hp_hz=300.0,
+            lp_hz=19000.0,
+        ),
+    },
+
+    # ------------------------------------------------------------------
+    # BALLAD / AMBIENT: halls largos pero filtrados.
+    # ------------------------------------------------------------------
+    "ballad_ambient": {
+        "drums": StyleOverride(
+            reverb_archetype="room",
+            send_level_db=-20.0,
+            pre_delay_ms=12.0,
+            hp_hz=320.0,
+            lp_hz=10000.0,
+        ),
+        "bass": StyleOverride(
+            reverb_archetype=None,
+            send_level_db=-45.0,
+            hp_hz=80.0,
+            lp_hz=6500.0,
+        ),
+        "guitars": StyleOverride(
+            reverb_archetype="hall",
+            send_level_db=-18.0,
+            pre_delay_ms=30.0,
+            delay_ms=280.0,
+            delay_feedback=0.26,
+            mod_type="chorus",
+            mod_rate_hz=0.6,
+            mod_depth=0.18,
+            hp_hz=240.0,
+            lp_hz=12000.0,
+        ),
+        "keys_synth": StyleOverride(
+            reverb_archetype="hall",
+            send_level_db=-16.0,
+            pre_delay_ms=35.0,
+            delay_ms=360.0,
+            delay_feedback=0.32,
+            mod_type="chorus",
+            mod_rate_hz=0.55,
+            mod_depth=0.22,
+            hp_hz=260.0,
+            lp_hz=16000.0,
+        ),
+        "lead_vocal": StyleOverride(
+            reverb_archetype="hall",
+            send_level_db=-16.0,
+            pre_delay_ms=95.0,
+            delay_ms=260.0,
+            delay_feedback=0.28,
+            mod_type="chorus",
+            mod_rate_hz=0.9,
+            mod_depth=0.14,
+            hp_hz=180.0,
+            lp_hz=12500.0,
+        ),
+        "backing_vocals": StyleOverride(
+            reverb_archetype="hall",
+            send_level_db=-14.0,
+            pre_delay_ms=70.0,
+            delay_ms=320.0,
+            delay_feedback=0.32,
+            mod_type="chorus",
+            mod_rate_hz=0.7,
+            mod_depth=0.2,
+            hp_hz=200.0,
+            lp_hz=13500.0,
+        ),
+        "fx": StyleOverride(
+            reverb_archetype="hall",
+            send_level_db=-12.0,
+            pre_delay_ms=45.0,
+            delay_ms=420.0,
+            delay_feedback=0.38,
+            mod_type="phaser",
+            mod_rate_hz=0.45,
+            mod_depth=0.30,
+            hp_hz=280.0,
+            lp_hz=18000.0,
+        ),
+    },
+
+    # ------------------------------------------------------------------
+    # ACÚSTICO / SINGER-SONGWRITER: rooms cortos y muy filtrados,
+    # casi todo relativamente seco.
+    # ------------------------------------------------------------------
+    "acoustic": {
+        "drums": StyleOverride(
+            reverb_archetype="room",
+            send_level_db=-22.0,
+            pre_delay_ms=8.0,
+            hp_hz=320.0,
+            lp_hz=10000.0,
+        ),
+        "bass": StyleOverride(
+            reverb_archetype=None,
+            send_level_db=-50.0,
+            hp_hz=90.0,
+            lp_hz=6500.0,
+        ),
+        "guitars": StyleOverride(
+            reverb_archetype="room",
+            send_level_db=-20.0,
+            pre_delay_ms=18.0,
+            delay_ms=220.0,
+            delay_feedback=0.16,
+            hp_hz=220.0,
+            lp_hz=11500.0,
+        ),
+        "keys_synth": StyleOverride(
+            reverb_archetype="room",
+            send_level_db=-20.0,
+            pre_delay_ms=20.0,
+            delay_ms=260.0,
+            delay_feedback=0.18,
+            hp_hz=230.0,
+            lp_hz=13500.0,
+        ),
+        "lead_vocal": StyleOverride(
+            reverb_archetype="plate",
+            send_level_db=-17.0,
+            pre_delay_ms=70.0,
+            delay_ms=150.0,
+            delay_feedback=0.22,
+            mod_type="chorus",
+            mod_rate_hz=0.8,
+            mod_depth=0.10,
+            hp_hz=180.0,
+            lp_hz=12000.0,
+        ),
+        "backing_vocals": StyleOverride(
+            reverb_archetype="hall",
+            send_level_db=-15.0,
+            pre_delay_ms=55.0,
+            delay_ms=260.0,
+            delay_feedback=0.24,
+            hp_hz=200.0,
+            lp_hz=13000.0,
+        ),
+        "fx": StyleOverride(
+            reverb_archetype="hall",
+            send_level_db=-13.0,
+            pre_delay_ms=35.0,
+            delay_ms=360.0,
+            delay_feedback=0.30,
+            hp_hz=260.0,
+            lp_hz=17000.0,
+        ),
+        "misc": StyleOverride(
+            reverb_archetype="room",
+            send_level_db=-22.0,
+            pre_delay_ms=16.0,
+            hp_hz=230.0,
+            lp_hz=13000.0,
+        ),
+    },
+}
+
+
+def get_bus_definition_for_style(
+    bus_key: str,
+    style_key: Optional[str],
+) -> BusDefinition:
+    """
+    Devuelve un BusDefinition para un bus dado y, opcionalmente, un estilo.
+
+    - Si style_key es None o no existe en STYLE_PRESETS_BY_STYLE_AND_BUS:
+      devuelve la definición base (BUS_DEFINITIONS[bus_key]).
+    - Si existe, aplica los overrides definidos para ese bus.
+    """
+    base_cfg = BUS_DEFINITIONS[bus_key]
+
+    if not style_key:
+        return base_cfg
+
+    style_key_norm = style_key.strip().lower()
+    style_map = STYLE_PRESETS_BY_STYLE_AND_BUS.get(style_key_norm)
+    if not style_map:
+        logger.warning(
+            "[SPACE_DEPTH] Estilo '%s' no reconocido para bus '%s'; usando AUTO.",
+            style_key,
+            bus_key,
+        )
+        return base_cfg
+
+    override = style_map.get(bus_key) or style_map.get("misc")
+    if override is None:
+        # No hay override específico; AUTO
+        return base_cfg
+
+    return apply_style_override(base_cfg, override)
 
 
 # ---------------------------------------------------------------------------
 # Construcción de la cadena de Pedalboard para un bus
 # ---------------------------------------------------------------------------
 
+
 def build_space_pedalboard(bus_cfg: BusDefinition) -> Pedalboard:
     """
     Crea una cadena de Pedalboard 100% WET (dry=0) para usar como bus FX.
     El dry se mezcla fuera del board con send_level_db.
+
+    Filosofía "pro":
+      - HP fuerte antes de la reverb para evitar bola de graves.
+      - LP razonable para que la cola no compita con los elementos brillantes.
+      - Reverbs cortas/medias, salvo en FX y estilos muy ambients.
     """
     plugins = []
 
@@ -259,15 +944,17 @@ def build_space_pedalboard(bus_cfg: BusDefinition) -> Pedalboard:
     if bus_cfg.reverb_archetype:
         params = REVERB_ARCHETYPES.get(bus_cfg.reverb_archetype)
         if not params:
-            raise ValueError(f"Arquetipo de reverb desconocido: {bus_cfg.reverb_archetype}")
+            raise ValueError(
+                f"Arquetipo de reverb desconocido: {bus_cfg.reverb_archetype}"
+            )
 
         plugins.append(
             Reverb(
                 room_size=params["room_size"],
                 damping=params["damping"],
                 width=params["width"],
-                wet_level=1.0,   # 100% wet
-                dry_level=0.0,   # 0% dry
+                wet_level=1.0,  # 100% wet
+                dry_level=0.0,  # 0% dry
                 freeze_mode=0.0,
             )
         )
@@ -311,7 +998,10 @@ def build_space_pedalboard(bus_cfg: BusDefinition) -> Pedalboard:
 # Asignación de perfiles a buses
 # ---------------------------------------------------------------------------
 
-def guess_profile_for_stem(stem_name: str, stem_profiles: Dict[str, str]) -> str:
+
+def guess_profile_for_stem(
+    stem_name: str, stem_profiles: Dict[str, str]
+) -> str:
     """
     Intenta recuperar el perfil de un stem:
       - Primero usando el nombre completo.
@@ -328,19 +1018,19 @@ def guess_profile_for_stem(stem_name: str, stem_profiles: Dict[str, str]) -> str
     return stem_profiles.get("default", "auto")
 
 
-def resolve_bus_for_profile(profile: str) -> Tuple[str, BusDefinition]:
+def resolve_bus_for_profile(profile: str) -> str:
     """
-    Devuelve (bus_key, BusDefinition) a partir de un perfil de stem.
+    Devuelve el bus_key a partir de un perfil de stem.
     """
     profile_key = (profile or "auto").strip()
     bus_key = PROFILE_TO_BUS.get(profile_key, "misc")
-    bus_cfg = BUS_DEFINITIONS[bus_key]
-    return bus_key, bus_cfg
+    return bus_key
 
 
 # ---------------------------------------------------------------------------
 # Procesado de un stem
 # ---------------------------------------------------------------------------
+
 
 def _process_stem_with_bus(
     stem_path: Path,
@@ -352,7 +1042,8 @@ def _process_stem_with_bus(
 
     - Lee el stem de stem_path.
     - Calcula wet = board(dry).
-    - Mezcla out = dry + wet * send_gain (send_gain en lineal a partir de send_level_db).
+    - Mezcla out = dry + wet * send_gain (send_gain en lineal a partir de
+      send_level_db).
     - Normaliza si es necesario para evitar clipping.
     - Escribe el stem procesado en output_path.
     - Devuelve (peak_dbfs, rms_dbfs).
@@ -360,7 +1051,9 @@ def _process_stem_with_bus(
     data, samplerate = sf.read(str(stem_path), always_2d=True)
     # data.shape = (n_samples, n_channels)
     if data.ndim != 2:
-        raise ValueError(f"Formato de audio inesperado para {stem_path}: {data.shape}")
+        raise ValueError(
+            f"Formato de audio inesperado para {stem_path}: {data.shape}"
+        )
 
     # Transponer a (n_channels, n_samples) para pedalboard
     audio = data.T.astype(np.float32)
@@ -410,27 +1103,41 @@ def _process_stem_with_bus(
 # Entry point de stage: run_space_depth
 # ---------------------------------------------------------------------------
 
+
 def run_space_depth(
     input_media_dir: Path,
     output_media_dir: Path,
     analysis_csv_path: Path,
     stem_profiles: Optional[Dict[str, str]] = None,
+    bus_styles: Optional[Dict[str, str]] = None,
 ) -> None:
     """
     Stage de Space & Depth.
 
     - input_media_dir: directorio con los stems de entrada (ya con EQ/dinámica).
     - output_media_dir: directorio donde se escribirán los stems procesados.
-    - analysis_csv_path: CSV con el mapeo stem→bus y métricas.
+    - analysis_csv_path: CSV con el mapeo stem→bus, estilo y métricas.
     - stem_profiles: dict opcional {stem_name (o base) -> perfil}.
+    - bus_styles: dict opcional {bus_key -> style_key}, por ejemplo:
+        {
+          "drums": "flamenco_rumba",
+          "lead_vocal": "urban_trap",
+          "fx": "edm"
+        }
+      Los style_key deben coincidir con los usados en el frontend:
+        flamenco_rumba, urban_trap, rock, latin_pop,
+        edm, ballad_ambient, acoustic.
     """
     stem_profiles = stem_profiles or {}
+    bus_styles = bus_styles or {}
+
     output_media_dir.mkdir(parents=True, exist_ok=True)
 
     wav_files = sorted(input_media_dir.glob("*.wav"))
     if not wav_files:
         logger.warning(
-            "[SPACE_DEPTH] No se encontraron stems .wav en %s", input_media_dir
+            "[SPACE_DEPTH] No se encontraron stems .wav en %s",
+            input_media_dir,
         )
         return
 
@@ -449,6 +1156,7 @@ def run_space_depth(
                 "stem_name",
                 "profile",
                 "bus_key",
+                "style_key",
                 "reverb_archetype",
                 "send_level_db",
                 "pre_delay_ms",
@@ -467,7 +1175,12 @@ def run_space_depth(
         for stem_path in wav_files:
             stem_name = stem_path.name
             profile = guess_profile_for_stem(stem_name, stem_profiles)
-            bus_key, bus_cfg = resolve_bus_for_profile(profile)
+            bus_key = resolve_bus_for_profile(profile)
+
+            # Estilo seleccionado para este bus (si lo hay)
+            style_key = bus_styles.get(bus_key) or bus_styles.get("default")
+
+            bus_cfg = get_bus_definition_for_style(bus_key, style_key)
 
             output_path = output_media_dir / stem_name
 
@@ -490,6 +1203,7 @@ def run_space_depth(
                     stem_name,
                     profile,
                     bus_key,
+                    style_key or "",
                     bus_cfg.reverb_archetype or "",
                     bus_cfg.send_level_db,
                     bus_cfg.pre_delay_ms,
@@ -518,4 +1232,5 @@ __all__ = [
     "BusDefinition",
     "BUS_DEFINITIONS",
     "PROFILE_TO_BUS",
+    "STYLE_PRESETS_BY_STYLE_AND_BUS",
 ]

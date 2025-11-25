@@ -192,6 +192,7 @@ export async function startMixJob(
   files: File[],
   enabledStageKeys?: string[],
   stemProfiles?: StemProfilePayload[],
+  spaceDepthBusStyles?: SpaceDepthBusStylesPayload,
 ): Promise<{ jobId: string }> {
   const formData = new FormData();
   files.forEach((f) => formData.append("files", f));

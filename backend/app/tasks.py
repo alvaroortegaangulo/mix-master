@@ -22,6 +22,7 @@ def run_full_pipeline_task(
     temp_root: str,
     enabled_stage_keys: list[str] | None = None,
     stem_profiles: dict[str, str] | None = None,
+    bus_styles: dict[str, str] | None = None,
 ) -> Dict[str, Any]:
     """
     Tarea Celery que ejecuta el pipeline completo (o un subconjunto de stages).
@@ -75,7 +76,8 @@ def run_full_pipeline_task(
             progress_callback=progress_cb,
             enabled_stage_keys=enabled_stage_keys,
             stem_profiles=stem_profiles,
-        )
+            bus_styles=bus_styles,
+        )    
     except Exception as exc:
         # Marcamos fallo en Celery con información básica
         self.update_state(
@@ -117,6 +119,7 @@ def run_full_pipeline_task(
         "vocal_shift_min": metrics.vocal_shift_min,
         "vocal_shift_max": metrics.vocal_shift_max,
         "vocal_shift_mean": metrics.vocal_shift_mean,
+        "bus_styles": bus_styles,
     }
 
     # Rutas útiles para el frontend/API
@@ -147,4 +150,5 @@ def run_full_pipeline_task(
 
         # Métricas finales
         "metrics": metrics_dict,
+        "bus_styles": bus_styles or {},
     }

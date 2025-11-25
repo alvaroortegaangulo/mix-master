@@ -8,6 +8,7 @@ import psutil
 import shutil
 import time
 from typing import Callable, Optional, Any, Dict, List
+import json
 
 # Configuración básica de logging si nadie la ha configurado aún
 logger = logging.getLogger(__name__)
@@ -291,6 +292,7 @@ class PipelineContext:
     current_media_dir: Path
 
     stem_profiles: Dict[str, str]
+    bus_styles: Dict[str, str]  # p.ej. {"drums": "flamenco_rumba", "lead_vocal": "urban_trap"}
 
     tempo_result: Any | None = None
     key_result: Any | None = None
@@ -615,6 +617,7 @@ def stage_space_depth(
     Stage de creación de buses de espacio (reverb/delay/modulación).
     - Lee los stems desde input_dir (salida de static_mix_dyn).
     - Usa ctx.stem_profiles para mapear cada stem a un bus.
+    - Usa ctx.bus_styles para aplicar presets de estilo por bus.
     - Escribe stems con profundidad espacial en output_dir.
     """
     analysis_csv = ctx.analysis_dir / stage_conf.get(
@@ -622,9 +625,10 @@ def stage_space_depth(
     )
 
     logger.info(
-        "Iniciando Space & Depth (buses de reverb/delay/mod) en %s -> %s",
+        "Iniciando Space & Depth (buses de reverb/delay/mod) en %s -> %s | bus_styles=%s",
         input_dir,
         output_dir,
+        ctx.bus_styles,
     )
 
     log_mem("before_space_depth")
@@ -634,6 +638,7 @@ def stage_space_depth(
         output_media_dir=output_dir,
         analysis_csv_path=analysis_csv,
         stem_profiles=ctx.stem_profiles,
+        bus_styles=ctx.bus_styles,  # <-- aquí se enganchan tus presets
     )
 
     log_mem("after_space_depth")
@@ -644,7 +649,6 @@ def stage_space_depth(
         analysis_csv,
     )
 
-    # Mezcla de preview para el frontend: media/space_depth/full_song.wav
     render_mixdown_for_stage(
         stage_label="space_depth",
         stems_dir=output_dir,
@@ -852,6 +856,7 @@ def run_full_pipeline(
     progress_callback: Optional[ProgressCallback] = None,
     enabled_stage_keys: Optional[List[str]] = None,
     stem_profiles: Optional[Dict[str, str]] = None,
+    bus_styles: Optional[Dict[str, str]] = None,
 ) -> FullPipelineResult:
     """
     Ejecuta TODO el pipeline de mezcla sobre los stems de media_dir,
@@ -872,6 +877,7 @@ def run_full_pipeline(
     logger.info("analysis_dir = %s", analysis_dir)
     log_mem("start_pipeline")
 
+
     # Contexto inicial
     ctx = PipelineContext(
         project_root=project_root,
@@ -881,6 +887,7 @@ def run_full_pipeline(
         stage_media_dirs={},
         current_media_dir=media_dir,
         stem_profiles=stem_profiles or {},
+        bus_styles=bus_styles or {},
     )
 
     # Filtrado de stages según enabled_stage_keys
