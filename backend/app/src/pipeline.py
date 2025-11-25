@@ -212,8 +212,24 @@ STAGES: List[Dict[str, Any]] = [
         "vocal_filename": "vocal.wav",
         "original_mix_name": "original_full_song.wav",
         "premaster_name": "full_song.wav",
-        "mastered_name": "full_song_mastered.wav",
+        "mastered_name": "full_song.wav",  # se usa este nombre en render_mixdown_for_stage
+
+        # --- NUEVO: configuración de mix-bus color ---
+        "mix_bus_color_enable": True,
+        "mix_bus_color_analysis_csv": "mix_bus_color_analysis.csv",
+        "mix_bus_color_log_csv": "mix_bus_color_log.csv",
+
+        # Rutas relativas al project_root; pon aquí tus IRs reales o déjalas a None
+        "mix_bus_tape_ir": None,     # ej: "irs/mixbus/tape_a.wav"
+        "mix_bus_console_ir": None,  # ej: "irs/mixbus/console_a.wav"
+
+        # Lista de VST3 opcionales (rutas relativas o absolutas)
+        "mix_bus_vst3_plugins": [
+            # "vst3/DeEsser.vst3",
+            # "vst3/TapeSaturator.vst3",
+        ],
     },
+
 ]
 
 
@@ -245,6 +261,13 @@ from src.analysis.multiband_eq_analysis import (
 )
 from src.stages.stage4_multiband_eq.multiband_eq_correction import (
     run_multiband_eq_correction,
+)
+from src.analysis.mix_bus_color_analysis import (
+    analyze_mix_bus_color,
+    export_mix_bus_color_to_csv,
+)
+from src.stages.stage11_mix_bus_color.mix_bus_color_correction import (
+    run_mix_bus_color_correction,
 )
 
 
@@ -862,6 +885,87 @@ def stage_mastering(
     )
 
     log_mem("after_mastered_mixdown")
+
+    # ------------------------------------------------------------------
+    # Mix-bus color: saturación + IRs + VST3 sobre el full mix final
+    # ------------------------------------------------------------------
+    if stage_conf.get("mix_bus_color_enable", True):
+        logger.info(
+            "Iniciando mix-bus color sobre full mix: %s",
+            mastered_full_song_render.output_path,
+        )
+
+        mix_bus_analysis_csv = ctx.analysis_dir / stage_conf.get(
+            "mix_bus_color_analysis_csv",
+            "mix_bus_color_analysis.csv",
+        )
+        mix_bus_log_csv = ctx.analysis_dir / stage_conf.get(
+            "mix_bus_color_log_csv",
+            "mix_bus_color_log.csv",
+        )
+
+        # 1) Análisis del full mix para decidir HPF/drive/mix de IRs
+        log_mem("before_mix_bus_color_analysis")
+        mix_bus_result = analyze_mix_bus_color(mastered_full_song_render.output_path)
+        export_mix_bus_color_to_csv(mix_bus_result, mix_bus_analysis_csv)
+        log_mem("after_mix_bus_color_analysis")
+        logger.info(
+            "Mix-bus color analysis completo. peak=%.2f dBFS | rms=%.2f dBFS | crest=%.2f dB | drive=%.2f dB",
+            mix_bus_result.peak_dbfs,
+            mix_bus_result.rms_dbfs,
+            mix_bus_result.crest_factor_db,
+            mix_bus_result.recommended_saturation_drive_db,
+        )
+
+        # 2) Resolución de rutas de IRs / VST3
+        tape_ir_rel = stage_conf.get("mix_bus_tape_ir")
+        console_ir_rel = stage_conf.get("mix_bus_console_ir")
+        vst3_conf = stage_conf.get("mix_bus_vst3_plugins") or []
+
+        tape_ir_path = (
+            (ctx.project_root / tape_ir_rel).resolve()
+            if tape_ir_rel
+            else None
+        )
+        console_ir_path = (
+            (ctx.project_root / console_ir_rel).resolve()
+            if console_ir_rel
+            else None
+        )
+
+        vst3_paths: List[Path] = []
+        for p in vst3_conf:
+            p_path = Path(p)
+            if not p_path.is_absolute():
+                p_path = (ctx.project_root / p).resolve()
+            vst3_paths.append(p_path)
+
+        # 3) Corrección: HPF + IRs + saturación + VST3 + limiter
+        log_mem("before_mix_bus_color_correction")
+        mix_bus_corr_result = run_mix_bus_color_correction(
+            analysis_csv_path=mix_bus_analysis_csv,
+            log_csv_path=mix_bus_log_csv,
+            tape_ir_path=tape_ir_path,
+            console_ir_path=console_ir_path,
+            vst3_plugin_paths=vst3_paths,
+            overwrite=True,
+            output_path=mastered_full_song_render.output_path,  # procesamos in-place
+        )
+        log_mem("after_mix_bus_color_correction")
+
+        logger.info(
+            "Mix-bus color aplicado. peak: %.2f -> %.2f dBFS | rms: %.2f -> %.2f dBFS",
+            mix_bus_corr_result.original_peak_dbfs,
+            mix_bus_corr_result.resulting_peak_dbfs,
+            mix_bus_corr_result.original_rms_dbfs,
+            mix_bus_corr_result.resulting_rms_dbfs,
+        )
+
+        # Actualizamos métricas del render final para que run_full_pipeline
+        # use los valores ya coloreados.
+        mastered_full_song_render.peak_dbfs = mix_bus_corr_result.resulting_peak_dbfs
+        mastered_full_song_render.rms_dbfs = mix_bus_corr_result.resulting_rms_dbfs
+
 
     ctx.mastered_full_song_render = mastered_full_song_render
 

@@ -1,4 +1,3 @@
-# src/stages/stage10_mastering/mastering_correction.py
 from __future__ import annotations
 
 import csv
@@ -67,6 +66,7 @@ class MasteringRow:
     recommended_target_peak_dbfs: float
     recommended_drive_db: float
 
+
 @dataclass
 class MasteringCorrectionResult:
     filename: str
@@ -125,7 +125,6 @@ def load_mastering_csv(csv_path: Path) -> List[MasteringRow]:
                 recommended_drive_db=_parse_float(
                     line.get("recommended_drive_db", "0.0")
                 ),
-
             )
             rows.append(row)
 
@@ -145,8 +144,15 @@ def _apply_mastering_to_file(
     vocal_filename: str = "vocal.wav",
 ) -> MasteringCorrectionResult:
     """
-    Aplica mastering ligero a un stem.
-    Si es la pista vocal, usa la versión afinada de vocal_tuning_media_dir si existe.
+    Aplica un mastering muy sutil a un stem.
+
+    Filosofía:
+      - Esta etapa NO rehace la mezcla ni la dinámica. Es un "polish" final.
+      - Compresión suave, ratio baja y thresholds adaptados a la dinámica original.
+      - El pre-gain se basa en el headroom real hacia el target_peak, escalado.
+      - La percusión mantiene transitorios, la voz no se dispara en volumen.
+      - Buses FX quedan más de fondo (no se empujan hacia delante).
+      - Distorsión sólo como toque sutil cuando tiene sentido y en muy baja cantidad.
     """
     # Stem base desde static_mix_dyn
     base_input_path = (input_media_dir / row.relative_path).resolve()
@@ -176,7 +182,7 @@ def _apply_mastering_to_file(
 
     if audio.size > 0:
         original_peak = float(np.max(np.abs(audio)))
-        original_rms = float(np.sqrt(np.mean(audio**2)))
+        original_rms = float(np.sqrt(np.mean(audio ** 2)))
     else:
         original_peak = 0.0
         original_rms = 0.0
@@ -185,97 +191,178 @@ def _apply_mastering_to_file(
     original_rms_dbfs = _safe_dbfs(original_rms)
 
     # --------------------------------------------------------------
-    # Diseño de cadena de mastering adaptado por perfil
+    # Perfil del stem (voz, percusión, FX, etc.)
     # --------------------------------------------------------------
-    target_peak_dbfs = row.recommended_target_peak_dbfs
-
-    # Pre-gain sugerido por el análisis, clamp de seguridad
-    pre_gain_db = max(min(row.recommended_drive_db, 12.0), -24.0)
-
     filename_lower = row.filename.lower()
-    is_kick = "kick" in filename_lower
-    is_bus_fx = row.is_bus_fx
     bus_key = (row.bus_key or "").lower()
 
-    # Valores por defecto (stems "normales")
-    hpf_cutoff_hz = 25.0
-    limiter_threshold_db = -1.0
-    comp_threshold_dbfs = -16.0
-    comp_ratio = 2.0
-    distortion_drive_db = 2.5
+    is_bus_fx = row.is_bus_fx
+    is_vocal = row.is_vocal and not is_bus_fx
 
-    if row.is_vocal and not is_bus_fx:
-        # Vocal principal: compresión algo más marcada pero con poca saturación,
-        # HPF moderado para limpiar low-end sin adelgazar demasiado.
-        hpf_cutoff_hz = 55.0
-        comp_threshold_dbfs = -18.0
-        comp_ratio = 2.5
-        distortion_drive_db = 1.5
-        limiter_threshold_db = -1.0
+    is_kick = "kick" in filename_lower
+    is_snare = "snare" in filename_lower or "clap" in filename_lower
+    is_perc_name = "perc" in filename_lower or "cajon" in filename_lower or "timbal" in filename_lower
+    is_drum_bus = bus_key == "drums"
 
-    elif is_bus_fx:
-        # Buses FX: reverb/delay 100 % wet procedentes de space_depth.
-        # Tratamiento: mucha limpieza de graves, compresión muy suave,
-        # cero o muy poca saturación y un poco más de headroom.
-        limiter_threshold_db = -3.0
+    is_percussive = is_kick or is_snare or is_perc_name or is_drum_bus
 
-        if bus_key in {"drums", "bass"}:
-            hpf_cutoff_hz = 160.0
-        elif bus_key in {"lead_vocal", "backing_vocals"}:
-            hpf_cutoff_hz = 180.0
-        else:
-            # guitars, keys_synth, fx, misc...
-            hpf_cutoff_hz = 200.0
+    # --------------------------------------------------------------
+    # Target y pre-gain: más conservador, basado en headroom real
+    # --------------------------------------------------------------
+    target_peak_dbfs = row.recommended_target_peak_dbfs
+    # Si el análisis dio algo raro, fija un target razonable
+    if target_peak_dbfs > -0.5 or target_peak_dbfs < -18.0:
+        target_peak_dbfs = -1.0
 
-        comp_threshold_dbfs = -22.0
-        comp_ratio = 1.3
-        distortion_drive_db = 0.0
+    headroom_db = target_peak_dbfs - original_peak_dbfs  # cuánto podemos subir antes de llegar al target
+    # Drive sugerido por análisis, pero no le permitimos más que el headroom real
+    raw_drive = min(row.recommended_drive_db, headroom_db)
 
-        # No empujamos tanto al limiter con los buses FX
-        pre_gain_db = max(min(row.recommended_drive_db, 6.0), -12.0)
+    # Mastering muy sutil: sólo usamos un % del drive recomendado
+    base_pre_gain = raw_drive * 0.6
 
-    elif is_kick:
-        # Kick directo: proteger transitorios → poca compresión y nada de saturación,
-        # HPF muy bajo, headroom normal pero con menos pre-gain.
-        hpf_cutoff_hz = 25.0
-        comp_threshold_dbfs = -10.0
-        comp_ratio = 1.3
-        distortion_drive_db = 0.0
-        limiter_threshold_db = -1.0
-
-        pre_gain_db = max(min(row.recommended_drive_db * 0.5, 6.0), -12.0)
-
+    # Ajustes por tipo de pista
+    if is_bus_fx:
+        # Los buses FX no deben adelantarse, nunca subimos por encima de 0 dB de pre-gain
+        pre_gain_db = min(base_pre_gain, 0.0)
+        pre_gain_db = max(pre_gain_db, -6.0)
+    elif is_vocal:
+        # La voz ya suele estar bastante presente. Pequeños ajustes +/- pocos dB.
+        pre_gain_db = base_pre_gain
+        pre_gain_db = min(pre_gain_db, 1.5)
+        pre_gain_db = max(pre_gain_db, -3.0)
+    elif is_percussive:
+        # Percusión: preservar punch. Ganancias moderadas.
+        pre_gain_db = base_pre_gain
+        pre_gain_db = min(pre_gain_db, 2.0)
+        pre_gain_db = max(pre_gain_db, -4.0)
     else:
-        # Resto de instrumentos (stems secos)
-        hpf_cutoff_hz = 30.0
-        comp_threshold_dbfs = -16.0
-        comp_ratio = 2.0
-        distortion_drive_db = 2.0
-        limiter_threshold_db = -1.0
+        # Resto de instrumentos
+        pre_gain_db = base_pre_gain
+        pre_gain_db = max(min(pre_gain_db, 3.0), -6.0)
 
+    # --------------------------------------------------------------
+    # HPF por tipo
+    # --------------------------------------------------------------
+    if is_bus_fx:
+        # FX: limpiar mucho low-end para no embarrar la mezcla
+        if bus_key in {"drums", "bass"}:
+            hpf_cutoff_hz = 150.0
+        elif bus_key in {"lead_vocal", "backing_vocals"}:
+            hpf_cutoff_hz = 170.0
+        else:
+            hpf_cutoff_hz = 180.0
+    elif is_vocal:
+        hpf_cutoff_hz = 55.0
+    elif is_percussive:
+        hpf_cutoff_hz = 25.0
+    else:
+        hpf_cutoff_hz = 30.0
+
+    # --------------------------------------------------------------
+    # Compresión: umbral adaptado a la dinámica real
+    # --------------------------------------------------------------
+    # Dinámica aproximada
+    dynamic_range_db = max(original_peak_dbfs - original_rms_dbfs, 4.0)
+
+    # Threshold base: trabajamos en el "top" del rango, no aplastamos todo
+    base_threshold = original_rms_dbfs + dynamic_range_db * 0.75
+
+    if is_bus_fx:
+        # Compresión casi simbólica en FX
+        comp_threshold_dbfs = base_threshold + 2.0
+        comp_ratio = 1.2
+        comp_attack_ms = 35.0
+        comp_release_ms = 280.0
+    elif is_vocal:
+        # Voz: control suave, no radio-voice; 1–3 dB de GR típico
+        comp_threshold_dbfs = base_threshold - 1.5
+        comp_ratio = 1.8
+        comp_attack_ms = 15.0
+        comp_release_ms = 160.0
+    elif is_percussive:
+        # Transitorios vivos, sólo domesticar un pelín
+        comp_threshold_dbfs = base_threshold - 0.5
+        comp_ratio = 1.3
+        comp_attack_ms = 25.0
+        comp_release_ms = 140.0
+    else:
+        # Instrumentos generales
+        comp_threshold_dbfs = base_threshold
+        comp_ratio = 1.4
+        comp_attack_ms = 20.0
+        comp_release_ms = 180.0
+
+    # Clamp de seguridad para el threshold
+    comp_threshold_dbfs = min(comp_threshold_dbfs, -2.0)
+
+    # --------------------------------------------------------------
+    # Distorsión: casi siempre 0, salvo toques muy sutiles
+    # --------------------------------------------------------------
+    distortion_drive_db = 0.0
+
+    if not is_bus_fx:
+        if is_percussive:
+            # Un toque opcional de saturación muy suave si el análisis propone algo
+            distortion_drive_db = max(min(row.recommended_drive_db * 0.3, 1.5), 0.0)
+        elif not is_vocal:
+            # Guitarras / keys: un poco de color, pero con muchísimo cuidado
+            distortion_drive_db = max(min(row.recommended_drive_db * 0.25, 1.0), 0.0)
+        else:
+            # Vocal: casi nada, sólo si el análisis lo sugiere
+            distortion_drive_db = max(min(row.recommended_drive_db * 0.2, 0.5), 0.0)
+
+    # Si es ridículamente pequeño, lo forzamos a 0 para ahorrar CPU
+    if distortion_drive_db < 0.1:
+        distortion_drive_db = 0.0
+
+    # --------------------------------------------------------------
+    # Limiter: techo ligado al target, sin aplastar
+    # --------------------------------------------------------------
+    if is_bus_fx:
+        limiter_threshold_db = min(target_peak_dbfs, -3.0)
+    else:
+        limiter_threshold_db = min(target_peak_dbfs, -0.8)
+
+    # Clamp adicional por seguridad
+    limiter_threshold_db = max(limiter_threshold_db, -8.0)
+
+    # --------------------------------------------------------------
+    # Construcción de la cadena de efectos
+    # --------------------------------------------------------------
     effects = [
         HighpassFilter(cutoff_frequency_hz=hpf_cutoff_hz),
-        Compressor(
-            threshold_db=comp_threshold_dbfs,
-            ratio=comp_ratio,
-            attack_ms=30.0,
-            release_ms=200.0,
-        ),
-        Distortion(drive_db=distortion_drive_db),
-        Gain(gain_db=pre_gain_db),
+    ]
+
+    if comp_ratio > 1.0:
+        effects.append(
+            Compressor(
+                threshold_db=comp_threshold_dbfs,
+                ratio=comp_ratio,
+                attack_ms=comp_attack_ms,
+                release_ms=comp_release_ms,
+            )
+        )
+
+    if distortion_drive_db > 0.0:
+        effects.append(Distortion(drive_db=distortion_drive_db))
+
+    if abs(pre_gain_db) > 0.05:
+        effects.append(Gain(gain_db=pre_gain_db))
+
+    effects.append(
         Limiter(
             threshold_db=limiter_threshold_db,
             release_ms=100.0,
-        ),
-    ]
-
+        )
+    )
 
     board = Pedalboard(effects)
     processed = board(audio, sample_rate=sr)
 
     if processed.size > 0:
         processed_peak = float(np.max(np.abs(processed)))
-        processed_rms = float(np.sqrt(np.mean(processed**2)))
+        processed_rms = float(np.sqrt(np.mean(processed ** 2)))
     else:
         processed_peak = 0.0
         processed_rms = 0.0

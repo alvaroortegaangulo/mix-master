@@ -119,6 +119,241 @@ def load_dynamics_csv(csv_path: Path) -> List[DynamicsRow]:
 
 
 # ----------------------------------------------------------------------
+# Heurísticas "pro" para refinar los parámetros de dinámica del CSV
+# ----------------------------------------------------------------------
+
+
+def _classify_instrument(instrument_profile: str, filename: str):
+    """
+    Clasificación de la pista basada en:
+      1) instrument_profile que llega del frontend (STEM_PROFILE_OPTIONS):
+         - auto
+         - drums
+         - percussion
+         - bass
+         - acoustic_guitar
+         - electric_guitar
+         - keys
+         - synth
+         - lead_vocal
+         - backing_vocals
+         - fx
+         - ambience
+         - other
+      2) Si sigue sin estar claro (auto/other/vacío), se cae al heurístico
+         por nombre de archivo que teníamos antes.
+
+    Devuelve:
+      is_percussive, is_bass, is_vocal, is_gtr_or_keys
+    """
+    ip = (instrument_profile or "").strip().lower()
+    filename_lower = filename.lower()
+
+    is_percussive = False
+    is_bass = False
+    is_vocal = False
+    is_gtr_or_keys = False
+
+    # ------------------ 1) Clasificación directa por perfil ------------------
+    if ip in ("drums", "percussion"):
+        is_percussive = True
+    elif ip == "bass":
+        is_bass = True
+    elif ip in ("lead_vocal", "backing_vocals"):
+        is_vocal = True
+    elif ip in ("acoustic_guitar", "electric_guitar", "keys", "synth"):
+        # Guitarras y teclas/synth → mismo tratamiento dinámico base
+        is_gtr_or_keys = True
+    elif ip in ("fx", "ambience", "other", "auto", ""):
+        # Se tratan como "no claramente clasificados" y se deja la puerta
+        # abierta al fallback por nombre.
+        pass
+    else:
+        # Cualquier otro tag inesperado: tratamos como desconocido.
+        pass
+
+    # Si el perfil ya nos da info suficiente, no necesitamos heurístico extra
+    if is_percussive or is_bass or is_vocal or is_gtr_or_keys:
+        return is_percussive, is_bass, is_vocal, is_gtr_or_keys
+
+    # ------------------ 2) Fallback heurístico por nombre --------------------
+    text = (instrument_profile or "").lower() + " " + filename_lower
+
+    is_kick = any(t in text for t in ("kick", "bombo", "bd"))
+    is_snare = any(t in text for t in ("snare", "sna", "caja"))
+    is_hat = any(t in text for t in ("hat", "hihat", "hh", "ride", "cym"))
+    is_tom = any(t in text for t in ("tom", "timbal"))
+    is_hand_perc = any(t in text for t in ("perc", "shaker", "clap", "palma", "cajon"))
+    is_drum = is_kick or is_snare or is_hat or is_tom or is_hand_perc
+
+    is_bass = any(t in text for t in ("bass", "bajo", "sub"))
+    is_vocal = any(t in text for t in ("vocal", "vox", "voz", "lead_vocal", "backing_vocals"))
+    is_gtr = any(t in text for t in ("guitar", "gtr", "acoustic_guitar", "electric_guitar"))
+    is_keys = any(t in text for t in ("keys", "piano", "synth", "pad", "rhodes"))
+
+    is_percussive = is_drum
+    is_gtr_or_keys = is_gtr or is_keys
+
+    return is_percussive, is_bass, is_vocal, is_gtr_or_keys
+
+
+def _refine_dynamics_settings(row: DynamicsRow):
+    """
+    Toma los ajustes sugeridos por el análisis y los "domestica" para que la
+    compresión sea más musical, respetando:
+
+      - tipo de instrumento (perfil + fallback)
+      - crest factor (dinámica global)
+      - transient_crest_db (transitorios)
+      - rms/peak reales
+
+    Devuelve la tupla:
+      (comp_enabled, thr, ratio, attack_ms, release_ms, makeup_db,
+       limiter_enabled, limiter_threshold_dbfs, limiter_release_ms)
+    """
+    is_perc, is_bass, is_vocal, is_gtr_keys = _classify_instrument(
+        row.instrument_profile, row.filename
+    )
+
+    peak_dbfs = row.peak_dbfs
+    rms_dbfs = row.rms_dbfs
+    crest_db = row.crest_factor_db
+    transient_db = row.transient_crest_db
+
+    comp_enabled = row.comp_enabled
+    thr = row.comp_threshold_dbfs
+    ratio = row.comp_ratio
+    attack = row.comp_attack_ms
+    release = row.comp_release_ms
+    makeup = row.comp_makeup_gain_db
+    lim_enabled = row.limiter_enabled
+    lim_thr = row.limiter_threshold_dbfs
+    lim_rel = row.limiter_release_ms
+
+    # ---------------------- Ratio: evitar aplastamiento ----------------------
+    ratio = max(ratio, 1.0)
+    ratio = min(ratio, 8.0)
+
+    # Si ya está bastante comprimido (crest bajo), limitamos ratio
+    if crest_db < 8.0:
+        ratio = min(ratio, 3.0)
+    if crest_db < 5.0:
+        ratio = min(ratio, 2.0)
+
+    # Voces → ratios razonables
+    if is_vocal:
+        ratio = max(1.2, min(ratio, 3.0))
+    # Percusiones → ratios moderados
+    if is_perc:
+        ratio = max(1.1, min(ratio, 3.5))
+    # Bajos → un poco más de control permitido
+    if is_bass:
+        ratio = max(1.5, min(ratio, 4.0))
+    # Guitarras/keys → suaves
+    if is_gtr_keys and not is_vocal:
+        ratio = max(1.1, min(ratio, 2.5))
+
+    # ---------------------- Threshold vs RMS/Peak ----------------------------
+    if comp_enabled:
+        # No queremos thresholds muy por debajo del RMS → eso destruye dinámica.
+        min_thr_above_rms = 2.0
+        if is_vocal:
+            min_thr_above_rms = 3.0
+
+        thr = max(thr, rms_dbfs + min_thr_above_rms)
+
+        # Threshold no puede estar por encima de (peak - 1) dB
+        thr = min(thr, peak_dbfs - 1.0)
+
+        # En general, no queremos trabajar tan cerca de 0 dBFS
+        thr = min(thr, -2.0)
+
+    # ---------------------- Tiempos: protegiendo transitorios ----------------
+    # Clamps genéricos
+    attack = max(attack, 0.3)
+    attack = min(attack, 60.0)
+    release = max(release, 20.0)
+    release = min(release, 800.0)
+
+    if is_perc:
+        # Para percusiones: no matar transitorios
+        if transient_db > 10.0:
+            attack = max(attack, 10.0)
+        else:
+            attack = max(attack, 5.0)
+        release = max(release, 60.0)
+        release = min(release, 250.0)
+
+    elif is_bass:
+        attack = max(attack, 5.0)
+        attack = min(attack, 30.0)
+        release = max(release, 80.0)
+        release = min(release, 400.0)
+
+    elif is_vocal:
+        attack = max(attack, 3.0)
+        attack = min(attack, 20.0)
+        release = max(release, 60.0)
+        release = min(release, 350.0)
+
+    elif is_gtr_keys:
+        attack = max(attack, 5.0)
+        attack = min(attack, 25.0)
+        release = max(release, 80.0)
+        release = min(release, 400.0)
+
+    # ---------------------- Makeup: mantener dinámica ------------------------
+    makeup = max(min(makeup, 6.0), -6.0)
+
+    if is_perc:
+        makeup = max(min(makeup, 2.0), -3.0)
+    elif is_vocal:
+        makeup = max(min(makeup, 3.0), -3.0)
+    else:
+        makeup = max(min(makeup, 3.5), -4.0)
+
+    # Si ya tiene crest bajo, reducimos cualquier boost agresivo
+    if crest_db < 6.0 and makeup > 0.0:
+        makeup = min(makeup, 1.5)
+
+    # Estimación grosera de GR en picos → si deja el crest ridículo, recortamos makeup
+    if comp_enabled and ratio > 1.0:
+        peak_above_thr = max(0.0, peak_dbfs - thr)
+        gr_peak = peak_above_thr * (1.0 - 1.0 / ratio)
+        if crest_db - gr_peak < 4.0:
+            makeup = min(makeup, 1.0)
+
+    # ---------------------- Compresor realmente activo o no ------------------
+    if comp_enabled:
+        if ratio <= 1.1:
+            comp_enabled = False
+        elif thr >= peak_dbfs - 0.5:
+            comp_enabled = False
+
+    # ---------------------- Limitador como "safety only" ---------------------
+    if lim_enabled:
+        if peak_dbfs <= -3.0:
+            lim_enabled = False
+        else:
+            lim_thr = max(peak_dbfs - 3.0, lim_thr)
+            lim_thr = min(lim_thr, -0.5)
+            lim_thr = min(lim_thr, -0.3)
+            lim_thr = max(lim_thr, -8.0)
+
+    return (
+        comp_enabled,
+        thr,
+        ratio,
+        attack,
+        release,
+        makeup,
+        lim_enabled,
+        lim_thr,
+        lim_rel,
+    )
+
+
+# ----------------------------------------------------------------------
 # Aplicación de compresor + limitador
 # ----------------------------------------------------------------------
 
@@ -145,33 +380,43 @@ def _apply_dynamics_to_file(
 
     # Métricas originales
     original_peak = float(np.max(np.abs(audio))) if audio.size > 0 else 0.0
-    original_rms = float(np.sqrt(np.mean(audio**2))) if audio.size > 0 else 0.0
+    original_rms = float(np.sqrt(np.mean(audio ** 2))) if audio.size > 0 else 0.0
 
     original_peak_dbfs = _safe_dbfs(original_peak)
     original_rms_dbfs = _safe_dbfs(original_rms)
 
+    (
+        comp_enabled,
+        comp_threshold_dbfs,
+        comp_ratio,
+        comp_attack_ms,
+        comp_release_ms,
+        comp_makeup_gain_db,
+        limiter_enabled,
+        limiter_threshold_dbfs,
+        limiter_release_ms,
+    ) = _refine_dynamics_settings(row)
+
     # Construir cadena de efectos
     effects = []
 
-    if row.comp_enabled:
-        # 1) Compresor sin makeup_gain_db (no lo soporta esta versión de Pedalboard)
+    if comp_enabled:
         comp = Compressor(
-            threshold_db=row.comp_threshold_dbfs,
-            ratio=row.comp_ratio,
-            attack_ms=row.comp_attack_ms,
-            release_ms=row.comp_release_ms,
+            threshold_db=comp_threshold_dbfs,
+            ratio=comp_ratio,
+            attack_ms=comp_attack_ms,
+            release_ms=comp_release_ms,
         )
         effects.append(comp)
 
-        # 2) Si queremos aplicar gain de compensación, lo hacemos con un Gain aparte
-        if abs(row.comp_makeup_gain_db) > 0.01:
-            effects.append(Gain(gain_db=row.comp_makeup_gain_db))
+        if abs(comp_makeup_gain_db) > 0.01:
+            effects.append(Gain(gain_db=comp_makeup_gain_db))
 
-    if row.limiter_enabled:
+    if limiter_enabled:
         effects.append(
             Limiter(
-                threshold_db=row.limiter_threshold_dbfs,
-                release_ms=row.limiter_release_ms,
+                threshold_db=limiter_threshold_dbfs,
+                release_ms=limiter_release_ms,
             )
         )
 
@@ -180,7 +425,7 @@ def _apply_dynamics_to_file(
 
     # Métricas resultantes
     processed_peak = float(np.max(np.abs(processed))) if processed.size > 0 else 0.0
-    processed_rms = float(np.sqrt(np.mean(processed**2))) if processed.size > 0 else 0.0
+    processed_rms = float(np.sqrt(np.mean(processed ** 2))) if processed.size > 0 else 0.0
 
     resulting_peak_dbfs = _safe_dbfs(processed_peak)
     resulting_rms_dbfs = _safe_dbfs(processed_rms)
@@ -197,15 +442,15 @@ def _apply_dynamics_to_file(
         num_channels=num_channels,
         duration_seconds=row.duration_seconds,
         instrument_profile=row.instrument_profile,
-        comp_enabled=row.comp_enabled,
-        comp_threshold_dbfs=row.comp_threshold_dbfs,
-        comp_ratio=row.comp_ratio,
-        comp_attack_ms=row.comp_attack_ms,
-        comp_release_ms=row.comp_release_ms,
-        comp_makeup_gain_db=row.comp_makeup_gain_db,
-        limiter_enabled=row.limiter_enabled,
-        limiter_threshold_dbfs=row.limiter_threshold_dbfs,
-        limiter_release_ms=row.limiter_release_ms,
+        comp_enabled=comp_enabled,
+        comp_threshold_dbfs=comp_threshold_dbfs,
+        comp_ratio=comp_ratio,
+        comp_attack_ms=comp_attack_ms,
+        comp_release_ms=comp_release_ms,
+        comp_makeup_gain_db=comp_makeup_gain_db,
+        limiter_enabled=limiter_enabled,
+        limiter_threshold_dbfs=limiter_threshold_dbfs,
+        limiter_release_ms=limiter_release_ms,
         original_peak_dbfs=original_peak_dbfs,
         original_rms_dbfs=original_rms_dbfs,
         resulting_peak_dbfs=resulting_peak_dbfs,
