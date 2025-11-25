@@ -1,7 +1,7 @@
-# src/stages/stage11_mix_bus_color/mix_bus_color_correction.py
+# src/stages/stage12_mix_bus_color/mix_bus_color_correction.py
 from __future__ import annotations
 
-import csv
+import json
 import logging
 from dataclasses import dataclass
 from pathlib import Path
@@ -69,39 +69,49 @@ class MixBusColorCorrectionResult:
     vst3_plugins_loaded: List[str]
 
 
-def load_mix_bus_color_csv(csv_path: Path) -> MixBusColorSettings:
-    """
-    Lee el CSV generado por mix_bus_color_analysis y devuelve los ajustes.
-    """
-    if not csv_path.exists():
-        raise FileNotFoundError(f"No se encontró el CSV de mix-bus color: {csv_path}")
+# ----------------------------------------------------------------------
+# Lectura JSON
+# ----------------------------------------------------------------------
 
-    with csv_path.open("r", newline="", encoding="utf-8") as f:
-        reader = csv.DictReader(f)
+
+def load_mix_bus_color_json(json_path: Path) -> MixBusColorSettings:
+    """
+    Lee el JSON generado por mix_bus_color_analysis y devuelve los ajustes.
+    """
+    if not json_path.exists():
+        raise FileNotFoundError(f"No se encontro el JSON de mix-bus color: {json_path}")
+
+    payload = json.loads(json_path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError(f"Formato JSON inesperado en {json_path}")
+
+    def _gf(name: str, default: float = 0.0) -> float:
+        v = payload.get(name)
         try:
-            row = next(reader)
-        except StopIteration:
-            raise RuntimeError(f"CSV de mix-bus color vacío: {csv_path}")
+            return float(v)
+        except Exception:
+            return default
 
-    def _pf(name: str, default: float = 0.0) -> float:
-        v = (row.get(name) or "").strip()
-        return float(v) if v else default
-
-    mix_path = Path(row["mix_path"]).resolve()
+    mix_path = Path(payload.get("mix_path", "")).resolve()
 
     return MixBusColorSettings(
         mix_path=mix_path,
-        sample_rate=int(row["sample_rate"]),
-        num_channels=int(row["num_channels"]),
-        duration_seconds=float(row["duration_seconds"]),
-        peak_dbfs=_pf("peak_dbfs", -120.0),
-        rms_dbfs=_pf("rms_dbfs", -120.0),
-        crest_factor_db=_pf("crest_factor_db", 0.0),
-        hpf_hz=_pf("recommended_hpf_hz", 25.0),
-        saturation_drive_db=_pf("recommended_saturation_drive_db", 1.0),
-        tape_mix=_pf("recommended_tape_mix", 0.2),
-        console_mix=_pf("recommended_console_mix", 0.2),
+        sample_rate=int(payload.get("sample_rate", 0)),
+        num_channels=int(payload.get("num_channels", 0)),
+        duration_seconds=float(payload.get("duration_seconds", 0.0)),
+        peak_dbfs=_gf("peak_dbfs", -120.0),
+        rms_dbfs=_gf("rms_dbfs", -120.0),
+        crest_factor_db=_gf("crest_factor_db", 0.0),
+        hpf_hz=_gf("recommended_hpf_hz", 25.0),
+        saturation_drive_db=_gf("recommended_saturation_drive_db", 1.0),
+        tape_mix=_gf("recommended_tape_mix", 0.2),
+        console_mix=_gf("recommended_console_mix", 0.2),
     )
+
+
+# ----------------------------------------------------------------------
+# Aplicacion de color
+# ----------------------------------------------------------------------
 
 
 def _apply_mix_bus_color(
@@ -114,18 +124,10 @@ def _apply_mix_bus_color(
 ) -> MixBusColorCorrectionResult:
     """
     Aplica la cadena de color de mix-bus sobre el full mix.
-
-    - HPF suave.
-    - Convolution con IRs (tape/console) si existen.
-    - Distortion ligera como saturador.
-    - VST3 externos opcionales (de-esser, saturador, etc.).
-    - Limiter final suave.
-
-    Por defecto sobreescribe el archivo de entrada.
     """
     input_path = settings.mix_path
     if not input_path.exists():
-        raise FileNotFoundError(f"No se encontró el full mix de entrada: {input_path}")
+        raise FileNotFoundError(f"No se encontro el full mix de entrada: {input_path}")
 
     if output_path is None:
         output_path = input_path if overwrite else input_path.with_name(
@@ -134,9 +136,6 @@ def _apply_mix_bus_color(
     output_path = output_path.resolve()
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    # -----------------------
-    # Leer audio original
-    # -----------------------
     with AudioFile(str(input_path), "r") as f:
         audio = f.read(f.frames)
         sr = f.samplerate
@@ -154,21 +153,15 @@ def _apply_mix_bus_color(
     original_peak_dbfs = _safe_dbfs(original_peak_lin)
     original_rms_dbfs = _safe_dbfs(original_rms_lin)
 
-    # -----------------------
-    # Construcción del board
-    # -----------------------
     effects = []
 
-    # HPF muy suave para el mix bus
     if settings.hpf_hz > 0.0:
         effects.append(HighpassFilter(cutoff_frequency_hz=settings.hpf_hz))
 
-    # Un pelín de pre-gain para entrar en saturadores/IR
     pre_gain_db = min(max(settings.saturation_drive_db * 0.4, 0.0), 2.0)
     if abs(pre_gain_db) > 0.05:
         effects.append(Gain(gain_db=pre_gain_db))
 
-    # IR de cinta
     if tape_ir_path is not None:
         tape_ir_path = tape_ir_path.resolve()
         if tape_ir_path.exists():
@@ -189,7 +182,6 @@ def _apply_mix_bus_color(
                 tape_ir_path,
             )
 
-    # IR de consola/summing
     if console_ir_path is not None:
         console_ir_path = console_ir_path.resolve()
         if console_ir_path.exists():
@@ -210,11 +202,9 @@ def _apply_mix_bus_color(
                 console_ir_path,
             )
 
-    # Saturación general muy ligera (Distortion como saturador de bus)
     if abs(settings.saturation_drive_db) > 0.05:
         effects.append(Distortion(drive_db=float(settings.saturation_drive_db)))
 
-    # VST3 externos (opcional)
     vst3_plugins_loaded: List[str] = []
     for vst_path in vst3_plugin_paths or []:
         try:
@@ -233,10 +223,7 @@ def _apply_mix_bus_color(
                 "[MIX_BUS_COLOR] Error cargando VST3 %s: %s", vst_path, exc
             )
 
-    # Trim leve antes del limiter para que no se vuelva loco
     effects.append(Gain(gain_db=-0.5))
-
-    # Limiter final suave del mix bus
     effects.append(
         Limiter(
             threshold_db=-0.8,
@@ -247,7 +234,6 @@ def _apply_mix_bus_color(
     board = Pedalboard(effects)
     processed = board(audio, sample_rate=sr)
 
-    # Métricas de salida
     if processed.size > 0:
         peak_lin = float(np.max(np.abs(processed)))
         rms_lin = float(np.sqrt(np.mean(processed**2)))
@@ -255,7 +241,6 @@ def _apply_mix_bus_color(
         peak_lin = 0.0
         rms_lin = 0.0
 
-    # Seguridad extra por si algo rompe el limiter
     if peak_lin > 0.999:
         processed = processed * (0.999 / peak_lin)
         peak_lin = 0.999
@@ -263,7 +248,6 @@ def _apply_mix_bus_color(
     resulting_peak_dbfs = _safe_dbfs(peak_lin)
     resulting_rms_dbfs = _safe_dbfs(rms_lin)
 
-    # Guardar WAV de salida
     with AudioFile(str(output_path), "w", sr, num_channels) as f:
         f.write(processed.astype(np.float32, copy=False))
 
@@ -287,59 +271,36 @@ def _apply_mix_bus_color(
     )
 
 
-def write_mix_bus_color_log(
+def write_mix_bus_color_log_json(
     result: MixBusColorCorrectionResult,
-    csv_path: Path,
-) -> None:
-    csv_path.parent.mkdir(parents=True, exist_ok=True)
-
-    fieldnames = [
-        "input_path",
-        "output_path",
-        "sample_rate",
-        "num_channels",
-        "duration_seconds",
-        "original_peak_dbfs",
-        "original_rms_dbfs",
-        "resulting_peak_dbfs",
-        "resulting_rms_dbfs",
-        "hpf_hz",
-        "saturation_drive_db",
-        "tape_ir_path",
-        "console_ir_path",
-        "tape_mix",
-        "console_mix",
-        "vst3_plugins_loaded",
-    ]
-
-    with csv_path.open("w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=fieldnames)
-        writer.writeheader()
-        writer.writerow(
-            {
-                "input_path": str(result.input_path),
-                "output_path": str(result.output_path),
-                "sample_rate": result.sample_rate,
-                "num_channels": result.num_channels,
-                "duration_seconds": f"{result.duration_seconds:.6f}",
-                "original_peak_dbfs": f"{result.original_peak_dbfs:.2f}",
-                "original_rms_dbfs": f"{result.original_rms_dbfs:.2f}",
-                "resulting_peak_dbfs": f"{result.resulting_peak_dbfs:.2f}",
-                "resulting_rms_dbfs": f"{result.resulting_rms_dbfs:.2f}",
-                "hpf_hz": f"{result.hpf_hz:.1f}",
-                "saturation_drive_db": f"{result.saturation_drive_db:.2f}",
-                "tape_ir_path": str(result.tape_ir_path) if result.tape_ir_path else "",
-                "console_ir_path": str(result.console_ir_path) if result.console_ir_path else "",
-                "tape_mix": f"{result.tape_mix:.3f}",
-                "console_mix": f"{result.console_mix:.3f}",
-                "vst3_plugins_loaded": "|".join(result.vst3_plugins_loaded),
-            }
-        )
+    json_path: Path,
+) -> Path:
+    json_path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "input_path": str(result.input_path),
+        "output_path": str(result.output_path),
+        "sample_rate": result.sample_rate,
+        "num_channels": result.num_channels,
+        "duration_seconds": result.duration_seconds,
+        "original_peak_dbfs": result.original_peak_dbfs,
+        "original_rms_dbfs": result.original_rms_dbfs,
+        "resulting_peak_dbfs": result.resulting_peak_dbfs,
+        "resulting_rms_dbfs": result.resulting_rms_dbfs,
+        "hpf_hz": result.hpf_hz,
+        "saturation_drive_db": result.saturation_drive_db,
+        "tape_ir_path": str(result.tape_ir_path) if result.tape_ir_path else None,
+        "console_ir_path": str(result.console_ir_path) if result.console_ir_path else None,
+        "tape_mix": result.tape_mix,
+        "console_mix": result.console_mix,
+        "vst3_plugins_loaded": result.vst3_plugins_loaded,
+    }
+    json_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    return json_path
 
 
 def run_mix_bus_color_correction(
-    analysis_csv_path: Path,
-    log_csv_path: Path,
+    analysis_json_path: Path,
+    log_json_path: Path,
     tape_ir_path: Optional[Path] = None,
     console_ir_path: Optional[Path] = None,
     vst3_plugin_paths: Optional[List[Path]] = None,
@@ -347,13 +308,9 @@ def run_mix_bus_color_correction(
     output_path: Optional[Path] = None,
 ) -> MixBusColorCorrectionResult:
     """
-    Punto de entrada de alto nivel para aplicar el color de mix-bus:
-
-      1) Lee el CSV de análisis.
-      2) Aplica HPF + IRs + saturación + VST3 + limiter.
-      3) Escribe un CSV de log con las métricas antes/después.
+    Punto de entrada de alto nivel para aplicar el color de mix-bus.
     """
-    settings = load_mix_bus_color_csv(analysis_csv_path)
+    settings = load_mix_bus_color_json(analysis_json_path)
     result = _apply_mix_bus_color(
         settings=settings,
         tape_ir_path=tape_ir_path,
@@ -362,7 +319,7 @@ def run_mix_bus_color_correction(
         overwrite=overwrite,
         output_path=output_path,
     )
-    write_mix_bus_color_log(result, log_csv_path)
+    write_mix_bus_color_log_json(result, log_json_path)
     return result
 
 
@@ -370,6 +327,6 @@ __all__ = [
     "MixBusColorSettings",
     "MixBusColorCorrectionResult",
     "run_mix_bus_color_correction",
-    "load_mix_bus_color_csv",
-    "write_mix_bus_color_log",
+    "load_mix_bus_color_json",
+    "write_mix_bus_color_log_json",
 ]

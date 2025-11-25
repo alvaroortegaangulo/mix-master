@@ -1,43 +1,53 @@
-# C:\mix\src\analysis\dc_offset_detection.py
-
 from __future__ import annotations
 
-import csv
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, asdict
 from pathlib import Path
 from typing import List
 
 import numpy as np
 import soundfile as sf
 
+
 @dataclass
 class DcOffsetResult:
-    """Resultado de análisis de DC offset para un archivo de audio."""
+    """Resultado de analisis de DC offset para un archivo de audio."""
     file_path: Path
     is_full_song: bool
     sample_rate: int
     num_channels: int
     duration_seconds: float
-    dc_offsets: List[float]          # offset por canal (en -1..1)
-    max_abs_dc_offset: float         # máximo |offset| entre canales
+    dc_offsets: List[float]
+    max_abs_dc_offset: float
 
 
 def _analyze_single_file(path: Path) -> DcOffsetResult:
     """
-    Analiza el DC offset de un único fichero WAV.
-
-    Calcula la media de las muestras por canal (DC offset) y algunos metadatos básicos.
+    Analiza el DC offset de un unico fichero WAV usando streaming para no cargar todo en memoria.
     """
-    # always_2d=True -> shape: (n_muestras, n_canales)
-    audio, sr = sf.read(path, dtype="float32", always_2d=True)
-    num_channels = audio.shape[1]
-    num_samples = audio.shape[0]
+    with sf.SoundFile(str(path), mode="r") as f:
+        sr = f.samplerate
+        num_channels = f.channels
+        total_frames = f.frames
 
-    # Media por canal (float32 / float64 en el rango -1..1 en la mayoría de casos)
-    dc_offsets = audio.mean(axis=0).astype(float)
-    max_abs_dc_offset = float(np.max(np.abs(dc_offsets)))
-    duration_seconds = float(num_samples / sr)
+        block_size = 262144  # frames; bloques grandes reducen I/O
+        sums = np.zeros(num_channels, dtype=np.float64)
+        frames_read = 0
+
+        while True:
+            block = f.read(block_size, dtype="float32", always_2d=True)
+            if block.size == 0:
+                break
+            sums += block.sum(axis=0, dtype=np.float64)
+            frames_read += block.shape[0]
+
+        if frames_read > 0:
+            dc_offsets = (sums / frames_read).astype(float)
+        else:
+            dc_offsets = np.zeros(num_channels, dtype=float)
+
+    max_abs_dc_offset = float(np.max(np.abs(dc_offsets))) if dc_offsets.size else 0.0
+    duration_seconds = float(total_frames / sr) if sr > 0 else 0.0
 
     return DcOffsetResult(
         file_path=path,
@@ -53,63 +63,24 @@ def _analyze_single_file(path: Path) -> DcOffsetResult:
 def detect_dc_offset(media_dir: Path) -> List[DcOffsetResult]:
     """
     Detecta el DC offset en todos los .wav dentro de media_dir.
-
-    :param media_dir: Carpeta donde están los stems y full_song.wav.
-    :return: Lista de resultados por archivo.
     """
     if not media_dir.exists() or not media_dir.is_dir():
         raise FileNotFoundError(f"El directorio de medios no existe: {media_dir}")
 
-    results: List[DcOffsetResult] = []
-
-    for wav_path in sorted(media_dir.glob("*.wav")):
-        result = _analyze_single_file(wav_path)
-        results.append(result)
-
-    return results
+    return [_analyze_single_file(p) for p in sorted(media_dir.glob("*.wav"))]
 
 
-def export_dc_offset_to_csv(results: List[DcOffsetResult], csv_path: Path) -> None:
+def export_dc_offset_to_json(results: List[DcOffsetResult], json_path: Path) -> None:
     """
-    Exporta los resultados de DC offset a un CSV.
-
-    Estructura del CSV:
-        filename              -> nombre del archivo (solo nombre, sin ruta)
-        relative_path         -> ruta relativa a la carpeta media (si la conoces en el main)
-        is_full_song          -> True/False
-        sample_rate           -> Hz
-        num_channels
-        duration_seconds
-        dc_offsets            -> lista JSON de offsets por canal (ej: [0.0001, -0.0002])
-        max_abs_dc_offset     -> máximo |offset| entre canales
+    Exporta los resultados de DC offset a JSON (lista de objetos).
     """
-    csv_path.parent.mkdir(parents=True, exist_ok=True)
+    json_path.parent.mkdir(parents=True, exist_ok=True)
 
-    fieldnames = [
-        "filename",
-        "relative_path",
-        "is_full_song",
-        "sample_rate",
-        "num_channels",
-        "duration_seconds",
-        "dc_offsets",
-        "max_abs_dc_offset",
-    ]
+    payload = []
+    for r in results:
+        item = asdict(r)
+        item["file_path"] = r.file_path.name  # solo el nombre del archivo
+        item["relative_path"] = r.file_path.name
+        payload.append(item)
 
-    with csv_path.open("w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=fieldnames)
-        writer.writeheader()
-
-        for r in results:
-            # relative_path queda a rellenar en el main si quieres algo concreto;
-            # aquí asumimos que guardas solo el nombre y dejas "" o igual al filename.
-            writer.writerow({
-                "filename": r.file_path.name,
-                "relative_path": r.file_path.name,  # o algo relativo a media_dir si lo pasas
-                "is_full_song": int(r.is_full_song),  # 1/0 para facilitar lectura posterior
-                "sample_rate": r.sample_rate,
-                "num_channels": r.num_channels,
-                "duration_seconds": f"{r.duration_seconds:.6f}",
-                "dc_offsets": json.dumps(r.dc_offsets),
-                "max_abs_dc_offset": f"{r.max_abs_dc_offset:.8f}",
-            })
+    json_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")

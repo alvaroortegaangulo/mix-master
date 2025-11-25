@@ -138,24 +138,19 @@ def _hz_to_midi(f: float) -> float:
     return 69.0 + 12.0 * math.log2(f / 440.0)
 
 
+
+
 def _pitch_to_midi(pitch_hz: np.ndarray, pitch_conf: np.ndarray) -> np.ndarray:
     """
     Convierte pitch (Hz) + confianza en un vector de notas MIDI (float),
     con NaNs en frames sin pitch fiable.
     """
     midi = np.full_like(pitch_hz, np.nan, dtype=np.float32)
-
-    for i, (f, c) in enumerate(zip(pitch_hz, pitch_conf)):
-        if c < PITCH_CONFIDENCE_MIN or f <= 0.0:
-            continue
-        midi[i] = _hz_to_midi(float(f))
-
+    mask = (pitch_conf >= PITCH_CONFIDENCE_MIN) & (pitch_hz > 0.0)
+    if not np.any(mask):
+        return midi
+    midi[mask] = 69.0 + 12.0 * np.log2(pitch_hz[mask] / 440.0)
     return midi
-
-
-# ----------------------------------------------------------------------
-# Cuantización de notas a la escala del tema
-# ----------------------------------------------------------------------
 
 
 def _quantize_midi_to_scale(
@@ -163,9 +158,9 @@ def _quantize_midi_to_scale(
     allowed_pcs: List[int],
 ) -> np.ndarray:
     """
-    Para cada frame con nota MIDI válida, la engancha a la nota más cercana
-    cuya pitch class esté en la escala permitida.
-    Devuelve un array target_midi (float) del mismo tamaño.
+    Para cada frame con nota MIDI valida, la engancha a la nota mas cercana
+    cuya pitch class esta en la escala permitida.
+    Devuelve un array target_midi (float) del mismo tamano.
     """
     target = np.copy(midi)
 
@@ -192,11 +187,9 @@ def _quantize_midi_to_scale(
         if best_dist is not None:
             target[i] = float(best_m)
         else:
-            # No encontramos candidato cercano en la escala -> no tocamos
             target[i] = m
 
     return target
-
 
 def _build_shift_curve(midi: np.ndarray, target_midi: np.ndarray) -> np.ndarray:
     """
@@ -204,14 +197,10 @@ def _build_shift_curve(midi: np.ndarray, target_midi: np.ndarray) -> np.ndarray:
     Frames no voiced -> shift = 0.
     """
     shift = np.zeros_like(target_midi, dtype=np.float32)
-
-    for i, (m, tm) in enumerate(zip(midi, target_midi)):
-        if math.isnan(m) or math.isnan(tm):
-            shift[i] = 0.0
-        else:
-            shift[i] = float(tm - m)
-
+    voiced = ~np.isnan(midi) & ~np.isnan(target_midi)
+    shift[voiced] = target_midi[voiced] - midi[voiced]
     return shift
+
 
 
 def _segment_shift_curve(shift: np.ndarray, tol: float = 0.25) -> List[Tuple[int, int, float]]:
@@ -219,35 +208,22 @@ def _segment_shift_curve(shift: np.ndarray, tol: float = 0.25) -> List[Tuple[int
     Agrupa frames consecutivos con shift similar en segmentos:
       (start_frame, end_frame_inclusive, shift_value)
 
-    tol: diferencia máxima de semitonos para considerar que sigue siendo la misma nota.
+    tol: diferencia maxima de semitonos para considerar que sigue siendo la misma nota.
     """
     n = shift.shape[0]
     if n == 0:
         return []
 
+    diff = np.abs(np.diff(shift))
+    boundaries = np.where(diff > tol)[0]
+    starts = np.concatenate(([0], boundaries + 1))
+    ends = np.concatenate((boundaries, [n - 1]))
+
     segments: List[Tuple[int, int, float]] = []
-
-    current_shift = shift[0]
-    seg_start = 0
-
-    for i in range(1, n):
-        if abs(shift[i] - current_shift) <= tol:
-            # seguimos en la misma nota
-            continue
-        else:
-            seg_end = i - 1
-            shift_value = float(np.mean(shift[seg_start:seg_end + 1]))
-            segments.append((seg_start, seg_end, shift_value))
-            seg_start = i
-            current_shift = shift[i]
-
-    # Último segmento
-    seg_end = n - 1
-    shift_value = float(np.mean(shift[seg_start:seg_end + 1]))
-    segments.append((seg_start, seg_end, shift_value))
+    for start, end in zip(starts, ends):
+        segments.append((int(start), int(end), float(np.mean(shift[start:end + 1]))))
 
     return segments
-
 
 # ----------------------------------------------------------------------
 # Aplicación de pitch shifting por segmentos (pyrubberband)
@@ -267,7 +243,7 @@ def _apply_pitch_corrections(
     segments: lista de (start_frame, end_frame_inclusive, shift_semitones)
     """
     num_samples = audio_mono.shape[0]
-    out = np.zeros_like(audio_mono, dtype=np.float32)
+    out = np.copy(audio_mono).astype(np.float32, copy=False)
 
     for (start_f, end_f, shift_val) in segments:
         # Convertimos frames -> samples (aprox)
@@ -284,9 +260,9 @@ def _apply_pitch_corrections(
         seg = audio_mono[start_sample:end_sample]
 
         if abs(shift_val) < 0.01:
-            seg_ps = seg  # sin cambio
-        else:
-            seg_ps = pyrb.pitch_shift(seg, sr, n_steps=shift_val)
+            continue  # ya tenemos la copia original en out
+
+        seg_ps = pyrb.pitch_shift(seg, sr, n_steps=shift_val)
 
         # Aseguramos misma longitud (por seguridad)
         L = min(seg.shape[0], seg_ps.shape[0])

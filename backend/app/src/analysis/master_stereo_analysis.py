@@ -1,8 +1,7 @@
-# src/analysis/master_stereo_analysis.py
 from __future__ import annotations
 
-import csv
-from dataclasses import dataclass
+import json
+from dataclasses import asdict, dataclass
 from pathlib import Path
 
 import numpy as np
@@ -10,6 +9,7 @@ import soundfile as sf
 
 
 def _safe_dbfs(value: float, floor: float = -120.0) -> float:
+    """Convierte magnitud lineal a dBFS con un floor seguro para ceros."""
     v = float(value)
     if v <= 0.0:
         return floor
@@ -41,30 +41,118 @@ class MasterStereoResult:
     recommended_side_ir_mix: float
 
 
+def _compute_ms_metrics(path: Path, block_size: int = 131072) -> tuple:
+    """
+    Calcula en streaming las métricas Mid/Side para reducir uso de memoria.
+    Devuelve:
+      (peak_dbfs, rms_dbfs, crest_factor_db,
+       mid_peak_dbfs, mid_rms_dbfs, side_peak_dbfs, side_rms_dbfs,
+       duration_seconds, sample_rate, num_channels)
+    """
+    with sf.SoundFile(path, "r") as f:
+        sr = int(f.samplerate)
+        num_channels = int(f.channels)
+        frames_total = int(len(f))
+
+        peak_lin = 0.0
+        sum_squares = 0.0
+        mid_peak_lin = 0.0
+        mid_sum_squares = 0.0
+        side_peak_lin = 0.0
+        side_sum_squares = 0.0
+        total_samples = 0
+
+        while True:
+            data = f.read(block_size, dtype="float32", always_2d=True)
+            if data.size == 0:
+                break
+
+            L = data[:, 0]
+            R = data[:, 0] if data.shape[1] == 1 else data[:, 1]
+
+            full_abs = np.abs(data)
+            peak_lin = max(peak_lin, float(full_abs.max()))
+            sum_squares += float(np.sum(data * data))
+            total_samples += data.size
+
+            mid = 0.5 * (L + R)
+            side = 0.5 * (L - R)
+
+            mid_abs = np.abs(mid)
+            side_abs = np.abs(side)
+
+            mid_peak_lin = max(mid_peak_lin, float(mid_abs.max()))
+            side_peak_lin = max(side_peak_lin, float(side_abs.max()))
+            mid_sum_squares += float(np.sum(mid * mid))
+            side_sum_squares += float(np.sum(side * side))
+
+        duration_seconds = float(frames_total) / float(sr) if frames_total else float(total_samples) / float(sr * max(num_channels, 1))
+
+        if total_samples == 0:
+            return (
+                -120.0,
+                -120.0,
+                0.0,
+                -120.0,
+                -120.0,
+                -120.0,
+                -120.0,
+                duration_seconds,
+                sr,
+                num_channels,
+            )
+
+        rms_lin = np.sqrt(sum_squares / float(total_samples))
+        mid_rms_lin = np.sqrt(mid_sum_squares / float(total_samples))
+        side_rms_lin = np.sqrt(side_sum_squares / float(total_samples))
+
+        peak_dbfs = _safe_dbfs(peak_lin)
+        rms_dbfs = _safe_dbfs(rms_lin)
+        crest_factor_db = peak_dbfs - rms_dbfs
+
+        mid_peak_dbfs = _safe_dbfs(mid_peak_lin)
+        mid_rms_dbfs = _safe_dbfs(mid_rms_lin)
+        side_peak_dbfs = _safe_dbfs(side_peak_lin)
+        side_rms_dbfs = _safe_dbfs(side_rms_lin)
+
+        return (
+            peak_dbfs,
+            rms_dbfs,
+            crest_factor_db,
+            mid_peak_dbfs,
+            mid_rms_dbfs,
+            side_peak_dbfs,
+            side_rms_dbfs,
+            duration_seconds,
+            sr,
+            num_channels,
+        )
+
+
 def analyze_master_stereo(mix_path: Path) -> MasterStereoResult:
     """
-    Analiza el full mix (stéreo) en Mid/Side y propone ajustes de imagen:
-
-      - RMS/peak de Mid y Side.
-      - Ratio Side/Mid en dB.
-      - Ganancia recomendada de Side (para anchura).
-      - HPF en Mid y Side.
-      - Compresión recomendada en Mid.
+    Analiza el full mix (estéreo) en Mid/Side y propone ajustes de imagen.
     """
     mix_path = mix_path.resolve()
     if not mix_path.exists():
-        raise FileNotFoundError(f"No se encontró el full mix: {mix_path}")
+        raise FileNotFoundError(f"No se encontro el full mix: {mix_path}")
 
-    audio, sr = sf.read(str(mix_path), dtype="float32", always_2d=True)
-    num_samples, num_channels = audio.shape
-    duration_seconds = float(num_samples) / float(sr) if num_samples > 0 else 0.0
+    (
+        peak_dbfs,
+        rms_dbfs,
+        crest_factor_db,
+        mid_peak_dbfs,
+        mid_rms_dbfs,
+        side_peak_dbfs,
+        side_rms_dbfs,
+        duration_seconds,
+        sr,
+        num_channels,
+    ) = _compute_ms_metrics(mix_path)
 
-    if num_samples == 0:
-        # Mezcla vacía -> todo a floor
-        peak_dbfs = rms_dbfs = crest_factor_db = -120.0
-        mid_peak_dbfs = mid_rms_dbfs = side_peak_dbfs = side_rms_dbfs = -120.0
+    if peak_dbfs <= -119.0 and rms_dbfs <= -119.0:
+        # Mezcla vacía -> defaults seguros
         side_to_mid_ratio_db = -60.0
-        # Defaults seguros
         recommended_mid_hpf_hz = 25.0
         recommended_side_hpf_hz = 120.0
         recommended_side_gain_db = 0.0
@@ -73,8 +161,8 @@ def analyze_master_stereo(mix_path: Path) -> MasterStereoResult:
         recommended_side_ir_mix = 0.18
         return MasterStereoResult(
             mix_path=mix_path,
-            sample_rate=int(sr),
-            num_channels=int(num_channels),
+            sample_rate=sr,
+            num_channels=num_channels,
             duration_seconds=duration_seconds,
             peak_dbfs=peak_dbfs,
             rms_dbfs=rms_dbfs,
@@ -92,49 +180,12 @@ def analyze_master_stereo(mix_path: Path) -> MasterStereoResult:
             recommended_side_ir_mix=recommended_side_ir_mix,
         )
 
-    # Métricas globales L/R
-    if num_channels == 1:
-        # Mono: Mid = canal único, Side = 0
-        L = audio[:, 0]
-        R = audio[:, 0]
-    else:
-        L = audio[:, 0]
-        R = audio[:, 1]
+    side_to_mid_ratio_db = side_rms_dbfs - mid_rms_dbfs
 
-    full = audio
-    peak_lin = float(np.max(np.abs(full)))
-    rms_lin = float(np.sqrt(np.mean(full**2)))
-
-    peak_dbfs = _safe_dbfs(peak_lin)
-    rms_dbfs = _safe_dbfs(rms_lin)
-    crest_factor_db = peak_dbfs - rms_dbfs
-
-    # Matriz Mid/Side (estándar)
-    mid = 0.5 * (L + R)
-    side = 0.5 * (L - R)
-
-    mid_peak_lin = float(np.max(np.abs(mid)))
-    mid_rms_lin = float(np.sqrt(np.mean(mid**2)))
-    side_peak_lin = float(np.max(np.abs(side)))
-    side_rms_lin = float(np.sqrt(np.mean(side**2)))
-
-    mid_peak_dbfs = _safe_dbfs(mid_peak_lin)
-    mid_rms_dbfs = _safe_dbfs(mid_rms_lin)
-    side_peak_dbfs = _safe_dbfs(side_peak_lin)
-    side_rms_dbfs = _safe_dbfs(side_rms_lin)
-
-    side_to_mid_ratio_db = side_rms_dbfs - mid_rms_dbfs  # normalmente negativo
-
-    # ---------------------------------------------------
-    # Heurísticas:
-    #   - Objetivo de ratio Side/Mid ≈ -6 dB.
-    #   - Ganancia de Side limitada a ±2.5 dB.
-    # ---------------------------------------------------
     target_ratio_db = -6.0
     desired_gain_db = target_ratio_db - side_to_mid_ratio_db
     recommended_side_gain_db = float(np.clip(desired_gain_db, -2.5, 2.5))
 
-    # HPF de Mid: muy suave, depende un poco del crest factor
     if crest_factor_db < 8.0:
         recommended_mid_hpf_hz = 30.0
     elif crest_factor_db < 11.0:
@@ -142,10 +193,8 @@ def analyze_master_stereo(mix_path: Path) -> MasterStereoResult:
     else:
         recommended_mid_hpf_hz = 22.0
 
-    # HPF de Side: graves laterales recortados por seguridad
     recommended_side_hpf_hz = 120.0
 
-    # Compresión de Mid: más ratio si el mix es muy dinámico
     if crest_factor_db >= 13.0:
         recommended_mid_comp_ratio = 1.6
         recommended_mid_comp_threshold_dbfs = -18.0
@@ -156,7 +205,6 @@ def analyze_master_stereo(mix_path: Path) -> MasterStereoResult:
         recommended_mid_comp_ratio = 1.3
         recommended_mid_comp_threshold_dbfs = -16.0
 
-    # Mix de IR en Side: valor base bastante conservador
     if side_to_mid_ratio_db <= -9.0:
         recommended_side_ir_mix = 0.22
     elif side_to_mid_ratio_db <= -7.0:
@@ -166,8 +214,8 @@ def analyze_master_stereo(mix_path: Path) -> MasterStereoResult:
 
     return MasterStereoResult(
         mix_path=mix_path,
-        sample_rate=int(sr),
-        num_channels=int(num_channels),
+        sample_rate=sr,
+        num_channels=num_channels,
         duration_seconds=duration_seconds,
         peak_dbfs=peak_dbfs,
         rms_dbfs=rms_dbfs,
@@ -186,61 +234,16 @@ def analyze_master_stereo(mix_path: Path) -> MasterStereoResult:
     )
 
 
-def export_master_stereo_to_csv(
+def export_master_stereo_to_json(
     result: MasterStereoResult,
-    csv_path: Path,
-) -> None:
-    """
-    Exporta el análisis Mid/Side a CSV (una sola fila).
-    """
-    csv_path.parent.mkdir(parents=True, exist_ok=True)
-
-    fieldnames = [
-        "mix_path",
-        "sample_rate",
-        "num_channels",
-        "duration_seconds",
-        "peak_dbfs",
-        "rms_dbfs",
-        "crest_factor_db",
-        "mid_peak_dbfs",
-        "mid_rms_dbfs",
-        "side_peak_dbfs",
-        "side_rms_dbfs",
-        "side_to_mid_ratio_db",
-        "recommended_mid_hpf_hz",
-        "recommended_side_hpf_hz",
-        "recommended_side_gain_db",
-        "recommended_mid_comp_threshold_dbfs",
-        "recommended_mid_comp_ratio",
-        "recommended_side_ir_mix",
-    ]
-
-    with csv_path.open("w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=fieldnames)
-        writer.writeheader()
-        writer.writerow(
-            {
-                "mix_path": str(result.mix_path),
-                "sample_rate": result.sample_rate,
-                "num_channels": result.num_channels,
-                "duration_seconds": f"{result.duration_seconds:.6f}",
-                "peak_dbfs": f"{result.peak_dbfs:.2f}",
-                "rms_dbfs": f"{result.rms_dbfs:.2f}",
-                "crest_factor_db": f"{result.crest_factor_db:.2f}",
-                "mid_peak_dbfs": f"{result.mid_peak_dbfs:.2f}",
-                "mid_rms_dbfs": f"{result.mid_rms_dbfs:.2f}",
-                "side_peak_dbfs": f"{result.side_peak_dbfs:.2f}",
-                "side_rms_dbfs": f"{result.side_rms_dbfs:.2f}",
-                "side_to_mid_ratio_db": f"{result.side_to_mid_ratio_db:.2f}",
-                "recommended_mid_hpf_hz": f"{result.recommended_mid_hpf_hz:.1f}",
-                "recommended_side_hpf_hz": f"{result.recommended_side_hpf_hz:.1f}",
-                "recommended_side_gain_db": f"{result.recommended_side_gain_db:.2f}",
-                "recommended_mid_comp_threshold_dbfs": f"{result.recommended_mid_comp_threshold_dbfs:.2f}",
-                "recommended_mid_comp_ratio": f"{result.recommended_mid_comp_ratio:.2f}",
-                "recommended_side_ir_mix": f"{result.recommended_side_ir_mix:.3f}",
-            }
-        )
+    json_path: Path,
+) -> Path:
+    """Exporta el analisis Mid/Side a JSON (una sola fila)."""
+    json_path.parent.mkdir(parents=True, exist_ok=True)
+    payload = asdict(result)
+    payload["mix_path"] = str(result.mix_path)
+    json_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    return json_path
 
 
-__all__ = ["MasterStereoResult", "analyze_master_stereo", "export_master_stereo_to_csv"]
+__all__ = ["MasterStereoResult", "analyze_master_stereo", "export_master_stereo_to_json"]

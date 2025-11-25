@@ -1,7 +1,7 @@
-# src/stages/stage12_master_stereo/master_stereo_correction.py
+# src/stages/stage11_master_stereo/master_stereo_correction.py
 from __future__ import annotations
 
-import csv
+import json
 import logging
 from dataclasses import dataclass
 from pathlib import Path
@@ -76,53 +76,54 @@ class MasterStereoCorrectionResult:
 
 
 # ----------------------------------------------------------------------
-# Lectura CSV
+# Lectura JSON
 # ----------------------------------------------------------------------
 
 
-def load_master_stereo_csv(csv_path: Path) -> MasterStereoSettings:
-    if not csv_path.exists():
+def load_master_stereo_json(json_path: Path) -> MasterStereoSettings:
+    if not json_path.exists():
         raise FileNotFoundError(
-            f"No se encontró el CSV de análisis master_stereo: {csv_path}"
+            f"No se encontro el JSON de analisis master_stereo: {json_path}"
         )
 
-    with csv_path.open("r", newline="", encoding="utf-8") as f:
-        reader = csv.DictReader(f)
+    payload = json.loads(json_path.read_text(encoding="utf-8"))
+    if not isinstance(payload, dict):
+        raise ValueError(f"Formato JSON inesperado en {json_path}")
+
+    def _get_float(name: str, default: float = 0.0) -> float:
+        v = payload.get(name)
         try:
-            row = next(reader)
-        except StopIteration:
-            raise RuntimeError(f"CSV master_stereo vacío: {csv_path}")
+            return float(v)
+        except Exception:
+            return default
 
-    def _pf(name: str, default: float = 0.0) -> float:
-        v = (row.get(name) or "").strip()
-        return float(v) if v else default
-
-    mix_path = Path(row["mix_path"]).resolve()
+    mix_path_raw = payload.get("mix_path") or payload.get("full_mix_path") or ""
+    mix_path = Path(mix_path_raw).resolve()
 
     return MasterStereoSettings(
         mix_path=mix_path,
-        sample_rate=int(row["sample_rate"]),
-        num_channels=int(row["num_channels"]),
-        duration_seconds=float(row["duration_seconds"]),
-        peak_dbfs=_pf("peak_dbfs", -120.0),
-        rms_dbfs=_pf("rms_dbfs", -120.0),
-        crest_factor_db=_pf("crest_factor_db", 0.0),
-        mid_peak_dbfs=_pf("mid_peak_dbfs", -120.0),
-        mid_rms_dbfs=_pf("mid_rms_dbfs", -120.0),
-        side_peak_dbfs=_pf("side_peak_dbfs", -120.0),
-        side_rms_dbfs=_pf("side_rms_dbfs", -120.0),
-        side_to_mid_ratio_db=_pf("side_to_mid_ratio_db", -60.0),
-        mid_hpf_hz=_pf("recommended_mid_hpf_hz", 25.0),
-        side_hpf_hz=_pf("recommended_side_hpf_hz", 120.0),
-        side_gain_db=_pf("recommended_side_gain_db", 0.0),
-        mid_comp_threshold_dbfs=_pf("recommended_mid_comp_threshold_dbfs", -18.0),
-        mid_comp_ratio=_pf("recommended_mid_comp_ratio", 1.3),
-        side_ir_mix=_pf("recommended_side_ir_mix", 0.18),
+        sample_rate=int(payload.get("sample_rate", 0)),
+        num_channels=int(payload.get("num_channels", 0)),
+        duration_seconds=float(payload.get("duration_seconds", 0.0)),
+        peak_dbfs=_get_float("peak_dbfs", -120.0),
+        rms_dbfs=_get_float("rms_dbfs", -120.0),
+        crest_factor_db=_get_float("crest_factor_db", 0.0),
+        mid_peak_dbfs=_get_float("mid_peak_dbfs", -120.0),
+        mid_rms_dbfs=_get_float("mid_rms_dbfs", -120.0),
+        side_peak_dbfs=_get_float("side_peak_dbfs", -120.0),
+        side_rms_dbfs=_get_float("side_rms_dbfs", -120.0),
+        side_to_mid_ratio_db=_get_float("side_to_mid_ratio_db", -60.0),
+        mid_hpf_hz=_get_float("recommended_mid_hpf_hz", 25.0),
+        side_hpf_hz=_get_float("recommended_side_hpf_hz", 120.0),
+        side_gain_db=_get_float("recommended_side_gain_db", 0.0),
+        mid_comp_threshold_dbfs=_get_float("recommended_mid_comp_threshold_dbfs", -18.0),
+        mid_comp_ratio=_get_float("recommended_mid_comp_ratio", 1.3),
+        side_ir_mix=_get_float("recommended_side_ir_mix", 0.18),
     )
 
 
 # ----------------------------------------------------------------------
-# Aplicación M/S
+# Aplicacion M/S
 # ----------------------------------------------------------------------
 
 
@@ -135,7 +136,7 @@ def _apply_master_stereo(
 ) -> MasterStereoCorrectionResult:
     input_path = settings.mix_path
     if not input_path.exists():
-        raise FileNotFoundError(f"No se encontró el full mix para master_stereo: {input_path}")
+        raise FileNotFoundError(f"No se encontro el full mix para master_stereo: {input_path}")
 
     if output_path is None:
         output_path = input_path if overwrite else input_path.with_name(
@@ -162,7 +163,7 @@ def _apply_master_stereo(
     original_peak_dbfs = _safe_dbfs(original_peak_lin)
     original_rms_dbfs = _safe_dbfs(original_rms_lin)
 
-    # Mono: si sólo hay 1 canal, procesamos como Mid puro y dejamos Side=0
+    # Mono: si solo hay 1 canal, procesamos como Mid puro y dejamos Side=0
     if num_channels == 1:
         L = audio[0]
         R = audio[0]
@@ -170,7 +171,6 @@ def _apply_master_stereo(
         L = audio[0]
         R = audio[1]
 
-    # Matriz M/S
     mid = 0.5 * (L + R)
     side = 0.5 * (L - R)
 
@@ -196,7 +196,7 @@ def _apply_master_stereo(
         HighpassFilter(cutoff_frequency_hz=settings.side_hpf_hz),
     ]
 
-    # IR opcional para dar sensación de room/cab en el campo lateral
+    # IR opcional para dar sensacion de room/cab en el campo lateral
     eff_side_ir_path: Optional[Path] = None
     eff_side_ir_mix: float = settings.side_ir_mix
 
@@ -224,7 +224,6 @@ def _apply_master_stereo(
                 side_ir_path,
             )
 
-    # Ganancia de anchura en Side
     if abs(settings.side_gain_db) > 0.05:
         side_fx.append(Gain(gain_db=settings.side_gain_db))
 
@@ -232,7 +231,7 @@ def _apply_master_stereo(
     side_proc = board_side(side[np.newaxis, :], sample_rate=sr)[0]
 
     # ------------------------------
-    # Reconversión a L/R
+    # Reconversion a L/R
     # ------------------------------
     L_out = mid_proc + side_proc
     R_out = mid_proc - side_proc
@@ -244,7 +243,6 @@ def _apply_master_stereo(
         if num_channels == 2:
             processed = np.stack([L_out, R_out], axis=0)
         else:
-            # Dejamos canales extra tal cual (por si hubiera stems raros multicanal)
             others = audio[2:, :]
             processed = np.concatenate(
                 [np.stack([L_out, R_out], axis=0), others],
@@ -252,11 +250,9 @@ def _apply_master_stereo(
             )
         num_channels_out = processed.shape[0]
     else:
-        # Caso extremo: sin canales -> no hacemos nada
         processed = audio
         num_channels_out = num_channels
 
-    # Métricas de salida
     if processed.size > 0:
         peak_lin = float(np.max(np.abs(processed)))
         rms_lin = float(np.sqrt(np.mean(processed**2)))
@@ -264,7 +260,6 @@ def _apply_master_stereo(
         peak_lin = 0.0
         rms_lin = 0.0
 
-    # Seguridad anti-clipping suave
     if peak_lin > 0.999:
         processed *= (0.999 / peak_lin)
         peak_lin = 0.999
@@ -272,7 +267,6 @@ def _apply_master_stereo(
     resulting_peak_dbfs = _safe_dbfs(peak_lin)
     resulting_rms_dbfs = _safe_dbfs(rms_lin)
 
-    # Guardar
     with AudioFile(str(output_path), "w", sr, num_channels_out) as f:
         f.write(processed.astype(np.float32, copy=False))
 
@@ -301,54 +295,31 @@ def _apply_master_stereo(
 # ----------------------------------------------------------------------
 
 
-def write_master_stereo_log(
+def write_master_stereo_log_json(
     result: MasterStereoCorrectionResult,
-    csv_path: Path,
-) -> None:
-    csv_path.parent.mkdir(parents=True, exist_ok=True)
-
-    fieldnames = [
-        "input_path",
-        "output_path",
-        "sample_rate",
-        "num_channels",
-        "duration_seconds",
-        "original_peak_dbfs",
-        "original_rms_dbfs",
-        "resulting_peak_dbfs",
-        "resulting_rms_dbfs",
-        "mid_hpf_hz",
-        "side_hpf_hz",
-        "side_gain_db",
-        "mid_comp_threshold_dbfs",
-        "mid_comp_ratio",
-        "side_ir_path",
-        "side_ir_mix",
-    ]
-
-    with csv_path.open("w", newline="", encoding="utf-8") as f:
-        writer = csv.DictWriter(f, fieldnames=fieldnames)
-        writer.writeheader()
-        writer.writerow(
-            {
-                "input_path": str(result.input_path),
-                "output_path": str(result.output_path),
-                "sample_rate": result.sample_rate,
-                "num_channels": result.num_channels,
-                "duration_seconds": f"{result.duration_seconds:.6f}",
-                "original_peak_dbfs": f"{result.original_peak_dbfs:.2f}",
-                "original_rms_dbfs": f"{result.original_rms_dbfs:.2f}",
-                "resulting_peak_dbfs": f"{result.resulting_peak_dbfs:.2f}",
-                "resulting_rms_dbfs": f"{result.resulting_rms_dbfs:.2f}",
-                "mid_hpf_hz": f"{result.mid_hpf_hz:.1f}",
-                "side_hpf_hz": f"{result.side_hpf_hz:.1f}",
-                "side_gain_db": f"{result.side_gain_db:.2f}",
-                "mid_comp_threshold_dbfs": f"{result.mid_comp_threshold_dbfs:.2f}",
-                "mid_comp_ratio": f"{result.mid_comp_ratio:.2f}",
-                "side_ir_path": str(result.side_ir_path) if result.side_ir_path else "",
-                "side_ir_mix": f"{result.side_ir_mix:.3f}",
-            }
-        )
+    log_json_path: Path,
+) -> Path:
+    log_json_path.parent.mkdir(parents=True, exist_ok=True)
+    payload = {
+        "input_path": str(result.input_path),
+        "output_path": str(result.output_path),
+        "sample_rate": result.sample_rate,
+        "num_channels": result.num_channels,
+        "duration_seconds": result.duration_seconds,
+        "original_peak_dbfs": result.original_peak_dbfs,
+        "original_rms_dbfs": result.original_rms_dbfs,
+        "resulting_peak_dbfs": result.resulting_peak_dbfs,
+        "resulting_rms_dbfs": result.resulting_rms_dbfs,
+        "mid_hpf_hz": result.mid_hpf_hz,
+        "side_hpf_hz": result.side_hpf_hz,
+        "side_gain_db": result.side_gain_db,
+        "mid_comp_threshold_dbfs": result.mid_comp_threshold_dbfs,
+        "mid_comp_ratio": result.mid_comp_ratio,
+        "side_ir_path": str(result.side_ir_path) if result.side_ir_path else None,
+        "side_ir_mix": result.side_ir_mix,
+    }
+    log_json_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+    return log_json_path
 
 
 # ----------------------------------------------------------------------
@@ -357,14 +328,14 @@ def write_master_stereo_log(
 
 
 def run_master_stereo_correction(
-    analysis_csv_path: Path,
-    log_csv_path: Path,
+    analysis_json_path: Path,
+    log_json_path: Path,
     side_ir_path: Optional[Path] = None,
     side_ir_mix_override: Optional[float] = None,
     overwrite: bool = True,
     output_path: Optional[Path] = None,
 ) -> MasterStereoCorrectionResult:
-    settings = load_master_stereo_csv(analysis_csv_path)
+    settings = load_master_stereo_json(analysis_json_path)
     result = _apply_master_stereo(
         settings=settings,
         side_ir_path=side_ir_path,
@@ -372,7 +343,7 @@ def run_master_stereo_correction(
         overwrite=overwrite,
         output_path=output_path,
     )
-    write_master_stereo_log(result, log_csv_path)
+    write_master_stereo_log_json(result, log_json_path)
     return result
 
 
@@ -380,6 +351,6 @@ __all__ = [
     "MasterStereoSettings",
     "MasterStereoCorrectionResult",
     "run_master_stereo_correction",
-    "load_master_stereo_csv",
-    "write_master_stereo_log",
+    "load_master_stereo_json",
+    "write_master_stereo_log_json",
 ]

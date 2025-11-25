@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import csv
 import json
+import csv
 from dataclasses import dataclass
 from pathlib import Path
 from typing import List
@@ -16,7 +16,7 @@ from src.utils.stage_base import BaseCorrectionStage
 
 @dataclass
 class DcOffsetAnalysisRow:
-    """Fila leída del CSV de análisis de DC offset."""
+    """Fila leida del analisis de DC offset."""
     filename: str
     relative_path: str
     is_full_song: bool
@@ -54,32 +54,41 @@ def _dbfs(value: float) -> float:
     return 20.0 * np.log10(value)
 
 
-def load_dc_offset_analysis(csv_path: Path) -> List[DcOffsetAnalysisRow]:
+def load_dc_offset_analysis(json_path: Path) -> List[DcOffsetAnalysisRow]:
     """
-    Carga el CSV generado por dc_offset_detection.py.
+    Carga el JSON generado por dc_offset_detection.py.
 
-    :param csv_path: Ruta al archivo dc_offset_analysis.csv.
+    :param json_path: Ruta al archivo dc_offset_analysis.json.
     """
-    if not csv_path.exists():
-        raise FileNotFoundError(f"No se encontró el CSV de análisis: {csv_path}")
+    if not json_path.exists():
+        raise FileNotFoundError(f"No se encontro el JSON de analisis: {json_path}")
 
     rows: List[DcOffsetAnalysisRow] = []
 
-    with csv_path.open("r", encoding="utf-8", newline="") as f:
-        reader = csv.DictReader(f)
-        for line in reader:
-            dc_offsets = json.loads(line["dc_offsets"])
+    payload = json.loads(json_path.read_text(encoding="utf-8"))
+    if not isinstance(payload, list):
+        raise ValueError(f"Formato de JSON inesperado en {json_path}")
+
+    for item in payload:
+        if not isinstance(item, dict):
+            continue
+        dc_offsets = item.get("dc_offsets") or []
+        try:
             row = DcOffsetAnalysisRow(
-                filename=line["filename"],
-                relative_path=line.get("relative_path") or line["filename"],
-                is_full_song=bool(int(line["is_full_song"])),
-                sample_rate=int(line["sample_rate"]),
-                num_channels=int(line["num_channels"]),
-                duration_seconds=float(line["duration_seconds"]),
+                filename=item.get("filename") or item.get("file_path") or "",
+                relative_path=item.get("relative_path") or item.get("filename") or item.get("file_path") or "",
+                is_full_song=bool(int(item.get("is_full_song", 0)))
+                if not isinstance(item.get("is_full_song"), bool)
+                else bool(item.get("is_full_song")),
+                sample_rate=int(item.get("sample_rate", 0)),
+                num_channels=int(item.get("num_channels", 0)),
+                duration_seconds=float(item.get("duration_seconds", 0.0)),
                 dc_offsets=[float(x) for x in dc_offsets],
-                max_abs_dc_offset=float(line["max_abs_dc_offset"]),
+                max_abs_dc_offset=float(item.get("max_abs_dc_offset", 0.0)),
             )
-            rows.append(row)
+        except Exception:
+            continue
+        rows.append(row)
 
     return rows
 
@@ -90,86 +99,74 @@ def _correct_single_file(
     output_dir: Path,
 ) -> DcOffsetCorrectionResult:
     """
-    Aplica corrección de DC offset a un archivo concreto y escribe la copia corregida,
-    usando procesamiento en streaming para evitar cargar todo el WAV en memoria.
+    Aplica correccion de DC offset a un archivo concreto y escribe la copia corregida.
+    Se evita cargar el WAV completo usando bloques grandes y restando offsets en streaming.
     """
     input_path = (media_root / row.relative_path).resolve()
     if not input_path.exists():
-        raise FileNotFoundError(f"No se encontró el WAV de entrada: {input_path}")
+        raise FileNotFoundError(f"No se encontro el WAV de entrada: {input_path}")
 
     output_dir.mkdir(parents=True, exist_ok=True)
     output_path = (output_dir / row.filename).resolve()
 
-    # Abrimos el fichero de entrada una primera vez para obtener metadatos
+    block_size = 262144  # frames; bloques grandes reducen llamadas IO y asignaciones
+
     with sf.SoundFile(str(input_path), mode="r") as f_in:
         sr = f_in.samplerate
         num_channels = f_in.channels
         subtype = f_in.subtype
-        total_frames = f_in.frames
 
-    # Offsets a aplicar (si el CSV no coincide en nº de canales, recalculamos en streaming)
-    if len(row.dc_offsets) == num_channels:
-        offsets = np.asarray(row.dc_offsets, dtype=np.float32)  # shape (C,)
-    else:
-        # Fallback raro: recalcular offsets en una pasada streaming
-        sums = np.zeros(num_channels, dtype=np.float64)
-        frame_count = 0
-        block_size = 65536
-
-        with sf.SoundFile(str(input_path), mode="r") as f_in:
+        # Offsets a aplicar (si el analisis no coincide en canales, se recalculan y se rebobina)
+        if len(row.dc_offsets) == num_channels:
+            offsets = np.asarray(row.dc_offsets, dtype=np.float32)
+        else:
+            sums = np.zeros(num_channels, dtype=np.float64)
+            frame_count = 0
             while True:
                 block = f_in.read(block_size, dtype="float32", always_2d=True)
                 if block.size == 0:
                     break
                 sums += block.sum(axis=0, dtype=np.float64)
                 frame_count += block.shape[0]
-
-        if frame_count > 0:
-            offsets = (sums / frame_count).astype(np.float32)
-        else:
-            offsets = np.zeros(num_channels, dtype=np.float32)
-
-    # ------------------------------------------------------------------
-    # Procesado en streaming: leer bloque, restar offset, escribir bloque
-    # ------------------------------------------------------------------
-    original_peak = 0.0
-    corrected_peak = 0.0
-    corrected_sums = np.zeros(num_channels, dtype=np.float64)
-    corrected_frame_count = 0
-    block_size = 65536
-
-    with sf.SoundFile(str(input_path), mode="r") as f_in, \
-         sf.SoundFile(
-             str(output_path),
-             mode="w",
-             samplerate=sr,
-             channels=num_channels,
-             subtype=subtype,
-         ) as f_out:
-
-        while True:
-            block = f_in.read(block_size, dtype="float32", always_2d=True)
-            if block.size == 0:
-                break
-
-            # Pico original (antes de corrección)
-            original_peak = max(original_peak, float(np.max(np.abs(block))))
-
-            # Restar offsets por canal
-            corrected_block = block - offsets[np.newaxis, :]
-
-            # Pico corregido
-            corrected_peak = max(
-                corrected_peak,
-                float(np.max(np.abs(corrected_block)))
+            offsets = (
+                (sums / frame_count).astype(np.float32)
+                if frame_count > 0
+                else np.zeros(num_channels, dtype=np.float32)
             )
+            f_in.seek(0)
 
-            # Acumular para calcular offset corregido medio
-            corrected_sums += corrected_block.sum(axis=0, dtype=np.float64)
-            corrected_frame_count += corrected_block.shape[0]
+        original_peak = 0.0
+        corrected_peak = 0.0
+        corrected_sums = np.zeros(num_channels, dtype=np.float64)
+        corrected_frame_count = 0
 
-            # Escribir bloque corregido
-            f_out.write(corrected_block)
+        with sf.SoundFile(
+            str(output_path),
+            mode="w",
+            samplerate=sr,
+            channels=num_channels,
+            subtype=subtype,
+        ) as f_out:
+            while True:
+                block = f_in.read(block_size, dtype="float32", always_2d=True)
+                if block.size == 0:
+                    break
+
+                block_peak = float(np.max(np.abs(block)))
+                if block_peak > original_peak:
+                    original_peak = block_peak
+
+                # Restar offsets por canal in-place para evitar copias extra
+                np.subtract(block, offsets, out=block)
+
+                corrected_block_peak = float(np.max(np.abs(block)))
+                if corrected_block_peak > corrected_peak:
+                    corrected_peak = corrected_block_peak
+
+                corrected_sums += block.sum(axis=0, dtype=np.float64)
+                corrected_frame_count += block.shape[0]
+
+                f_out.write(block)
 
     if corrected_frame_count > 0:
         corrected_offsets = (corrected_sums / corrected_frame_count).astype(np.float64)
@@ -269,7 +266,7 @@ class DcOffsetCorrectionStage(
     Etapa de corrección de DC offset usando el patrón BaseCorrectionStage.
 
     Reutiliza:
-      - load_dc_offset_analysis  -> lectura del CSV de análisis.
+      - load_dc_offset_analysis  -> lectura del JSON de analisis.
       - _correct_single_file     -> corrección de cada WAV.
       - write_correction_log     -> escritura del log.
     """
@@ -291,20 +288,20 @@ class DcOffsetCorrectionStage(
 
 
 def run_dc_offset_correction(
-    analysis_csv_path: Path,
+    analysis_json_path: Path,
     media_dir: Path,
     output_dc_media_dir: Path,
 ) -> Path:
     """
-    Punto de entrada de alto nivel para la corrección de DC offset.
+    Punto de entrada de alto nivel para la correccion de DC offset.
 
-    Esta versión delega en DcOffsetCorrectionStage (BaseCorrectionStage) para:
-      - leer el CSV de análisis,
+    Esta version delega en DcOffsetCorrectionStage (BaseCorrectionStage) para:
+      - leer el JSON de analisis,
       - corregir cada archivo,
       - escribir el CSV de log.
     """
     stage = DcOffsetCorrectionStage(
-        analysis_csv_path=analysis_csv_path,
+        analysis_csv_path=analysis_json_path,
         input_media_dir=media_dir,
         output_media_dir=output_dc_media_dir,
     )
