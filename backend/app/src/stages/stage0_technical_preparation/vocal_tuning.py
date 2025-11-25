@@ -19,7 +19,7 @@ import pyrubberband as pyrb
 
 PITCH_FRAME_SIZE = 2048
 PITCH_HOP_SIZE = 128
-PITCH_CONFIDENCE_MIN = 0.2  # por debajo de esto consideramos "no confiable"
+PITCH_CONFIDENCE_MIN = 0.1  # por debajo de esto consideramos "no confiable"
 
 
 @dataclass
@@ -114,17 +114,12 @@ def _read_song_key_from_csv(key_csv_path: Path) -> Tuple[str, str]:
 # ----------------------------------------------------------------------
 
 
-def _extract_pitch_curve(audio_mono: np.ndarray) -> Tuple[np.ndarray, np.ndarray]:
-    """
-    Extrae F0 y confianza por frame usando Essentia PitchMelodia.
-    Devuelve:
-      pitch_hz: np.ndarray [num_frames]
-      pitch_conf: np.ndarray [num_frames]
-    """
+def _extract_pitch_curve(audio_mono: np.ndarray, sr: int) -> Tuple[np.ndarray, np.ndarray]:
     essentia.log.infoActive = False
     essentia.log.warningActive = False
 
     pitch_extractor = es.PitchMelodia(
+        sampleRate=sr,
         frameSize=PITCH_FRAME_SIZE,
         hopSize=PITCH_HOP_SIZE,
     )
@@ -198,10 +193,18 @@ def _quantize_midi_to_scale(
     return target
 
 
-def _build_shift_curve(midi: np.ndarray, target_midi: np.ndarray) -> np.ndarray:
+def _build_shift_curve(
+    midi: np.ndarray,
+    target_midi: np.ndarray,
+    strength: float = 1.0,
+    min_abs_semitones: float = 0.05,
+) -> np.ndarray:
     """
-    shift[i] = target_midi[i] - midi[i] (en semitonos).
+    shift[i] = strength * (target_midi[i] - midi[i]) en semitonos.
     Frames no voiced -> shift = 0.
+
+    - strength > 1.0 => corrección agresiva (más robot).
+    - min_abs_semitones => umbral mínimo; por debajo no hacemos nada para evitar micro-movimientos.
     """
     shift = np.zeros_like(target_midi, dtype=np.float32)
 
@@ -209,9 +212,14 @@ def _build_shift_curve(midi: np.ndarray, target_midi: np.ndarray) -> np.ndarray:
         if math.isnan(m) or math.isnan(tm):
             shift[i] = 0.0
         else:
-            shift[i] = float(tm - m)
+            raw = float(tm - m)
+            if abs(raw) < min_abs_semitones:
+                shift[i] = 0.0
+            else:
+                shift[i] = float(strength * raw)
 
     return shift
+
 
 
 def _segment_shift_curve(shift: np.ndarray, tol: float = 0.25) -> List[Tuple[int, int, float]]:
@@ -356,12 +364,12 @@ def run_vocal_tuning_autotune(
     duration_seconds = float(num_samples) / float(sr) if num_samples > 0 else 0.0
 
     # 3) Curva de F0
-    pitch_hz, pitch_conf = _extract_pitch_curve(audio_mono)
+    pitch_hz, pitch_conf = _extract_pitch_curve(audio_mono, sr)
     midi = _pitch_to_midi(pitch_hz, pitch_conf)
 
     # 4) Cuantización a la escala
     target_midi = _quantize_midi_to_scale(midi, allowed_pcs)
-    shift_curve = _build_shift_curve(midi, target_midi)
+    shift_curve = _build_shift_curve(midi, target_midi, strength=1.2, min_abs_semitones=0.05)
 
     # 5) Segmentación por notas (shift aproximadamente constante)
     segments = _segment_shift_curve(shift_curve, tol=0.25)
