@@ -236,7 +236,7 @@ class SpectralCleanupStage(BaseCorrectionStage[SpectralCleanupRow, SpectralClean
         max_notches: int = 4,
     ) -> None:
         super().__init__(
-            analysis_csv_path=analysis_json_path,
+            analysis_json_path=analysis_json_path,
             input_media_dir=input_media_dir,
             output_media_dir=output_media_dir,
         )

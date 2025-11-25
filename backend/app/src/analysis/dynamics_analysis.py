@@ -56,11 +56,22 @@ class DynamicsAnalysisResult:
     limiter_release_ms: float
 
 
-def _safe_dbfs(x: float, floor: float = -120.0) -> float:
-    x = float(x)
-    if x <= 0.0:
-        return floor
-    return 20.0 * np.log10(x)
+def _safe_dbfs(x, floor: float = -120.0):
+    """
+    Acepta escalar o array. Devuelve:
+      - float si la entrada es escalar
+      - np.ndarray si la entrada es array
+    """
+    x_arr = np.asarray(x, dtype=float)
+
+    # x <= 0 -> floor, x > 0 -> 20*log10(x)
+    db = np.where(x_arr <= 0.0, floor, 20.0 * np.log10(x_arr))
+
+    # Si es escalar, devolvemos un float puro
+    if db.ndim == 0:
+        return float(db)
+    return db
+
 
 
 def _infer_instrument_profile(

@@ -272,7 +272,7 @@ class DcOffsetCorrectionStage(
     """
 
     def load_rows(self) -> List[DcOffsetAnalysisRow]:
-        return load_dc_offset_analysis(self.analysis_csv_path)
+        return load_dc_offset_analysis(self.analysis_json_path)
 
     def process_row(self, row: DcOffsetAnalysisRow) -> DcOffsetCorrectionResult:
         return _correct_single_file(
@@ -301,7 +301,7 @@ def run_dc_offset_correction(
       - escribir el CSV de log.
     """
     stage = DcOffsetCorrectionStage(
-        analysis_csv_path=analysis_json_path,
+        analysis_json_path=analysis_json_path,
         input_media_dir=media_dir,
         output_media_dir=output_dc_media_dir,
     )

@@ -15,20 +15,20 @@ class BaseCorrectionStage(ABC, Generic[RowT, ResultT]):
     Plantilla base reutilizable para etapas de corrección.
 
     Patrón:
-      1) load_rows()  -> lista de filas del CSV de análisis.
+      1) load_rows()  -> lista de filas del json de análisis.
       2) process_row  -> corrige un único archivo y devuelve un resultado.
-      3) write_log    -> escribe el CSV de log a partir de todos los resultados.
+      3) write_log    -> escribe el json de log a partir de todos los resultados.
 
     El método run() orquesta el flujo completo.
     """
 
-    analysis_csv_path: Path
+    analysis_json_path: Path
     input_media_dir: Path
     output_media_dir: Path
 
     @abstractmethod
     def load_rows(self) -> List[RowT]:
-        """Carga las filas del CSV de análisis."""
+        """Carga las filas del json de análisis."""
         raise NotImplementedError
 
     @abstractmethod
@@ -38,7 +38,7 @@ class BaseCorrectionStage(ABC, Generic[RowT, ResultT]):
 
     @abstractmethod
     def write_log(self, results: List[ResultT]) -> Path:
-        """Escribe el log de corrección y devuelve la ruta al CSV generado."""
+        """Escribe el log de corrección y devuelve la ruta al json generado."""
         raise NotImplementedError
 
     def process_all_rows(self) -> List[ResultT]:
@@ -50,6 +50,6 @@ class BaseCorrectionStage(ABC, Generic[RowT, ResultT]):
         return results
 
     def run(self) -> Path:
-        """Ejecuta la etapa completa y devuelve la ruta al CSV de log."""
+        """Ejecuta la etapa completa y devuelve la ruta al json de log."""
         results = self.process_all_rows()
         return self.write_log(results)

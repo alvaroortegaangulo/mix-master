@@ -250,7 +250,7 @@ def write_dynamics_correction_log(
 
 class DynamicsCorrectionStage(BaseCorrectionStage[DynamicsRow, DynamicsCorrectionResult]):
     def load_rows(self) -> List[DynamicsRow]:
-        return load_dynamics_json(self.analysis_csv_path)
+        return load_dynamics_json(self.analysis_json_path)
 
     def process_row(self, row: DynamicsRow) -> DynamicsCorrectionResult:
         return _apply_dynamics_to_file(
@@ -266,12 +266,12 @@ class DynamicsCorrectionStage(BaseCorrectionStage[DynamicsRow, DynamicsCorrectio
 
 
 def run_dynamics_correction(
-    analysis_csv_path: Path,
+    analysis_json_path: Path,
     input_media_dir: Path,
     output_media_dir: Path,
 ) -> Path:
     stage = DynamicsCorrectionStage(
-        analysis_csv_path=analysis_csv_path,
+        analysis_json_path=analysis_json_path,
         input_media_dir=input_media_dir,
         output_media_dir=output_media_dir,
     )

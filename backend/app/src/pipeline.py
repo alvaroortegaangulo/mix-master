@@ -706,7 +706,7 @@ def stage_mastering(
     log_stage_event(stage_key, 'correction', 'Aplicando mastering por stems en %s', output_dir)
     log_stage_memory(stage_key, 'correction_start')
     run_mastering_correction(
-        analysis_csv_path=analysis_json,
+        analysis_json_path=analysis_json,
         input_media_dir=input_dir,
         vocal_tuning_media_dir=vocal_tuning_media_dir,
         output_media_dir=output_dir,

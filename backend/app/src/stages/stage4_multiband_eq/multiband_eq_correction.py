@@ -362,14 +362,14 @@ class MultibandEQStage(
 ):
     def __init__(
         self,
-        analysis_csv_path: Path,
+        analysis_json_path: Path,
         input_media_dir: Path,
         output_media_dir: Path,
         low_mid_crossover_hz: float = 120.0,
         mid_high_crossover_hz: float = 5000.0,
     ) -> None:
         super().__init__(
-            analysis_csv_path=analysis_csv_path,
+            analysis_json_path=analysis_json_path,
             input_media_dir=input_media_dir,
             output_media_dir=output_media_dir,
         )
@@ -377,7 +377,7 @@ class MultibandEQStage(
         self.mid_high_crossover_hz = mid_high_crossover_hz
 
     def load_rows(self) -> List[MultibandEQRow]:
-        return load_multiband_eq_json(self.analysis_csv_path)
+        return load_multiband_eq_json(self.analysis_json_path)
 
     def process_row(self, row: MultibandEQRow) -> MultibandEQCorrectionResult:
         return _apply_multiband_eq_to_file(
@@ -404,7 +404,7 @@ def run_multiband_eq_correction(
     mid_high_crossover_hz: float = 5000.0,
 ) -> Path:
     stage = MultibandEQStage(
-        analysis_csv_path=analysis_json_path,
+        analysis_json_path=analysis_json_path,
         input_media_dir=input_media_dir,
         output_media_dir=output_media_dir,
         low_mid_crossover_hz=low_mid_crossover_hz,

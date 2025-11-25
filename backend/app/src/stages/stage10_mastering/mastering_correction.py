@@ -252,14 +252,14 @@ def write_mastering_log(results: List[MasteringCorrectionResult], log_json_path:
 class MasteringStage(BaseCorrectionStage[MasteringRow, MasteringCorrectionResult]):
     def __init__(
         self,
-        analysis_csv_path: Path,
+        analysis_json_path: Path,
         input_media_dir: Path,
         vocal_tuning_media_dir: Path,
         output_media_dir: Path,
         vocal_filename: str = "vocal.wav",
     ) -> None:
         super().__init__(
-            analysis_csv_path=analysis_csv_path,
+            analysis_json_path=analysis_json_path,
             input_media_dir=input_media_dir,
             output_media_dir=output_media_dir,
         )
@@ -267,7 +267,7 @@ class MasteringStage(BaseCorrectionStage[MasteringRow, MasteringCorrectionResult
         self.vocal_filename = vocal_filename
 
     def load_rows(self) -> List[MasteringRow]:
-        return load_mastering_json(self.analysis_csv_path)
+        return load_mastering_json(self.analysis_json_path)
 
     def process_row(self, row: MasteringRow) -> MasteringCorrectionResult:
         return _apply_mastering_to_file(
@@ -284,14 +284,14 @@ class MasteringStage(BaseCorrectionStage[MasteringRow, MasteringCorrectionResult
 
 
 def run_mastering_correction(
-    analysis_csv_path: Path,
+    analysis_json_path: Path,
     input_media_dir: Path,
     vocal_tuning_media_dir: Path,
     output_media_dir: Path,
     vocal_filename: str = "vocal.wav",
 ) -> Path:
     stage = MasteringStage(
-        analysis_csv_path=analysis_csv_path,
+        analysis_json_path=analysis_json_path,
         input_media_dir=input_media_dir,
         vocal_tuning_media_dir=vocal_tuning_media_dir,
         output_media_dir=output_media_dir,

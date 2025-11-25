@@ -287,20 +287,20 @@ class LoudnessCorrectionStage(
 
     def __init__(
         self,
-        analysis_csv_path: Path,
+        analysis_json_path: Path,
         input_media_dir: Path,
         output_media_dir: Path,
         mode: str = "rms",
     ) -> None:
         super().__init__(
-            analysis_csv_path=analysis_csv_path,
+            analysis_json_path=analysis_json_path,
             input_media_dir=input_media_dir,
             output_media_dir=output_media_dir,
         )
         self.mode = mode
 
     def load_rows(self) -> List[LoudnessAnalysisRow]:
-        return load_loudness_analysis(self.analysis_csv_path)
+        return load_loudness_analysis(self.analysis_json_path)
 
     def process_row(self, row: LoudnessAnalysisRow) -> LoudnessCorrectionResult:
         return _apply_loudness_correction_to_file(
@@ -333,7 +333,7 @@ class LoudnessCorrectionStage(
 
 
 def run_loudness_correction(
-    analysis_csv_path: Path,
+    analysis_json_path: Path,
     input_media_dir: Path,
     output_media_dir: Path,
     mode: str = "rms",
@@ -344,7 +344,7 @@ def run_loudness_correction(
     Implementado mediante LoudnessCorrectionStage para unificar el patron de etapas.
     """
     stage = LoudnessCorrectionStage(
-        analysis_csv_path=analysis_csv_path,
+        analysis_json_path=analysis_json_path,
         input_media_dir=input_media_dir,
         output_media_dir=output_media_dir,
         mode=mode,
