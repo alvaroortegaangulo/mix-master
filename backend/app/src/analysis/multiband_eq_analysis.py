@@ -47,7 +47,6 @@ def _classify_stem_for_multiband(
     filename: str,
     vocal_filename: str = "vocal.wav",
 ) -> Tuple[bool, bool, Optional[str]]:
-    name = filename.lower()
     stem_stem = Path(filename).stem.lower()
     vocal_stem = Path(vocal_filename).stem.lower()
 
@@ -122,6 +121,12 @@ def analyze_multiband_eq(
     results: List[MultibandEQResult] = []
 
     for wav_path in sorted(media_dir.glob("*.wav")):
+        # Clasificación del stem
+        is_vocal, is_bus_fx, bus_key = _classify_stem_for_multiband(
+            wav_path.name,
+            vocal_filename=vocal_filename,
+        )
+
         audio, sr = sf.read(str(wav_path), dtype="float32", always_2d=True)
         num_samples, num_channels = audio.shape
         duration_seconds = float(num_samples) / float(sr) if num_samples > 0 else 0.0
@@ -153,19 +158,45 @@ def analyze_multiband_eq(
                 suggested_low = suggested_mid = suggested_high = 0.0
             else:
                 ref = mid_rms_dbfs
+
+                def _soft_diff(diff: float, boost_max: float, cut_max: float) -> float:
+                    """
+                    diff > 0  → banda por debajo del mid → boost muy contenido.
+                    diff < 0  → banda por encima del mid → corte algo más decidido.
+                    """
+                    if abs(diff) < 1.0:
+                        return 0.0
+                    if diff > 0.0:
+                        # Boost muy prudente
+                        return min(diff * 0.4, boost_max)
+                    else:
+                        # Corte algo mayor, pero limitado
+                        return max(diff * 0.9, -cut_max)
+
+                low_diff = ref - low_rms_dbfs
+                high_diff = ref - high_rms_dbfs
+
                 suggested_mid = 0.0
-                suggested_low = float(np.clip(ref - low_rms_dbfs, -4.0, 4.0))
-                suggested_high = float(np.clip(ref - high_rms_dbfs, -4.0, 4.0))
+                suggested_low = _soft_diff(low_diff, boost_max=1.5, cut_max=3.0)
+                suggested_high = _soft_diff(high_diff, boost_max=3.0, cut_max=3.5)
 
-        is_vocal, is_bus_fx, bus_key = _classify_stem_for_multiband(
-            wav_path.name,
-            vocal_filename=vocal_filename,
-        )
+            # ---------------- Ajustes por tipo de pista ----------------
+            suggested_low = float(np.clip(suggested_low, -3.5, 1.5))
+            suggested_mid = float(np.clip(suggested_mid, -2.5, 2.5))
+            suggested_high = float(np.clip(suggested_high, -4.0, 3.0))
 
-        if is_bus_fx:
-            suggested_low = float(np.clip(suggested_low, -2.0, 2.0))
-            suggested_mid = float(np.clip(suggested_mid, -2.0, 2.0))
-            suggested_high = float(np.clip(suggested_high, -2.0, 2.0))
+            if is_vocal:
+                # Voces: nada de boost en subgraves
+                suggested_low = float(np.clip(min(suggested_low, 0.0), -4.0, 0.0))
+
+            if is_bus_fx:
+                # FX / reverbs: nunca subir graves; pequeños cortes permitidos
+                suggested_low = float(np.clip(min(suggested_low, 0.0), -5.0, 0.0))
+                suggested_high = float(np.clip(suggested_high, -2.0, 2.5))
+
+            if bus_key in ("bass", "drums"):
+                # Buses críticos de graves: un poco más permisivos, pero sin locuras
+                suggested_low = float(np.clip(suggested_low, -2.5, 1.0))
 
         results.append(
             MultibandEQResult(

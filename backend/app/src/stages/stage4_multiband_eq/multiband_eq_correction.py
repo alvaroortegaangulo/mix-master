@@ -1,4 +1,3 @@
-# src/stages/stage4_multiband_eq/multiband_eq_correction.py
 from __future__ import annotations
 
 import json
@@ -11,8 +10,6 @@ from pedalboard import (
     Pedalboard,
     HighpassFilter,
     LowpassFilter,
-    Compressor,
-    Distortion,
     Gain,
 )
 from pedalboard.io import AudioFile
@@ -197,6 +194,45 @@ def _apply_multiband_eq_to_file(
 
     audio_ch_first = audio  # pedalboard ya entrega (C, N)
 
+    # Clasificación para tratamiento de graves
+    filename_lower = row.filename.lower()
+    bus_key = (row.bus_key or "").lower()
+
+    is_vocal = row.is_vocal
+    is_bus_fx = row.is_bus_fx
+
+    is_bass_bus = (bus_key == "bass") or ("bass" in filename_lower) or ("bajo" in filename_lower) or ("sub" in filename_lower)
+    is_drums_bus = (bus_key == "drums") or ("kick" in filename_lower) or ("bombo" in filename_lower)
+    is_low_critical = is_bass_bus or is_drums_bus
+
+    # ---------------- Ganancias de banda (interpretando sugerencias) ----------------
+    low_gain = float(np.clip(row.suggested_low_gain_db, -3.5, 1.5))
+    mid_gain = float(np.clip(row.suggested_mid_gain_db, -2.5, 2.5))
+    high_gain = float(np.clip(row.suggested_high_gain_db, -4.0, 3.0))
+
+    # Reglas específicas para graves:
+    if is_bus_fx:
+        # FX / reverbs: nunca boost de lows; solo cortes moderados
+        low_gain = float(np.clip(min(low_gain, 0.0), -4.0, 0.0))
+    elif is_vocal:
+        # Voces: nada de refuerzo en graves
+        low_gain = float(np.clip(min(low_gain, 0.0), -4.0, 0.0))
+    elif is_low_critical:
+        # Bajo / drums: pequeños ajustes, prioridad a no pasarse
+        low_gain = float(np.clip(low_gain, -2.0, 0.8))
+    else:
+        # Resto: como mucho +0.5 dB de lows, cortes algo mayores posibles
+        low_gain = float(np.clip(low_gain, -3.0, 0.5))
+
+    # Pequeños umbrales de "zona muerta" para no hacer micro-ajustes innecesarios
+    if abs(low_gain) < 0.25:
+        low_gain = 0.0
+    if abs(mid_gain) < 0.25:
+        mid_gain = 0.0
+    if abs(high_gain) < 0.25:
+        high_gain = 0.0
+
+    # Split en bandas
     low, mid, high = _split_into_bands(
         audio_ch_first=audio_ch_first,
         sr=sr,
@@ -204,62 +240,16 @@ def _apply_multiband_eq_to_file(
         mid_high_crossover_hz=mid_high_crossover_hz,
     )
 
-    def _compute_gain_and_fx(
-        band_name: str,
-        suggested_gain_db: float,
-        is_vocal: bool,
-        is_bus_fx: bool,
-    ) -> tuple[float, float, float, float]:
-        gain_db = float(np.clip(suggested_gain_db, -6.0, 6.0))
-        if band_name == "low":
-            comp_threshold = min(row.low_rms_dbfs + 4.0, -10.0)
-            comp_ratio = 2.0 if is_bus_fx else 1.8
-            distortion_db = 0.5 if is_vocal else 1.0
-        elif band_name == "mid":
-            comp_threshold = min(row.mid_rms_dbfs + 3.0, -9.0)
-            comp_ratio = 2.0 if is_bus_fx else 1.7
-            distortion_db = 0.4 if is_vocal else 0.8
-        else:
-            comp_threshold = min(row.high_rms_dbfs + 2.0, -8.0)
-            comp_ratio = 1.6 if is_bus_fx else 1.5
-            distortion_db = 0.2 if is_vocal else 0.6
-
-        if is_vocal:
-            comp_ratio *= 1.05
-            distortion_db *= 0.7
-
-        return gain_db, comp_threshold, comp_ratio, distortion_db
-
-    low_gain_db, low_comp_thr, low_comp_ratio, low_dist_db = _compute_gain_and_fx(
-        "low", row.suggested_low_gain_db, row.is_vocal, row.is_bus_fx
-    )
-    mid_gain_db, mid_comp_thr, mid_comp_ratio, mid_dist_db = _compute_gain_and_fx(
-        "mid", row.suggested_mid_gain_db, row.is_vocal, row.is_bus_fx
-    )
-    high_gain_db, high_comp_thr, high_comp_ratio, high_dist_db = _compute_gain_and_fx(
-        "high", row.suggested_high_gain_db, row.is_vocal, row.is_bus_fx
-    )
-
-    def _build_band_chain(
-        comp_threshold: float, comp_ratio: float, dist_db: float, gain_db: float
-    ) -> List:
-        fx = [
-            Compressor(
-                threshold_db=comp_threshold,
-                ratio=comp_ratio,
-                attack_ms=12.0,
-                release_ms=160.0,
-            )
-        ]
-        if abs(dist_db) > 0.05:
-            fx.append(Distortion(drive_db=dist_db))
+    # Sólo EQ estática por banda
+    def _build_band_chain(gain_db: float) -> List:
+        fx = []
         if abs(gain_db) > 0.05:
             fx.append(Gain(gain_db=gain_db))
         return fx
 
-    board_low = Pedalboard(_build_band_chain(low_comp_thr, low_comp_ratio, low_dist_db, low_gain_db))
-    board_mid = Pedalboard(_build_band_chain(mid_comp_thr, mid_comp_ratio, mid_dist_db, mid_gain_db))
-    board_high = Pedalboard(_build_band_chain(high_comp_thr, high_comp_ratio, high_dist_db, high_gain_db))
+    board_low = Pedalboard(_build_band_chain(low_gain))
+    board_mid = Pedalboard(_build_band_chain(mid_gain))
+    board_high = Pedalboard(_build_band_chain(high_gain))
 
     low_proc = board_low(low, sample_rate=sr)
     mid_proc = board_mid(mid, sample_rate=sr)
@@ -281,6 +271,19 @@ def _apply_multiband_eq_to_file(
     resulting_peak_dbfs = _safe_dbfs(peak_lin)
     resulting_rms_dbfs = _safe_dbfs(rms_lin)
 
+    # Como no usamos compresor/distortion en esta fase, dejamos valores "neutros"
+    low_comp_thr = 0.0
+    low_comp_ratio = 1.0
+    low_dist_db = 0.0
+
+    mid_comp_thr = 0.0
+    mid_comp_ratio = 1.0
+    mid_dist_db = 0.0
+
+    high_comp_thr = 0.0
+    high_comp_ratio = 1.0
+    high_dist_db = 0.0
+
     with AudioFile(str(output_path), "w", sr, num_channels) as f:
         f.write(mixed.astype(np.float32, copy=False))
 
@@ -299,15 +302,15 @@ def _apply_multiband_eq_to_file(
         low_comp_threshold_dbfs=low_comp_thr,
         low_comp_ratio=low_comp_ratio,
         low_distortion_drive_db=low_dist_db,
-        low_gain_db=low_gain_db,
+        low_gain_db=low_gain,
         mid_comp_threshold_dbfs=mid_comp_thr,
         mid_comp_ratio=mid_comp_ratio,
         mid_distortion_drive_db=mid_dist_db,
-        mid_gain_db=mid_gain_db,
+        mid_gain_db=mid_gain,
         high_comp_threshold_dbfs=high_comp_thr,
         high_comp_ratio=high_comp_ratio,
         high_distortion_drive_db=high_dist_db,
-        high_gain_db=high_gain_db,
+        high_gain_db=high_gain,
         original_peak_dbfs=original_peak_dbfs,
         original_rms_dbfs=original_rms_dbfs,
         resulting_peak_dbfs=resulting_peak_dbfs,
