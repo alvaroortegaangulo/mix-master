@@ -116,14 +116,22 @@ def analyze_mastering(
 
         peak_dbfs, rms_dbfs, sr, num_channels, duration_seconds = _compute_peak_rms(analysis_path)
 
+        # ----------------------------------------------------------
+        # Target MUCHO MÁS CONSERVADOR (pensado para stems, no loudness war)
+        # ----------------------------------------------------------
         if is_bus_fx:
-            target_peak = -5.0 if bus_key == "fx" else -4.0
+            # FX más bajos que el resto
+            target_peak = -7.0 if bus_key == "fx" else -6.0
         elif is_vocal:
-            target_peak = -2.0
+            # Voz 1 dB por debajo de lo que tenías (-3 en vez de -2)
+            target_peak = -3.0
         else:
-            target_peak = -1.0
+            # Instrumentos / buses: en torno a -3.5 / -4
+            target_peak = -3.5
 
-        drive_db = max(min(target_peak - peak_dbfs, 12.0), -24.0)
+        # Drive recomendado muy acotado: ±6 dB máx
+        drive_db = target_peak - peak_dbfs
+        drive_db = max(min(drive_db, 6.0), -6.0)
 
         results.append(
             MasteringResult(

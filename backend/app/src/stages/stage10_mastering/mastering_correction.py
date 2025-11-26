@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import List
 
 import numpy as np
-from pedalboard import Pedalboard, HighpassFilter, Compressor, Distortion, Gain, Limiter
+from pedalboard import Pedalboard, HighpassFilter, Compressor, Gain, Limiter
 from pedalboard.io import AudioFile
 
 from src.utils.stage_base import BaseCorrectionStage
@@ -78,7 +78,7 @@ def load_mastering_json(json_path: Path) -> List[MasteringRow]:
                     is_vocal=bool(item.get("is_vocal", False)),
                     is_bus_fx=bool(item.get("is_bus_fx", False)),
                     bus_key=item.get("bus_key"),
-                    recommended_target_peak_dbfs=float(item.get("recommended_target_peak_dbfs", -1.0)),
+                    recommended_target_peak_dbfs=float(item.get("recommended_target_peak_dbfs", -4.0)),
                     recommended_drive_db=float(item.get("recommended_drive_db", 0.0)),
                 )
             )
@@ -94,6 +94,9 @@ def _apply_mastering_to_file(
     output_media_dir: Path,
     vocal_filename: str = "vocal.wav",
 ) -> MasteringCorrectionResult:
+    # ----------------------------------------------------------------------
+    # 1) Seleccionar archivo de entrada (voz puede venir del afinado)
+    # ----------------------------------------------------------------------
     base_input_path = (input_media_dir / row.relative_path).resolve()
     input_path = base_input_path
 
@@ -108,6 +111,9 @@ def _apply_mastering_to_file(
     output_media_dir.mkdir(parents=True, exist_ok=True)
     output_path = (output_media_dir / row.filename).resolve()
 
+    # ----------------------------------------------------------------------
+    # 2) Leer audio
+    # ----------------------------------------------------------------------
     with AudioFile(str(input_path), "r") as f:
         audio = f.read(f.frames)
         sr = f.samplerate
@@ -124,39 +130,79 @@ def _apply_mastering_to_file(
 
     original_peak_dbfs = _safe_dbfs(original_peak)
     original_rms_dbfs = _safe_dbfs(original_rms)
+    crest_db = original_peak_dbfs - original_rms_dbfs
 
-    target_peak_dbfs = row.recommended_target_peak_dbfs
-    if target_peak_dbfs > -0.5 or target_peak_dbfs < -18.0:
-        target_peak_dbfs = -1.0
-
-    headroom_db = target_peak_dbfs - original_peak_dbfs
-    raw_drive = min(row.recommended_drive_db, headroom_db)
-    base_pre_gain = raw_drive * 0.6
-
+    # ----------------------------------------------------------------------
+    # 3) Clasificación de la pista
+    # ----------------------------------------------------------------------
     filename_lower = row.filename.lower()
     bus_key = (row.bus_key or "").lower()
+
     is_bus_fx = row.is_bus_fx
     is_vocal = row.is_vocal and not is_bus_fx
+
     is_kick = "kick" in filename_lower
     is_snare = "snare" in filename_lower or "clap" in filename_lower
     is_perc_name = "perc" in filename_lower or "cajon" in filename_lower or "timbal" in filename_lower
     is_drum_bus = bus_key == "drums"
     is_percussive = is_kick or is_snare or is_perc_name or is_drum_bus
 
+    # ----------------------------------------------------------------------
+    # 4) Target de pico más realista y suave
+    # ----------------------------------------------------------------------
+    base_target = row.recommended_target_peak_dbfs
+    if not (-18.0 <= base_target <= -0.5):
+        base_target = -4.0
+
     if is_bus_fx:
-        pre_gain_db = max(min(base_pre_gain, 0.0), -6.0)
+        # FX más bajos
+        target_peak_dbfs = min(base_target, -6.0 if bus_key == "fx" else -5.0)
     elif is_vocal:
-        pre_gain_db = min(max(base_pre_gain, -3.0), 1.5)
+        # Voz entre -5 y -3 dBFS
+        target_peak_dbfs = max(min(base_target, -3.0), -5.0)
     elif is_percussive:
-        pre_gain_db = min(max(base_pre_gain, -4.0), 2.0)
+        # Bombo/caja/perc entre -6 y -4 dBFS
+        target_peak_dbfs = max(min(base_target, -4.0), -6.0)
     else:
-        pre_gain_db = max(min(base_pre_gain, 3.0), -6.0)
+        # Resto de instrumentos: -6 .. -3.5
+        target_peak_dbfs = max(min(base_target, -3.5), -6.0)
+
+    # ----------------------------------------------------------------------
+    # 5) Pre-gain MUY conservador por tipo de pista
+    # ----------------------------------------------------------------------
+    gain_needed = target_peak_dbfs - original_peak_dbfs  # positivo = habría que subir
+
+    if is_bus_fx:
+        # Nunca subir FX en mastering; solo bajar un poco si vienen pasados
+        pre_gain_db = np.clip(gain_needed * 0.3, -6.0, 0.0)
+    elif is_vocal:
+        # Si la voz viene muy alta, permitir bajarla. Si viene baja, subir muy poco.
+        if gain_needed < 0:
+            pre_gain_db = np.clip(gain_needed * 0.8, -4.0, 0.0)
+        else:
+            pre_gain_db = np.clip(gain_needed * 0.4, -1.0, 1.0)
+    elif is_percussive:
+        # Bombo y percusión: casi no se suben; se permite bajarlos suavemente
+        if gain_needed < 0:
+            pre_gain_db = np.clip(gain_needed * 0.7, -3.0, 0.0)
+        else:
+            pre_gain_db = np.clip(gain_needed * 0.3, -1.0, 1.0)
+    else:
+        # Otros: ajuste suave general
+        pre_gain_db = np.clip(gain_needed * 0.5, -3.0, 2.0)
+
+    # Valores muy pequeños -> nada
+    if abs(pre_gain_db) < 0.25:
+        pre_gain_db = 0.0
 
     effects = []
     if pre_gain_db != 0.0:
         effects.append(Gain(gain_db=pre_gain_db))
 
-    if row.is_bus_fx:
+    # ----------------------------------------------------------------------
+    # 6) Filtro de graves (DC / rumble) según tipo
+    # ----------------------------------------------------------------------
+    if is_bus_fx:
         effects.append(HighpassFilter(cutoff_frequency_hz=150.0))
     elif is_vocal:
         effects.append(HighpassFilter(cutoff_frequency_hz=80.0))
@@ -165,27 +211,67 @@ def _apply_mastering_to_file(
     else:
         effects.append(HighpassFilter(cutoff_frequency_hz=30.0))
 
-    comp_threshold = min(target_peak_dbfs - 4.0, -2.0)
-    comp_ratio = 1.5 if is_bus_fx else 1.8
-    comp_attack = 10.0 if is_percussive else 20.0
-    comp_release = 180.0 if is_vocal else 220.0
+    # ----------------------------------------------------------------------
+    # 7) Compresión muy sutil (o ninguna) según crest y tipo
+    # ----------------------------------------------------------------------
+    use_compressor = True
 
-    effects.append(
-        Compressor(
-            threshold_db=comp_threshold,
-            ratio=comp_ratio,
-            attack_ms=comp_attack,
-            release_ms=comp_release,
+    # Nunca comprimimos los buses FX en mastering, solo los limitamos por seguridad
+    if is_bus_fx:
+        use_compressor = False
+
+    # Si la pista ya viene muy comprimida (crest bajo), no insistimos
+    if crest_db <= 5.0 and not is_vocal:
+        use_compressor = False
+
+    if use_compressor:
+        if is_vocal:
+            # Compresión suave tipo bus vocal
+            comp_ratio = 1.4
+            comp_attack = 12.0
+            comp_release = 220.0
+            # Domar sólo los picos más fuertes
+            comp_threshold = min(original_peak_dbfs - 5.0, -4.0)
+        elif is_percussive:
+            # Respetar transitorios de bombo/caja
+            comp_ratio = 1.25
+            comp_attack = 25.0
+            comp_release = 160.0
+            comp_threshold = min(original_peak_dbfs - 4.0, -3.0)
+        else:
+            # Otros stems: glue muy suave
+            comp_ratio = 1.3
+            comp_attack = 18.0
+            comp_release = 240.0
+            comp_threshold = min(original_peak_dbfs - 4.5, -3.5)
+
+        effects.append(
+            Compressor(
+                threshold_db=comp_threshold,
+                ratio=comp_ratio,
+                attack_ms=comp_attack,
+                release_ms=comp_release,
+            )
         )
-    )
 
-    if is_percussive:
-        effects.append(Distortion(drive_db=1.0))
+    # ----------------------------------------------------------------------
+    # 8) Limitador de seguridad (NO para volumen extremo)
+    # ----------------------------------------------------------------------
+    if is_bus_fx:
+        limiter_threshold = -6.0
+        limiter_release = 120.0
+    elif is_percussive:
+        # Dejarle respirar algo más
+        limiter_threshold = -1.5
+        limiter_release = 70.0
+    else:
+        limiter_threshold = -1.0
+        limiter_release = 120.0
 
     effects.append(
         Limiter(
-            threshold_db=min(target_peak_dbfs, -0.3),
-            release_ms=80.0 if is_percussive else 120.0,
+            threshold_db=limiter_threshold,
+            release_ms=limiter_release,
         )
     )
 
