@@ -226,6 +226,7 @@ STAGES: List[Dict[str, Any]] = [
         "mix_bus_vst3_plugins": [
             # "vst3/DeEsser.vst3",
             # "vst3/TapeSaturator.vst3",
+        ],
 
 
         "key": "mastering",
@@ -248,7 +249,7 @@ STAGES: List[Dict[str, Any]] = [
         "master_stereo_side_ir": None,  # ej: "irs/stereo/side_room.wav"
         # Si None → usa el mix recomendado por el análisis
         "master_stereo_side_ir_mix_override": None,
-        ],
+        
     },
 
 ]
