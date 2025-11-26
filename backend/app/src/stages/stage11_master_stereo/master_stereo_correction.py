@@ -1,4 +1,3 @@
-# src/stages/stage11_master_stereo/master_stereo_correction.py
 from __future__ import annotations
 
 import json
@@ -113,12 +112,12 @@ def load_master_stereo_json(json_path: Path) -> MasterStereoSettings:
         side_peak_dbfs=_get_float("side_peak_dbfs", -120.0),
         side_rms_dbfs=_get_float("side_rms_dbfs", -120.0),
         side_to_mid_ratio_db=_get_float("side_to_mid_ratio_db", -60.0),
-        mid_hpf_hz=_get_float("recommended_mid_hpf_hz", 25.0),
-        side_hpf_hz=_get_float("recommended_side_hpf_hz", 120.0),
+        mid_hpf_hz=_get_float("recommended_mid_hpf_hz", 24.0),
+        side_hpf_hz=_get_float("recommended_side_hpf_hz", 110.0),
         side_gain_db=_get_float("recommended_side_gain_db", 0.0),
-        mid_comp_threshold_dbfs=_get_float("recommended_mid_comp_threshold_dbfs", -18.0),
-        mid_comp_ratio=_get_float("recommended_mid_comp_ratio", 1.3),
-        side_ir_mix=_get_float("recommended_side_ir_mix", 0.18),
+        mid_comp_threshold_dbfs=_get_float("recommended_mid_comp_threshold_dbfs", -14.0),
+        mid_comp_ratio=_get_float("recommended_mid_comp_ratio", 1.0),
+        side_ir_mix=_get_float("recommended_side_ir_mix", 0.10),
     )
 
 
@@ -174,18 +173,37 @@ def _apply_master_stereo(
     mid = 0.5 * (L + R)
     side = 0.5 * (L - R)
 
+    # ------------------------------------------------------------------
+    # Saneado de parámetros (criterios sutiles)
+    # ------------------------------------------------------------------
+    mid_hpf_hz = float(np.clip(settings.mid_hpf_hz, 18.0, 35.0))
+    side_hpf_hz = float(np.clip(settings.side_hpf_hz, 80.0, 150.0))
+    side_gain_db = float(np.clip(settings.side_gain_db, -2.0, 2.0))
+    mid_comp_ratio = float(np.clip(settings.mid_comp_ratio, 1.0, 1.4))
+    mid_comp_threshold_dbfs = float(np.clip(settings.mid_comp_threshold_dbfs, -24.0, -8.0))
+
+    eff_side_ir_mix = settings.side_ir_mix
+    if side_ir_mix_override is not None:
+        eff_side_ir_mix = float(side_ir_mix_override)
+    eff_side_ir_mix = float(np.clip(eff_side_ir_mix, 0.0, 0.25))
+
     # ------------------------------
     # Cadena Mid
     # ------------------------------
     mid_board_fx = [
-        HighpassFilter(cutoff_frequency_hz=settings.mid_hpf_hz),
+        HighpassFilter(cutoff_frequency_hz=mid_hpf_hz),
+    ]
+
+    # Si ratio==1.0 prácticamente no actúa, pero mantenemos el bloque
+    mid_board_fx.append(
         Compressor(
-            threshold_db=settings.mid_comp_threshold_dbfs,
-            ratio=settings.mid_comp_ratio,
+            threshold_db=mid_comp_threshold_dbfs,
+            ratio=mid_comp_ratio,
             attack_ms=30.0,
             release_ms=250.0,
-        ),
-    ]
+        )
+    )
+
     board_mid = Pedalboard(mid_board_fx)
     mid_proc = board_mid(mid[np.newaxis, :], sample_rate=sr)[0]
 
@@ -193,19 +211,13 @@ def _apply_master_stereo(
     # Cadena Side
     # ------------------------------
     side_fx = [
-        HighpassFilter(cutoff_frequency_hz=settings.side_hpf_hz),
+        HighpassFilter(cutoff_frequency_hz=side_hpf_hz),
     ]
 
-    # IR opcional para dar sensacion de room/cab en el campo lateral
     eff_side_ir_path: Optional[Path] = None
-    eff_side_ir_mix: float = settings.side_ir_mix
-
-    if side_ir_mix_override is not None:
-        eff_side_ir_mix = float(side_ir_mix_override)
-
     if side_ir_path is not None:
         side_ir_path = side_ir_path.resolve()
-        if side_ir_path.exists():
+        if side_ir_path.exists() and eff_side_ir_mix > 0.0:
             eff_side_ir_path = side_ir_path
             logger.info(
                 "[MASTER_STEREO] Insertando IR en Side: %s (mix=%.3f)",
@@ -215,17 +227,17 @@ def _apply_master_stereo(
             side_fx.append(
                 Convolution(
                     str(side_ir_path),
-                    mix=float(eff_side_ir_mix),
+                    mix=eff_side_ir_mix,
                 )
             )
-        else:
+        elif not side_ir_path.exists():
             logger.warning(
                 "[MASTER_STEREO] IR de Side no encontrada, se omite: %s",
                 side_ir_path,
             )
 
-    if abs(settings.side_gain_db) > 0.05:
-        side_fx.append(Gain(gain_db=settings.side_gain_db))
+    if abs(side_gain_db) > 0.05:
+        side_fx.append(Gain(gain_db=side_gain_db))
 
     board_side = Pedalboard(side_fx)
     side_proc = board_side(side[np.newaxis, :], sample_rate=sr)[0]
@@ -280,11 +292,11 @@ def _apply_master_stereo(
         original_rms_dbfs=original_rms_dbfs,
         resulting_peak_dbfs=resulting_peak_dbfs,
         resulting_rms_dbfs=resulting_rms_dbfs,
-        mid_hpf_hz=settings.mid_hpf_hz,
-        side_hpf_hz=settings.side_hpf_hz,
-        side_gain_db=settings.side_gain_db,
-        mid_comp_threshold_dbfs=settings.mid_comp_threshold_dbfs,
-        mid_comp_ratio=settings.mid_comp_ratio,
+        mid_hpf_hz=mid_hpf_hz,
+        side_hpf_hz=side_hpf_hz,
+        side_gain_db=side_gain_db,
+        mid_comp_threshold_dbfs=mid_comp_threshold_dbfs,
+        mid_comp_ratio=mid_comp_ratio,
         side_ir_path=eff_side_ir_path,
         side_ir_mix=eff_side_ir_mix,
     )

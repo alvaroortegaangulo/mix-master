@@ -86,7 +86,11 @@ def _compute_ms_metrics(path: Path, block_size: int = 131072) -> tuple:
             mid_sum_squares += float(np.sum(mid * mid))
             side_sum_squares += float(np.sum(side * side))
 
-        duration_seconds = float(frames_total) / float(sr) if frames_total else float(total_samples) / float(sr * max(num_channels, 1))
+        duration_seconds = (
+            float(frames_total) / float(sr)
+            if frames_total
+            else float(total_samples) / float(sr * max(num_channels, 1))
+        )
 
         if total_samples == 0:
             return (
@@ -131,7 +135,8 @@ def _compute_ms_metrics(path: Path, block_size: int = 131072) -> tuple:
 
 def analyze_master_stereo(mix_path: Path) -> MasterStereoResult:
     """
-    Analiza el full mix (estéreo) en Mid/Side y propone ajustes de imagen.
+    Analiza el full mix (estéreo) en Mid/Side y propone ajustes de imagen
+    y dinámica muy sutiles.
     """
     mix_path = mix_path.resolve()
     if not mix_path.exists():
@@ -150,15 +155,15 @@ def analyze_master_stereo(mix_path: Path) -> MasterStereoResult:
         num_channels,
     ) = _compute_ms_metrics(mix_path)
 
+    # Mezcla vacía -> defaults seguros
     if peak_dbfs <= -119.0 and rms_dbfs <= -119.0:
-        # Mezcla vacía -> defaults seguros
         side_to_mid_ratio_db = -60.0
-        recommended_mid_hpf_hz = 25.0
-        recommended_side_hpf_hz = 120.0
+        recommended_mid_hpf_hz = 24.0
+        recommended_side_hpf_hz = 110.0
         recommended_side_gain_db = 0.0
-        recommended_mid_comp_threshold_dbfs = -18.0
-        recommended_mid_comp_ratio = 1.3
-        recommended_side_ir_mix = 0.18
+        recommended_mid_comp_threshold_dbfs = -14.0
+        recommended_mid_comp_ratio = 1.0
+        recommended_side_ir_mix = 0.10
         return MasterStereoResult(
             mix_path=mix_path,
             sample_rate=sr,
@@ -182,35 +187,58 @@ def analyze_master_stereo(mix_path: Path) -> MasterStereoResult:
 
     side_to_mid_ratio_db = side_rms_dbfs - mid_rms_dbfs
 
-    target_ratio_db = -6.0
+    # ------------------------------------------------------------------
+    # 1) Imagen estéreo: side gain muy contenido
+    # ------------------------------------------------------------------
+    target_ratio_db = -6.5  # buscamos sides ~6.5 dB por debajo del mid
     desired_gain_db = target_ratio_db - side_to_mid_ratio_db
-    recommended_side_gain_db = float(np.clip(desired_gain_db, -2.5, 2.5))
+    # Máximo +/- 1.5 dB para no destrozar el balance
+    recommended_side_gain_db = float(np.clip(desired_gain_db, -1.5, 1.5))
 
+    # ------------------------------------------------------------------
+    # 2) HPF en Mid y Side (subgrave y low-end mono)
+    # ------------------------------------------------------------------
+    # Mid: sólo limpiar sub-subgrave, preservando cuerpo de bombo y bajo
     if crest_factor_db < 8.0:
-        recommended_mid_hpf_hz = 30.0
+        recommended_mid_hpf_hz = 28.0
     elif crest_factor_db < 11.0:
-        recommended_mid_hpf_hz = 26.0
+        recommended_mid_hpf_hz = 24.0
     else:
-        recommended_mid_hpf_hz = 22.0
+        recommended_mid_hpf_hz = 20.0
 
-    recommended_side_hpf_hz = 120.0
+    # Side: mantener low-end prácticamente en mono, pero sin pasarse
+    recommended_side_hpf_hz = 110.0
 
-    if crest_factor_db >= 13.0:
-        recommended_mid_comp_ratio = 1.6
-        recommended_mid_comp_threshold_dbfs = -18.0
-    elif crest_factor_db >= 10.0:
-        recommended_mid_comp_ratio = 1.4
-        recommended_mid_comp_threshold_dbfs = -17.0
+    # ------------------------------------------------------------------
+    # 3) Compresión Mid muy sutil (o inexistente si ya viene aplastado)
+    # ------------------------------------------------------------------
+    # crest bajo => ya muy comprimido: ratio 1.0 -> comp "bypass"
+    if crest_factor_db <= 9.0:
+        recommended_mid_comp_ratio = 1.0
+        recommended_mid_comp_threshold_dbfs = -12.0
+    elif crest_factor_db <= 12.0:
+        recommended_mid_comp_ratio = 1.15
+        base_thr = mid_rms_dbfs + 4.0
+        recommended_mid_comp_threshold_dbfs = float(
+            np.clip(base_thr, -18.0, -10.0)
+        )
     else:
-        recommended_mid_comp_ratio = 1.3
-        recommended_mid_comp_threshold_dbfs = -16.0
+        recommended_mid_comp_ratio = 1.25
+        base_thr = mid_rms_dbfs + 5.0
+        recommended_mid_comp_threshold_dbfs = float(
+            np.clip(base_thr, -19.0, -11.0)
+        )
 
+    # ------------------------------------------------------------------
+    # 4) IR en Side: aire muy sutil
+    # ------------------------------------------------------------------
+    # Mezclas muy mono aceptan algo más de IR, pero siempre muy suave.
     if side_to_mid_ratio_db <= -9.0:
-        recommended_side_ir_mix = 0.22
-    elif side_to_mid_ratio_db <= -7.0:
-        recommended_side_ir_mix = 0.20
-    else:
         recommended_side_ir_mix = 0.16
+    elif side_to_mid_ratio_db <= -7.0:
+        recommended_side_ir_mix = 0.12
+    else:
+        recommended_side_ir_mix = 0.08
 
     return MasterStereoResult(
         mix_path=mix_path,

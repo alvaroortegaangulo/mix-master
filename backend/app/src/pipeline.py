@@ -212,6 +212,22 @@ STAGES: List[Dict[str, Any]] = [
         "mid_high_crossover_hz": 5000.0,
     },
     {
+
+        # --- NUEVO: configuración de mix-bus color ---
+        "mix_bus_color_enable": True,
+        "mix_bus_color_analysis_json": "mix_bus_color_analysis.json",
+        "mix_bus_color_log_json": "mix_bus_color_log.json",
+
+        # Rutas relativas al project_root; pon aquí tus IRs reales o déjalas a None
+        "mix_bus_tape_ir": None,     # ej: "irs/mixbus/tape_a.wav"
+        "mix_bus_console_ir": None,  # ej: "irs/mixbus/console_a.wav"
+
+        # Lista de VST3 opcionales (rutas relativas o absolutas)
+        "mix_bus_vst3_plugins": [
+            # "vst3/DeEsser.vst3",
+            # "vst3/TapeSaturator.vst3",
+
+
         "key": "mastering",
         "label": "Mixdown & Mastering",
         "description": "Rendering final full mix and mastering from stems",
@@ -232,20 +248,6 @@ STAGES: List[Dict[str, Any]] = [
         "master_stereo_side_ir": None,  # ej: "irs/stereo/side_room.wav"
         # Si None → usa el mix recomendado por el análisis
         "master_stereo_side_ir_mix_override": None,
-
-        # --- NUEVO: configuración de mix-bus color ---
-        "mix_bus_color_enable": True,
-        "mix_bus_color_analysis_json": "mix_bus_color_analysis.json",
-        "mix_bus_color_log_json": "mix_bus_color_log.json",
-
-        # Rutas relativas al project_root; pon aquí tus IRs reales o déjalas a None
-        "mix_bus_tape_ir": None,     # ej: "irs/mixbus/tape_a.wav"
-        "mix_bus_console_ir": None,  # ej: "irs/mixbus/console_a.wav"
-
-        # Lista de VST3 opcionales (rutas relativas o absolutas)
-        "mix_bus_vst3_plugins": [
-            # "vst3/DeEsser.vst3",
-            # "vst3/TapeSaturator.vst3",
         ],
     },
 
