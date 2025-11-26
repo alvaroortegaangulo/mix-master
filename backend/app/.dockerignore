@@ -1,0 +1,64 @@
+# ----------------------------
+# Git & VCS
+# ----------------------------
+.git
+.gitignore
+
+# ----------------------------
+# Python: bytecode & cachés
+# ----------------------------
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+
+# ----------------------------
+# Entornos virtuales
+# ----------------------------
+.env
+.venv/
+venv/
+env/
+
+# ----------------------------
+# IDE / editor
+# ----------------------------
+.idea/
+.vscode/
+
+# ----------------------------
+# Logs, tests & coverage
+# ----------------------------
+*.log
+*.out
+*.err
+.coverage
+.coverage.*
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+.tox/
+.cache/
+pytest-debug.log
+
+# ----------------------------
+# Datos pesados de runtime
+# (clave para tu caso)
+# ----------------------------
+media/
+temp/
+
+# por si acaso se cuela audio suelto
+*.wav
+*.aif
+*.aiff
+*.flac
+*.mp3
+*.ogg
+
+# ----------------------------
+# Basura de SO
+# ----------------------------
+.DS_Store
+Thumbs.db
