@@ -56,7 +56,10 @@ def _compute_basic_metrics(path: Path, block_size: int = 262144) -> tuple:
             sum_squares += float(np.sum(data * data))
             total_samples += data.size
 
-        duration_seconds = float(frames_total) / float(sr) if frames_total else float(total_samples) / float(sr * max(num_channels, 1))
+        if frames_total:
+            duration_seconds = float(frames_total) / float(sr)
+        else:
+            duration_seconds = float(total_samples) / float(sr * max(num_channels, 1))
 
         if total_samples == 0:
             return -120.0, -120.0, 0.0, duration_seconds, sr, num_channels
@@ -64,12 +67,16 @@ def _compute_basic_metrics(path: Path, block_size: int = 262144) -> tuple:
         rms_lin = np.sqrt(sum_squares / float(total_samples))
         peak_dbfs = _safe_dbfs(peak_lin)
         rms_dbfs = _safe_dbfs(rms_lin)
-        return peak_dbfs, rms_dbfs, peak_dbfs - rms_dbfs, duration_seconds, sr, num_channels
+        crest_factor_db = peak_dbfs - rms_dbfs
+        return peak_dbfs, rms_dbfs, crest_factor_db, duration_seconds, sr, num_channels
 
 
 def analyze_mix_bus_color(mix_path: Path) -> MixBusColorResult:
     """
-    Analiza el full mix para decidir un color de bus sutil pero con caracter.
+    Analiza el full mix para decidir un color de bus MUY sutil:
+      - HPF solo limpia sub-subgrave.
+      - Saturacion moderada, dependiente de RMS.
+      - IR de tape/console con mix bajo.
     Se asume que mix_path apunta al full mix ya masterizado por stems.
     """
     mix_path = mix_path.resolve()
@@ -78,11 +85,12 @@ def analyze_mix_bus_color(mix_path: Path) -> MixBusColorResult:
 
     peak_dbfs, rms_dbfs, crest_factor_db, duration_seconds, sr, num_channels = _compute_basic_metrics(mix_path)
 
+    # Mezcla vacía -> defaults seguros y suaves
     if peak_dbfs <= -119.0 and rms_dbfs <= -119.0:
-        sat_drive_db = 0.5
-        hpf_hz = 28.0
-        tape_mix = 0.18
-        console_mix = 0.15
+        hpf_hz = 24.0
+        sat_drive_db = 0.7
+        tape_mix = 0.16
+        console_mix = 0.12
         return MixBusColorResult(
             mix_path=mix_path,
             sample_rate=sr,
@@ -97,38 +105,53 @@ def analyze_mix_bus_color(mix_path: Path) -> MixBusColorResult:
             recommended_console_mix=console_mix,
         )
 
-    if rms_dbfs <= -20.0:
-        sat_drive_db = 4.0
-    elif rms_dbfs <= -16.0:
-        sat_drive_db = 3.0
+    # ------------------------------------------------------------------
+    # 1) Saturación: rango muy moderado (0.5–1.5 dB de drive)
+    #    RMS más bajo → un poco más de color; RMS muy alto → casi nada.
+    # ------------------------------------------------------------------
+    if rms_dbfs <= -18.0:
+        sat_drive_db = 1.4
     elif rms_dbfs <= -14.0:
-        sat_drive_db = 2.0
-    elif rms_dbfs <= -12.0:
-        sat_drive_db = 1.5
-    elif rms_dbfs <= -10.0:
-        sat_drive_db = 1.0
+        sat_drive_db = 1.1
+    elif rms_dbfs <= -11.0:
+        sat_drive_db = 0.8
     else:
         sat_drive_db = 0.5
 
+    # Mezclas muy aplastadas (crest bajo) → menos drive todavía
     if crest_factor_db < 8.0:
-        hpf_hz = 30.0
-    elif crest_factor_db < 10.0:
-        hpf_hz = 27.0
-    else:
-        hpf_hz = 24.0
+        sat_drive_db *= 0.7
+    elif crest_factor_db > 12.0:
+        sat_drive_db *= 1.05
 
-    if crest_factor_db >= 13.0:
-        tape_mix = 0.35
-        console_mix = 0.22
-    elif crest_factor_db >= 10.0:
-        tape_mix = 0.28
-        console_mix = 0.20
-    elif crest_factor_db >= 8.0:
+    sat_drive_db = float(np.clip(sat_drive_db, 0.3, 1.5))
+
+    # ------------------------------------------------------------------
+    # 2) HPF: solo quitar "rumble" sub-20/25 Hz, dejando bombo/bajo intactos
+    # ------------------------------------------------------------------
+    if crest_factor_db < 8.0:
+        hpf_hz = 28.0
+    elif crest_factor_db < 11.0:
+        hpf_hz = 24.0
+    else:
+        hpf_hz = 20.0
+
+    # ------------------------------------------------------------------
+    # 3) Tape / console IR: color suave de bus
+    #    Mezclas más dinámicas aceptan algo más de tape.
+    # ------------------------------------------------------------------
+    if crest_factor_db >= 13.0 and rms_dbfs <= -13.0:
         tape_mix = 0.22
         console_mix = 0.18
-    else:
+    elif crest_factor_db >= 9.0:
         tape_mix = 0.18
-        console_mix = 0.15
+        console_mix = 0.14
+    else:
+        tape_mix = 0.14
+        console_mix = 0.10
+
+    tape_mix = float(np.clip(tape_mix, 0.10, 0.24))
+    console_mix = float(np.clip(console_mix, 0.08, 0.18))
 
     return MixBusColorResult(
         mix_path=mix_path,

@@ -13,7 +13,6 @@ from pedalboard import (
     HighpassFilter,
     Distortion,
     Gain,
-    Limiter,
     Convolution,
     load_plugin,
 )
@@ -102,10 +101,10 @@ def load_mix_bus_color_json(json_path: Path) -> MixBusColorSettings:
         peak_dbfs=_gf("peak_dbfs", -120.0),
         rms_dbfs=_gf("rms_dbfs", -120.0),
         crest_factor_db=_gf("crest_factor_db", 0.0),
-        hpf_hz=_gf("recommended_hpf_hz", 25.0),
-        saturation_drive_db=_gf("recommended_saturation_drive_db", 1.0),
-        tape_mix=_gf("recommended_tape_mix", 0.2),
-        console_mix=_gf("recommended_console_mix", 0.2),
+        hpf_hz=_gf("recommended_hpf_hz", 24.0),
+        saturation_drive_db=_gf("recommended_saturation_drive_db", 0.8),
+        tape_mix=_gf("recommended_tape_mix", 0.16),
+        console_mix=_gf("recommended_console_mix", 0.12),
     )
 
 
@@ -124,6 +123,7 @@ def _apply_mix_bus_color(
 ) -> MixBusColorCorrectionResult:
     """
     Aplica la cadena de color de mix-bus sobre el full mix.
+    Esta etapa NO hace mastering (no limiter agresivo): solo color sutil.
     """
     input_path = settings.mix_path
     if not input_path.exists():
@@ -153,27 +153,42 @@ def _apply_mix_bus_color(
     original_peak_dbfs = _safe_dbfs(original_peak_lin)
     original_rms_dbfs = _safe_dbfs(original_rms_lin)
 
+    # ------------------------------------------------------------------
+    # Saneado de parámetros: todo muy contenido
+    # ------------------------------------------------------------------
+    hpf_hz = float(np.clip(settings.hpf_hz, 18.0, 32.0))
+    sat_drive_db = float(np.clip(settings.saturation_drive_db, 0.0, 1.8))
+    tape_mix = float(np.clip(settings.tape_mix, 0.0, 0.25))
+    console_mix = float(np.clip(settings.console_mix, 0.0, 0.25))
+
+    # Ganancia previa muy moderada (máx. +1 dB)
+    pre_gain_db = float(np.clip(sat_drive_db * 0.25, 0.0, 1.0))
+
     effects = []
 
-    if settings.hpf_hz > 0.0:
-        effects.append(HighpassFilter(cutoff_frequency_hz=settings.hpf_hz))
+    # HPF solo para rumble
+    if hpf_hz > 0.0:
+        effects.append(HighpassFilter(cutoff_frequency_hz=hpf_hz))
 
-    pre_gain_db = min(max(settings.saturation_drive_db * 0.4, 0.0), 2.0)
+    # Pre-gain antes de saturación/IR
     if abs(pre_gain_db) > 0.05:
         effects.append(Gain(gain_db=pre_gain_db))
 
-    if tape_ir_path is not None:
+    # IR de tape
+    tape_ir_used: Optional[Path] = None
+    if tape_ir_path is not None and tape_mix > 0.0:
         tape_ir_path = tape_ir_path.resolve()
         if tape_ir_path.exists():
+            tape_ir_used = tape_ir_path
             logger.info(
                 "[MIX_BUS_COLOR] Insertando IR de tape: %s (mix=%.3f)",
                 tape_ir_path,
-                settings.tape_mix,
+                tape_mix,
             )
             effects.append(
                 Convolution(
                     str(tape_ir_path),
-                    mix=float(settings.tape_mix),
+                    mix=tape_mix,
                 )
             )
         else:
@@ -182,18 +197,21 @@ def _apply_mix_bus_color(
                 tape_ir_path,
             )
 
-    if console_ir_path is not None:
+    # IR de consola
+    console_ir_used: Optional[Path] = None
+    if console_ir_path is not None and console_mix > 0.0:
         console_ir_path = console_ir_path.resolve()
         if console_ir_path.exists():
+            console_ir_used = console_ir_path
             logger.info(
                 "[MIX_BUS_COLOR] Insertando IR de consola: %s (mix=%.3f)",
                 console_ir_path,
-                settings.console_mix,
+                console_mix,
             )
             effects.append(
                 Convolution(
                     str(console_ir_path),
-                    mix=float(settings.console_mix),
+                    mix=console_mix,
                 )
             )
         else:
@@ -202,9 +220,11 @@ def _apply_mix_bus_color(
                 console_ir_path,
             )
 
-    if abs(settings.saturation_drive_db) > 0.05:
-        effects.append(Distortion(drive_db=float(settings.saturation_drive_db)))
+    # Saturación suave
+    if sat_drive_db > 0.4:
+        effects.append(Distortion(drive_db=sat_drive_db))
 
+    # VST3 externos opcionales (por ejemplo, color de bus adicional)
     vst3_plugins_loaded: List[str] = []
     for vst_path in vst3_plugin_paths or []:
         try:
@@ -223,16 +243,8 @@ def _apply_mix_bus_color(
                 "[MIX_BUS_COLOR] Error cargando VST3 %s: %s", vst_path, exc
             )
 
-    effects.append(Gain(gain_db=-0.5))
-    effects.append(
-        Limiter(
-            threshold_db=-0.8,
-            release_ms=100.0,
-        )
-    )
-
     board = Pedalboard(effects)
-    processed = board(audio, sample_rate=sr)
+    processed = board(audio, sample_rate=sr) if effects else audio
 
     if processed.size > 0:
         peak_lin = float(np.max(np.abs(processed)))
@@ -241,6 +253,7 @@ def _apply_mix_bus_color(
         peak_lin = 0.0
         rms_lin = 0.0
 
+    # Safety por si algún VST externa se pasa
     if peak_lin > 0.999:
         processed = processed * (0.999 / peak_lin)
         peak_lin = 0.999
@@ -261,12 +274,12 @@ def _apply_mix_bus_color(
         original_rms_dbfs=original_rms_dbfs,
         resulting_peak_dbfs=resulting_peak_dbfs,
         resulting_rms_dbfs=resulting_rms_dbfs,
-        hpf_hz=settings.hpf_hz,
-        saturation_drive_db=settings.saturation_drive_db,
-        tape_ir_path=tape_ir_path,
-        console_ir_path=console_ir_path,
-        tape_mix=settings.tape_mix,
-        console_mix=settings.console_mix,
+        hpf_hz=hpf_hz,
+        saturation_drive_db=sat_drive_db,
+        tape_ir_path=tape_ir_used,
+        console_ir_path=console_ir_used,
+        tape_mix=tape_mix,
+        console_mix=console_mix,
         vst3_plugins_loaded=vst3_plugins_loaded,
     )
 
