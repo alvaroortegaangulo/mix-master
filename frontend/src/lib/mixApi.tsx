@@ -187,6 +187,18 @@ function mapBackendStatusToJobStatus(raw: any, baseUrl: string): JobStatus {
   return base;
 }
 
+
+export async function cleanupTemp(): Promise<void> {
+  const res = await fetch(`${API_BASE_URL}/cleanup-temp`, {
+    method: "POST",
+  });
+
+  if (!res.ok) {
+    throw new Error("Failed to cleanup temp");
+  }
+}
+
+
 // 1) Arrancar job (POST /mix)
 export async function startMixJob(
   files: File[],

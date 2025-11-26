@@ -4,6 +4,7 @@ import logging
 from pathlib import Path
 from uuid import uuid4
 import json
+import shutil
 
 from celery import states
 from celery.result import AsyncResult
@@ -137,6 +138,27 @@ def get_job_status(job_id: str):
         "jobId": job_id,
         "status": async_result.state.lower(),
     }
+
+
+@app.post("/cleanup-temp")
+async def cleanup_temp():
+    """
+    Borra todos los subdirectorios de JOBS_ROOT (temp/<job_id>).
+    Se usa cuando el usuario recarga / resetea la página.
+    """
+    removed_jobs = 0
+
+    if not JOBS_ROOT.exists():
+        return {"status": "ok", "removed_jobs": 0}
+
+    for child in JOBS_ROOT.iterdir():
+        # Ej: /app/temp/<job_id>
+        if child.is_dir():
+            shutil.rmtree(child, ignore_errors=True)
+            removed_jobs += 1
+
+    return {"status": "ok", "removed_jobs": removed_jobs}
+
 
 
 @app.get("/pipeline/stages")

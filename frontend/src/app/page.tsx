@@ -9,6 +9,7 @@ import {
   fetchPipelineStages,
   type PipelineStage,
   type StemProfilePayload,
+  cleanupTemp,  
 } from "../lib/mixApi";
 import { UploadDropzone } from "../components/UploadDropzone";
 import { MixResultPanel } from "../components/MixResultPanel";
@@ -78,6 +79,19 @@ const SPACE_DEPTH_BUSES: SpaceDepthBus[] = [
 ];
 
 
+const handleResetApp = async () => {
+  try {
+    // limpiamos al pulsar el "logo"
+    await cleanupTemp();
+  } catch (err) {
+    console.error("Error cleaning temp on reset", err);
+  } finally {
+    // recarga completa de la página
+    window.location.reload();
+  }
+};
+
+
 function mapStemProfileToBusKey(profile: string): string {
   switch (profile) {
     case "drums":
@@ -123,6 +137,15 @@ export default function HomePage() {
   const [spaceBusStyles, setSpaceBusStyles] = useState<Record<string, string>>(
      {},
   );
+
+
+useEffect(() => {
+  // Limpiar temp siempre que se entra / recarga la página
+  cleanupTemp().catch((err) => {
+    console.error("Error cleaning temp on page load", err);
+  });
+}, []);
+
 
   // Cargar definición de stages del backend
   useEffect(() => {
@@ -302,18 +325,22 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
       {/* Top bar */}
-      <header className="border-b border-slate-800/80">
-        <div className="mx-auto flex h-16 max-w-5xl items-center px-4">
-          <div className="flex items-center gap-2">
-            <div className="h-7 w-7 rounded-full bg-teal-400/90 flex items-center justify-center text-slate-950 text-lg font-bold">
-              A
-            </div>
-            <span className="text-lg font-semibold tracking-tight">
-              Audio Alchemy
-            </span>
-          </div>
-        </div>
-      </header>
+<header className="border-b border-slate-800/80">
+  <div className="mx-auto flex h-16 max-w-5xl items-center px-4">
+    <div className="flex items-center gap-2">
+      <div className="h-7 w-7 rounded-full bg-teal-400/90 flex items-center justify-center text-slate-950 text-lg font-bold">
+        A
+      </div>
+      <button
+        type="button"
+        onClick={handleResetApp}
+        className="text-lg font-semibold tracking-tight bg-transparent border-none p-0 cursor-pointer"
+      >
+        Audio Alchemy
+      </button>
+    </div>
+  </div>
+</header>
 
       {/* Layout: grid con 3 columnas a partir de lg.
           Centro más estrecho en portátiles, más ancho en pantallas grandes */}
