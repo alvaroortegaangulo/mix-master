@@ -21,9 +21,9 @@ import soundfile as sf  # noqa: E402
 
 from utils.analysis_utils import (  # noqa: E402
     load_contract,
-    get_temp_dir,
-    PROJECT_ROOT,
+    get_temp_dir
 )
+from utils.analysis_utils import get_temp_dir
 from utils.session_utils import load_session_config  # noqa: E402
 from utils.loudness_utils import compute_lufs_and_lra  # noqa: E402
 from utils.color_utils import compute_true_peak_dbfs  # noqa: E402
@@ -81,7 +81,7 @@ def _build_stage_report_entry(contract_id: str) -> Dict[str, Any]:
     Construye una entrada de reporte para un contract_id concreto,
     usando analysis_<contract_id>.json si existe.
     """
-    temp_dir = PROJECT_ROOT / "temp" / contract_id
+    temp_dir = get_temp_dir(contract_id, create=False)
     analysis_path = temp_dir / f"analysis_{contract_id}.json"
 
     entry: Dict[str, Any] = {
@@ -236,7 +236,7 @@ def main() -> None:
 
     # 4) Métricas finales desde QC de S10 + audio final para crest / hist
     qc_contract_id = "S10_MASTER_FINAL_LIMITS"
-    qc_dir = PROJECT_ROOT / "temp" / qc_contract_id
+    qc_dir = get_temp_dir(qc_contract_id, create=False)
     qc_path = qc_dir / "qc_metrics_S10_MASTER_FINAL_LIMITS.json"
 
     final_tp = float("nan")
