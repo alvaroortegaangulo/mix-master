@@ -45,15 +45,23 @@ def _generate_reverb_ir(
     """
     Genera una IR de reverb muy simple:
       - ruido filtrado con envolvente de decaimiento exponencial.
-      - longitud ~ 2 * rt60_s, limitada a 5 s máx.
+      - longitud ~ 2 * rt60_s, limitada a 4 s máx.
 
     Es determinista vía seed para idempotencia.
+
+    Ajustes respecto a la versión anterior:
+      - Decaimiento calibrado para que a t = rt60_s estemos ≈ -60 dB
+        (no se queda flotando tanto tiempo).
+      - Nivel global algo más contenido para evitar 'sopa' de reverb.
     """
-    rt60_s = max(rt60_s, 0.1)
-    length_s = min(rt60_s * 2.0, 5.0)
+    # Evitar valores ridículamente cortos
+    rt60_s = max(rt60_s, 0.2)
+
+    # Longitud total un poco más corta que antes
+    length_s = min(rt60_s * 2.0, 4.0)
     n = int(sr * length_s)
     if n <= 0:
-        n = int(sr * 0.3)
+        n = int(sr * 0.4)
 
     rng = np.random.default_rng(seed)
     noise = rng.standard_normal(n).astype(np.float32)
@@ -63,7 +71,10 @@ def _generate_reverb_ir(
         noise[i] = 0.8 * noise[i - 1] + 0.2 * noise[i]
 
     t = np.arange(n, dtype=np.float32) / float(sr)
-    decay = np.exp(-3.0 * t / rt60_s).astype(np.float32)
+
+    # Queremos que a t = rt60_s el nivel haya caído ~60 dB:
+    # A(rt60) ~= 10^(-60/20) = 10^-3 -> factor ≈ e^(-6.9078 * t / rt60)
+    decay = np.exp(-np.log(1000.0) * t / rt60_s).astype(np.float32)
 
     ir = noise * decay
     peak = float(np.max(np.abs(ir)))
@@ -71,8 +82,10 @@ def _generate_reverb_ir(
         ir /= peak
 
     # Atenuamos algo para evitar excesos; el nivel relativo lo ajustaremos con sends
-    ir *= 0.4
+    # (más contenido que el 0.4 anterior).
+    ir *= 0.3
     return ir
+
 
 
 def load_analysis(contract_id: str) -> Dict[str, Any]:
@@ -156,6 +169,35 @@ def _render_reverb_return_worker(
     }
 
 
+def _choose_target_offset_db(
+    offset_min_db: float,
+    offset_max_db: float,
+    style_preset: str,
+) -> float:
+    """
+    El contrato define un rango de offsets dry/reverb [min, max] en dB.
+    Aquí elegimos un punto dentro de ese rango, claramente del lado 'seco',
+    y le damos un poco de dependencia por estilo.
+
+    offset_min_db y offset_max_db son negativos (p.ej. -24, -6).
+    """
+    style = (style_preset or "").lower()
+
+    # pos=0 -> offset_min (más seco), pos=1 -> offset_max (más wet)
+    if any(k in style for k in ("flamenco", "rumba", "acoustic", "acústico", "jazz", "folk")):
+        pos = 0.2   # reverb claramente sutil
+    elif any(k in style for k in ("edm", "club", "trance", "house")):
+        pos = 0.4   # un poco más presente pero sin excesos
+    elif any(k in style for k in ("urbano", "trap", "reggaeton", "hiphop", "urban")):
+        pos = 0.35
+    else:
+        pos = 0.3   # valor intermedio tirando a seco
+
+    pos = max(0.0, min(1.0, pos))
+    return offset_min_db + pos * (offset_max_db - offset_min_db)
+
+
+
 def main() -> None:
     """
     Stage S6_BUS_REVERB_STYLE:
@@ -180,11 +222,14 @@ def main() -> None:
     session: Dict[str, Any] = analysis.get("session", {}) or {}
     stems: List[Dict[str, Any]] = analysis.get("stems", []) or []
 
+    style_preset: str = analysis.get("style_preset", "default") or "default"
+
     offset_min_db = float(metrics.get("reverb_return_lufs_offset_min_db", -24.0))
     offset_max_db = float(metrics.get("reverb_return_lufs_offset_max_db", -8.0))
     max_send_change_db = float(limits.get("max_send_level_change_db_per_pass", 2.0))
 
     dry_lufs = float(session.get("dry_mix_lufs", float("-inf")))
+
 
     temp_dir = get_temp_dir(contract_id, create=False)
     full_song_path = temp_dir / "full_song.wav"
@@ -342,12 +387,23 @@ def main() -> None:
         f"offset_vs_dry={offset_now:.2f} dB."
     )
 
-    # 4) Calcular offset objetivo (punto medio del rango)
-    target_offset = 0.5 * (offset_min_db + offset_max_db)
+    # 4) Calcular offset objetivo (claramente hacia el lado 'seco', dependiente de estilo)
+    target_offset = _choose_target_offset_db(
+        offset_min_db=offset_min_db,
+        offset_max_db=offset_max_db,
+        style_preset=style_preset,
+    )
 
-    # Queremos mover el offset hacia target_offset, pero como máximo max_send_change_db
-    delta_needed = target_offset - offset_now
-    delta_db = max(-max_send_change_db, min(max_send_change_db, delta_needed))
+    # Queremos mover el offset hacia target_offset, pero si ya estamos más secos
+    # que el objetivo, preferimos no subir el nivel de reverb.
+    delta_db = 0.0
+    if offset_now > target_offset:
+        # reverb demasiado alta (offset menos negativo)
+        delta_needed = target_offset - offset_now  # negativo
+        delta_db = max(-max_send_change_db, min(0.0, delta_needed))
+    else:
+        # ya estamos suficientemente secos o más
+        delta_db = 0.0
 
     # 5) Aplicar ajuste global a todos los returns (idempotente por diseño)
     if abs(delta_db) > 1e-3:
@@ -385,7 +441,7 @@ def main() -> None:
                 "reverb_return_offset_db": offset_now,
                 "target_offset_min_db": offset_min_db,
                 "target_offset_max_db": offset_max_db,
-                "target_offset_mid_db": target_offset,
+                "target_offset_target_db": target_offset,
                 "applied_offset_delta_db": delta_db,
                 "max_send_level_change_db_per_pass": max_send_change_db,
                 "num_returns": len(returns_info),

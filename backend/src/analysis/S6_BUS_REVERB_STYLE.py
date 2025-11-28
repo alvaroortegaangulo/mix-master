@@ -126,6 +126,11 @@ def _get_reverb_profile_for(style_preset: str, family: str) -> Dict[str, Any]:
             )
 
     # Otros estilos / por defecto usan profile base
+    
+    # --- GLOBAL TRIM: hacer la reverb mucho más sutil por defecto ---
+    # Bajamos todos los envíos 6 dB para que el reverb arranque más discreto.
+    GLOBAL_REVERB_TRIM_DB = 6.0
+    profile["base_send_db"] = float(profile.get("base_send_db", -18.0)) - GLOBAL_REVERB_TRIM_DB
 
     return profile
 
