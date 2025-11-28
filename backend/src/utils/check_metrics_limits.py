@@ -17,7 +17,6 @@ from utils.analysis_utils import get_temp_dir
 def _load_analysis(contract_id: str) -> Dict[str, Any]:
     """
     Carga el JSON de análisis:
-        <PROJECT_ROOT>/temp/<contract_id>/analysis_<contract_id>.json
     """
     temp_dir = get_temp_dir(contract_id, create=False)
     analysis_path = temp_dir / f"analysis_{contract_id}.json"
@@ -914,7 +913,7 @@ def _check_S5_LEADVOX_DYNAMICS(data: Dict[str, Any]) -> bool:
         max_auto_per_pass = 3.0
 
     # Cargar métricas auxiliares generadas por el stage
-    temp_dir = PROJECT_ROOT / "temp" / contract_id
+    temp_dir = get_temp_dir(contract_id, create=False)
     metrics_path = temp_dir / "leadvox_dynamics_metrics_S5_LEADVOX_DYNAMICS.json"
 
     if not metrics_path.exists():
@@ -1088,7 +1087,7 @@ def _check_S5_BUS_DYNAMICS_DRUMS(data: Dict[str, Any]) -> bool:
         max_avg_gr_contract = 3.0
 
     # Cargar métricas auxiliares del stage
-    temp_dir = PROJECT_ROOT / "temp" / contract_id
+    temp_dir = get_temp_dir(contract_id, create=False)
     metrics_path = temp_dir / "bus_dynamics_metrics_S5_BUS_DYNAMICS_DRUMS.json"
 
     if not metrics_path.exists():
@@ -1219,7 +1218,7 @@ def _check_S6_BUS_REVERB_STYLE(data: Dict[str, Any]) -> bool:
         max_send_change_contract = 2.0
 
     # Cargar métricas del stage
-    temp_dir = PROJECT_ROOT / "temp" / contract_id
+    temp_dir = get_temp_dir(contract_id, create=False)
     metrics_path = temp_dir / "space_depth_metrics_S6_BUS_REVERB_STYLE.json"
 
     if not metrics_path.exists():
@@ -1354,7 +1353,7 @@ def _check_S7_MIXBUS_TONAL_BALANCE(data: Dict[str, Any]) -> bool:
         max_eq_change_contract = 1.5
 
     # Métricas generadas por el stage
-    temp_dir = PROJECT_ROOT / "temp" / contract_id
+    temp_dir = get_temp_dir(contract_id, create=False)
     metrics_path = temp_dir / "tonal_metrics_S7_MIXBUS_TONAL_BALANCE.json"
 
     if not metrics_path.exists():
@@ -1510,7 +1509,7 @@ def _check_S8_MIXBUS_COLOR_GENERIC(data: Dict[str, Any]) -> bool:
         max_sat_per_pass_contract = 1.0
 
     # Métricas generadas por el stage
-    temp_dir = PROJECT_ROOT / "temp" / contract_id
+    temp_dir = get_temp_dir(contract_id, create=False)
     metrics_path = temp_dir / "color_metrics_S8_MIXBUS_COLOR_GENERIC.json"
 
     if not metrics_path.exists():
@@ -1624,11 +1623,6 @@ def _check_S8_MIXBUS_COLOR_GENERIC(data: Dict[str, Any]) -> bool:
     return ok
 
 
-from pathlib import Path
-import json
-from typing import Dict, Any
-
-from utils.analysis_utils import PROJECT_ROOT  # ya lo usas en otros checks
 
 
 def _check_S9_MASTER_GENERIC(data: Dict[str, Any]) -> bool:
@@ -1669,7 +1663,7 @@ def _check_S9_MASTER_GENERIC(data: Dict[str, Any]) -> bool:
         max_width_change_pct_contract = 10.0
 
     # Métricas generadas por el stage
-    temp_dir = PROJECT_ROOT / "temp" / contract_id
+    temp_dir = get_temp_dir(contract_id, create=False)
     metrics_path = temp_dir / "master_metrics_S9_MASTER_GENERIC.json"
 
     if not metrics_path.exists():
@@ -1851,7 +1845,7 @@ def _check_S10_MASTER_FINAL_LIMITS(data: Dict[str, Any]) -> bool:
     contract_id = data.get("contract_id", "S10_MASTER_FINAL_LIMITS")
 
     # Cargar métricas QC generadas por el stage
-    temp_dir = PROJECT_ROOT / "temp" / contract_id
+    temp_dir = get_temp_dir(contract_id, create=False)
     qc_path = temp_dir / "qc_metrics_S10_MASTER_FINAL_LIMITS.json"
 
     if not qc_path.exists():
@@ -2120,9 +2114,9 @@ def _check_S11_REPORT_GENERATION(data: Dict[str, Any]) -> bool:
             ok = False
 
     # 4) Coherencia con el QC del master (S10_MASTER_FINAL_LIMITS)
-    qc_contract_id = "S10_MASTER_FINAL_LIMITS"
-    qc_dir = PROJECT_ROOT / "temp" / qc_contract_id
-    qc_path = qc_dir / "qc_metrics_S10_MASTER_FINAL_LIMITS.json"
+    contract_id = "S10_MASTER_FINAL_LIMITS"
+    temp_dir = get_temp_dir(contract_id, create=False)
+    qc_path = temp_dir / "qc_metrics_S10_MASTER_FINAL_LIMITS.json"
 
     if qc_path.exists():
         try:
