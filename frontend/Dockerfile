@@ -16,10 +16,6 @@ RUN npm install
 # Copiamos el resto del código
 COPY . .
 
-# IMPORTANTE: aquí metemos la URL pública del backend
-# Sustituye TU_IP por la IP pública del VPS
-
-
 # Construimos la app Next
 RUN npm run build
 

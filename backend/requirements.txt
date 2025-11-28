@@ -1,0 +1,31 @@
+# Núcleo numérico / audio base
+numpy
+soundfile
+scipy
+
+# Análisis de audio
+librosa
+pyloudnorm
+
+# Procesado de efectos (EQ, compresor, etc.)
+pedalboard
+
+# Backend web (API de mezcla)
+fastapi
+uvicorn[standard]
+python-multipart   # necesario para UploadFile / multipart/form-data
+
+# Cola de tareas (procesamiento asíncrono)
+celery[redis]
+redis
+
+# --- Opcionales históricos / futuros (comentados) ---
+# psutil         # monitorización de memoria/CPU si lo quieres usar más adelante
+# essentia       # análisis de audio avanzado si reactivas el pipeline antiguo
+# pyrubberband   # time-stretch / pitch-shift de alta calidad (vía Rubber Band)
+# pydantic       # FastAPI ya lo instala como dependencia; sólo añádelo si lo usas tú directamente
+# ML / Deep Learning (lo puedes usar más adelante)
+# torch
+# torchvision
+# torchaudio
+
