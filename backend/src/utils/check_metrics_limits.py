@@ -747,6 +747,132 @@ def _check_S4_STEM_RESONANCE_CONTROL(data: Dict[str, Any]) -> bool:
     return True
 
 
+def _check_S5_STEM_DYNAMICS_GENERIC(data: Dict[str, Any]) -> bool:
+    """
+    Valida S5_STEM_DYNAMICS_GENERIC a partir de:
+      - analysis_S5_STEM_DYNAMICS_GENERIC.json (this 'data')
+      - dynamics_metrics_S5_STEM_DYNAMICS_GENERIC.json (generado por el stage)
+
+    Reglas (HARD, pero con márgenes razonables):
+      - Para cada stem:
+          avg_gain_reduction_db  <= max_average_gain_reduction_db + MARGIN_AVG_DB
+          max_gain_reduction_db  <= max_peak_gain_reduction_db     + MARGIN_PEAK_DB
+
+    Si no existe el JSON de métricas, consideramos éxito (stage no ha hecho nada
+    o no había stems válidos).
+    """
+    contract_id = data.get("contract_id", "S5_STEM_DYNAMICS_GENERIC")
+    session = data.get("session", {}) or {}
+    metrics = data.get("metrics_from_contract", {}) or {}
+
+    try:
+        max_avg_gr = float(metrics.get("max_average_gain_reduction_db", 4.0))
+        max_peak_gr = float(metrics.get("max_peak_gain_reduction_db", 6.0))
+    except (TypeError, ValueError):
+        print(f"[{contract_id}] Métricas inválidas en metrics_from_contract; fracaso.")
+        return False
+
+    # Márgenes de tolerancia para pequeñas desviaciones numéricas / aproximaciones
+    MARGIN_AVG_DB = 0.5
+    MARGIN_PEAK_DB = 1.0
+
+    # Localizar JSON de métricas generado por el stage
+    temp_dir = get_temp_dir(contract_id, create=False)
+    metrics_path = temp_dir / "dynamics_metrics_S5_STEM_DYNAMICS_GENERIC.json"
+
+    if not metrics_path.exists():
+        # Si no hay métricas, no bloqueamos; puede ser un caso donde no se
+        # ha aplicado compresión (stems muy bajos, etc.).
+        print(
+            f"[{contract_id}] Aviso: no se encuentra {metrics_path}. "
+            f"Se asume éxito (sin compresión relevante)."
+        )
+        return True
+
+    try:
+        with metrics_path.open("r", encoding="utf-8") as f:
+            dyn_data = json.load(f)
+    except Exception as exc:
+        print(
+            f"[{contract_id}] Error leyendo {metrics_path}: {exc}. "
+            f"Se considera fracaso para revisar el material."
+        )
+        return False
+
+    records: List[Dict[str, Any]] = dyn_data.get("records", []) or []
+    if not records:
+        print(
+            f"[{contract_id}] Aviso: 'records' vacío en {metrics_path}. "
+            f"Se asume éxito (no se aplicó compresión o fue despreciable)."
+        )
+        return True
+
+    ok = True
+    worst_avg = 0.0
+    worst_peak = 0.0
+    n = 0
+
+    for rec in records:
+        fname = rec.get("file_name", "<unnamed>")
+        avg_gr_raw = rec.get("avg_gain_reduction_db")
+        max_gr_raw = rec.get("max_gain_reduction_db")
+
+        try:
+            avg_gr = float(avg_gr_raw)
+            max_gr = float(max_gr_raw)
+        except (TypeError, ValueError):
+            print(
+                f"[{contract_id}] {fname}: métricas de GR inválidas "
+                f"(avg={avg_gr_raw!r}, max={max_gr_raw!r}); se ignora este stem en la validación."
+            )
+            continue
+
+        # Ignoramos valores negativos raros (por seguridad)
+        if avg_gr < 0.0:
+            avg_gr = 0.0
+        if max_gr < 0.0:
+            max_gr = 0.0
+
+        n += 1
+        if avg_gr > worst_avg:
+            worst_avg = avg_gr
+        if max_gr > worst_peak:
+            worst_peak = max_gr
+
+        # Check HARD con margen
+        if avg_gr > max_avg_gr + MARGIN_AVG_DB or max_gr > max_peak_gr + MARGIN_PEAK_DB:
+            print(
+                f"[{contract_id}] {fname}: "
+                f"avg_GR={avg_gr:.2f} dB (límite {max_avg_gr:.2f} + {MARGIN_AVG_DB:.1f}), "
+                f"max_GR={max_gr:.2f} dB (límite {max_peak_gr:.2f} + {MARGIN_PEAK_DB:.1f})."
+            )
+            ok = False
+
+    if n == 0:
+        # No hemos podido validar ningún stem con datos numéricos; ser estrictos.
+        print(
+            f"[{contract_id}] No se han encontrado métricas numéricas válidas "
+            f"en {metrics_path}; fracaso."
+        )
+        return False
+
+    if ok:
+        print(
+            f"[{contract_id}] OK: {n} stems validados. "
+            f"worst_avg_GR={worst_avg:.2f} dB (límite {max_avg_gr:.2f} + {MARGIN_AVG_DB:.1f}), "
+            f"worst_max_GR={worst_peak:.2f} dB (límite {max_peak_gr:.2f} + {MARGIN_PEAK_DB:.1f})."
+        )
+    else:
+        print(
+            f"[{contract_id}] FRACASO: se han encontrado stems con reducción de ganancia "
+            f"por encima de los límites permitidos "
+            f"(max_avg={max_avg_gr:.2f} dB, max_peak={max_peak_gr:.2f} dB, "
+            f"márgenes avg={MARGIN_AVG_DB:.1f}, peak={MARGIN_PEAK_DB:.1f})."
+        )
+
+    return ok
+
+
 
 def _check_S5_LEADVOX_DYNAMICS(data: Dict[str, Any]) -> bool:
     """
