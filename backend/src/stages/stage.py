@@ -7,6 +7,14 @@ from pathlib import Path
 
 MAX_RETRIES = 3
 
+# Stages que trabajan en mixbus/master y necesitan full_song.wav
+# generado a partir de stems ANTES del análisis
+MIXDOWN_STAGES = {
+    "S7_MIXBUS_TONAL_BALANCE",
+    "S8_MIXBUS_COLOR_GENERIC",
+    "S9_MASTER_GENERIC",
+    "S10_MASTER_FINAL_LIMITS",
+}
 
 def _run_python_script(script_path: Path, *args: str) -> int:
     cmd = [sys.executable, str(script_path), *args]
@@ -46,7 +54,6 @@ def run_stage(stage_id: str) -> None:
     analysis_script = base_dir / "analysis" / f"{stage_id}.py"
     stage_script = base_dir / "stages" / f"{stage_id}.py"
     check_script = base_dir / "utils" / "check_metrics_limits.py"
-    select_script = base_dir / "utils" / "select_stems.py"
     mixdown_script = base_dir / "utils" / "mixdown_stems.py"
     copy_script = base_dir / "utils" / "copy_stems.py"
 
@@ -57,6 +64,9 @@ def run_stage(stage_id: str) -> None:
 
     while attempt < MAX_RETRIES:
         attempt += 1
+
+        if stage_id in MIXDOWN_STAGES:
+            _run_python_script(mixdown_script, stage_id)
 
         _run_python_script(analysis_script, stage_id)
         _run_python_script(stage_script, stage_id)
@@ -72,7 +82,8 @@ def run_stage(stage_id: str) -> None:
     print(f"Resultado {stage_id}: {resultado}")
 
 
-    _run_python_script(mixdown_script, stage_id)
+    if stage_id not in MIXDOWN_STAGES:
+        _run_python_script(mixdown_script, stage_id)
 
     next_contract_id = _get_next_contract_id(base_dir, stage_id)
     if next_contract_id is not None:

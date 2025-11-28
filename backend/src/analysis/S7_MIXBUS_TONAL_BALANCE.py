@@ -29,7 +29,6 @@ from utils.tonal_balance_utils import (  # noqa: E402
     compute_tonal_error,
 )
 
-
 def _analyze_mixbus(full_song_path: Path) -> Dict[str, Any]:
     """
     Worker para ProcessPoolExecutor.
