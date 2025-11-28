@@ -92,6 +92,106 @@ const handleResetApp = async () => {
 };
 
 
+type StageUiInfo = {
+  label: string;
+  description: string;
+};
+
+const STAGE_UI_INFO: Record<string, StageUiInfo> = {
+  S0_SESSION_FORMAT: {
+    label: "SESSION FORMAT",
+    description:
+      "Session format normalization (samplerate, bit depth, headroom and bus routing).",
+  },
+  S1_STEM_DC_OFFSET: {
+    label: "STEM DC OFFSET",
+    description:
+      "DC offset detection and correction on each stem.",
+  },
+  S1_STEM_WORKING_LOUDNESS: {
+    label: "STEM WORKING LOUDNESS",
+    description:
+      "Per-stem working loudness normalization based on the detected instrument profile.",
+  },
+  S1_KEY_DETECTION: {
+    label: "GLOBAL KEY DETECTION",
+    description:
+      "Global key and scale detection for the song.",
+  },
+  S1_VOX_TUNING: {
+    label: "VOCAL TUNING",
+    description:
+      "Pitch-correction of vocal tracks using the detected key, within natural pitch and retune-speed limits.",
+  },
+  S2_GROUP_PHASE_DRUMS: {
+    label: "DRUM PHASE ALIGNMENT",
+    description:
+      "Phase and polarity alignment across the drum and percussion group.",
+  },
+  S3_MIXBUS_HEADROOM: {
+    label: "MIXBUS HEADROOM",
+    description:
+      "Global mixbus headroom adjustment (peak level and working LUFS).",
+  },
+  S3_LEADVOX_AUDIBILITY: {
+    label: "LEAD VOCAL AUDIBILITY",
+    description:
+      "Static level balancing of the lead vocal against the mix so it sits clearly on top without sounding detached.",
+  },
+  S4_STEM_HPF_LPF: {
+    label: "STEM HPF/LPF FILTERS",
+    description:
+      "Per-stem high-pass / low-pass filtering driven by the instrument profile.",
+  },
+  S4_STEM_RESONANCE_CONTROL: {
+    label: "STEM RESONANCE CONTROL",
+    description:
+      "Per-stem resonance control using narrow, limited cuts on resonant bands.",
+  },
+  S5_STEM_DYNAMICS_GENERIC: {
+    label: "STEM DYNAMICS",
+    description:
+      "Generic per-stem dynamics processing (compression/gating) to control dynamic range.",
+  },
+  S5_LEADVOX_DYNAMICS: {
+    label: "LEAD VOCAL DYNAMICS",
+    description:
+      "Lead vocal-focused dynamics processing (main compression and gentle level automation).",
+  },
+  S5_BUS_DYNAMICS_DRUMS: {
+    label: "DRUM BUS DYNAMICS",
+    description:
+      "Drum-bus compression to enhance punch and glue the drum kit together.",
+  },
+  S6_BUS_REVERB_STYLE: {
+    label: "BUS REVERB & SPACE",
+    description:
+      "Style-aware reverb and space assignment per bus family.",
+  },
+  S7_MIXBUS_TONAL_BALANCE: {
+    label: "MIXBUS TONAL BALANCE",
+    description:
+      "Broad-band tonal EQ on the mixbus to match the target tonal balance for the chosen style.",
+  },
+  S8_MIXBUS_COLOR_GENERIC: {
+    label: "MIXBUS COLOR & SATURATION",
+    description:
+      "Subtle mixbus coloration and saturation to add glue and harmonic density.",
+  },
+  S9_MASTER_GENERIC: {
+    label: "STEREO MASTERING",
+    description:
+      "Final stereo mastering (target loudness, ceiling and moderate M/S width adjustment).",
+  },
+  S10_MASTER_FINAL_LIMITS: {
+    label: "FINAL MASTER QC",
+    description:
+      "Final master quality-control pass over true-peak level, loudness (LUFS), L/R balance and stereo correlation with only micro-adjustments applied.",
+  },
+};
+
+
+
 function mapStemProfileToBusKey(profile: string): string {
   switch (profile) {
     case "drums":
@@ -312,15 +412,43 @@ useEffect(() => {
       ? jobStatus.result
       : null;
 
-  const progressText =
+
+
+  const stageUiInfo: StageUiInfo | null =
+    jobStatus && jobStatus.stageKey
+      ? STAGE_UI_INFO[jobStatus.stageKey] ?? null
+      : null;
+
+
+
+  const progressHeader =
     jobStatus &&
     (jobStatus.status === "queued" || jobStatus.status === "running")
-      ? `[${jobStatus.progress.toFixed(
-          0,
-        )}%] Step ${jobStatus.stageIndex}/${jobStatus.totalStages} – ${
-          jobStatus.message
-        }`
+      ? (() => {
+          const percent = Math.round(jobStatus.progress ?? 0);
+          const currentStep = jobStatus.stageIndex ?? 0;
+          const totalSteps = jobStatus.totalStages ?? 0;
+
+          // En cola: texto genérico
+          if (jobStatus.status === "queued" || totalSteps === 0) {
+            return `[${percent}%] Step ${currentStep}/${totalSteps} – Waiting in queue…`;
+          }
+
+          const label =
+            stageUiInfo?.label ||
+            jobStatus.stageKey ||
+            "Processing";
+
+          return `[${percent}%] Step ${currentStep}/${totalSteps} – Running stage ${label}…`;
+        })()
       : null;
+
+  const progressSubtext =
+    jobStatus &&
+    (jobStatus.status === "queued" || jobStatus.status === "running")
+      ? stageUiInfo?.description || jobStatus.message || null
+      : null;
+
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
@@ -492,11 +620,19 @@ useEffect(() => {
                   </button>
                 </div>
 
-                {progressText && (
-                  <p className="mt-4 text-center text-sm text-slate-300 font-mono">
-                    {progressText}
-                  </p>
-                )}
+      {progressHeader && (
+        <p className="mt-4 text-center text-sm font-mono text-slate-300">
+          {progressHeader}
+          {progressSubtext && (
+            <>
+              <br />
+              <span className="font-sans text-[11px] text-slate-400">
+                {progressSubtext}
+              </span>
+            </>
+          )}
+        </p>
+      )}
 
                 {error && (
                   <p className="mt-4 text-center text-sm text-red-400">

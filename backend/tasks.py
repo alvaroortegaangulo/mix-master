@@ -22,162 +22,9 @@ from src.utils.analysis_utils import (
 logger = logging.getLogger(__name__)
 
 
-
-STAGE_UI_INFO: Dict[str, Dict[str, str]] = {
-    "S0_SESSION_FORMAT": {
-        "label": "SESSION FORMAT",
-        "description_en": (
-            "Session format normalization (sample rate, bit depth, working headroom "
-            "and bus routing)."
-        ),
-    },
-    "S1_STEM_DC_OFFSET": {
-        "label": "STEM DC OFFSET",
-        "description_en": (
-            "DC offset detection and correction per stem to recentre the waveform "
-            "and recover headroom."
-        ),
-    },
-    "S1_STEM_WORKING_LOUDNESS": {
-        "label": "STEM WORKING LOUDNESS",
-        "description_en": (
-            "Working loudness normalization per stem based on its instrument profile, "
-            "so all tracks sit in a comfortable level range."
-        ),
-    },
-    "S1_KEY_DETECTION": {
-        "label": "GLOBAL KEY DETECTION",
-        "description_en": (
-            "Global key and scale detection for the session, used later for vocal tuning "
-            "and harmonic decisions."
-        ),
-    },
-    "S1_VOX_TUNING": {
-        "label": "VOCAL TUNING",
-        "description_en": (
-            "Lead vocal pitch correction using the detected key, with controlled pitch "
-            "range and tuning strength."
-        ),
-    },
-    "S2_GROUP_PHASE_DRUMS": {
-        "label": "DRUM GROUP PHASE",
-        "description_en": (
-            "Phase and polarity alignment within the drums/percussion group to preserve "
-            "low-end punch and avoid cancellations."
-        ),
-    },
-    "S3_MIXBUS_HEADROOM": {
-        "label": "MIXBUS HEADROOM",
-        "description_en": (
-            "Global headroom adjustment for the mix bus, targeting a safe peak level "
-            "and working LUFS for downstream processing."
-        ),
-    },
-    "S3_LEADVOX_AUDIBILITY": {
-        "label": "LEAD VOCAL AUDIBILITY",
-        "description_en": (
-            "Static level balancing of the lead vocal against the rest of the mix so it "
-            "sits clearly on top without sounding detached."
-        ),
-    },
-    "S4_STEM_HPF_LPF": {
-        "label": "STEM HPF/LPF FILTERS",
-        "description_en": (
-            "Per-stem high-pass and low-pass filtering based on instrument profile to "
-            "remove unnecessary sub-lows and ultra-highs."
-        ),
-    },
-    "S4_STEM_RESONANCE_CONTROL": {
-        "label": "STEM RESONANCE CONTROL",
-        "description_en": (
-            "Per-stem resonance control using limited narrow cuts to tame harsh or "
-            "ringing frequencies without over-EQing."
-        ),
-    },
-    "S5_STEM_DYNAMICS_GENERIC": {
-        "label": "STEM DYNAMICS",
-        "description_en": (
-            "Generic per-stem dynamics (compression and/or gating) to keep the dynamic "
-            "range under control while preserving natural transients."
-        ),
-    },
-    "S5_LEADVOX_DYNAMICS": {
-        "label": "LEAD VOCAL DYNAMICS",
-        "description_en": (
-            "Lead vocal-focused dynamics processing (main compression and gentle "
-            "automation) to stabilize level and presence."
-        ),
-    },
-    "S5_BUS_DYNAMICS_DRUMS": {
-        "label": "DRUM BUS DYNAMICS",
-        "description_en": (
-            "Bus compression for the drums group to add punch, cohesion and musical glue "
-            "to the kit."
-        ),
-    },
-    "S6_BUS_REVERB_STYLE": {
-        "label": "BUS REVERB & SPACE",
-        "description_en": (
-            "Style-based assignment of reverbs and spatial treatment per bus family, "
-            "building a coherent sense of depth and room."
-        ),
-    },
-    "S7_MIXBUS_TONAL_BALANCE": {
-        "label": "MIXBUS TONAL BALANCE",
-        "description_en": (
-            "Broadband mix bus EQ by frequency bands to match the overall tonal balance "
-            "to the chosen reference style."
-        ),
-    },
-    "S8_MIXBUS_COLOR_GENERIC": {
-        "label": "MIXBUS COLOR",
-        "description_en": (
-            "Mix bus colour and glue via gentle saturation and harmonic enhancement, "
-            "kept within defined distortion limits."
-        ),
-    },
-    "S9_MASTER_GENERIC": {
-        "label": "STEM MASTERING",
-        "description_en": (
-            "Mastering stage: final loudness and true-peak target, plus moderate M/S "
-            "width shaping according to style profile."
-        ),
-    },
-    "S10_MASTER_FINAL_LIMITS": {
-        "label": "FINAL MASTER QC",
-        "description_en": (
-            "Final master quality control (true peak, LUFS, L/R balance and correlation) "
-            "with micro-adjustments only."
-        ),
-    },
-}
-
 # -------------------------------------------------------------------
 # Helpers de métricas finales
 # -------------------------------------------------------------------
-
-def _format_stage_message(
-    stage_index: int,
-    total_stages: int,
-    stage_key: str,
-    progress_val: float,
-) -> str:
-    """
-    Construye el mensaje para el frontend, p.ej.:
-
-      [42%] Step 8/19 – Running stage MIXBUS HEADROOM…
-      Global headroom adjustment for the mix bus (peak and working LUFS).
-    """
-    percent_int = int(round(progress_val))
-    info = STAGE_UI_INFO.get(stage_key, {})
-    label = info.get("label", stage_key)
-    desc = info.get("description_en", "")
-
-    header = f"[{percent_int}%] Step {stage_index}/{total_stages} – Running stage {label}…"
-    if desc:
-        return f"{header}\n{desc}"
-    return header
-
 
 def _safe_compute_final_metrics(job_id: str) -> Dict[str, Any]:
     """
@@ -277,12 +124,13 @@ def _make_files_url(job_root: Path, job_id: str, path: Path | None) -> str:
         return ""
 
     try:
-        rel = path.relative_to(job_root)  # p.ej. "S10_MASTER_FINAL_LIMITS/full_song.wav"
+        # p.ej. "S10_MASTER_FINAL_LIMITS/full_song.wav"
+        rel = path.relative_to(job_root)
     except ValueError:
         # No cuelga de job_root
         return ""
 
-    # Asumimos que en server.py montas StaticFiles en /files apuntando a PROJECT_ROOT/temp
+    # En server.py montas StaticFiles en /files apuntando a PROJECT_ROOT/temp
     # de forma que: /files/<job_id>/... -> temp/<job_id>/...
     return f"/files/{job_id}/{rel.as_posix()}"
 
@@ -415,38 +263,32 @@ def run_full_pipeline_task(
         stage_index: int,
         total_stages: int,
         stage_key: str,
-        message: str,   # lo seguimos aceptando pero ya no lo usamos para el UI
+        message: str,
     ) -> None:
         # Actualizar estado interno
         progress_state["stage_index"] = stage_index
         progress_state["total_stages"] = total_stages
         progress_state["stage_key"] = stage_key
-        progress_state["message"] = message  # opcional para logs internos
+        progress_state["message"] = message  # genérico, el UI hará el formateo
 
         if total_stages <= 0:
             progress_val = 0.0
         else:
             progress_val = float(stage_index) / float(total_stages) * 100.0
 
-        # Nuevo mensaje “bonito” para el frontend
-        ui_message = _format_stage_message(
-            stage_index=stage_index,
-            total_stages=total_stages,
-            stage_key=stage_key,
-            progress_val=progress_val,
-        )
-
         meta = {
             "jobId": job_id,
             "stage_index": stage_index,
             "total_stages": total_stages,
             "stage_key": stage_key,
-            "message": ui_message,
+            "message": message,
             "progress": progress_val,
         }
 
+        # Estado en Celery (opcional)
         self.update_state(state="PROGRESS", meta=meta)
 
+        # Estado persistido para el frontend (server.py -> /jobs/{job_id})
         status = {
             "jobId": job_id,
             "job_id": job_id,
@@ -454,11 +296,10 @@ def run_full_pipeline_task(
             "stage_index": stage_index,
             "total_stages": total_stages,
             "stage_key": stage_key,
-            "message": ui_message,   # aquí es lo que le llegará al frontend
+            "message": message,
             "progress": progress_val,
         }
         _write_job_status(job_root_path, status)
-
 
     # ---------------------------
     # 1) Ejecutar pipeline
