@@ -19,7 +19,7 @@ def _load_analysis(contract_id: str) -> Dict[str, Any]:
     Carga el JSON de análisis:
         <PROJECT_ROOT>/temp/<contract_id>/analysis_<contract_id>.json
     """
-    get_temp_dir(contract_id, create=False)
+    temp_dir = get_temp_dir(contract_id, create=False)
     analysis_path = temp_dir / f"analysis_{contract_id}.json"
 
     if not analysis_path.exists():
