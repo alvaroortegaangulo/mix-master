@@ -36,7 +36,7 @@ services:
 
   frontend:
     build:
-      context: ../../frontend
+      context: ../frontend
       dockerfile: Dockerfile
     command: npm run start -- -p 3000
     environment:
