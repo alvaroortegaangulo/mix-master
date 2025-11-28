@@ -1,42 +1,73 @@
-# C:\mix-master\backend\src\utils\resonance_utils.py
-
 from __future__ import annotations
 
-from typing import List, Dict, Any
+from typing import List, Dict
 
 import numpy as np
 from scipy.signal import lfilter
 
 
+# ---------------------------------------------------------------------
+# Espectro de magnitud optimizado
+# ---------------------------------------------------------------------
+
+
 def compute_magnitude_spectrum(
     y: np.ndarray,
     sr: int,
+    max_duration_s: float = 60.0,
+    target_max_sr: float = 24000.0,
 ) -> tuple[np.ndarray, np.ndarray]:
     """
-    Calcula el espectro de magnitud (FFT de todo el clip).
+    Calcula el espectro de magnitud (FFT de todo el clip), con optimizaciones:
+
+    - Convierte a mono.
+    - Recorta a como máximo `max_duration_s` segundos.
+    - Opcionalmente decima la señal si sr > target_max_sr para reducir NFFT.
 
     Devuelve:
       - freqs: frecuencias de cada bin (rfft).
       - mag_lin: magnitud lineal por bin.
     """
-    if not isinstance(y, np.ndarray):
-        y = np.asarray(y, dtype=np.float32)
-    else:
-        y = y.astype(np.float32)
+    arr = np.asarray(y, dtype=np.float32)
 
-    if y.ndim > 1:
-        y_mono = np.mean(y, axis=1)
+    # Mono
+    if arr.ndim > 1:
+        y_mono = np.mean(arr, axis=1)
     else:
-        y_mono = y
+        y_mono = arr
+
+    if y_mono.size == 0:
+        return np.array([], dtype=np.float32), np.array([], dtype=np.float32)
+
+    # 1) Recorte en tiempo
+    if max_duration_s is not None and max_duration_s > 0.0:
+        max_samples = int(max_duration_s * sr)
+        if y_mono.size > max_samples:
+            y_mono = y_mono[:max_samples]
+
+    # 2) Decimación simple para limitar samplerate efectivo
+    sr_eff = float(sr)
+    if target_max_sr is not None and target_max_sr > 0.0 and sr_eff > target_max_sr:
+        # factor mínimo para dejar sr_eff <= target_max_sr
+        decim_factor = int(sr_eff // target_max_sr)
+        if decim_factor > 1:
+            y_mono = y_mono[::decim_factor]
+            sr_eff = sr_eff / decim_factor
 
     n = y_mono.shape[0]
     if n == 0:
         return np.array([], dtype=np.float32), np.array([], dtype=np.float32)
 
     Y = np.fft.rfft(y_mono)
-    mag_lin = np.abs(Y)
-    freqs = np.fft.rfftfreq(n, d=1.0 / float(sr))
+    mag_lin = np.abs(Y).astype(np.float32)
+    freqs = np.fft.rfftfreq(n, d=1.0 / sr_eff).astype(np.float32)
+
     return freqs, mag_lin
+
+
+# ---------------------------------------------------------------------
+# Detección de resonancias optimizada (vectorizada)
+# ---------------------------------------------------------------------
 
 
 def detect_resonances(
@@ -50,7 +81,12 @@ def detect_resonances(
 ) -> List[Dict[str, float]]:
     """
     Detecta resonancias como bins cuya magnitud está por encima de la media local
-    (en un vecindario en frecuencia) más 'threshold_db'.
+    (en dB) más 'threshold_db'.
+
+    Implementación optimizada:
+      - Trabaja sobre un slice [fmin, fmax].
+      - Calcula una media móvil en dB mediante convolución NumPy (vectorizado).
+      - Agrupa bins contiguos en “picos” y se queda con el más severo.
 
     Devuelve lista de dicts:
       { "freq_hz": float, "gain_above_local_db": float }
@@ -64,135 +100,91 @@ def detect_resonances(
     # Acotamos rango de interés
     fmin = max(fmin, float(freqs[0]))
     fmax = min(fmax, float(freqs[-1]))
+    if fmax <= fmin:
+        return []
 
     idx_lo = int(np.searchsorted(freqs, fmin, side="left"))
     idx_hi = int(np.searchsorted(freqs, fmax, side="right") - 1)
-
     if idx_hi <= idx_lo:
         return []
 
-    # Resolución en frecuencia
-    if freqs.size > 1:
-        df = float(freqs[1] - freqs[0])
+    freqs_slice = freqs[idx_lo : idx_hi + 1]
+    mag_slice = mag_lin[idx_lo : idx_hi + 1]
+
+    if freqs_slice.size < 3:
+        return []
+
+    # Magnitud en dB
+    eps = 1e-12
+    mag_db = (20.0 * np.log10(mag_slice + eps)).astype(np.float32)
+
+    # Resolución en frecuencia y tamaño de ventana local
+    if freqs_slice.size > 1:
+        df = float(freqs_slice[1] - freqs_slice[0])
     else:
         df = 1.0
 
     window_bins = max(3, int(round(local_window_hz / df)))
-    half = window_bins // 2
+    n_bins = mag_db.size
 
-    candidates: list[tuple[int, float, float]] = []
+    if window_bins >= n_bins:
+        window_bins = max(3, n_bins // 2)
 
-    for i in range(idx_lo, idx_hi + 1):
-        start = max(idx_lo, i - half)
-        end = min(idx_hi, i + half)
-        if end <= start:
-            continue
-
-        region = mag_lin[start : end + 1].copy()
-        if region.size < 3:
-            continue
-
-        j_self = i - start
-        # Excluimos el propio bin del cálculo local
-        region[j_self] = 0.0
-
-        if np.all(region <= 0.0):
-            continue
-
-        local_lin = float(np.sqrt(np.mean(region**2)))
-        peak_lin = float(mag_lin[i])
-
-        if peak_lin <= 0.0 or local_lin <= 0.0:
-            continue
-
-        peak_db = 20.0 * np.log10(peak_lin)
-        local_db = 20.0 * np.log10(local_lin)
-        diff_db = peak_db - local_db
-
-        if diff_db >= threshold_db:
-            candidates.append((i, float(freqs[i]), float(diff_db)))
-
-    if not candidates:
+    if window_bins < 3 or n_bins < 3:
         return []
 
-    # Agrupar bins contiguos en "picos"
-    candidates.sort(key=lambda x: x[0])
-    groups: list[list[tuple[int, float, float]]] = []
-    current_group = [candidates[0]]
-    for c in candidates[1:]:
-        if c[0] == current_group[-1][0] + 1:
-            current_group.append(c)
+    # Media móvil en dB (vectorizada)
+    kernel = np.ones(window_bins, dtype=np.float32) / float(window_bins)
+    local_mean_db = np.convolve(mag_db, kernel, mode="same")
+
+    diff_db = mag_db - local_mean_db
+
+    # Candidatos donde estamos por encima del umbral
+    mask = diff_db >= float(threshold_db)
+    idx_candidates = np.nonzero(mask)[0]
+    if idx_candidates.size == 0:
+        return []
+
+    # Agrupar índices contiguos en grupos
+    groups: list[list[int]] = []
+    current_group = [int(idx_candidates[0])]
+    for idx in idx_candidates[1:]:
+        idx = int(idx)
+        if idx == current_group[-1] + 1:
+            current_group.append(idx)
         else:
             groups.append(current_group)
-            current_group = [c]
+            current_group = [idx]
     groups.append(current_group)
 
+    # Para cada grupo, nos quedamos con el bin con mayor diff_db
     resonances: List[Dict[str, float]] = []
-    for group in groups:
-        # Nos quedamos con el bin más "resonante" del grupo
-        best = max(group, key=lambda x: x[2])  # diff_db
-        _, f0, diff = best
+    for g in groups:
+        g_arr = np.array(g, dtype=int)
+        best_local_pos = int(np.argmax(diff_db[g_arr]))
+        best_idx = g_arr[best_local_pos]
+
+        f0 = float(freqs_slice[best_idx])
+        diff = float(diff_db[best_idx])
+
         resonances.append(
-            {"freq_hz": float(f0), "gain_above_local_db": float(diff)}
+            {
+                "freq_hz": f0,
+                "gain_above_local_db": diff,
+            }
         )
 
-    # Ordenar por severidad descendente
+    # Ordenar por severidad descendente y limitar nº de resonancias
     resonances.sort(key=lambda r: r["gain_above_local_db"], reverse=True)
-
     if max_resonances is not None and len(resonances) > max_resonances:
         resonances = resonances[:max_resonances]
 
     return resonances
 
 
-def _apply_resonance_cuts_mono(
-    y: np.ndarray,
-    sr: int,
-    notches: List[Dict[str, float]],
-) -> np.ndarray:
-    """
-    Aplica notches en dominio de frecuencia (FFT) sobre señal mono.
-
-    Cada notch:
-      - {"freq_hz": f0, "cut_db": cut_db}
-
-    Sólo hace cortes (attenuación <= 1.0), nunca boosts.
-    """
-    y = np.asarray(y, dtype=np.float32)
-    n = y.shape[0]
-    if n == 0 or not notches:
-        return y
-
-    Y = np.fft.rfft(y)
-    freqs = np.fft.rfftfreq(n, d=1.0 / float(sr))
-    atten = np.ones_like(freqs, dtype=np.float32)
-
-    nyq = sr / 2.0
-
-    for notch in notches:
-        f0 = float(notch.get("freq_hz", 0.0))
-        cut_db = float(notch.get("cut_db", 0.0))
-
-        if cut_db <= 0.0 or f0 <= 0.0 or f0 >= nyq:
-            continue
-
-        # Q objetivo aproximado
-        Q = 10.0
-        bandwidth_hz = max(20.0, f0 / Q)
-        sigma_hz = bandwidth_hz / 3.0
-        if sigma_hz <= 0.0:
-            continue
-
-        g = 10.0 ** (-cut_db / 20.0)  # ganancia en el centro (< 1)
-
-        # Gaussiana en frecuencia
-        w = np.exp(-0.5 * ((freqs - f0) / sigma_hz) ** 2)
-        # En el pico, factor g; fuera, ~1
-        atten *= (1.0 - w * (1.0 - g))
-
-    Y_filt = Y * atten
-    y_out = np.fft.irfft(Y_filt, n=n).astype(np.float32)
-    return y_out
+# ---------------------------------------------------------------------
+# Aplicación de notches (peaking EQ en dominio temporal)
+# ---------------------------------------------------------------------
 
 
 def _design_peaking_eq_biquad(
@@ -251,6 +243,9 @@ def _apply_resonance_cuts_mono(
     x = np.asarray(y, dtype=np.float32)
     if x.ndim != 1:
         x = x.reshape(-1)
+
+    if x.size == 0 or not notches:
+        return x
 
     # Trabajamos internamente en float64 por estabilidad numérica
     out = x.astype(np.float64)

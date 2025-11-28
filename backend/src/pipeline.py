@@ -144,14 +144,8 @@ def run_pipeline_for_job(
       - Copia S0_MIX_ORIGINAL -> S0_SESSION_FORMAT.
       - Recorre los contratos definidos en contracts.json en orden.
       - Opcionalmente filtra por enabled_stage_keys (lista de contract_ids).
-      - Después de cada contrato, llama a progress_cb(stage_index, total_stages, stage_key, message).
-
-    Notas:
-      - La resolución de directorios temp/<job_id>/<contract_id> se hace vía
-        get_temp_dir(contract_id), que usa la variable de entorno MIX_JOB_ID
-        que la tarea Celery ya ha definido.
-      - profiles_by_name se conserva por si quieres integrarlo en tus scripts
-        (leyendo temp/<job_id>/work/stem_profiles.json, etc.).
+      - Antes de ejecutar cada contrato llama a progress_cb(stage_index, total_stages, stage_key, message)
+        indicando el stage que está EN PROGRESO.
     """
     base_dir = Path(__file__).resolve().parent      # .../src
 
@@ -231,7 +225,7 @@ def run_pipeline_for_job(
         )
         return
 
-    # Callback inicial de progreso (stage_index = 0)
+    # Callback inicial de progreso (antes de cualquier stage)
     if progress_cb is not None:
         progress_cb(
             0,
@@ -251,16 +245,19 @@ def run_pipeline_for_job(
             total_stages,
         )
 
-        # Ejecuta análisis, stage y check con reintentos, y copia al siguiente contrato
-        run_stage(contract_id)
-
+        # Avisamos ANTES de ejecutar el stage para que el frontend
+        # muestre el stage que está EN PROGRESO.
         if progress_cb is not None:
             progress_cb(
                 idx,
                 total_stages,
                 contract_id,
-                f"Stage {contract_id} completado.",
+                f"Running stage {contract_id}...",
             )
+
+        # Ejecuta análisis, stage y check con reintentos, copia al siguiente contrato, etc.
+        run_stage(contract_id)
+
 
 
 if __name__ == "__main__":
