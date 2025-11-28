@@ -84,7 +84,8 @@ def _build_pipeline_stages() -> list[dict[str, Any]]:
     index          -> orden global 1..N según contracts.json
     mediaSubdir    -> None (de momento no lo usamos)
     updatesCurrentDir -> True
-    previewMixRelPath -> None (podríamos usar /<contract_id>/full_song.wav más adelante)
+    previewMixRelPath -> ruta relativa al job_root donde está el full_song
+                         de ese contrato: "/<CONTRACT_ID>/full_song.wav"
     """
     contracts = _load_contracts()
     stages_cfg = contracts.get("stages", {}) or {}
@@ -104,6 +105,12 @@ def _build_pipeline_stages() -> list[dict[str, Any]]:
 
             idx += 1
 
+            # Asumimos que para cada contrato existe un bounce en:
+            #   temp/<job_id>/<CONTRACT_ID>/full_song.wav
+            # y lo exponemos como:
+            #   /files/<job_id>/<CONTRACT_ID>/full_song.wav
+            preview_rel_path = f"/{contract_id}/full_song.wav"
+
             result.append(
                 {
                     "key": contract_id,        # lo que el frontend enviará como enabledStageKeys
@@ -112,11 +119,12 @@ def _build_pipeline_stages() -> list[dict[str, Any]]:
                     "index": idx,              # orden global
                     "mediaSubdir": None,
                     "updatesCurrentDir": True,
-                    "previewMixRelPath": None,
+                    "previewMixRelPath": preview_rel_path,
                 }
             )
 
     return result
+
 
 
 def _write_initial_job_status(job_id: str, temp_root: Path) -> None:
