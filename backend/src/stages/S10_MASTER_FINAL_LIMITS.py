@@ -18,7 +18,7 @@ from concurrent.futures import ProcessPoolExecutor  # noqa: E402
 import numpy as np  # noqa: E402
 import soundfile as sf  # noqa: E402
 
-from utils.analysis_utils import PROJECT_ROOT  # noqa: E402
+from utils.analysis_utils import get_temp_dir
 from utils.loudness_utils import compute_lufs_and_lra  # noqa: E402
 from utils.color_utils import compute_true_peak_dbfs  # noqa: E402
 from utils.mastering_profiles_utils import get_mastering_profile  # noqa: E402
@@ -28,7 +28,7 @@ def load_analysis(contract_id: str) -> Dict[str, Any]:
     """
     Carga el JSON de análisis generado por analysis\\S10_MASTER_FINAL_LIMITS.py.
     """
-    temp_dir = PROJECT_ROOT / "temp" / contract_id
+    temp_dir = get_temp_dir(contract_id, create=False)
     analysis_path = temp_dir / f"analysis_{contract_id}.json"
 
     if not analysis_path.exists():

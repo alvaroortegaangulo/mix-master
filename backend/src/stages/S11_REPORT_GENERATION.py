@@ -13,7 +13,7 @@ SRC_DIR = THIS_DIR.parent  # .../src
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-from utils.analysis_utils import PROJECT_ROOT  # noqa: E402
+from utils.analysis_utils import get_temp_dir
 
 
 def main() -> None:
@@ -29,7 +29,7 @@ def main() -> None:
 
     contract_id = sys.argv[1]  # "S11_REPORT_GENERATION"
 
-    temp_dir = PROJECT_ROOT / "temp" / contract_id
+    temp_dir = get_temp_dir(contract_id, create=False)
     analysis_path = temp_dir / f"analysis_{contract_id}.json"
 
     if not analysis_path.exists():

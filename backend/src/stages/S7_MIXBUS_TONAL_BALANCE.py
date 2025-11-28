@@ -18,7 +18,7 @@ import json  # noqa: E402
 import numpy as np  # noqa: E402
 import soundfile as sf  # noqa: E402
 
-from utils.analysis_utils import PROJECT_ROOT  # noqa: E402
+from utils.analysis_utils import get_temp_dir
 from utils.tonal_balance_utils import (  # noqa: E402
     get_freq_bands,
     compute_band_energies,
@@ -31,7 +31,7 @@ def load_analysis(contract_id: str) -> Dict[str, Any]:
     """
     Carga el JSON de análisis generado por analysis\\S7_MIXBUS_TONAL_BALANCE.py.
     """
-    temp_dir = PROJECT_ROOT / "temp" / contract_id
+    temp_dir = get_temp_dir(contract_id, create=False)
     analysis_path = temp_dir / f"analysis_{contract_id}.json"
 
     if not analysis_path.exists():

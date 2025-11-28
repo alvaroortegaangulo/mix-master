@@ -16,14 +16,14 @@ import json  # noqa: E402
 import os  # noqa: E402
 from concurrent.futures import ProcessPoolExecutor  # noqa: E402
 
-from utils.analysis_utils import PROJECT_ROOT  # noqa: E402
+from utils.analysis_utils import get_temp_dir
 
 
 def load_analysis(contract_id: str) -> Dict[str, Any]:
     """
     Carga el JSON de análisis generado por analysis\\S1_KEY_DETECTION.py.
     """
-    temp_dir = PROJECT_ROOT / "temp" / contract_id
+    temp_dir = get_temp_dir(contract_id, create=False)
     analysis_path = temp_dir / f"analysis_{contract_id}.json"
 
     if not analysis_path.exists():

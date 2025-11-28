@@ -15,7 +15,7 @@ from concurrent.futures import ProcessPoolExecutor
 import numpy as np
 import soundfile as sf
 
-from utils.analysis_utils import PROJECT_ROOT
+from utils.analysis_utils import get_temp_dir
 
 
 def load_analysis(contract_id: str) -> Dict[str, Any]:
@@ -24,7 +24,7 @@ def load_analysis(contract_id: str) -> Dict[str, Any]:
     Ruta esperada:
         <PROJECT_ROOT>/temp/<contract_id>/analysis_<contract_id>.json
     """
-    temp_dir = PROJECT_ROOT / "temp" / contract_id
+    temp_dir = get_temp_dir(contract_id, create=False)
     analysis_path = temp_dir / f"analysis_{contract_id}.json"
 
     if not analysis_path.exists():

@@ -11,16 +11,15 @@ SRC_DIR = THIS_DIR.parent                          # .../src
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-from utils.analysis_utils import PROJECT_ROOT  # noqa: E402
 from utils.profiles_utils import get_instrument_profile  # noqa: E402
-
+from utils.analysis_utils import get_temp_dir
 
 def _load_analysis(contract_id: str) -> Dict[str, Any]:
     """
     Carga el JSON de análisis:
         <PROJECT_ROOT>/temp/<contract_id>/analysis_<contract_id>.json
     """
-    temp_dir = PROJECT_ROOT / "temp" / contract_id
+    get_temp_dir(contract_id, create=False)
     analysis_path = temp_dir / f"analysis_{contract_id}.json"
 
     if not analysis_path.exists():
