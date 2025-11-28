@@ -71,12 +71,12 @@ def run_stage(stage_id: str) -> None:
     resultado = "éxito" if success else "fracaso"
     print(f"Resultado {stage_id}: {resultado}")
 
-    if success:
-        _run_python_script(mixdown_script, stage_id)
 
-        next_contract_id = _get_next_contract_id(base_dir, stage_id)
-        if next_contract_id is not None:
-            _run_python_script(copy_script, stage_id, next_contract_id)
+    _run_python_script(mixdown_script, stage_id)
+
+    next_contract_id = _get_next_contract_id(base_dir, stage_id)
+    if next_contract_id is not None:
+        _run_python_script(copy_script, stage_id, next_contract_id)
 
 
 if __name__ == "__main__":
