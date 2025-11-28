@@ -259,7 +259,7 @@ def main() -> None:
     )
     style_lufs_tolerance = float(session.get("style_lufs_tolerance", 0.5))
 
-    temp_dir = PROJECT_ROOT / "temp" / contract_id
+    temp_dir = get_temp_dir(contract_id, create=False)
     full_song_path = temp_dir / "full_song.wav"
 
     if not full_song_path.exists():

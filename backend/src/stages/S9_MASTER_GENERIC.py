@@ -305,7 +305,7 @@ def main() -> None:
         or m_profile.get("target_ms_width_factor", 1.0)
     )
 
-    temp_dir = PROJECT_ROOT / "temp" / contract_id
+    temp_dir = get_temp_dir(contract_id, create=False)
     full_song_path = temp_dir / "full_song.wav"
 
     if not full_song_path.exists():

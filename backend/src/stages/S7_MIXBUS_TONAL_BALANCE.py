@@ -166,7 +166,7 @@ def main() -> None:
     max_tonal_error_db = float(metrics.get("max_tonal_balance_error_db", 3.0))
     max_eq_change_db = float(limits.get("max_eq_change_db_per_band_per_pass", 1.5))
 
-    temp_dir = PROJECT_ROOT / "temp" / contract_id
+    temp_dir = get_temp_dir(contract_id, create=False)
     full_song_path = temp_dir / "full_song.wav"
 
     if not full_song_path.exists():

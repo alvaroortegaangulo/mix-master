@@ -232,7 +232,7 @@ def main() -> None:
     max_thd_percent = float(metrics.get("max_thd_percent", 3.0))
     max_sat_per_pass_db = float(limits.get("max_additional_saturation_per_pass", 1.0))
 
-    temp_dir = PROJECT_ROOT / "temp" / contract_id
+    temp_dir = get_temp_dir(contract_id, create=False)
     full_song_path = temp_dir / "full_song.wav"
 
     if not full_song_path.exists():

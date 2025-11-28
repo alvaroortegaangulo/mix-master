@@ -186,7 +186,7 @@ def main() -> None:
 
     dry_lufs = float(session.get("dry_mix_lufs", float("-inf")))
 
-    temp_dir = PROJECT_ROOT / "temp" / contract_id
+    temp_dir = get_temp_dir(contract_id, create=False)
     full_song_path = temp_dir / "full_song.wav"
 
     sr_ref: Optional[int] = None

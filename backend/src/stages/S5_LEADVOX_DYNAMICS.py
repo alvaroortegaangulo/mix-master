@@ -219,7 +219,7 @@ def main() -> None:
     RELEASE_MS = 100.0
     MAKEUP_DB = 0.0  # de momento no hacemos maquillaje (automatización global = 0 dB)
 
-    temp_dir = PROJECT_ROOT / "temp" / contract_id
+    temp_dir = get_temp_dir(contract_id, create=False)
 
     # ------------------------------------------------------------------
     # 1) Preparar tareas para stems de lead vocal que realmente necesiten compresión
@@ -350,7 +350,7 @@ def main() -> None:
     # ------------------------------------------------------------------
     # 3) Guardar métricas de dinámica para el futuro check
     # ------------------------------------------------------------------
-    temp_dir = PROJECT_ROOT / "temp" / contract_id
+    temp_dir = get_temp_dir(contract_id, create=False)
     metrics_path = temp_dir / "leadvox_dynamics_metrics_S5_LEADVOX_DYNAMICS.json"
     with metrics_path.open("w", encoding="utf-8") as f:
         json.dump(

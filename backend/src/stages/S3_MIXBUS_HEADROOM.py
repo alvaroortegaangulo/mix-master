@@ -114,7 +114,7 @@ def _apply_gain_to_stem_worker(args: Tuple[str, str, float]) -> Tuple[str, bool]
     if not fname:
         return fname, False
 
-    temp_dir = PROJECT_ROOT / "temp" / contract_id
+    temp_dir = get_temp_dir(contract_id, create=False)
     path = temp_dir / fname
 
     if not path.exists():

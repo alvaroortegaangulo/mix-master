@@ -9,13 +9,11 @@ import uuid
 from pathlib import Path
 from typing import List, Dict, Optional, Any
 
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException
+from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from celery.result import AsyncResult
 from celery import states
-
 from celery_app import celery_app
 from tasks import run_full_pipeline_task
 
@@ -39,12 +37,12 @@ CONTRACTS_PATH = SRC_DIR / "struct" / "contracts.json"
 JOBS_ROOT = PROJECT_ROOT / "temp"
 
 # Exponer /files/{jobId}/... -> backend/temp/{jobId}/...
+JOBS_ROOT.mkdir(parents=True, exist_ok=True)
 app.mount(
     "/files",
     StaticFiles(directory=JOBS_ROOT, html=False),
     name="files",
 )
-
 
 # -------------------------------------------------------------------
 # Helpers
@@ -77,95 +75,22 @@ def _load_contracts() -> Dict[str, Any]:
         return json.load(f)
 
 
-def _get_ordered_contract_ids(enabled_contract_ids: Optional[List[str]] = None) -> List[str]:
-    """
-    Devuelve la lista de contract_id en el orden definido en contracts.json.
-    Si enabled_contract_ids no es None, filtra por esa lista.
-    """
-    contracts = _load_contracts()
-    stages = contracts.get("stages", {}) or {}
-
-    ordered: List[str] = []
-    for _stage_group_key, stage_group in stages.items():
-        for c in stage_group.get("contracts", []) or []:
-            cid = c.get("id")
-            if not cid:
-                continue
-            if enabled_contract_ids is not None and cid not in enabled_contract_ids:
-                continue
-            ordered.append(cid)
-
-    return ordered
-
-
-def _build_pipeline_stage_list() -> List[Dict[str, Any]]:
-    """
-    Construye la lista de PipelineStage que el frontend espera, alineada con contracts.json.
-
-    key            -> contract_id (p.ej. "S1_STEM_DC_OFFSET")
-    label          -> contract_id (o lo que quieras enseñar)
-    description    -> texto corto basado en el stage group y target_scope
-    index          -> orden global 1..N según contracts.json
-    mediaSubdir    -> "/<contract_id>" (no se usa ahora mismo en frontend)
-    updatesCurrentDir -> True (todas las etapas actualizan su carpeta)
-    previewMixRelPath -> "/<contract_id>/full_song.wav"
-    """
-    contracts = _load_contracts()
-    stages = contracts.get("stages", {}) or {}
-
-    result: List[Dict[str, Any]] = []
-    idx = 0
-
-    for stage_group_key, stage_group in stages.items():
-        group_name = stage_group.get("name", stage_group_key)
-        for c in stage_group.get("contracts", []) or []:
-            cid = c.get("id")
-            if not cid:
-                continue
-            idx += 1
-
-            target_scope = c.get("target_scope", "")
-            description = f"{group_name} (scope: {target_scope})"
-
-            result.append(
-                {
-                    "key": cid,                         # muy importante: contract_id
-                    "label": cid,                       # puedes refinarlo más adelante
-                    "description": description,
-                    "index": idx,
-                    "mediaSubdir": f"/{cid}",
-                    "updatesCurrentDir": True,
-                    "previewMixRelPath": f"/{cid}/full_song.wav",
-                }
-            )
-
-    return result
-
-
-def _load_job_config(job_id: str) -> Dict[str, Any]:
-    """
-    Lee temp/<job_id>/job_config.json si existe (enabled_stage_keys, perfiles, etc.).
-    """
-    cfg_path = JOBS_ROOT / job_id / "job_config.json"
-    if not cfg_path.exists():
-        return {}
-    try:
-        with cfg_path.open("r", encoding="utf-8") as f:
-            return json.load(f)
-    except Exception as exc:
-        logger.warning("No se pudo leer job_config.json para job_id=%s: %s", job_id, exc)
-        return {}
-
-
 def _build_pipeline_stages() -> list[dict[str, Any]]:
     """
     Lee struct/contracts.json y construye la lista de PipelineStage
     que espera el frontend, en términos de contract_id.
-    """
-    with CONTRACTS_PATH.open("r", encoding="utf-8") as f:
-        contracts = json.load(f)
 
+    key            -> contract_id (p.ej. "S1_STEM_DC_OFFSET")
+    label          -> contract_id (o lo que quieras enseñar)
+    description    -> nombre del grupo (Technical Preparation, etc.)
+    index          -> orden global 1..N según contracts.json
+    mediaSubdir    -> None (de momento no lo usamos)
+    updatesCurrentDir -> True
+    previewMixRelPath -> None (podríamos usar /<contract_id>/full_song.wav más adelante)
+    """
+    contracts = _load_contracts()
     stages_cfg = contracts.get("stages", {}) or {}
+
     result: list[dict[str, Any]] = []
     idx = 0
 
@@ -181,96 +106,18 @@ def _build_pipeline_stages() -> list[dict[str, Any]]:
 
             idx += 1
 
-            # Mapeo mínimo para que coincida con PipelineStage del frontend
             result.append(
                 {
-                    "key": contract_id,               # lo que el frontend enviará como enabledStageKeys
-                    "label": contract_id,             # puedes refinarlo si quieres algo más bonito
-                    "description": group_name,        # nombre del bloque (Technical Preparation, etc.)
-                    "index": idx,                     # orden global
-                    "mediaSubdir": None,              # por ahora sin previews por etapa
-                    "updatesCurrentDir": True,        # todas las etapas actualizan la sesión
-                    "previewMixRelPath": None,        # más adelante: f"{contract_id}/full_song.wav"
+                    "key": contract_id,        # lo que el frontend enviará como enabledStageKeys
+                    "label": contract_id,      # puedes refinarlo si quieres algo más bonito
+                    "description": group_name, # nombre del bloque (Technical Preparation, etc.)
+                    "index": idx,              # orden global
+                    "mediaSubdir": None,
+                    "updatesCurrentDir": True,
+                    "previewMixRelPath": None,
                 }
             )
 
-    return result
-
-
-def _build_final_urls_and_metrics(job_id: str) -> Dict[str, Any]:
-    """
-    Intenta construir:
-      - full_song_url
-      - original_full_song_url
-      - metrics (si existen en el report de S11)
-
-    Todo basado en el sistema de ficheros y analysis_S11_REPORT_GENERATION.json.
-    """
-    job_root = JOBS_ROOT / job_id
-
-    # 1) full_song_url: preferimos S11, luego S10, luego el último contract_id que tenga full_song.wav
-    contracts_all = _get_ordered_contract_ids()
-    full_rel: Optional[str] = None
-
-    # Intentos preferentes
-    preferred = ["S11_REPORT_GENERATION", "S10_MASTER_FINAL_LIMITS"]
-    for cid in preferred:
-        p = job_root / cid / "full_song.wav"
-        if p.exists():
-            full_rel = f"/{cid}/full_song.wav"
-            break
-
-    # Si no están, buscamos el último contract con full_song.wav
-    if full_rel is None:
-        for cid in reversed(contracts_all):
-            p = job_root / cid / "full_song.wav"
-            if p.exists():
-                full_rel = f"/{cid}/full_song.wav"
-                break
-
-    # 2) original_full_song_url: usamos S0_SESSION_FORMAT/full_song.wav si existe
-    orig_rel: Optional[str] = None
-    p_orig = job_root / "S0_SESSION_FORMAT" / "full_song.wav"
-    if p_orig.exists():
-        orig_rel = "/S0_SESSION_FORMAT/full_song.wav"
-
-    # 3) metrics desde analysis_S11_REPORT_GENERATION.json (si existe)
-    metrics: Dict[str, Any] = {}
-    s11_analysis = job_root / "S11_REPORT_GENERATION" / "analysis_S11_REPORT_GENERATION.json"
-    if s11_analysis.exists():
-        try:
-            with s11_analysis.open("r", encoding="utf-8") as f:
-                data = json.load(f)
-            session = data.get("session", {}) or {}
-            report = (session.get("report", {}) or {})
-            final_metrics = report.get("final_metrics", {}) or {}
-
-            # Mapear a la estructura de MixMetrics del frontend.
-            # Usamos defaults razonables; si no existen campos, quedarán en 0 o vacío.
-            metrics = {
-                "final_peak_dbfs": final_metrics.get("final_true_peak_dbfs")
-                or final_metrics.get("final_peak_dbfs")
-                or 0.0,
-                "final_rms_dbfs": final_metrics.get("final_rms_dbfs") or 0.0,
-                "tempo_bpm": final_metrics.get("tempo_bpm") or 0.0,
-                "tempo_confidence": final_metrics.get("tempo_confidence") or 0.0,
-                "key": final_metrics.get("key") or "",
-                "scale": final_metrics.get("scale") or "",
-                "key_strength": final_metrics.get("key_strength") or 0.0,
-                "vocal_shift_min": final_metrics.get("vocal_shift_min") or 0.0,
-                "vocal_shift_max": final_metrics.get("vocal_shift_max") or 0.0,
-                "vocal_shift_mean": final_metrics.get("vocal_shift_mean") or 0.0,
-            }
-        except Exception as exc:
-            logger.warning(
-                "No se pudo leer métricas finales de %s: %s", s11_analysis, exc
-            )
-
-    result: Dict[str, Any] = {
-        "full_song_url": f"/files/{job_id}{full_rel}" if full_rel else "",
-        "original_full_song_url": f"/files/{job_id}{orig_rel}" if orig_rel else "",
-        "metrics": metrics,
-    }
     return result
 
 
@@ -315,6 +162,25 @@ async def mix_tracks(
                 exc,
             )
 
+    # También podemos persistir estilos de space/depth si vienen
+    if space_depth_bus_styles_json:
+        try:
+            parsed = json.loads(space_depth_bus_styles_json)
+            if isinstance(parsed, dict):
+                job_root = temp_root
+                sd_path = job_root / "work" / "space_depth_bus_styles.json"
+                sd_path.parent.mkdir(parents=True, exist_ok=True)
+                sd_path.write_text(
+                    json.dumps(parsed, indent=2, ensure_ascii=False),
+                    encoding="utf-8",
+                )
+        except Exception as exc:
+            logger.warning(
+                "No se pudo parsear space_depth_bus_styles_json=%r: %s",
+                space_depth_bus_styles_json,
+                exc,
+            )
+
     # -----------------------------
     # 2) Guardar los stems en disco
     # -----------------------------
@@ -348,39 +214,10 @@ async def mix_tracks(
             )
 
     # -----------------------------
-    # 3b) Parsear estilos de space/depth (bus -> estilo)
-    # -----------------------------
-    space_depth_bus_styles: Dict[str, str] = {}
-    if space_depth_bus_styles_json:
-        try:
-            parsed = json.loads(space_depth_bus_styles_json)
-            if isinstance(parsed, dict):
-                space_depth_bus_styles = {
-                    str(k): str(v) for k, v in parsed.items()
-                }
-        except Exception as exc:
-            logger.warning(
-                "No se pudo parsear space_depth_bus_styles_json=%r: %s",
-                space_depth_bus_styles_json,
-                exc,
-            )
-
-    # Guardar job_config.json para que /jobs pueda conocer qué contracts se han pedido
-    job_config = {
-        "job_id": job_id,
-        "enabled_stage_keys": enabled_stage_keys,
-        "profiles_by_name": profiles_by_name,
-        "space_depth_bus_styles": space_depth_bus_styles,
-    }
-    cfg_path = temp_root / "job_config.json"
-    cfg_path.write_text(
-        json.dumps(job_config, indent=2, ensure_ascii=False),
-        encoding="utf-8",
-    )
-
-    # -----------------------------
     # 4) Lanzar tarea Celery
     # -----------------------------
+    # IMPORTANTE: usamos task_id = job_id para que frontend y backend
+    # hablen del mismo identificador.
     run_full_pipeline_task.apply_async(
         args=[
             job_id,
@@ -396,54 +233,42 @@ async def mix_tracks(
 
 
 @app.get("/jobs/{job_id}")
-def get_job_status(job_id: str):
+def get_job_status(job_id: str) -> Dict[str, Any]:
     """
-    Devuelve el estado del job en el formato que el frontend espera.
+    Devuelve el estado del job para el frontend.
+
+    Usa run_full_pipeline_task.AsyncResult(job_id) para asegurarse de que
+    se consulta el mismo Celery app/backend que el worker.
     """
-    result = AsyncResult(job_id, app=celery_app)
+    result = run_full_pipeline_task.AsyncResult(job_id)
 
-    if result is None:
-        raise HTTPException(status_code=404, detail="Job not found")
+    state = result.state  # 'PENDING', 'PROGRESS', 'SUCCESS', 'FAILURE', etc.
 
-    job_cfg = _load_job_config(job_id)
-    enabled_stage_keys = job_cfg.get("enabled_stage_keys")
-    if not isinstance(enabled_stage_keys, list):
-        enabled_stage_keys = None
-
-    # nº de contracts totales para este job (filtrando si hace falta)
-    contract_ids = _get_ordered_contract_ids(
-        enabled_contract_ids=enabled_stage_keys
-    )
-    total_stages = len(contract_ids) if contract_ids else 0
-
-    state = result.state
-
-    # PENDING => en cola
+    # Caso 1: todavía no hay info en Redis (pendiente en la cola)
     if state == states.PENDING:
         return {
+            "jobId": job_id,
             "job_id": job_id,
             "status": "pending",
             "stage_index": 0,
-            "total_stages": total_stages,
+            "total_stages": 0,
             "stage_key": "queued",
             "message": "Job pending in queue",
             "progress": 0.0,
         }
 
-    # STARTED / PROGRESS => en ejecución, usamos meta de Celery
-    if state in (states.STARTED, "PROGRESS"):
-        info = result.info or {}
-        stage_index = int(info.get("stage_index") or 0)
-        stage_key = info.get("stage_key") or ""
-        message = info.get("message") or "Processing mix..."
-        progress = float(info.get("progress") or 0.0)
-
-        # Si el worker conoce mejor total_stages, lo usamos
-        meta_total = info.get("total_stages")
-        if isinstance(meta_total, int) and meta_total > 0:
-            total_stages = meta_total
+    # Caso 2: en progreso (nuestro task usa state="PROGRESS")
+    if state in ("PROGRESS", states.STARTED):
+        meta = result.info or {}
+        # meta viene del update_state(state="PROGRESS", meta={...})
+        stage_index = int(meta.get("stage_index", 0))
+        total_stages = int(meta.get("total_stages", 0))
+        stage_key = str(meta.get("stage_key", "running"))
+        message = str(meta.get("message", "Processing mix..."))
+        progress = float(meta.get("progress", 0.0))
 
         return {
+            "jobId": job_id,
             "job_id": job_id,
             "status": "running",
             "stage_index": stage_index,
@@ -453,57 +278,42 @@ def get_job_status(job_id: str):
             "progress": progress,
         }
 
-    # SUCCESS => pipeline terminado. Construimos URLs y métricas.
+    # Caso 3: terminado con éxito
     if state == states.SUCCESS:
-        # Intentamos usar lo que devuelva la tarea, pero tenemos fallback al FS.
-        task_result = result.result or {}
-        # Fallback: construir a partir del sistema de ficheros y S11.
-        fs_info = _build_final_urls_and_metrics(job_id)
+        payload = result.result or {}
+        if not isinstance(payload, dict):
+            payload = {"raw_result": payload}
 
-        full_song_url = task_result.get("full_song_url") or fs_info["full_song_url"]
-        original_full_song_url = (
-            task_result.get("original_full_song_url")
-            or fs_info["original_full_song_url"]
-        )
-        metrics = task_result.get("metrics") or fs_info["metrics"]
+        # Compatibilidad con el frontend (usa jobId/job_id y status)
+        payload.setdefault("jobId", job_id)
+        payload.setdefault("job_id", job_id)
+        payload.setdefault("status", "success")
 
-        return {
-            "job_id": job_id,
-            "status": "success",
-            "stage_index": total_stages,
-            "total_stages": total_stages,
-            "stage_key": "finished",
-            "message": "Mix finished",
-            "progress": 100.0,
-            "full_song_url": full_song_url,
-            "original_full_song_url": original_full_song_url,
-            "metrics": metrics,
-        }
+        # Aseguramos que existen métricas, aunque sea dict vacío
+        metrics = payload.get("metrics") or {}
+        payload["metrics"] = metrics
 
-    # FAILURE / REVOKED => error
-    if state in (states.FAILURE, states.REVOKED):
-        error_msg = str(result.info) if result.info else "Unknown error"
-        return {
-            "job_id": job_id,
-            "status": "failure",
-            "stage_index": 0,
-            "total_stages": total_stages,
-            "stage_key": "error",
-            "message": error_msg,
-            "progress": 0.0,
-            "error": error_msg,
-        }
+        return payload
 
-    # Otros estados raros
+    # Caso 4: fallo o estado terminal raro
+    info = result.info
+    if isinstance(info, Exception):
+        error_msg = f"{type(info).__name__}: {info}"
+    elif isinstance(info, dict):
+        error_msg = info.get("exc_message") or str(info)
+    else:
+        error_msg = str(info)
+
     return {
+        "jobId": job_id,
         "job_id": job_id,
         "status": "failure",
         "stage_index": 0,
-        "total_stages": total_stages,
-        "stage_key": "unknown",
-        "message": f"Estado Celery desconocido: {state}",
+        "total_stages": 0,
+        "stage_key": "error",
+        "message": error_msg or "Error while processing mix",
         "progress": 0.0,
-        "error": f"Estado Celery desconocido: {state}",
+        "error": error_msg or None,
     }
 
 
@@ -520,16 +330,6 @@ async def cleanup_temp():
         dir_path.mkdir(parents=True, exist_ok=True)
 
     return {"status": "ok"}
-
-
-@app.get("/pipeline/stages")
-def get_pipeline_stages():
-    """
-    Devuelve la lista de contratos en orden, para que el frontend
-    seleccione/des-seleccione directamente por contract_id.
-    """
-    stages = _build_pipeline_stage_list()
-    return stages
 
 
 @app.get("/pipeline/stages")

@@ -128,7 +128,7 @@ def main() -> None:
     # Umbral mínimo para no mover más si ya está prácticamente alineado
     MIN_SHIFT_MS = 0.1
 
-    temp_dir = PROJECT_ROOT / "temp" / contract_id
+    temp_dir = get_temp_dir(contract_id, create=False)
 
     # Preparamos lista de stems candidatos (familia Drums no referencia)
     candidate_stems: List[Dict[str, Any]] = [

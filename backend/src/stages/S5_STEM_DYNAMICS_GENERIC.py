@@ -209,7 +209,7 @@ def main() -> None:
     ATTACK_MS = min(max(ATTACK_MS, min_attack_ms), max_attack_ms)
     RELEASE_MS = min(max(RELEASE_MS, min_release_ms), max_release_ms)
 
-    temp_dir = PROJECT_ROOT / "temp" / contract_id
+    temp_dir = get_temp_dir(contract_id, create=False)
 
     # ------------------------------------------------------------------
     # 1) Preparar tareas para ProcessPoolExecutor

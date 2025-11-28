@@ -153,7 +153,7 @@ def main() -> None:
     crest_max = float(metrics.get("target_crest_factor_db_max", 10.0))
     max_avg_gr = float(limits.get("max_average_gain_reduction_db", 3.0))
 
-    temp_dir = PROJECT_ROOT / "temp" / contract_id
+    temp_dir = get_temp_dir(contract_id, create=False)
 
     # Parámetros de compresión típicos de bus de drums
     RATIO = 3.0

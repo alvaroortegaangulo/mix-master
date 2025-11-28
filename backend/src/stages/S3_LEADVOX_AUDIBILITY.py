@@ -162,7 +162,7 @@ def main() -> None:
 
     gain_lin = float(10.0 ** (gain_db / 20.0))
 
-    temp_dir = PROJECT_ROOT / "temp" / contract_id
+    temp_dir = get_temp_dir(contract_id, create=False)
 
     # Filtramos solo stems de lead vocal
     lead_stems: List[Dict[str, Any]] = [

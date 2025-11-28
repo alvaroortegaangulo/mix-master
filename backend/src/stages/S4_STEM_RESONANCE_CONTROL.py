@@ -182,7 +182,7 @@ def main() -> None:
     max_cuts_db = float(limits.get("max_resonant_cuts_db", 8.0))
     max_filters_per_band = int(limits.get("max_resonant_filters_per_band", 3))
 
-    temp_dir = PROJECT_ROOT / "temp" / contract_id
+    temp_dir = get_temp_dir(contract_id, create=False)
     temp_dir_str = str(temp_dir)
 
     # Preparar tareas solo para stems que tengan notches efectivos
