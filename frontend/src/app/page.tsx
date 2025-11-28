@@ -194,32 +194,42 @@ const STAGE_UI_INFO: Record<string, StageUiInfo> = {
 
 function mapStemProfileToBusKey(profile: string): string {
   switch (profile) {
-    case "drums":
+    case "Kick":
+    case "Snare":
       return "drums";
-    case "percussion":
+
+    case "Percussion":
       return "percussion";
-    case "bass":
+
+    case "Bass_Electric":
       return "bass";
-    case "acoustic_guitar":
-    case "electric_guitar":
+
+    case "Acoustic_Guitar":
+    case "Electric_Guitar_Rhythm":
       return "guitars";
-    case "keys":
-    case "synth":
+
+    case "Keys_Piano":
+    case "Synth_Pads":
       return "keys_synths";
-    case "lead_vocal":
+
+    case "Lead_Vocal_Melodic":
+    case "Lead_Vocal_Rap":
       return "lead_vocal";
-    case "backing_vocals":
-      return "backing_vocals";
-    case "fx":
+
+    case "Backing_Vocals":
+      return "bkg_vocals";
+
+    case "FX_EarCandy":
       return "fx";
-    case "ambience":
+
+    case "Ambience_Atmos":
       return "ambience";
-    case "auto":
-    case "other":
+
     default:
       return "other";
   }
 }
+
 
 export default function HomePage() {
   const [files, setFiles] = useState<File[]>([]);

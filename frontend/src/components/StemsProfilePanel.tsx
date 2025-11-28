@@ -14,20 +14,30 @@ type Props = {
 };
 
 const STEM_PROFILE_OPTIONS: { value: string; label: string }[] = [
-  { value: "auto", label: "Auto" },
-  { value: "drums", label: "Drums" },
-  { value: "percussion", label: "Percussion" },
-  { value: "bass", label: "Bass" },
-  { value: "acoustic_guitar", label: "Acoustic guitar" },
-  { value: "electric_guitar", label: "Electric guitar" },
-  { value: "keys", label: "Keys / Piano" },
-  { value: "synth", label: "Synth / Pads" },
-  { value: "lead_vocal", label: "Lead vocal" },
-  { value: "backing_vocals", label: "Backing vocals" },
-  { value: "fx", label: "FX / Ear candy" },
-  { value: "ambience", label: "Ambience / Atmos" },
-  { value: "other", label: "Other" },
+  { value: "auto", label: "Auto-detect (recommended)" },
+
+  { value: "Kick", label: "Kick (main kick drum)" },
+  { value: "Snare", label: "Snare (main snare)" },
+  { value: "Percussion", label: "Percussion (palmas, bongos, shakers…)" },
+
+  { value: "Bass_Electric", label: "Electric / synth bass" },
+
+  { value: "Acoustic_Guitar", label: "Acoustic guitar (rhythm)" },
+  { value: "Electric_Guitar_Rhythm", label: "Electric guitar (rhythm)" },
+
+  { value: "Keys_Piano", label: "Piano / keys" },
+  { value: "Synth_Pads", label: "Synth pads / textures" },
+
+  { value: "Lead_Vocal_Melodic", label: "Lead vocal (melodic)" },
+  { value: "Lead_Vocal_Rap", label: "Lead vocal (rap / spoken)" },
+  { value: "Backing_Vocals", label: "Backing vocals / doubles" },
+
+  { value: "FX_EarCandy", label: "FX / ear candy" },
+  { value: "Ambience_Atmos", label: "Ambience / atmos" },
+
+  { value: "Other", label: "Other / unclassified" },
 ];
+
 
 export function StemsProfilePanel({ stems, onChangeProfile }: Props) {
   if (!stems.length) return null;

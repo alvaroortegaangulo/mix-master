@@ -171,6 +171,14 @@ def _load_job_status_from_fs(job_id: str) -> Optional[Dict[str, Any]]:
         )
         return None
 
+PROFILES_PATH = SRC_DIR / "struct" / "profiles.json"
+
+def _load_profiles() -> Dict[str, Any]:
+    if not PROFILES_PATH.exists():
+        raise RuntimeError(f"No se encuentra {PROFILES_PATH}")
+    with PROFILES_PATH.open("r", encoding="utf-8") as f:
+        return json.load(f)
+    
 
 # -------------------------------------------------------------------
 # Endpoints
@@ -332,3 +340,35 @@ def get_pipeline_stages() -> list[dict[str, Any]]:
     para que el frontend pueda habilitar/deshabilitar contracts concretos.
     """
     return _build_pipeline_stages()
+
+
+@app.get("/profiles/instruments")
+def get_instrument_profiles() -> List[Dict[str, Any]]:
+    data = _load_profiles()
+    inst = data.get("instrument_profiles", {}) or {}
+    result: List[Dict[str, Any]] = []
+    for pid, cfg in inst.items():
+        result.append(
+            {
+                "id": pid,
+                "family": cfg.get("family", ""),
+                "label": pid.replace("_", " "),
+                "notes": cfg.get("notes", ""),
+            }
+        )
+    return result
+
+@app.get("/profiles/styles")
+def get_style_profiles() -> List[Dict[str, Any]]:
+    data = _load_profiles()
+    styles = data.get("style_profiles", {}) or {}
+    result: List[Dict[str, Any]] = []
+    for sid, cfg in styles.items():
+        result.append(
+            {
+                "id": sid,
+                "label": sid.replace("_", " "),
+                "has_reverb_profiles": bool(cfg.get("reverb_profile_by_bus")),
+            }
+        )
+    return result

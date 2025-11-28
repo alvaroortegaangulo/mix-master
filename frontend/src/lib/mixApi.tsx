@@ -49,6 +49,20 @@ export type SpaceDepthBusStylesPayload = {
 };
 
 
+export type InstrumentProfileDef = {
+  id: string;
+  family: string;
+  label: string;
+  notes: string;
+};
+
+export type StyleProfileDef = {
+  id: string;
+  label: string;
+  has_reverb_profiles: boolean;
+};
+
+
 export function getBackendBaseUrl(): string {
   // 1) Si se ha configurado explícitamente, usamos esa URL (opcional)
   const fromEnv = process.env.NEXT_PUBLIC_BACKEND_URL?.trim();
@@ -284,3 +298,18 @@ export async function fetchPipelineStages(): Promise<PipelineStage[]> {
   return data.sort((a, b) => a.index - b.index);
 }
 
+
+
+export async function fetchInstrumentProfiles(): Promise<InstrumentProfileDef[]> {
+  const base = getBackendBaseUrl();
+  const res = await fetch(`${base}/profiles/instruments`);
+  if (!res.ok) throw new Error("Error fetching instrument profiles");
+  return (await res.json()) as InstrumentProfileDef[];
+}
+
+export async function fetchStyleProfiles(): Promise<StyleProfileDef[]> {
+  const base = getBackendBaseUrl();
+  const res = await fetch(`${base}/profiles/styles`);
+  if (!res.ok) throw new Error("Error fetching style profiles");
+  return (await res.json()) as StyleProfileDef[];
+}

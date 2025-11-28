@@ -21,15 +21,14 @@ type Props = {
 };
 
 const STYLE_OPTIONS: { value: string; label: string }[] = [
-  { value: "auto", label: "Auto (según material)" },
-  { value: "flamenco_rumba", label: "Flamenco / Rumba" },
-  { value: "urban_trap", label: "Urbano / Trap / Hip-hop" },
-  { value: "rock", label: "Rock / Pop-rock" },
-  { value: "latin_pop", label: "Latin pop / Reggaeton" },
-  { value: "edm", label: "EDM / Club" },
-  { value: "ballad_ambient", label: "Balada / Ambient" },
-  { value: "acoustic", label: "Acústico / Singer-songwriter" },
+  { value: "Flamenco_Rumba", label: "Flamenco / Rumba" },
+  { value: "EDM_Club", label: "EDM / Club" },
+  {
+    value: "Acoustic_SingerSongwriter",
+    label: "Acoustic / Singer-songwriter",
+  },
 ];
+
 
 type StyleBusDoc = {
   title: string;
