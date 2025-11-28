@@ -167,6 +167,20 @@
             "max_hpf_change_hz_per_pass": 40.0,
             "max_lpf_change_hz_per_pass": 4000.0
           }
+        },
+        {
+          "id": "S4_STEM_RESONANCE_CONTROL",
+          "stage_id": "S4_SPECTRAL_CLEANUP",
+          "instrument_id": "*",
+          "style_id": "*",
+          "target_scope": "stem",
+          "metrics": {
+            "max_resonance_peak_db_above_local": 12.0
+          },
+          "limits": {
+            "max_resonant_cuts_db": 8.0,
+            "max_resonant_filters_per_band": 3
+          }
         }
       ]
     },

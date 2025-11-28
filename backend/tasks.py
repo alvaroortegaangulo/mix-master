@@ -1,3 +1,5 @@
+# C:\mix-master\backend\tasks.py
+
 from __future__ import annotations
 
 import os
@@ -20,32 +22,19 @@ from src.utils.analysis_utils import (
 logger = logging.getLogger(__name__)
 
 
-# -------------------------------------------------------------------------
-# Helpers para métricas y localización de ficheros finales
-# -------------------------------------------------------------------------
+# -------------------------------------------------------------------
+# Helpers de métricas finales
+# -------------------------------------------------------------------
 
 def _safe_compute_final_metrics(job_id: str) -> Dict[str, Any]:
     """
     Calcula un bloque mínimo de métricas finales para el frontend.
 
-    - Busca primero el full_song del contrato S11_REPORT_GENERATION.
-    - Si no existe, intenta con S10_MASTER_FINAL_LIMITS.
+    - Lee el full_song de S10_MASTER_FINAL_LIMITS (si existe).
     - Lee análisis de S1_KEY_DETECTION (si existe).
     - El resto de campos se devuelven con valores neutros.
 
-    Devuelve un dict con la forma de MixMetrics:
-      {
-        "final_peak_dbfs": float,
-        "final_rms_dbfs": float,
-        "tempo_bpm": float,
-        "tempo_confidence": float,
-        "key": str,
-        "scale": str,
-        "key_strength": float,
-        "vocal_shift_min": float,
-        "vocal_shift_max": float,
-        "vocal_shift_mean": float,
-      }
+    Devuelve un dict con la forma de MixMetrics.
     """
     # Defaults neutros
     final_peak_dbfs = 0.0
@@ -63,32 +52,23 @@ def _safe_compute_final_metrics(job_id: str) -> Dict[str, Any]:
     vocal_shift_mean = 0.0
 
     # -----------------------------
-    # 1) Métricas a partir del máster final (S11 -> S10)
+    # 1) Métricas a partir del máster final (S10_MASTER_FINAL_LIMITS)
     # -----------------------------
-    master_audio_path: Optional[Path] = None
     try:
-        # Preferimos el full_song de S11_REPORT_GENERATION
-        for contract_id in ("S11_REPORT_GENERATION", "S10_MASTER_FINAL_LIMITS"):
-            master_dir = get_temp_dir(contract_id, create=False)
-            cand = master_dir / "full_song.wav"
-            if cand.exists():
-                master_audio_path = cand
-                break
-
-        if master_audio_path is not None:
-            mono, sr = load_audio_mono(master_audio_path)
+        contract_id = "S10_MASTER_FINAL_LIMITS"
+        master_dir = get_temp_dir(contract_id, create=False)
+        master_path = master_dir / "full_song.wav"
+        if master_path.exists():
+            mono, sr = load_audio_mono(master_path)
             final_peak_dbfs = compute_peak_dbfs(mono)
             final_rms_dbfs = compute_integrated_loudness_lufs(mono, sr)
         else:
             logger.warning(
-                "[tasks] No se ha encontrado máster final (S11 ni S10) para job_id=%s",
-                job_id,
+                "[tasks] No se ha encontrado máster final en %s", master_path
             )
     except Exception as exc:
         logger.warning(
-            "[tasks] Error calculando métricas de máster final para job_id=%s: %s",
-            job_id,
-            exc,
+            "[tasks] Error calculando métricas de máster final: %s", exc
         )
 
     # -----------------------------
@@ -109,15 +89,12 @@ def _safe_compute_final_metrics(job_id: str) -> Dict[str, Any]:
             )
         else:
             logger.info(
-                "[tasks] No se ha encontrado analysis_%s.json para key detection (job_id=%s)",
+                "[tasks] No se ha encontrado analysis_%s.json para key detection",
                 contract_id,
-                job_id,
             )
     except Exception as exc:
         logger.warning(
-            "[tasks] Error leyendo análisis de key detection para job_id=%s: %s",
-            job_id,
-            exc,
+            "[tasks] Error leyendo análisis de key detection: %s", exc
         )
 
     # (3) Tempo y shifts vocales: de momento neutros hasta que los midamos en el nuevo pipeline.
@@ -147,14 +124,13 @@ def _make_files_url(job_root: Path, job_id: str, path: Path | None) -> str:
         return ""
 
     try:
-        # p.ej. "S10_MASTER_FINAL_LIMITS/full_song.wav"
-        rel = path.relative_to(job_root)
+        rel = path.relative_to(job_root)  # p.ej. "S10_MASTER_FINAL_LIMITS/full_song.wav"
     except ValueError:
         # No cuelga de job_root
         return ""
 
-    # El server monta StaticFiles en /files apuntando a PROJECT_ROOT/temp:
-    #   /files/<job_id>/S10_MASTER_FINAL_LIMITS/full_song.wav -> temp/<job_id>/...
+    # Asumimos que en server.py montas StaticFiles en /files apuntando a PROJECT_ROOT/temp
+    # de forma que: /files/<job_id>/... -> temp/<job_id>/...
     return f"/files/{job_id}/{rel.as_posix()}"
 
 
@@ -162,59 +138,64 @@ def _locate_original_and_master_paths(job_id: str) -> tuple[Path | None, Path | 
     """
     Intenta localizar:
       - original_mix_path: full_song de S0_MIX_ORIGINAL
-      - master_path: full_song de S11_REPORT_GENERATION (si existe) o S10_MASTER_FINAL_LIMITS
+      - master_path: full_song de S10_MASTER_FINAL_LIMITS
 
     Devolvemos (original_path or None, master_path or None).
     """
     original_path: Path | None = None
     master_path: Path | None = None
 
-    # Original (S0_MIX_ORIGINAL)
     try:
+        # S0_MIX_ORIGINAL
         s0_dir = get_temp_dir("S0_MIX_ORIGINAL", create=False)
         cand = s0_dir / "full_song.wav"
         if cand.exists():
             original_path = cand
         else:
             logger.info(
-                "[tasks] No se encuentra original full_song.wav en %s (job_id=%s)",
-                cand,
-                job_id,
+                "[tasks] No se encuentra original full_song.wav en %s", cand
             )
     except Exception as exc:
         logger.warning(
-            "[tasks] Error localizando original full_song.wav para job_id=%s: %s",
-            job_id,
-            exc,
+            "[tasks] Error localizando original full_song.wav: %s", exc
         )
 
-    # Máster final (S11 -> S10)
     try:
-        for contract_id in ("S11_REPORT_GENERATION", "S10_MASTER_FINAL_LIMITS"):
-            cdir = get_temp_dir(contract_id, create=False)
-            cand = cdir / "full_song.wav"
-            if cand.exists():
-                master_path = cand
-                break
-
-        if master_path is None:
+        # S10_MASTER_FINAL_LIMITS
+        s10_dir = get_temp_dir("S10_MASTER_FINAL_LIMITS", create=False)
+        cand = s10_dir / "full_song.wav"
+        if cand.exists():
+            master_path = cand
+        else:
             logger.info(
-                "[tasks] No se encuentra máster full_song.wav en S11 ni S10 (job_id=%s)",
-                job_id,
+                "[tasks] No se encuentra máster full_song.wav en %s", cand
             )
     except Exception as exc:
         logger.warning(
-            "[tasks] Error localizando máster full_song.wav para job_id=%s: %s",
-            job_id,
-            exc,
+            "[tasks] Error localizando máster full_song.wav: %s", exc
         )
 
     return original_path, master_path
 
 
-# -------------------------------------------------------------------------
-# Tarea Celery principal
-# -------------------------------------------------------------------------
+def _write_job_status(job_root: Path, status: Dict[str, Any]) -> None:
+    """
+    Escribe temp/<job_id>/job_status.json con el estado actual del job.
+    """
+    try:
+        status_path = job_root / "job_status.json"
+        status_path.parent.mkdir(parents=True, exist_ok=True)
+        status_path.write_text(
+            json.dumps(status, indent=2, ensure_ascii=False),
+            encoding="utf-8",
+        )
+    except Exception as exc:
+        logger.warning("[tasks] No se pudo escribir job_status.json: %s", exc)
+
+
+# -------------------------------------------------------------------
+# Tarea Celery
+# -------------------------------------------------------------------
 
 @celery_app.task(bind=True, name="run_full_pipeline_task")
 def run_full_pipeline_task(
@@ -231,8 +212,7 @@ def run_full_pipeline_task(
     - job_id: identificador del job.
     - media_dir: carpeta donde se han guardado los stems originales.
     - temp_root: carpeta raíz temporal del job (p.ej. /app/temp/<job_id>).
-    - enabled_stage_keys: lista opcional de contract_ids a ejecutar
-                          (S0_SESSION_FORMAT, S1_STEM_DC_OFFSET, ...).
+    - enabled_stage_keys: lista opcional de contract_ids a ejecutar.
     - profiles_by_name: mapping opcional nombre_de_archivo -> perfil_de_stem.
     """
 
@@ -250,7 +230,30 @@ def run_full_pipeline_task(
 
     media_dir_path = Path(media_dir)
     temp_root_path = Path(temp_root)
-    job_root_path = temp_root_path  # en este diseño: /app/temp/<job_id>
+
+    # En este diseño, temp_root = /app/temp/<job_id>
+    job_root_path = temp_root_path
+
+    # Estado de progreso que iremos actualizando en la callback
+    progress_state: Dict[str, Any] = {
+        "stage_index": 0,
+        "total_stages": 0,
+        "stage_key": "initializing",
+        "message": "Inicializando pipeline...",
+    }
+
+    # Estado inicial mínimo (por si el frontend pregunta antes de que arranque el pipeline)
+    initial_status = {
+        "jobId": job_id,
+        "job_id": job_id,
+        "status": "running",
+        "stage_index": 0,
+        "total_stages": 0,
+        "stage_key": "initializing",
+        "message": "Inicializando pipeline de mezcla...",
+        "progress": 0.0,
+    }
+    _write_job_status(job_root_path, initial_status)
 
     # ----------------------------------------------------
     # Callback de progreso: llamado desde run_pipeline_for_job
@@ -261,10 +264,16 @@ def run_full_pipeline_task(
         stage_key: str,
         message: str,
     ) -> None:
+        # Actualizar estado interno
+        progress_state["stage_index"] = stage_index
+        progress_state["total_stages"] = total_stages
+        progress_state["stage_key"] = stage_key
+        progress_state["message"] = message
+
         if total_stages <= 0:
-            progress = 0.0
+            progress_val = 0.0
         else:
-            progress = float(stage_index) / float(total_stages) * 100.0
+            progress_val = float(stage_index) / float(total_stages) * 100.0
 
         meta = {
             "jobId": job_id,
@@ -272,10 +281,24 @@ def run_full_pipeline_task(
             "total_stages": total_stages,
             "stage_key": stage_key,
             "message": message,
-            "progress": progress,
+            "progress": progress_val,
         }
-        # Estado custom "PROGRESS" que el endpoint /jobs/{jobId} mapea a "running"
+
+        # Actualizamos estado en Celery (por si quieres consultarlo también por ahí)
         self.update_state(state="PROGRESS", meta=meta)
+
+        # Y escribimos job_status.json para que /jobs lo lea desde disco
+        status = {
+            "jobId": job_id,
+            "job_id": job_id,
+            "status": "running",
+            "stage_index": stage_index,
+            "total_stages": total_stages,
+            "stage_key": stage_key,
+            "message": message,
+            "progress": progress_val,
+        }
+        _write_job_status(job_root_path, status)
 
     # ---------------------------
     # 1) Ejecutar pipeline
@@ -290,9 +313,8 @@ def run_full_pipeline_task(
             progress_cb=progress_cb,
         )
     except Exception as exc:
+        # Marcamos fallo en Celery con info básica
         logger.exception("Error en run_pipeline_for_job(job_id=%s)", job_id)
-
-        # Marcamos fallo en Celery (el estado final será FAILURE y /jobs lo verá)
         self.update_state(
             state=states.FAILURE,
             meta={
@@ -302,7 +324,25 @@ def run_full_pipeline_task(
                 "exc_module": exc.__class__.__module__,
             },
         )
-        # Re-lanzamos para que Celery marque el task como FAILURE
+
+        # Y escribimos job_status.json con estado de error
+        error_status = {
+            "jobId": job_id,
+            "job_id": job_id,
+            "status": "failure",
+            "stage_index": progress_state.get("stage_index", 0),
+            "total_stages": progress_state.get("total_stages", 0),
+            "stage_key": "error",
+            "message": f"Error en pipeline: {exc}",
+            "progress": float(
+                100.0
+                if progress_state.get("stage_index", 0)
+                >= progress_state.get("total_stages", 0) > 0
+                else 0.0
+            ),
+            "error": str(exc),
+        }
+        _write_job_status(job_root_path, error_status)
         raise
 
     logger.info("Celery: pipeline finalizado correctamente job_id=%s", job_id)
@@ -317,13 +357,23 @@ def run_full_pipeline_task(
     master_url = _make_files_url(job_root_path, job_id, master_path)
 
     # ---------------------------
-    # 3) Resultado estructurado para /jobs/{jobId}
+    # 3) Resultado estructurado
     # ---------------------------
-    return {
+    total_stages = int(progress_state.get("total_stages", 0))
+    stage_index = int(progress_state.get("stage_index", total_stages))
+
+    final_status = {
         # Identificación básica
         "jobId": job_id,
+        "job_id": job_id,
         "status": "success",
         "message": "Mix pipeline finished successfully.",
+
+        # Progreso
+        "stage_index": stage_index,
+        "total_stages": total_stages,
+        "stage_key": "finished",
+        "progress": 100.0,
 
         # Info de rutas internas (útil para debug / filesystem)
         "job_root": str(job_root_path),          # /app/temp/<job_id>
@@ -340,3 +390,9 @@ def run_full_pipeline_task(
         # Placeholder por si más adelante quieres propagar estilos de buses, etc.
         "bus_styles": {},
     }
+
+    # Guardar estado final en job_status.json
+    _write_job_status(job_root_path, final_status)
+
+    # Devolvemos también el resultado a Celery (por si quieres inspeccionarlo vía backend)
+    return final_status

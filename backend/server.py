@@ -13,8 +13,6 @@ from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from celery import states
-from celery_app import celery_app
 from tasks import run_full_pipeline_task
 
 logger = logging.getLogger(__name__)
@@ -121,6 +119,51 @@ def _build_pipeline_stages() -> list[dict[str, Any]]:
     return result
 
 
+def _write_initial_job_status(job_id: str, temp_root: Path) -> None:
+    """
+    Crea un job_status.json inicial en estado 'pending', para que el frontend
+    pueda mostrar la cola incluso antes de que arranque el worker.
+    """
+    status = {
+        "jobId": job_id,
+        "job_id": job_id,
+        "status": "pending",
+        "stage_index": 0,
+        "total_stages": 0,
+        "stage_key": "queued",
+        "message": "Job pending in queue",
+        "progress": 0.0,
+    }
+    status_path = temp_root / "job_status.json"
+    status_path.parent.mkdir(parents=True, exist_ok=True)
+    status_path.write_text(
+        json.dumps(status, indent=2, ensure_ascii=False),
+        encoding="utf-8",
+    )
+
+
+def _load_job_status_from_fs(job_id: str) -> Optional[Dict[str, Any]]:
+    """
+    Lee temp/<job_id>/job_status.json si existe.
+    """
+    status_path = JOBS_ROOT / job_id / "job_status.json"
+    if not status_path.exists():
+        return None
+    try:
+        with status_path.open("r", encoding="utf-8") as f:
+            data = json.load(f)
+        if isinstance(data, dict):
+            data.setdefault("jobId", job_id)
+            data.setdefault("job_id", job_id)
+            return data
+        return None
+    except Exception as exc:
+        logger.warning(
+            "No se pudo leer job_status.json para job_id=%s: %s", job_id, exc
+        )
+        return None
+
+
 # -------------------------------------------------------------------
 # Endpoints
 # -------------------------------------------------------------------
@@ -138,7 +181,12 @@ async def mix_tracks(
     )
 
     # -----------------------------
-    # 1) Parsear perfiles de stems
+    # 1) job_status inicial (pending)
+    # -----------------------------
+    _write_initial_job_status(job_id, temp_root)
+
+    # -----------------------------
+    # 2) Parsear perfiles de stems
     # -----------------------------
     profiles_by_name: Dict[str, str] = {}
     raw_profiles: List[Dict[str, str]] = []
@@ -182,7 +230,7 @@ async def mix_tracks(
             )
 
     # -----------------------------
-    # 2) Guardar los stems en disco
+    # 3) Guardar los stems en disco
     # -----------------------------
     for f in files:
         dest_path = media_dir / f.filename
@@ -200,7 +248,7 @@ async def mix_tracks(
         )
 
     # -----------------------------
-    # 3) Parsear stages_json (lista de contract_id habilitados)
+    # 4) Parsear stages_json (lista de contract_id habilitados)
     # -----------------------------
     enabled_stage_keys: Optional[List[str]] = None
     if stages_json:
@@ -214,9 +262,9 @@ async def mix_tracks(
             )
 
     # -----------------------------
-    # 4) Lanzar tarea Celery
+    # 5) Lanzar tarea Celery
     # -----------------------------
-    # IMPORTANTE: usamos task_id = job_id para que frontend y backend
+    # IMPORTANTE: usamos task_id = job_id para que frontend y worker
     # hablen del mismo identificador.
     run_full_pipeline_task.apply_async(
         args=[
@@ -235,17 +283,12 @@ async def mix_tracks(
 @app.get("/jobs/{job_id}")
 def get_job_status(job_id: str) -> Dict[str, Any]:
     """
-    Devuelve el estado del job para el frontend.
-
-    Usa run_full_pipeline_task.AsyncResult(job_id) para asegurarse de que
-    se consulta el mismo Celery app/backend que el worker.
+    Devuelve el estado del job para el frontend, LEYÉNDOLO DE DISCO
+    (temp/<job_id>/job_status.json), que es lo que va actualizando el worker.
     """
-    result = run_full_pipeline_task.AsyncResult(job_id)
-
-    state = result.state  # 'PENDING', 'PROGRESS', 'SUCCESS', 'FAILURE', etc.
-
-    # Caso 1: todavía no hay info en Redis (pendiente en la cola)
-    if state == states.PENDING:
+    data = _load_job_status_from_fs(job_id)
+    if data is None:
+        # Si no hay fichero, devolvemos un "pending" neutro
         return {
             "jobId": job_id,
             "job_id": job_id,
@@ -256,65 +299,7 @@ def get_job_status(job_id: str) -> Dict[str, Any]:
             "message": "Job pending in queue",
             "progress": 0.0,
         }
-
-    # Caso 2: en progreso (nuestro task usa state="PROGRESS")
-    if state in ("PROGRESS", states.STARTED):
-        meta = result.info or {}
-        # meta viene del update_state(state="PROGRESS", meta={...})
-        stage_index = int(meta.get("stage_index", 0))
-        total_stages = int(meta.get("total_stages", 0))
-        stage_key = str(meta.get("stage_key", "running"))
-        message = str(meta.get("message", "Processing mix..."))
-        progress = float(meta.get("progress", 0.0))
-
-        return {
-            "jobId": job_id,
-            "job_id": job_id,
-            "status": "running",
-            "stage_index": stage_index,
-            "total_stages": total_stages,
-            "stage_key": stage_key,
-            "message": message,
-            "progress": progress,
-        }
-
-    # Caso 3: terminado con éxito
-    if state == states.SUCCESS:
-        payload = result.result or {}
-        if not isinstance(payload, dict):
-            payload = {"raw_result": payload}
-
-        # Compatibilidad con el frontend (usa jobId/job_id y status)
-        payload.setdefault("jobId", job_id)
-        payload.setdefault("job_id", job_id)
-        payload.setdefault("status", "success")
-
-        # Aseguramos que existen métricas, aunque sea dict vacío
-        metrics = payload.get("metrics") or {}
-        payload["metrics"] = metrics
-
-        return payload
-
-    # Caso 4: fallo o estado terminal raro
-    info = result.info
-    if isinstance(info, Exception):
-        error_msg = f"{type(info).__name__}: {info}"
-    elif isinstance(info, dict):
-        error_msg = info.get("exc_message") or str(info)
-    else:
-        error_msg = str(info)
-
-    return {
-        "jobId": job_id,
-        "job_id": job_id,
-        "status": "failure",
-        "stage_index": 0,
-        "total_stages": 0,
-        "stage_key": "error",
-        "message": error_msg or "Error while processing mix",
-        "progress": 0.0,
-        "error": error_msg or None,
-    }
+    return data
 
 
 @app.post("/cleanup-temp")
