@@ -8,7 +8,7 @@ import logging
 from pathlib import Path
 from typing import Callable, Dict, Any, List, Optional
 
-from .stages.stage import run_stage
+from .stages.stage import run_stage, set_active_contract_sequence
 from .utils.analysis_utils import get_temp_dir
 
 logger = logging.getLogger(__name__)
@@ -35,14 +35,13 @@ def _get_ordered_contract_ids(contracts: Dict[str, Any]) -> List[str]:
     """
     Devuelve la lista ordenada de contract_ids según aparecen en contracts.json.
 
-    El orden es:
-      S0_INPUT -> S1_TECH_PREP -> ... -> S11_REPORTING
-    y dentro de cada stage, en el orden de "contracts".
+    El orden es el definido por "stages" y, dentro de cada stage, por la lista
+    "contracts".
     """
     ordered: List[str] = []
 
     for stage_data in contracts.get("stages", {}).values():
-        for c in stage_data.get("contracts", []):
+        for c in stage_data.get("contracts", []) or []:
             cid = c.get("id")
             if cid:
                 ordered.append(cid)
@@ -83,8 +82,7 @@ def _run_contracts_global(enabled_stage_keys: Optional[List[str]] = None) -> Non
     """
     Versión global (sin job_id) basada en contracts.json.
 
-    Recorre todos los contratos definidos en struct/contracts.json y llama a run_stage.
-
+    Recorre los contratos definidos en struct/contracts.json y llama a run_stage.
     Si enabled_stage_keys no es None, interpreta que contiene contract_ids
     (S0_SESSION_FORMAT, S1_STEM_DC_OFFSET, etc.) y filtra en base a eso.
     """
@@ -96,6 +94,10 @@ def _run_contracts_global(enabled_stage_keys: Optional[List[str]] = None) -> Non
         contract_ids = [cid for cid in all_contract_ids if cid in enabled_set]
     else:
         contract_ids = all_contract_ids
+
+    # Propagamos la secuencia efectiva al módulo stage.py para que
+    # _get_next_contract_id pueda copiar siempre al siguiente contrato habilitado.
+    set_active_contract_sequence(contract_ids)
 
     for contract_id in contract_ids:
         run_stage(contract_id)
@@ -225,6 +227,11 @@ def run_pipeline_for_job(
         )
         return
 
+    # Propagar la secuencia efectiva a stage.py para que las copias
+    # de stems vayan siempre al siguiente contrato HABILITADO y no a
+    # cualquier contrato del pipeline completo.
+    set_active_contract_sequence(contract_ids)
+
     # Callback inicial de progreso (antes de cualquier stage)
     if progress_cb is not None:
         progress_cb(
@@ -257,7 +264,6 @@ def run_pipeline_for_job(
 
         # Ejecuta análisis, stage y check con reintentos, copia al siguiente contrato, etc.
         run_stage(contract_id)
-
 
 
 if __name__ == "__main__":
