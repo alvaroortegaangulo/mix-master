@@ -769,11 +769,12 @@ export function MixResultPanel({
             </p>
           </div>
         </div>
+        </div>
       </details>
 
 
 
-      {/* Selector de etapa / detalles de logs (colapsado) */}
+       {/* Selector de etapa / detalles de logs (colapsado) */}
       <details className="mt-8 border-t border-slate-800/70 pt-6">
         <summary className="cursor-pointer list-none [&::-webkit-details-marker]:hidden">
           <h3 className="mb-1 text-sm font-semibold uppercase tracking-wide text-slate-400">
