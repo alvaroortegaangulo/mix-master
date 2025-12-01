@@ -693,17 +693,25 @@ export function MixResultPanel({
         enabledPipelineStageKeys={enabledPipelineStageKeys}
       />
 
-      {/* Métricas principales (colapsadas) */}
-      <details className="mt-6 rounded-xl bg-slate-950/40 p-4">
-        <summary className="flex cursor-pointer list-none flex-col [&::-webkit-details-marker]:hidden">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-400">
-            Metrics
-          </h3>
-          <p className="mt-1 text-xs text-slate-400">
-            Resumen del loudness final, la afinación vocal y el tempo/tonalidad
-            del master.
-          </p>
-        </summary>
+{/* Métricas principales (colapsadas) */}
+<details className="mt-6 rounded-xl bg-slate-950/40 p-4 group">
+  <summary className="flex cursor-pointer list-none items-center justify-between gap-2 [&::-webkit-details-marker]:hidden">
+    <div className="flex-1">
+      <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-400">
+        Metrics
+      </h3>
+      <p className="mt-1 text-xs text-slate-400">
+        Resumen del loudness final, la afinación vocal y el tempo/tonalidad
+        del master.
+      </p>
+    </div>
+    <span
+      aria-hidden="true"
+      className="ml-2 text-xs text-slate-400 transition-transform duration-200 group-open:rotate-180"
+    >
+      ▼
+    </span>
+  </summary>
 
         <div className="mt-4 grid gap-4 md:grid-cols-3">
           <div>
@@ -752,17 +760,25 @@ export function MixResultPanel({
         </div>
       </details>
 
-      {/* Selector de etapa / detalles de logs (colapsado) */}
-      <details className="mt-8 border-t border-slate-800/70 pt-6">
-        <summary className="cursor-pointer list-none [&::-webkit-details-marker]:hidden">
-          <h3 className="mb-1 text-sm font-semibold uppercase tracking-wide text-slate-400">
-            Detalles del procesamiento
-          </h3>
-          <p className="text-xs text-slate-400">
-            Selecciona una etapa del pipeline para ver un resumen de los cambios
-            aplicados, extraído directamente de los ficheros de análisis.
-          </p>
-        </summary>
+{/* Selector de etapa / detalles de logs (colapsado) */}
+<details className="mt-8 border-t border-slate-800/70 pt-6 group">
+  <summary className="flex cursor-pointer list-none items-center justify-between gap-2 [&::-webkit-details-marker]:hidden">
+    <div className="flex-1">
+      <h3 className="mb-1 text-sm font-semibold uppercase tracking-wide text-slate-400">
+        Detalles del procesamiento
+      </h3>
+      <p className="text-xs text-slate-400">
+        Selecciona una etapa del pipeline para ver un resumen de los cambios
+        aplicados, extraído directamente de los ficheros de análisis.
+      </p>
+    </div>
+    <span
+      aria-hidden="true"
+      className="ml-2 text-xs text-slate-400 transition-transform duration-200 group-open:rotate-180"
+    >
+      ▼
+    </span>
+  </summary>
 
         <div className="mt-4">
           <div className="flex flex-col gap-3 md:flex-row md:items-center">

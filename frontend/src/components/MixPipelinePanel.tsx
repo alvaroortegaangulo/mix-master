@@ -119,18 +119,26 @@ export function MixPipelinePanel({ result, enabledPipelineStageKeys }: Props) {
 
   return (
     <section className="mt-6 rounded-2xl border border-slate-800/80 bg-slate-900/80 p-4 shadow-inner">
-      <details className="group">
-        <summary className="flex cursor-pointer list-none flex-col gap-2 md:flex-row md:items-center md:justify-between [&::-webkit-details-marker]:hidden">
-          <div>
-            <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-300">
-              Pipeline
-            </h3>
-            <p className="mt-1 text-xs text-slate-400">
-              Explora cómo va evolucionando la mezcla etapa a etapa, escuchando
-              el resultado acumulado hasta la etapa seleccionada.
-            </p>
-          </div>
-        </summary>
+    <details className="group">
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-2 md:flex-row md:items-center md:justify-between [&::-webkit-details-marker]:hidden">
+        <div className="flex-1">
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-300">
+            Pipeline
+          </h3>
+          <p className="mt-1 text-xs text-slate-400">
+            Explora cómo va evolucionando la mezcla etapa a etapa, escuchando
+            el resultado acumulado hasta la etapa seleccionada.
+          </p>
+        </div>
+        <span
+          aria-hidden="true"
+          className="ml-2 text-xs text-slate-400 transition-transform duration-200 group-open:rotate-180"
+        >
+          ▼
+        </span>
+      </summary>
+      {/* resto igual */}
+
 
         {loading && !stages.length && (
           <p className="mt-3 text-xs text-slate-400">
