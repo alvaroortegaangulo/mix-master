@@ -26,7 +26,7 @@ export type PipelineStage = {
 };
 
 export function MixPipelinePanel({ result, enabledPipelineStageKeys }: Props) {
-  const { originalFullSongUrl, fullSongUrl, jobId } = result;
+  const { fullSongUrl, jobId } = result;
 
   const [stages, setStages] = useState<PipelineStage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -132,13 +132,23 @@ export function MixPipelinePanel({ result, enabledPipelineStageKeys }: Props) {
   if (error) {
     return (
       <section className="mt-6 rounded-2xl border border-slate-800/80 bg-slate-900/80 p-4">
-        <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-300">
-          Pipeline
-        </h3>
-        <p className="mt-2 text-xs text-red-400">
-          {error} (endpoint esperado:{" "}
-          <code className="bg-slate-950 px-1">/pipeline/stages</code>).
-        </p>
+        <details className="group">
+          <summary className="flex cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+            <div>
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-300">
+                Pipeline
+              </h3>
+              <p className="mt-1 text-xs text-slate-400">
+                Explora cómo va evolucionando la mezcla etapa a etapa, escuchando
+                el resultado acumulado hasta la etapa seleccionada.
+              </p>
+            </div>
+          </summary>
+          <p className="mt-2 text-xs text-red-400">
+            {error} (endpoint esperado:{" "}
+            <code className="bg-slate-950 px-1">/pipeline/stages</code>).
+          </p>
+        </details>
       </section>
     );
   }
@@ -150,69 +160,76 @@ export function MixPipelinePanel({ result, enabledPipelineStageKeys }: Props) {
 
   return (
     <section className="mt-6 rounded-2xl border border-slate-800/80 bg-slate-900/80 p-4 shadow-inner">
-      <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-        <div>
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-300">
-            Pipeline
-          </h3>
-          <p className="mt-1 text-xs text-slate-400">
-            Explora cómo va evolucionando la mezcla etapa a etapa, escuchando
-            el resultado acumulado hasta la etapa seleccionada.
-          </p>
-        </div>
-      </div>
+      <details className="group">
+        <summary className="flex cursor-pointer list-none flex-col gap-2 md:flex-row md:items-center md:justify-between [&::-webkit-details-marker]:hidden">
+          <div>
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-300">
+              Pipeline
+            </h3>
+            <p className="mt-1 text-xs text-slate-400">
+              Explora cómo va evolucionando la mezcla etapa a etapa, escuchando
+              el resultado acumulado hasta la etapa seleccionada.
+            </p>
+          </div>
+        </summary>
 
-      {/* Tabs con índice de etapa (sólo las etapas habilitadas para este job) */}
-      <div className="mt-4 flex flex-wrap gap-2">
-        {stages.map((stage) => {
-          const isActive = stage.key === activeStage.key;
-          return (
-            <button
-              key={stage.key}
-              type="button"
-              onClick={() => setActiveKey(stage.key)}
-              className={[
-                "rounded-full px-3 py-1 text-xs font-medium transition",
-                isActive
-                  ? "bg-indigo-500 text-white shadow-sm"
-                  : "bg-slate-800 text-slate-300 hover:bg-slate-700",
-              ].join(" ")}
-            >
-              {stage.index}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Contenido de la etapa activa */}
-      <div className="mt-4 rounded-xl bg-slate-950/40 p-4">
-        <p className="text-sm font-semibold text-slate-100">
-          {`Stage ${activeStage.index} · ${activeStage.label}`}
-        </p>
-        <p className="mt-2 text-xs text-slate-300">{activeStage.description}</p>
-
-        {/* Solo mostramos la mezcla tras esta etapa */}
+        {/* Contenido expandible: tabs + player */}
         <div className="mt-4">
-          <p className="mb-1 text-xs font-medium text-slate-200">
-            Mix tras esta etapa
-          </p>
-          <audio
-            controls
-            src={processedUrl}
-            className="mt-1 w-full rounded-lg bg-slate-800"
-          />
-          <p className="mt-1 text-[11px] text-slate-500">
-            Esta mezcla refleja todas las etapas habilitadas desde el inicio
-            hasta{" "}
-            <span className="font-semibold">
-              Stage {activeStage.index} · {activeStage.label}
-            </span>
-            . Si alguna etapa anterior no genera un bounce propio todavía, se
-            usa la mezcla más cercana disponible (por defecto, el master
-            final).
-          </p>
+          {/* Tabs con índice de etapa (sólo las etapas habilitadas para este job) */}
+          <div className="flex flex-wrap gap-2">
+            {stages.map((stage) => {
+              const isActive = stage.key === activeStage.key;
+              return (
+                <button
+                  key={stage.key}
+                  type="button"
+                  onClick={() => setActiveKey(stage.key)}
+                  className={[
+                    "rounded-full px-3 py-1 text-xs font-medium transition",
+                    isActive
+                      ? "bg-indigo-500 text-white shadow-sm"
+                      : "bg-slate-800 text-slate-300 hover:bg-slate-700",
+                  ].join(" ")}
+                >
+                  {stage.index}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Contenido de la etapa activa */}
+          <div className="mt-4 rounded-xl bg-slate-950/40 p-4">
+            <p className="text-sm font-semibold text-slate-100">
+              {`Stage ${activeStage.index} · ${activeStage.label}`}
+            </p>
+            <p className="mt-2 text-xs text-slate-300">
+              {activeStage.description}
+            </p>
+
+            {/* Solo mostramos la mezcla tras esta etapa */}
+            <div className="mt-4">
+              <p className="mb-1 text-xs font-medium text-slate-200">
+                Mix tras esta etapa
+              </p>
+              <audio
+                controls
+                src={processedUrl}
+                className="mt-1 w-full rounded-lg bg-slate-800"
+              />
+              <p className="mt-1 text-[11px] text-slate-500">
+                Esta mezcla refleja todas las etapas habilitadas desde el inicio
+                hasta{" "}
+                <span className="font-semibold">
+                  Stage {activeStage.index} · {activeStage.label}
+                </span>
+                . Si alguna etapa anterior no genera un bounce propio todavía, se
+                usa la mezcla más cercana disponible (por defecto, el master
+                final).
+              </p>
+            </div>
+          </div>
         </div>
-      </div>
+      </details>
     </section>
   );
 }

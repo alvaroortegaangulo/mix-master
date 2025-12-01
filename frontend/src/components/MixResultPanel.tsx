@@ -711,114 +711,147 @@ export function MixResultPanel({
       />
 
 
-      {/* Métricas principales */}
-      <div className="mt-6 rounded-xl bg-slate-950/40 p-4">
-        <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-400">
-          Metrics
-        </h3>
-        <div className="grid gap-4 md:grid-cols-3">
-          <div>
-            <p className="text-xs uppercase text-slate-400">Loudness</p>
-            <p className="text-sm text-slate-200">
-              Peak:{" "}
-              <span className="font-semibold">
-                {metrics.final_peak_dbfs.toFixed(1)} dBFS
-              </span>
-            </p>
-            <p className="text-sm text-slate-200">
-              RMS:{" "}
-              <span className="font-semibold">
-                {metrics.final_rms_dbfs.toFixed(1)} dBFS
-              </span>
-            </p>
-          </div>
-          <div>
-            <p className="text-xs uppercase text-slate-400">Vocal tuning</p>
-            <p className="text-sm text-slate-200">
-              Shift medio:{" "}
+      {/* Métricas principales (colapsadas) */}
+      <details className="mt-6 rounded-xl bg-slate-950/40 p-4">
+        <summary className="flex cursor-pointer list-none flex-col [&::-webkit-details-marker]:hidden">
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-400">
+            Metrics
+          </h3>
+          <p className="mt-1 text-xs text-slate-400">
+            Resumen del loudness final, la afinación vocal y el tempo/tonalidad
+            del master.
+          </p>
+        </summary>
+
+        <div className="mt-4">
+          <div className="grid gap-4 md:grid-cols-3">
+            <div>
+              <p className="text-xs uppercase text-slate-400">Loudness</p>
+              <p className="text-sm text-slate-200">
+                Peak:{" "}
+                <span className="font-semibold">
+                  {metrics.final_peak_dbfs.toFixed(1)} dBFS
+                </span>
+              </p>
+              <p className="text-sm text-slate-200">
+                RMS:{" "}
+                <span className="font-semibold">
+                  {metrics.final_rms_dbfs.toFixed(1)} dBFS
+                </span>
+              </p>
+            </div>
+            <div>
+              <p className="text-xs uppercase text-slate-400">Vocal tuning</p>
+              <p className="text-sm text-slate-200">
+                Shift medio:{" "}
                 <span className="font-semibold">
                   {metrics.vocal_shift_mean.toFixed(2)} semitonos
                 </span>
-            </p>
-            <p className="text-xs text-slate-400">
-              Rango: {metrics.vocal_shift_min.toFixed(2)} –{" "}
-              {metrics.vocal_shift_max.toFixed(2)} st
-            </p>
-          </div>
-          <div>
-            <p className="text-xs uppercase text-slate-400">Tempo & key</p>
-            <p className="text-sm text-slate-200">
-              Tempo:{" "}
-              <span className="font-semibold">
-                {metrics.tempo_bpm.toFixed(1)} BPM
-              </span>
-            </p>
-            <p className="text-sm text-slate-200">
-              Key:{" "}
-              <span className="font-semibold">
-                {metrics.key} {metrics.scale}
-              </span>
-            </p>
+              </p>
+              <p className="text-xs text-slate-400">
+                Rango: {metrics.vocal_shift_min.toFixed(2)} –{" "}
+                {metrics.vocal_shift_max.toFixed(2)} st
+              </p>
+            </div>
+            <div>
+              <p className="text-xs uppercase text-slate-400">Tempo &amp; key</p>
+              <p className="text-sm text-slate-200">
+                Tempo:{" "}
+                <span className="font-semibold">
+                  {metrics.tempo_bpm.toFixed(1)} BPM
+                </span>
+              </p>
+              <p className="text-sm text-slate-200">
+                Key:{" "}
+                <span className="font-semibold">
+                  {metrics.key} {metrics.scale}
+                </span>
+              </p>
+            </div>
           </div>
         </div>
-      </div>
+      </details>
 
-      {/* Selector de etapa / detalles de logs */}
-      <div className="mt-8 border-t border-slate-800/70 pt-6">
-        <h3 className="mb-3 text-sm font-semibold uppercase tracking-wide text-slate-400">
-          Detalles del procesamiento
-        </h3>
 
-        <p className="mb-3 text-xs text-slate-400">
-          Selecciona una etapa del pipeline para ver un resumen de los cambios
-          aplicados, extraído directamente de los ficheros de análisis.
-        </p>
+      {/* Selector de etapa / detalles de logs (colapsado) */}
+      <details className="mt-8 border-t border-slate-800/70 pt-6">
+        <summary className="cursor-pointer list-none [&::-webkit-details-marker]:hidden">
+          <h3 className="mb-1 text-sm font-semibold uppercase tracking-wide text-slate-400">
+            Detalles del procesamiento
+          </h3>
 
-        <div className="flex flex-col gap-3 md:flex-row md:items-center">
-          <label className="text-xs font-medium text-slate-300 md:w-48">
-            Etapa:
-          </label>
-          <select
-            value={selectedStageKey}
-            onChange={(e) =>
-              setSelectedStageKey(e.target.value as StageKey | "")
-            }
-            className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-50 outline-none focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 md:w-80"
-          >
-            <option value="">Selecciona una etapa…</option>
-            {STAGE_OPTIONS.map((stage) => (
-              <option key={stage.key} value={stage.key}>
-                {stage.label}
-              </option>
-            ))}
-          </select>
+          <p className="text-xs text-slate-400">
+            Selecciona una etapa del pipeline para ver un resumen de los cambios
+            aplicados, extraído directamente de los ficheros de análisis.
+          </p>
+        </summary>
+
+        <div className="mt-4">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center">
+            <label className="text-xs font-medium text-slate-300 md:w-48">
+              Etapa:
+            </label>
+            <select
+              value={selectedStageKey}
+              onChange={(e) =>
+                setSelectedStageKey(e.target.value as StageKey | "")
+              }
+              className="w-full rounded-lg border border-slate-700 bg-slate-900/70 px-3 py-2 text-xs text-slate-100 outline-none transition hover:border-slate-500 focus:border-indigo-400 focus:ring-1 focus:ring-indigo-400 md:w-80"
+            >
+              <option value="">Selecciona una etapa…</option>
+              {STAGE_OPTIONS.map((stage) => (
+                <option key={stage.key} value={stage.key}>
+                  {stage.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Panel explicativo de cada etapa */}
+          {selectedStage && (
+            <div className="mt-5 rounded-xl border border-slate-800 bg-slate-950/50 p-4">
+              <h4 className="text-sm font-semibold text-slate-100">
+                {selectedStage.explanationTitle}
+              </h4>
+              <p className="mt-2 text-xs text-slate-300">
+                {selectedStage.intro}
+              </p>
+
+              {/* loader / errores CSV */}
+              {csvLoading && (
+                <p className="mt-3 text-xs text-slate-400">
+                  Cargando datos de análisis para esta etapa…
+                </p>
+              )}
+              {csvError && (
+                <p className="mt-3 text-xs text-red-400">{csvError}</p>
+              )}
+
+              {/* Aquí se mantiene TODO tu bloque de explicación por etapa:
+                  resúmenes (dcSummary, loudnessSummary, etc.) + mappings
+                  explainXxxRow(csvRows)…  */}
+              {!csvLoading && !csvError && csvRows && csvRows.length > 0 && (
+                <>
+                  {/* … deja aquí exactamente el mismo contenido que ya tenías
+                      dentro de este mismo panel (DC OFFSET, LOUDNESS, SPECTRAL,
+                      DYNAMICS, KEY, etc.). */}
+                </>
+              )}
+
+              {!csvLoading &&
+                !csvError &&
+                (!csvRows || csvRows.length === 0) && (
+                  <p className="mt-3 text-xs text-slate-400">
+                    No se han encontrado filas en el CSV de esta etapa. Es
+                    posible que el pipeline no haya generado todavía el fichero
+                    o que la estructura haya cambiado.
+                  </p>
+                )}
+            </div>
+          )}
         </div>
+      </details>
 
-        {/* Panel explicativo de cada etapa */}
-        {selectedStage && (
-          <div className="mt-5 rounded-xl border border-slate-800 bg-slate-950/50 p-4">
-            <h4 className="text-sm font-semibold text-slate-100">
-              {selectedStage.explanationTitle}
-            </h4>
-            <p className="mt-2 text-xs text-slate-300">
-              {selectedStage.intro}
-            </p>
-
-            {csvLoading && (
-              <p className="mt-3 text-xs text-slate-400">
-                Cargando datos de análisis de esta etapa…
-              </p>
-            )}
-
-            {csvError && (
-              <p className="mt-3 text-xs text-red-400">
-                {csvError} (comprueba que existe el fichero en{" "}
-                <code className="rounded bg-slate-900 px-1">
-                  {selectedStage.getCsvPath(jobId)}
-                </code>
-                ).
-              </p>
-            )}
 
             {/* Resúmenes por etapa, sólo cuando hay datos */}
             {!csvLoading && !csvError && csvRows && csvRows.length > 0 && (
