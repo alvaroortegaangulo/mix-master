@@ -723,54 +723,54 @@ export function MixResultPanel({
           </p>
         </summary>
 
-        <div className="mt-4">
-          <div className="grid gap-4 md:grid-cols-3">
-            <div>
-              <p className="text-xs uppercase text-slate-400">Loudness</p>
-              <p className="text-sm text-slate-200">
-                Peak:{" "}
-                <span className="font-semibold">
-                  {metrics.final_peak_dbfs.toFixed(1)} dBFS
-                </span>
-              </p>
-              <p className="text-sm text-slate-200">
-                RMS:{" "}
-                <span className="font-semibold">
-                  {metrics.final_rms_dbfs.toFixed(1)} dBFS
-                </span>
-              </p>
-            </div>
-            <div>
-              <p className="text-xs uppercase text-slate-400">Vocal tuning</p>
-              <p className="text-sm text-slate-200">
-                Shift medio:{" "}
-                <span className="font-semibold">
-                  {metrics.vocal_shift_mean.toFixed(2)} semitonos
-                </span>
-              </p>
-              <p className="text-xs text-slate-400">
-                Rango: {metrics.vocal_shift_min.toFixed(2)} –{" "}
-                {metrics.vocal_shift_max.toFixed(2)} st
-              </p>
-            </div>
-            <div>
-              <p className="text-xs uppercase text-slate-400">Tempo &amp; key</p>
-              <p className="text-sm text-slate-200">
-                Tempo:{" "}
-                <span className="font-semibold">
-                  {metrics.tempo_bpm.toFixed(1)} BPM
-                </span>
-              </p>
-              <p className="text-sm text-slate-200">
-                Key:{" "}
-                <span className="font-semibold">
-                  {metrics.key} {metrics.scale}
-                </span>
-              </p>
-            </div>
+        <div className="mt-4 grid gap-4 md:grid-cols-3">
+          <div>
+            <p className="text-xs uppercase text-slate-400">Loudness</p>
+            <p className="text-sm text-slate-200">
+              Peak:{" "}
+              <span className="font-semibold">
+                {metrics.final_peak_dbfs.toFixed(1)} dBFS
+              </span>
+            </p>
+            <p className="text-sm text-slate-200">
+              RMS:{" "}
+              <span className="font-semibold">
+                {metrics.final_rms_dbfs.toFixed(1)} dBFS
+              </span>
+            </p>
+          </div>
+          <div>
+            <p className="text-xs uppercase text-slate-400">Vocal tuning</p>
+            <p className="text-sm text-slate-200">
+              Shift medio:{" "}
+              <span className="font-semibold">
+                {metrics.vocal_shift_mean.toFixed(2)} semitonos
+              </span>
+            </p>
+            <p className="text-xs text-slate-400">
+              Rango:{" "}
+              {metrics.vocal_shift_min.toFixed(2)} –{" "}
+              {metrics.vocal_shift_max.toFixed(2)} st
+            </p>
+          </div>
+          <div>
+            <p className="text-xs uppercase text-slate-400">Tempo &amp; key</p>
+            <p className="text-sm text-slate-200">
+              Tempo:{" "}
+              <span className="font-semibold">
+                {metrics.tempo_bpm.toFixed(1)} BPM
+              </span>
+            </p>
+            <p className="text-sm text-slate-200">
+              Key:{" "}
+              <span className="font-semibold">
+                {metrics.key} {metrics.scale}
+              </span>
+            </p>
           </div>
         </div>
       </details>
+
 
 
       {/* Selector de etapa / detalles de logs (colapsado) */}
@@ -779,7 +779,6 @@ export function MixResultPanel({
           <h3 className="mb-1 text-sm font-semibold uppercase tracking-wide text-slate-400">
             Detalles del procesamiento
           </h3>
-
           <p className="text-xs text-slate-400">
             Selecciona una etapa del pipeline para ver un resumen de los cambios
             aplicados, extraído directamente de los ficheros de análisis.
@@ -817,25 +816,14 @@ export function MixResultPanel({
                 {selectedStage.intro}
               </p>
 
-              {/* loader / errores CSV */}
               {csvLoading && (
                 <p className="mt-3 text-xs text-slate-400">
-                  Cargando datos de análisis para esta etapa…
+                  Cargando datos de análisis de esta etapa…
                 </p>
               )}
+
               {csvError && (
                 <p className="mt-3 text-xs text-red-400">{csvError}</p>
-              )}
-
-              {/* Aquí se mantiene TODO tu bloque de explicación por etapa:
-                  resúmenes (dcSummary, loudnessSummary, etc.) + mappings
-                  explainXxxRow(csvRows)…  */}
-              {!csvLoading && !csvError && csvRows && csvRows.length > 0 && (
-                <>
-                  {/* … deja aquí exactamente el mismo contenido que ya tenías
-                      dentro de este mismo panel (DC OFFSET, LOUDNESS, SPECTRAL,
-                      DYNAMICS, KEY, etc.). */}
-                </>
               )}
 
               {!csvLoading &&
@@ -843,14 +831,25 @@ export function MixResultPanel({
                 (!csvRows || csvRows.length === 0) && (
                   <p className="mt-3 text-xs text-slate-400">
                     No se han encontrado filas en el CSV de esta etapa. Es
-                    posible que el pipeline no haya generado todavía el fichero
-                    o que la estructura haya cambiado.
+                    posible que el pipeline no haya generado todavía el
+                    fichero o que la estructura haya cambiado.
                   </p>
                 )}
+
+              {/* Resúmenes por etapa, sólo cuando hay datos */}
+              {!csvLoading && !csvError && csvRows && csvRows.length > 0 && (
+                <>
+                  {/* aquí mantienes TODO tu bloque actual:
+                      DC OFFSET, LOUDNESS, SPECTRAL, DYNAMICS, KEY,
+                      VOCAL_TUNING, MASTERING, etc. No hace falta tocarlo,
+                      solo déjalo dentro de este fragmento */}
+                </>
+              )}
             </div>
           )}
         </div>
       </details>
+
 
 
             {/* Resúmenes por etapa, sólo cuando hay datos */}
