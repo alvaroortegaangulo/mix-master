@@ -15,7 +15,7 @@ type Props = {
   enabledPipelineStageKeys?: string[];
 };
 
-type PipelineStage = {
+export type PipelineStage = {
   key: string;
   label: string;
   description: string;
@@ -115,7 +115,7 @@ export function MixPipelinePanel({ result, enabledPipelineStageKeys }: Props) {
       )}${candidate.previewMixRelPath}`;
     }
 
-    // Fallback: si no hay preview específico, comparamos con el master final
+    // Fallback: si no hay preview específico, usamos el master final
     return fullSongUrl;
   }, [stages, activeStage, fullSongUrl, jobId]);
 
@@ -156,9 +156,8 @@ export function MixPipelinePanel({ result, enabledPipelineStageKeys }: Props) {
             Pipeline
           </h3>
           <p className="mt-1 text-xs text-slate-400">
-            Explora cómo va evolucionando la mezcla etapa a etapa, comparando
-            siempre la mezcla original con el resultado acumulado hasta la
-            etapa seleccionada.
+            Explora cómo va evolucionando la mezcla etapa a etapa, escuchando
+            el resultado acumulado hasta la etapa seleccionada.
           </p>
         </div>
       </div>
@@ -192,37 +191,26 @@ export function MixPipelinePanel({ result, enabledPipelineStageKeys }: Props) {
         </p>
         <p className="mt-2 text-xs text-slate-300">{activeStage.description}</p>
 
-        <div className="mt-4 grid gap-4 md:grid-cols-2">
-          <div>
-            <p className="mb-1 text-xs font-medium text-slate-200">
-              Original mix (antes del procesamiento)
-            </p>
-            <audio
-              controls
-              src={originalFullSongUrl}
-              className="mt-1 w-full rounded-lg bg-slate-800"
-            />
-          </div>
-          <div>
-            <p className="mb-1 text-xs font-medium text-slate-200">
-              Mix tras esta etapa
-            </p>
-            <audio
-              controls
-              src={processedUrl}
-              className="mt-1 w-full rounded-lg bg-slate-800"
-            />
-            <p className="mt-1 text-[11px] text-slate-500">
-              Esta mezcla refleja todas las etapas habilitadas desde el inicio
-              hasta{" "}
-              <span className="font-semibold">
-                Stage {activeStage.index} · {activeStage.label}
-              </span>
-              . Si alguna etapa anterior no genera un bounce propio todavía, se
-              usa la mezcla más cercana disponible (por defecto, el master
-              final).
-            </p>
-          </div>
+        {/* Solo mostramos la mezcla tras esta etapa */}
+        <div className="mt-4">
+          <p className="mb-1 text-xs font-medium text-slate-200">
+            Mix tras esta etapa
+          </p>
+          <audio
+            controls
+            src={processedUrl}
+            className="mt-1 w-full rounded-lg bg-slate-800"
+          />
+          <p className="mt-1 text-[11px] text-slate-500">
+            Esta mezcla refleja todas las etapas habilitadas desde el inicio
+            hasta{" "}
+            <span className="font-semibold">
+              Stage {activeStage.index} · {activeStage.label}
+            </span>
+            . Si alguna etapa anterior no genera un bounce propio todavía, se
+            usa la mezcla más cercana disponible (por defecto, el master
+            final).
+          </p>
         </div>
       </div>
     </section>
