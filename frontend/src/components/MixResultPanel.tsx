@@ -676,8 +676,7 @@ export function MixResultPanel({
             AI mix &amp; mastering (resultado)
           </h2>
           <p className="mt-1 text-xs text-slate-400">
-            Escucha el resultado final tras todo el pipeline de mezcla y
-            mastering.
+            Escucha el resultado final tras la mezcla
           </p>
           <audio
             controls
