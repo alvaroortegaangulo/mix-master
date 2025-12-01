@@ -767,7 +767,6 @@ export function MixResultPanel({
                 {metrics.key} {metrics.scale}
               </span>
             </p>
-          </div>
         </div>
         </div>
       </details>
@@ -850,6 +849,7 @@ export function MixResultPanel({
           )}
         </div>
       </details>
+
 
 
 
