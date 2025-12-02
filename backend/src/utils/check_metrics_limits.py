@@ -283,9 +283,16 @@ def _check_S1_MIXBUS_HEADROOM(analysis: Dict[str, Any]) -> bool:
     Check de QC para S1_MIXBUS_HEADROOM.
 
     - Falla (False) si el pico de mixbus o el LUFS integrado están por encima
-      de los máximos definidos en el contrato (con pequeña tolerancia).
-    - Si están por debajo de los mínimos, solo lanza avisos (no falla) para
-      evitar bucles cuando la mezcla ya viene muy baja de origen.
+      de los máximos definidos en el contrato (con pequeña tolerancia),
+      **siempre que** el LUFS no esté ya por debajo del mínimo.
+
+    - Si el LUFS está por debajo de lufs_integrated_min, tratamos cualquier exceso
+      de pico como AVISO (no error duro), para evitar seguir hundiendo mezclas
+      que ya vienen flojas de origen y que además no pueden cumplir simultáneamente
+      peak y LUFS solo con gain lineal.
+
+    - También lanza avisos cuando está por debajo de los mínimos, pero sin
+      bloquear el pipeline.
     """
     session = analysis.get("session", {}) or {}
     metrics = analysis.get("metrics_from_contract", {}) or {}
@@ -313,16 +320,9 @@ def _check_S1_MIXBUS_HEADROOM(analysis: Dict[str, Any]) -> bool:
 
     ok = True
 
-    # --- Peak ---
+    # --- Avisos por estar por debajo de mínimos ---
     if mix_peak_measured is not None and mix_peak_measured != float("-inf"):
-        if mix_peak_measured > peak_max + peak_tol:
-            print(
-                f"[S1_MIXBUS_HEADROOM][CHECK] mixbus_peak_dbfs_measured="
-                f"{mix_peak_measured:.2f} > peak_dbfs_max={peak_max:.2f} (+{peak_tol} margen)",
-                file=sys.stderr,
-            )
-            ok = False
-        elif mix_peak_measured < peak_min - peak_tol:
+        if mix_peak_measured < peak_min - peak_tol:
             print(
                 f"[S1_MIXBUS_HEADROOM][CHECK] mixbus_peak_dbfs_measured="
                 f"{mix_peak_measured:.2f} < peak_dbfs_min={peak_min:.2f} "
@@ -330,7 +330,40 @@ def _check_S1_MIXBUS_HEADROOM(analysis: Dict[str, Any]) -> bool:
                 file=sys.stderr,
             )
 
-    # --- LUFS ---
+    if lufs_measured is not None:
+        if lufs_measured < lufs_min - lufs_tol:
+            print(
+                f"[S1_MIXBUS_HEADROOM][CHECK] mixbus_lufs_integrated_measured="
+                f"{lufs_measured:.2f} < lufs_integrated_min={lufs_min:.2f} "
+                f"(solo aviso, mezcla ya floja de origen).",
+                file=sys.stderr,
+            )
+
+    # Flag para saber si la mezcla ya está floja de LUFS
+    lufs_demasiado_bajo = (
+        lufs_measured is not None and lufs_measured < lufs_min - lufs_tol
+    )
+
+    # --- Condiciones de error duro (solo si NO está floja de LUFS) ---
+    if mix_peak_measured is not None and mix_peak_measured != float("-inf"):
+        if mix_peak_measured > peak_max + peak_tol:
+            if lufs_demasiado_bajo:
+                # Mezcla ya floja de LUFS: tratamos exceso de pico como aviso, no error
+                print(
+                    f"[S1_MIXBUS_HEADROOM][CHECK] mixbus_peak_dbfs_measured="
+                    f"{mix_peak_measured:.2f} > peak_dbfs_max={peak_max:.2f} "
+                    f"(pero LUFS ya por debajo de mínimo; se deja para etapas posteriores).",
+                    file=sys.stderr,
+                )
+            else:
+                print(
+                    f"[S1_MIXBUS_HEADROOM][CHECK] mixbus_peak_dbfs_measured="
+                    f"{mix_peak_measured:.2f} > peak_dbfs_max={peak_max:.2f} "
+                    f"(+{peak_tol} margen)",
+                    file=sys.stderr,
+                )
+                ok = False
+
     if lufs_measured is not None:
         if lufs_measured > lufs_max + lufs_tol:
             print(
@@ -340,15 +373,9 @@ def _check_S1_MIXBUS_HEADROOM(analysis: Dict[str, Any]) -> bool:
                 file=sys.stderr,
             )
             ok = False
-        elif lufs_measured < lufs_min - lufs_tol:
-            print(
-                f"[S1_MIXBUS_HEADROOM][CHECK] mixbus_lufs_integrated_measured="
-                f"{lufs_measured:.2f} < lufs_integrated_min={lufs_min:.2f} "
-                f"(solo aviso, no se considera error duro).",
-                file=sys.stderr,
-            )
 
     return ok
+
 
 
 
