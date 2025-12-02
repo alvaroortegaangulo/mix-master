@@ -16,8 +16,8 @@ import json  # noqa: E402
 import os  # noqa: E402
 
 import numpy as np  # noqa: E402
+import soundfile as sf  # noqa: E402
 from pedalboard import Pedalboard, Gain  # noqa: E402
-from pedalboard.io import AudioFile  # noqa: E402
 
 from utils.analysis_utils import get_temp_dir  # noqa: E402
 
@@ -137,16 +137,16 @@ def compute_global_gain_db(analysis: Dict[str, Any]) -> float:
 
 
 # ---------------------------------------------------------------------
-# Aplicación de ganancia con Pedalboard
+# Aplicación de ganancia con Pedalboard (pero IO con soundfile)
 # ---------------------------------------------------------------------
 
 def _apply_gain_worker(args: Tuple[Dict[str, Any], float]) -> None:
     """
     Worker para aplicar la ganancia global a un único stem.
 
-    - Lee el archivo con pedalboard.AudioFile.
-    - Aplica Gain(gain_db).
-    - Reescribe el archivo con AudioFile.
+    - Lee el archivo con soundfile.
+    - Aplica Gain(gain_db) de Pedalboard en memoria.
+    - Reescribe el archivo con soundfile.
 
     Pensado para ejecutarse en procesos hijos (aunque aquí se usa en serie).
     """
@@ -157,49 +157,35 @@ def _apply_gain_worker(args: Tuple[Dict[str, Any], float]) -> None:
     if abs(gain_db) < 0.1:
         return
 
-    # Leer audio
     try:
-        with AudioFile(str(file_path)) as f:
-            audio = f.read(f.frames)
-            samplerate = f.samplerate
+        data, sr = sf.read(file_path, always_2d=False)
     except Exception as e:
         print(f"[S1_MIXBUS_HEADROOM] Error leyendo stem {file_path}: {e}")
         return
 
-    audio = np.asarray(audio, dtype=np.float32)
+    if not isinstance(data, np.ndarray):
+        data = np.asarray(data, dtype=np.float32)
+    else:
+        data = data.astype(np.float32)
 
-    # Configurar cadena de Pedalboard
+    if data.size == 0:
+        print(f"[S1_MIXBUS_HEADROOM] {file_path.name}: archivo vacío; se omite.")
+        return
+
+    # Cadena de Pedalboard con un único Gain
     board = Pedalboard([Gain(gain_db=float(gain_db))])
 
     try:
-        processed = board(audio, samplerate)
+        processed = board(data, sr)
     except Exception as e:
         print(f"[S1_MIXBUS_HEADROOM] Error aplicando Gain a {file_path}: {e}")
         return
 
     processed = np.asarray(processed, dtype=np.float32)
 
-    # Determinar canales para escritura
-    if processed.ndim == 1:
-        num_channels = 1
-    elif processed.ndim == 2:
-        num_channels = processed.shape[1]
-    else:
-        print(
-            f"[S1_MIXBUS_HEADROOM] Formato de audio no soportado para {file_path}: "
-            f"ndim={processed.ndim}"
-        )
-        return
-
     # Reescribir archivo con el audio procesado
     try:
-        with AudioFile(
-            str(file_path),
-            "w",
-            samplerate=int(samplerate),
-            num_channels=int(num_channels),
-        ) as f:
-            f.write(processed)
+        sf.write(file_path, processed, sr)
     except Exception as e:
         print(f"[S1_MIXBUS_HEADROOM] Error escribiendo stem {file_path}: {e}")
         return
