@@ -60,15 +60,12 @@ def _get_job_temp_root(create: bool = False) -> Path:
     job_id_env = os.getenv("MIX_JOB_ID")
 
     preferred_base = Path("/dev/shm/mix-master/temp")
-    if temp_root_env:
-        base_root = Path(temp_root_env)
-    else:
-        base_root = preferred_base
 
-    if job_id_env:
-        base = base_root / job_id_env
+    if temp_root_env:
+        # Si el usuario define MIX_TEMP_ROOT, lo usamos tal cual (sin añadir job_id de nuevo)
+        base = Path(temp_root_env)
     else:
-        base = base_root
+        base = preferred_base / job_id_env if job_id_env else preferred_base
 
     if create:
         try:

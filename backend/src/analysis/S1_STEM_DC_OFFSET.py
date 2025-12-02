@@ -80,13 +80,8 @@ def main() -> None:
     dc_offsets_db: List[float] = []
     peaks_dbfs: List[float] = []
 
-    # --- Análisis paralelo por stem ---
-    if stem_files:
-        max_workers = min(4, os.cpu_count() or 1)
-            # ex.map mantiene el orden de stem_files
-            results = list(ex.map(analyze_stem, stem_files))
-    else:
-        results = []
+    # Análisis por stem en serie
+    results = [analyze_stem(p) for p in stem_files] if stem_files else []
 
     # Recorremos resultados y calculamos agregados
     for stem_info in results:
