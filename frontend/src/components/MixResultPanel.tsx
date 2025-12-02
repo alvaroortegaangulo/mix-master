@@ -536,6 +536,12 @@ export function MixResultPanel({
     [selectedStageKey],
   );
 
+  // Abre autom��ticamente el informe final cuando el pipeline termina
+  useEffect(() => {
+    if (!jobId) return;
+    setIsReportModalOpen(true);
+  }, [jobId]);
+
   // Carga del CSV cuando cambia la etapa seleccionada
   useEffect(() => {
     if (!selectedStage) {

@@ -293,8 +293,11 @@ export function FinalReportModal({ jobId, isOpen, onClose }: FinalReportModalPro
         {/* Header */}
         <div className="flex items-start justify-between border-b border-slate-800 px-5 py-4">
           <div>
-            <h2 className="text-sm font-semibold text-slate-50">
-              Informe de mezcla y mastering (S11)
+            <h2 className="text-sm font-semibold leading-tight text-slate-50">
+              ¡MEZCLA COMPLETADA!
+              <span className="block text-[13px] font-normal text-slate-200">
+                Informe de mezcla y mastering
+              </span>
             </h2>
             <p className="mt-1 text-xs text-slate-400">
               Resumen técnico-humanizado del pipeline completo para este job.
