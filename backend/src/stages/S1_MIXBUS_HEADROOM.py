@@ -67,10 +67,20 @@ def compute_global_gain_db(analysis: Dict[str, Any]) -> float:
     except (TypeError, ValueError):
         lufs_measured = None
 
-    peak_dbfs_min = float(metrics.get("peak_dbfs_min", -12.0))
-    peak_dbfs_max = float(metrics.get("peak_dbfs_max", -6.0))
-    lufs_min = float(metrics.get("lufs_integrated_min", -26.0))
-    lufs_max = float(metrics.get("lufs_integrated_max", -20.0))
+    # Los targets deben venir del contrato; si faltan, no forzamos defaults
+    try:
+        peak_dbfs_min = float(metrics["peak_dbfs_min"])
+        peak_dbfs_max = float(metrics["peak_dbfs_max"])
+    except Exception:
+        print("[S1_MIXBUS_HEADROOM] Falta peak_dbfs_min/peak_dbfs_max en metrics; no se ajusta ganancia.")
+        return 0.0
+
+    try:
+        lufs_min = float(metrics["lufs_integrated_min"])
+        lufs_max = float(metrics["lufs_integrated_max"])
+    except Exception:
+        print("[S1_MIXBUS_HEADROOM] Falta lufs_integrated_min/lufs_integrated_max en metrics; no se ajusta ganancia.")
+        return 0.0
 
     peak_tol = 0.2
     lufs_tol = 0.5
