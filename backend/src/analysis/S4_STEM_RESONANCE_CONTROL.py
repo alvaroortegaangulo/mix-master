@@ -164,10 +164,9 @@ def main() -> None:
             )
         )
 
-    # 5) Ejecutar análisis en paralelo
+    # 5) Ejecutar análisis en serie
     if tasks:
-        max_workers = min(4, os.cpu_count() or 1)
-            stems_analysis: List[Dict[str, Any]] = list(ex.map(_analyze_stem, tasks))
+        stems_analysis: List[Dict[str, Any]] = list(map(_analyze_stem, tasks))
     else:
         stems_analysis = []
 
