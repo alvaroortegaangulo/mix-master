@@ -118,21 +118,21 @@ export function MixPipelinePanel({ result, enabledPipelineStageKeys }: Props) {
   }, [stages, activeStage, fullSongUrl, jobId]);
 
   return (
-    <section className="mt-6 rounded-2xl border border-slate-800/80 bg-slate-900/80 p-4 shadow-inner">
+    <section className="mt-6 rounded-2xl border border-emerald-500/40 bg-emerald-900/30 p-4 text-emerald-50 shadow-inner shadow-emerald-900/40">
     <details className="group">
       <summary className="flex cursor-pointer list-none items-center justify-between gap-2 md:flex-row md:items-center md:justify-between [&::-webkit-details-marker]:hidden">
         <div className="flex-1">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-300">
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-emerald-100">
             Pipeline
           </h3>
-          <p className="mt-1 text-xs text-slate-400">
+          <p className="mt-1 text-xs text-emerald-200/90">
             Explora cómo va evolucionando la mezcla etapa a etapa, escuchando
             el resultado acumulado hasta la etapa seleccionada.
           </p>
         </div>
         <span
           aria-hidden="true"
-          className="ml-2 text-xs text-slate-400 transition-transform duration-200 group-open:rotate-180"
+          className="ml-2 text-xs text-emerald-200 transition-transform duration-200 group-open:rotate-180"
         >
           ▼
         </span>
@@ -141,7 +141,7 @@ export function MixPipelinePanel({ result, enabledPipelineStageKeys }: Props) {
 
 
         {loading && !stages.length && (
-          <p className="mt-3 text-xs text-slate-400">
+          <p className="mt-3 text-xs text-emerald-200/80">
             Cargando definición del pipeline…
           </p>
         )}
@@ -167,8 +167,8 @@ export function MixPipelinePanel({ result, enabledPipelineStageKeys }: Props) {
                     className={[
                       "rounded-full px-3 py-1 text-xs font-medium transition",
                       isActive
-                        ? "bg-indigo-500 text-white shadow-sm"
-                        : "bg-slate-800 text-slate-300 hover:bg-slate-700",
+                        ? "bg-emerald-500 text-emerald-950 shadow-sm"
+                        : "bg-emerald-950/60 text-emerald-100 hover:bg-emerald-900/70",
                     ].join(" ")}
                   >
                     {stage.index}
@@ -178,25 +178,25 @@ export function MixPipelinePanel({ result, enabledPipelineStageKeys }: Props) {
             </div>
 
             {/* Contenido de la etapa activa */}
-            <div className="mt-4 rounded-xl bg-slate-950/40 p-4">
-              <p className="text-sm font-semibold text-slate-100">
+            <div className="mt-4 rounded-xl bg-emerald-950/40 p-4">
+              <p className="text-sm font-semibold text-emerald-50">
                 {`Stage ${activeStage.index} · ${activeStage.label}`}
               </p>
-              <p className="mt-2 text-xs text-slate-300">
+              <p className="mt-2 text-xs text-emerald-200/90">
                 {activeStage.description}
               </p>
 
               {/* Solo mostramos la mezcla tras esta etapa */}
               <div className="mt-4">
-                <p className="mb-1 text-xs font-medium text-slate-200">
+                <p className="mb-1 text-xs font-medium text-emerald-100">
                   Mix tras esta etapa
                 </p>
                 <audio
                   controls
                   src={processedUrl}
-                  className="mt-1 w-full rounded-lg bg-slate-800"
+                  className="mt-1 w-full rounded-lg bg-emerald-900/70"
                 />
-                <p className="mt-1 text-[11px] text-slate-500">
+                <p className="mt-1 text-[11px] text-emerald-200/80">
                   Esta mezcla refleja todas las etapas habilitadas desde el
                   inicio hasta{" "}
                   <span className="font-semibold">

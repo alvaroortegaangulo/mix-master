@@ -664,14 +664,14 @@ export function MixResultPanel({
   }, [csvRows]);
 
   return (
-    <section className="mt-6 rounded-3xl border border-slate-800/70 bg-slate-900/80 p-6 text-slate-50 shadow-xl shadow-black/40">
+    <section className="mt-6 rounded-3xl border border-emerald-500/40 bg-emerald-900/30 p-6 text-emerald-50 shadow-xl shadow-emerald-900/40">
       {/* Cabecera con players: original vs master */}
       <div className="space-y-2">
         <div>
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-300">
+          <h2 className="text-sm font-semibold uppercase tracking-wide text-emerald-100">
             {showOriginal ? "Mix original" : "AI mix & mastering (resultado)"}
           </h2>
-          <p className="mt-1 text-xs text-slate-400">
+          <p className="mt-1 text-xs text-emerald-200/90">
             {showOriginal
               ? "Original mix (antes del procesamiento)"
               : "Escucha el resultado final tras la mezcla"}
@@ -679,13 +679,13 @@ export function MixResultPanel({
           <audio
             controls
             src={showOriginal ? originalFullSongUrl : fullSongUrl}
-            className="mt-2 w-full rounded-lg bg-slate-800"
+            className="mt-2 w-full rounded-lg bg-emerald-950/60"
           />
         </div>
         <button
           type="button"
           onClick={() => setShowOriginal((v) => !v)}
-          className="inline-flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-950/60 px-3 py-1.5 text-[11px] font-medium text-slate-100 hover:border-indigo-400 hover:bg-slate-900/80"
+          className="inline-flex items-center gap-2 rounded-lg border border-emerald-500/50 bg-emerald-950/60 px-3 py-1.5 text-[11px] font-medium text-emerald-50 hover:border-emerald-300 hover:bg-emerald-900/80"
         >
           {showOriginal ? "AI mix & mastering" : "Mix Original"}
         </button>
@@ -701,10 +701,10 @@ export function MixResultPanel({
         <button
           type="button"
           onClick={() => setIsReportModalOpen(true)}
-          className="inline-flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-950/60 px-3 py-1.5 text-[11px] font-medium text-slate-100 hover:border-indigo-400 hover:bg-slate-900/80"
+          className="inline-flex items-center gap-2 rounded-lg border border-emerald-500/50 bg-emerald-950/60 px-3 py-1.5 text-[11px] font-medium text-slate-100 hover:border-indigo-400 hover:bg-slate-900/80"
         >
           Ver informe global del pipeline
-          <span className="rounded-full bg-slate-800/80 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-indigo-200">
+          <span className="rounded-full bg-emerald-900/70/80 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-indigo-200">
             S11
           </span>
         </button>
@@ -718,20 +718,20 @@ export function MixResultPanel({
 
 
 {/* Métricas principales (colapsadas) */}
-<details className="mt-6 rounded-xl bg-slate-950/40 p-4 group">
+<details className="mt-6 rounded-xl border border-emerald-500/30 bg-emerald-950/30 p-4 group">
   <summary className="flex cursor-pointer list-none items-center justify-between gap-2 [&::-webkit-details-marker]:hidden">
     <div className="flex-1">
-      <h3 className="text-sm font-semibold uppercase tracking-wide text-slate-400">
+      <h3 className="text-sm font-semibold uppercase tracking-wide text-emerald-200/90">
         Metrics
       </h3>
-      <p className="mt-1 text-xs text-slate-400">
+      <p className="mt-1 text-xs text-emerald-200/90">
         Resumen del loudness final, la afinación vocal y el tempo/tonalidad
         del master.
       </p>
     </div>
     <span
       aria-hidden="true"
-      className="ml-2 text-xs text-slate-400 transition-transform duration-200 group-open:rotate-180"
+      className="ml-2 text-xs text-emerald-200/90 transition-transform duration-200 group-open:rotate-180"
     >
       ▼
     </span>
@@ -739,14 +739,14 @@ export function MixResultPanel({
 
         <div className="mt-4 grid gap-4 md:grid-cols-3">
           <div>
-            <p className="text-xs uppercase text-slate-400">Loudness</p>
-            <p className="text-sm text-slate-200">
+            <p className="text-xs uppercase text-emerald-200/90">Loudness</p>
+            <p className="text-sm text-emerald-50">
               Peak:{" "}
               <span className="font-semibold">
                 {metrics.final_peak_dbfs.toFixed(1)} dBFS
               </span>
             </p>
-            <p className="text-sm text-slate-200">
+            <p className="text-sm text-emerald-50">
               RMS:{" "}
               <span className="font-semibold">
                 {metrics.final_rms_dbfs.toFixed(1)} dBFS
@@ -754,27 +754,27 @@ export function MixResultPanel({
             </p>
           </div>
           <div>
-            <p className="text-xs uppercase text-slate-400">Vocal tuning</p>
-            <p className="text-sm text-slate-200">
+            <p className="text-xs uppercase text-emerald-200/90">Vocal tuning</p>
+            <p className="text-sm text-emerald-50">
               Shift medio:{" "}
               <span className="font-semibold">
                 {metrics.vocal_shift_mean.toFixed(2)} semitonos
               </span>
             </p>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-emerald-200/90">
               Rango: {metrics.vocal_shift_min.toFixed(2)} –{" "}
               {metrics.vocal_shift_max.toFixed(2)} st
             </p>
           </div>
           <div>
-            <p className="text-xs uppercase text-slate-400">Tempo &amp; key</p>
-            <p className="text-sm text-slate-200">
+            <p className="text-xs uppercase text-emerald-200/90">Tempo &amp; key</p>
+            <p className="text-sm text-emerald-50">
               Tempo:{" "}
               <span className="font-semibold">
                 {metrics.tempo_bpm.toFixed(1)} BPM
               </span>
             </p>
-            <p className="text-sm text-slate-200">
+            <p className="text-sm text-emerald-50">
               Key:{" "}
               <span className="font-semibold">
                 {metrics.key} {metrics.scale}
