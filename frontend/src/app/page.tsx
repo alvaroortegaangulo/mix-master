@@ -123,6 +123,11 @@ const STAGE_UI_INFO: Record<string, StageUiInfo> = {
     description:
       "Pitch-correction of vocal tracks using the detected key, within natural pitch and retune-speed limits.",
   },
+  S1_MIXBUS_HEADROOM: {
+    label: "MIXBUS HEADROOM",
+    description:
+      "Global mixbus headroom adjustment (peak level and working LUFS).",
+  },  
   S2_GROUP_PHASE_DRUMS: {
     label: "DRUM PHASE ALIGNMENT",
     description:
@@ -273,6 +278,10 @@ export default function HomePage() {
     S1_VOX_TUNING: {
       title: "Vocal tuning",
       description: "Afina la voz principal respetando la tonalidad detectada.",
+    },
+    S1_MIXBUS_HEADROOM: {
+      title: "Mixbus headroom",
+      description: "Ajusta el headroom global para dejar espacio a procesar.",
     },
     S2_GROUP_PHASE_DRUMS: {
       title: "Phase alignment (drums)",
