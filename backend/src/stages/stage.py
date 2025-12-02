@@ -9,7 +9,7 @@ import uuid
 import datetime
 import subprocess
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Dict
 
 MAX_RETRIES = 3
 
@@ -29,6 +29,7 @@ MIXDOWN_STAGES = {
 # de contract_ids que realmente se van a ejecutar para el job actual.
 ACTIVE_CONTRACT_SEQUENCE: Optional[List[str]] = None
 TIMINGS_FILENAME = "pipeline_timings.json"
+_SCRIPT_USES_POOL_CACHE: Dict[Path, bool] = {}
 
 
 def _get_job_temp_root(create: bool = False) -> Path:
@@ -168,6 +169,38 @@ def _run_script_main(script_path: Path, *args: str) -> int:
             sys.modules.pop(spec.name, None)
 
 
+def _script_uses_process_pool(script_path: Path) -> bool:
+    """
+    Heurística: si el script menciona ProcessPoolExecutor o multiprocessing,
+    lo ejecutamos en subprocess para evitar el error de procesos daemonic.
+    """
+    cached = _SCRIPT_USES_POOL_CACHE.get(script_path)
+    if cached is not None:
+        return cached
+
+    try:
+        text = script_path.read_text(encoding="utf-8", errors="ignore")
+    except Exception:
+        _SCRIPT_USES_POOL_CACHE[script_path] = False
+        return False
+
+    markers = ("ProcessPoolExecutor", "multiprocessing")
+    uses_pool = any(m in text for m in markers)
+    _SCRIPT_USES_POOL_CACHE[script_path] = uses_pool
+    return uses_pool
+
+
+def _run_script(script_path: Path, *args: str) -> int:
+    """
+    Ejecuta un script en el mismo proceso o en subprocess según necesite
+    multiproceso interno.
+    """
+    if _script_uses_process_pool(script_path):
+        result = subprocess.run([sys.executable, str(script_path), *args])
+        return result.returncode
+    return _run_script_main(script_path, *args)
+
+
 def _get_next_contract_id(base_dir: Path, current_contract_id: str) -> str | None:
     """
     Devuelve el id del siguiente contrato en la secuencia efectiva.
@@ -238,19 +271,19 @@ def run_stage(stage_id: str) -> None:
         # Para stages de mixbus/master, primero necesitamos un full_song.wav
         # actualizado a partir de los stems de este stage.
         if stage_id in MIXDOWN_STAGES:
-            _run_script_main(mixdown_script, stage_id)
+            _run_script(mixdown_script, stage_id)
 
         # 1) Análisis previo
-        _run_script_main(analysis_script, stage_id)
+        _run_script(analysis_script, stage_id)
 
         # 2) Procesamiento principal de la etapa
-        _run_script_main(stage_script, stage_id)
+        _run_script(stage_script, stage_id)
 
         # 3) Análisis posterior
-        _run_script_main(analysis_script, stage_id)
+        _run_script(analysis_script, stage_id)
 
         # 4) Validación de métricas (check_metrics_limits.py)
-        ret = _run_script_main(check_script, stage_id)
+        ret = _run_script(check_script, stage_id)
         success = (ret == 0)
 
         if success:
@@ -262,12 +295,12 @@ def run_stage(stage_id: str) -> None:
     # Para el resto de stages (no master), el mixdown se hace al final
     # para dejar preparado full_song.wav de este contrato.
     if stage_id not in MIXDOWN_STAGES:
-        _run_script_main(mixdown_script, stage_id)
+        _run_script(mixdown_script, stage_id)
 
     # Copiar stems a la carpeta del siguiente contrato de la secuencia
     next_contract_id = _get_next_contract_id(base_dir, stage_id)
     if next_contract_id is not None:
-        _run_script_main(copy_script, stage_id, next_contract_id)
+        _run_script(copy_script, stage_id, next_contract_id)
 
     # Asegurar que el análisis existe (fallback a subprocess si falta)
     _ensure_analysis_file(stage_id, analysis_script)
