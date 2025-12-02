@@ -81,9 +81,9 @@ def _process_stem_worker(
     if data.size == 0:
         return False
 
-    # El análisis da el lag "medido"; para corregirlo lo aplicamos con signo contrario
+    # OJO: estimate_best_lag_and_corr ya devuelve el lag a aplicar (en samples)
     lag_samples_from_analysis = float(lag_samples)
-    shift_samples = -int(round(lag_samples_from_analysis))
+    shift_samples = int(round(lag_samples_from_analysis))
 
     shifted = apply_time_shift_samples(data, shift_samples)
 
@@ -95,8 +95,9 @@ def _process_stem_worker(
 
     print(
         f"[S2_GROUP_PHASE_DRUMS] {file_name}: "
-        f"lag_aplicado={shift_samples} samples ({-lag_ms:.3f} ms aprox), flip={use_flip}"
+        f"lag_aplicado={shift_samples} samples ({lag_ms:.3f} ms aprox), flip={use_flip}"
     )
+
 
     return True
 
