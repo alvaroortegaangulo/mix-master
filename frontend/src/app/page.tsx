@@ -29,52 +29,52 @@ const SPACE_DEPTH_BUSES: SpaceDepthBus[] = [
   {
     key: "drums",
     label: "Drums bus",
-    description: "Drum kit, baterías programadas, loops, etc.",
+    description: "Drum kit, programmed drums, loops, etc.",
   },
   {
     key: "percussion",
     label: "Percussion bus",
-    description: "Percusiones adicionales, palmas, shakers, etc.",
+    description: "Additional percussion, claps, shakers, etc.",
   },
   {
     key: "bass",
     label: "Bass bus",
-    description: "Bajo eléctrico, bajo synth, sub-bass.",
+    description: "Electric bass, synth bass, sub-bass.",
   },
   {
     key: "guitars",
     label: "Guitars bus",
-    description: "Guitarras acústicas y eléctricas.",
+    description: "Acoustic and electric guitars.",
   },
   {
     key: "keys_synths",
     label: "Keys / Synths bus",
-    description: "Pianos, Rhodes, pads, sintetizadores.",
+    description: "Pianos, Rhodes, pads, synthesizers.",
   },
   {
     key: "lead_vocal",
     label: "Lead vocal bus",
-    description: "Voz principal.",
+    description: "Lead vocal.",
   },
   {
     key: "backing_vocals",
     label: "Backing vocals bus",
-    description: "Coros, dobles, harmonies.",
+    description: "Backing vocals, doubles, harmonies.",
   },
   {
     key: "fx",
     label: "FX / Ear candy bus",
-    description: "Risers, impacts, vocal chops, efectos creativos.",
+    description: "Risers, impacts, vocal chops, creative FX.",
   },
   {
     key: "ambience",
     label: "Ambience / Atmos bus",
-    description: "Ambientes, atmósferas, room mics, fx de fondo.",
+    description: "Ambiences, atmospheres, room mics, background FX.",
   },
   {
     key: "other",
     label: "Other bus",
-    description: "Cualquier stem no clasificado en las categorías anteriores.",
+    description: "Any stem not classified in the previous categories.",
   },
 ];
 
