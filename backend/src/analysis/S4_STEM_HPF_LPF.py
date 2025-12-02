@@ -150,7 +150,7 @@ def _analyze_stem(
         hpf_target, lpf_target = 20.0, 20000.0
 
     try:
-    y, sr = sf_read_limited(stem_path, always_2d=False)
+        y, sr = sf_read_limited(stem_path, always_2d=False)
     except Exception as e:
         print(f"[S4_STEM_HPF_LPF] Aviso: no se puede leer '{fname}': {e}. Se omiten métricas espectrales.")
         return {
