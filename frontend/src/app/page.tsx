@@ -692,9 +692,8 @@ useEffect(() => {
                             </label>
                           ))}
                         </div>
-                          </code>
-                          .
-                        </p>
+
+
                       </div>
                     )}
                   </section>
