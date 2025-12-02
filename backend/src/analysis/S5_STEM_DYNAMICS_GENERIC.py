@@ -104,19 +104,15 @@ def main() -> None:
         if p.name.lower() != "full_song.wav"
     )
 
-    # 4) Preparar tareas para análisis paralelo
+    # 4) Preparar tareas para análisis (serie)
     tasks: List[Tuple[Path, str]] = []
     for p in stem_files:
         fname = p.name
         inst_prof = instrument_by_file.get(fname, "Other")
         tasks.append((p, inst_prof))
 
-    # 5) Ejecutar análisis en paralelo
-    if tasks:
-        max_workers = min(4, os.cpu_count() or 1)
-            results: List[Dict[str, Any]] = list(ex.map(_analyze_stem, tasks))
-    else:
-        results = []
+    # 5) Ejecutar análisis en serie
+    results: List[Dict[str, Any]] = [_analyze_stem(t) for t in tasks] if tasks else []
 
     stems_analysis: List[Dict[str, Any]] = []
 
