@@ -2,7 +2,7 @@
 
 import sys
 from pathlib import Path
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Tuple
 
 # --- hack para poder importar utils cuando se ejecuta como script suelto ---
 THIS_DIR = Path(__file__).resolve().parent
@@ -20,12 +20,12 @@ import soundfile as sf  # noqa: E402
 from utils.analysis_utils import (  # noqa: E402
     load_contract,
     get_temp_dir,
-    # compute_mixbus_peak_dbfs,  # ya no lo usamos aquí, pero lo puedes dejar si quieres
 )
+from utils.loudness_utils import compute_lufs_and_lra  # noqa: E402
 
 
 # ---------------------------------------------------------------------------
-# Workers para cálculo paralelo del peak de mixbus
+# Workers para cálculo paralelo del mix preliminar (suma de stems)
 # ---------------------------------------------------------------------------
 
 def _load_stem_for_mix(stem_path_str: str):
@@ -44,18 +44,18 @@ def _load_stem_for_mix(stem_path_str: str):
         return None, None
 
 
-def _compute_mixbus_peak_dbfs_parallel(stem_paths: List[Path]) -> float:
+def _compute_mixbus_peak_and_lufs_parallel(
+    stem_paths: List[Path],
+) -> Tuple[float, float | None]:
     """
-    Calcula el pico del mix preliminar (suma unity de todos los stems) en paralelo:
+    Calcula el pico del mix preliminar (suma unity de todos los stems) en paralelo
+    y el LUFS integrado aproximado de ese mix.
 
-      1) Carga de stems y conversión a float32 en procesos paralelos.
-      2) Suma en el proceso principal.
-      3) Devuelve peak en dBFS.
-
-    Asume mismo samplerate y nº de canales (garantizado por S0_SESSION_FORMAT).
+    Devuelve (peak_dbfs, lufs_integrated) donde lufs_integrated puede ser None
+    si hay algún problema de cálculo.
     """
     if not stem_paths:
-        return float("-inf")
+        return float("-inf"), None
 
     stem_path_strs = [str(p) for p in stem_paths]
     max_workers = min(4, os.cpu_count() or 1)
@@ -64,7 +64,7 @@ def _compute_mixbus_peak_dbfs_parallel(stem_paths: List[Path]) -> float:
     sr_ref = None
     ch_ref = None
 
-    # 1) Cargar en paralelo
+    # 1) Cargar stems en paralelo
     with ProcessPoolExecutor(max_workers=max_workers) as ex:
         for data, sr in ex.map(_load_stem_for_mix, stem_path_strs):
             if data is None or sr is None:
@@ -73,12 +73,11 @@ def _compute_mixbus_peak_dbfs_parallel(stem_paths: List[Path]) -> float:
             if sr_ref is None:
                 sr_ref = sr
                 ch_ref = data.shape[1]
-            # Aquí podrías hacer un check de sr != sr_ref / ch != ch_ref si lo necesitas.
 
             data_list.append(data)
 
-    if not data_list or ch_ref is None:
-        return float("-inf")
+    if not data_list or ch_ref is None or sr_ref is None:
+        return float("-inf"), None
 
     # 2) Sumar a un único buffer mix
     max_len = max(d.shape[0] for d in data_list)
@@ -91,9 +90,23 @@ def _compute_mixbus_peak_dbfs_parallel(stem_paths: List[Path]) -> float:
     # 3) Peak en dBFS
     peak = float(np.max(np.abs(mix)))
     if peak <= 0.0:
-        return float("-inf")
+        peak_dbfs = float("-inf")
+    else:
+        peak_dbfs = float(20.0 * np.log10(peak))
 
-    return float(20.0 * np.log10(peak))
+    # 4) LUFS integrado del mix preliminar
+    lufs_integrated: float | None = None
+    if peak_dbfs != float("-inf"):
+        try:
+            lufs_integrated, _ = compute_lufs_and_lra(mix, sr_ref)
+            lufs_integrated = float(lufs_integrated)
+        except Exception as e:
+            print(
+                f"[S1_MIXBUS_HEADROOM] Aviso: no se pudo calcular LUFS del mixbus: {e}"
+            )
+            lufs_integrated = None
+
+    return peak_dbfs, lufs_integrated
 
 
 def main() -> None:
@@ -119,19 +132,21 @@ def main() -> None:
 
     # 2) Listar stems (.wav) en temp/<contract_id>, excluyendo full_song.wav
     stem_files: List[Path] = sorted(
-        p for p in temp_dir.glob("*.wav")
-        if p.name.lower() != "full_song.wav"
+        p for p in temp_dir.glob("*.wav") if p.name.lower() != "full_song.wav"
     )
 
-    # 3) Calcular pico de mixbus en paralelo
-    mixbus_peak_dbfs_measured = _compute_mixbus_peak_dbfs_parallel(stem_files)
+    # 3) Calcular pico de mixbus + LUFS de trabajo en paralelo
+    mixbus_peak_dbfs_measured, mixbus_lufs_integrated_measured = (
+        _compute_mixbus_peak_and_lufs_parallel(stem_files)
+    )
 
-    # Rango objetivo de pico desde el contrato
+    # Rango objetivo desde el contrato (con defaults razonables)
     peak_dbfs_min = float(metrics.get("peak_dbfs_min", -12.0))
     peak_dbfs_max = float(metrics.get("peak_dbfs_max", -6.0))
+    lufs_integrated_min = float(metrics.get("lufs_integrated_min", -26.0))
+    lufs_integrated_max = float(metrics.get("lufs_integrated_max", -20.0))
 
-    # Target “por defecto”: el techo del rango. Si además defines mixbus_peak_target_dbfs
-    # en el contrato, lo respetamos por encima.
+    # Target de pico: por defecto, el techo del rango
     mixbus_peak_target_dbfs = float(
         metrics.get("mixbus_peak_target_dbfs", peak_dbfs_max)
     )
@@ -144,8 +159,11 @@ def main() -> None:
         "session": {
             "mixbus_peak_target_dbfs": mixbus_peak_target_dbfs,
             "mixbus_peak_dbfs_measured": mixbus_peak_dbfs_measured,
+            "mixbus_lufs_integrated_measured": mixbus_lufs_integrated_measured,
             "peak_dbfs_min": peak_dbfs_min,
             "peak_dbfs_max": peak_dbfs_max,
+            "lufs_integrated_min": lufs_integrated_min,
+            "lufs_integrated_max": lufs_integrated_max,
         },
         "stems": [
             {
@@ -155,7 +173,6 @@ def main() -> None:
             for p in stem_files
         ],
     }
-
 
     output_path = temp_dir / f"analysis_{contract_id}.json"
     with output_path.open("w", encoding="utf-8") as f:

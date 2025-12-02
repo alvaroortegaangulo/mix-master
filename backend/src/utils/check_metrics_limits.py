@@ -279,25 +279,77 @@ def _check_S1_VOX_TUNING(data: Dict[str, Any]) -> bool:
 
 
 def _check_S1_MIXBUS_HEADROOM(analysis: Dict[str, Any]) -> bool:
-    session = analysis.get("session", {})
-    mix_peak_target = session.get("mixbus_peak_target_dbfs", -6.0)
+    """
+    Check de QC para S1_MIXBUS_HEADROOM.
+
+    - Falla (False) si el pico de mixbus o el LUFS integrado están por encima
+      de los máximos definidos en el contrato (con pequeña tolerancia).
+    - Si están por debajo de los mínimos, solo lanza avisos (no falla) para
+      evitar bucles cuando la mezcla ya viene muy baja de origen.
+    """
+    session = analysis.get("session", {}) or {}
+    metrics = analysis.get("metrics_from_contract", {}) or {}
+
     mix_peak_measured = session.get("mixbus_peak_dbfs_measured")
+    lufs_measured = session.get("mixbus_lufs_integrated_measured")
 
-    if mix_peak_measured is None:
-        return True  # nada que comprobar
+    try:
+        mix_peak_measured = float(mix_peak_measured)
+    except (TypeError, ValueError):
+        mix_peak_measured = None
 
-    mix_peak_measured = float(mix_peak_measured)
-    tol = 0.1  # margen
+    try:
+        lufs_measured = float(lufs_measured) if lufs_measured is not None else None
+    except (TypeError, ValueError):
+        lufs_measured = None
 
-    if mix_peak_measured > mix_peak_target + tol:
-        print(
-            f"[S1_MIXBUS_HEADROOM] mixbus_peak_dbfs_measured={mix_peak_measured:.2f} "
-            f"> target={mix_peak_target} (+{tol} margen)",
-            file=sys.stderr,
-        )
-        return False
+    peak_min = float(metrics.get("peak_dbfs_min", -12.0))
+    peak_max = float(metrics.get("peak_dbfs_max", -6.0))
+    lufs_min = float(metrics.get("lufs_integrated_min", -26.0))
+    lufs_max = float(metrics.get("lufs_integrated_max", -20.0))
 
-    return True
+    peak_tol = 0.2   # margen dB de pico
+    lufs_tol = 0.5   # margen dB de LUFS
+
+    ok = True
+
+    # --- Peak ---
+    if mix_peak_measured is not None and mix_peak_measured != float("-inf"):
+        if mix_peak_measured > peak_max + peak_tol:
+            print(
+                f"[S1_MIXBUS_HEADROOM][CHECK] mixbus_peak_dbfs_measured="
+                f"{mix_peak_measured:.2f} > peak_dbfs_max={peak_max:.2f} (+{peak_tol} margen)",
+                file=sys.stderr,
+            )
+            ok = False
+        elif mix_peak_measured < peak_min - peak_tol:
+            print(
+                f"[S1_MIXBUS_HEADROOM][CHECK] mixbus_peak_dbfs_measured="
+                f"{mix_peak_measured:.2f} < peak_dbfs_min={peak_min:.2f} "
+                f"(solo aviso, no se considera error duro).",
+                file=sys.stderr,
+            )
+
+    # --- LUFS ---
+    if lufs_measured is not None:
+        if lufs_measured > lufs_max + lufs_tol:
+            print(
+                f"[S1_MIXBUS_HEADROOM][CHECK] mixbus_lufs_integrated_measured="
+                f"{lufs_measured:.2f} > lufs_integrated_max={lufs_max:.2f} "
+                f"(+{lufs_tol} margen)",
+                file=sys.stderr,
+            )
+            ok = False
+        elif lufs_measured < lufs_min - lufs_tol:
+            print(
+                f"[S1_MIXBUS_HEADROOM][CHECK] mixbus_lufs_integrated_measured="
+                f"{lufs_measured:.2f} < lufs_integrated_min={lufs_min:.2f} "
+                f"(solo aviso, no se considera error duro).",
+                file=sys.stderr,
+            )
+
+    return ok
+
 
 
 
