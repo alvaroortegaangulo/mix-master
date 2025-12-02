@@ -16,12 +16,12 @@ import json  # noqa: E402
 
 import numpy as np  # noqa: E402
 import soundfile as sf  # noqa: E402
+from pedalboard import Distortion  # noqa: E402
 
-from utils.analysis_utils import get_temp_dir
+from utils.analysis_utils import get_temp_dir  # noqa: E402
 from utils.color_utils import (  # noqa: E402
     compute_rms_dbfs,
     compute_true_peak_dbfs,
-    apply_soft_saturation,
     estimate_thd_percent,
 )
 
@@ -65,6 +65,33 @@ def _style_saturation_factor(style_preset: str) -> float:
     return 0.8
 
 
+def _apply_pedalboard_saturation(
+    y: np.ndarray,
+    sr: int,
+    drive_db: float,
+) -> np.ndarray:
+    """
+    Aplica saturación suave usando pedalboard.Distortion.
+
+    El comportamiento es conceptualmente equivalente a un waveshaper tanh
+    controlado por drive_db, como en la documentación de Pedalboard.
+    """
+    # Nos aseguramos de trabajar en float32
+    if not isinstance(y, np.ndarray):
+        y = np.asarray(y, dtype=np.float32)
+    else:
+        y = y.astype(np.float32)
+
+    dist = Distortion()
+    # Pedalboard expone drive_db como parámetro del plugin.
+    # Lo configuramos después de instanciar para evitar problemas de firma.
+    dist.drive_db = float(drive_db)
+
+    # Llamada directa al plugin (alias de .process())
+    y_sat = dist(y, sr)
+    return y_sat.astype(np.float32)
+
+
 def _process_mixbus_color_worker(
     full_song_path_str: str,
     style_preset: str,
@@ -77,10 +104,11 @@ def _process_mixbus_color_worker(
     Worker que realiza todo el procesado de color en el mixbus:
 
       - Lee full_song.wav.
-      - Calcula métricas pre.
+      - Calcula métricas pre (RMS / true peak).
       - Determina drive de saturación según estilo y límites.
-      - Aplica saturación suave y, si es necesario, ajusta drive para respetar THD.
-      - Aplica trim suave para acercar el true peak al rango objetivo.
+      - Aplica saturación usando pedalboard.Distortion y ajusta drive si
+        se excede el límite de THD.
+      - Aplica un trim suave para acercar el true peak al rango objetivo.
       - Escribe el audio procesado en el mismo full_song.wav.
       - Devuelve métricas clave (pre/post, drive, trim, THD).
     """
@@ -114,8 +142,8 @@ def _process_mixbus_color_worker(
         y_sat = y.copy()
         thd_pct = 0.0
     else:
-        # Aplicar saturación inicial
-        y_sat = apply_soft_saturation(y, drive_db=drive_db, curve_strength=1.5)
+        # Saturación inicial con Pedalboard
+        y_sat = _apply_pedalboard_saturation(y, sr, drive_db=drive_db)
 
         # Estimar THD incremental
         thd_pct = estimate_thd_percent(y, y_sat)
@@ -127,7 +155,8 @@ def _process_mixbus_color_worker(
         # Si nos pasamos de THD, ajustamos drive hacia abajo
         if thd_pct > max_thd_percent:
             scale = max_thd_percent / max(thd_pct, 1e-6)
-            new_drive = drive_db * scale
+            new_drive = float(drive_db * scale)
+
             if new_drive < 0.1:
                 print(
                     "[S8_MIXBUS_COLOR_GENERIC] Para respetar THD el drive caería < 0.1 dB; "
@@ -137,12 +166,12 @@ def _process_mixbus_color_worker(
                 y_sat = y.copy()
                 thd_pct = 0.0
             else:
-                drive_db = float(new_drive)
+                drive_db = new_drive
                 print(
                     f"[S8_MIXBUS_COLOR_GENERIC] Ajustando drive a {drive_db:.2f} dB "
                     "para respetar THD."
                 )
-                y_sat = apply_soft_saturation(y, drive_db=drive_db, curve_strength=1.5)
+                y_sat = _apply_pedalboard_saturation(y, sr, drive_db=drive_db)
                 thd_pct = estimate_thd_percent(y, y_sat)
                 print(
                     f"[S8_MIXBUS_COLOR_GENERIC] THD tras ajuste: {thd_pct:.2f} %."
@@ -208,7 +237,7 @@ def main() -> None:
 
       - Lee analysis_S8_MIXBUS_COLOR_GENERIC.json.
       - Calcula parámetros de saturación en función de estilo y límites del contrato.
-      - El worker aplica saturación suave y trim de true peak.
+      - El worker aplica saturación (vía pedalboard.Distortion) y trim de true peak.
       - Se guardan métricas en color_metrics_S8_MIXBUS_COLOR_GENERIC.json.
     """
     if len(sys.argv) < 2:
@@ -221,14 +250,15 @@ def main() -> None:
 
     metrics: Dict[str, Any] = analysis.get("metrics_from_contract", {}) or {}
     limits: Dict[str, Any] = analysis.get("limits_from_contract", {}) or {}
-    session: Dict[str, Any] = analysis.get("session", {}) or {}
 
     style_preset = analysis.get("style_preset", "default")
 
     tp_min = float(metrics.get("target_true_peak_range_dbtp_min", -4.0))
     tp_max = float(metrics.get("target_true_peak_range_dbtp_max", -2.0))
     max_thd_percent = float(metrics.get("max_thd_percent", 3.0))
-    max_sat_per_pass_db = float(limits.get("max_additional_saturation_per_pass", 1.0))
+    max_sat_per_pass_db = float(
+        limits.get("max_additional_saturation_per_pass", 1.0)
+    )
 
     temp_dir = get_temp_dir(contract_id, create=False)
     full_song_path = temp_dir / "full_song.wav"
