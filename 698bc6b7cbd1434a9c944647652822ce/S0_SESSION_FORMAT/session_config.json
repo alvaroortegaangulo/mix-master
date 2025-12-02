@@ -1,0 +1,34 @@
+{
+  "style_preset": "Unknown",
+  "stems": [
+    {
+      "file_name": "bass.wav",
+      "instrument_profile": "Bass_Electric"
+    },
+    {
+      "file_name": "bongo.wav",
+      "instrument_profile": "Percussion"
+    },
+    {
+      "file_name": "guitar_riff1.wav",
+      "instrument_profile": "Acoustic_Guitar"
+    },
+    {
+      "file_name": "guitar_riff2.wav",
+      "instrument_profile": "Acoustic_Guitar"
+    },
+    {
+      "file_name": "guitar_rythm.wav",
+      "instrument_profile": "Acoustic_Guitar"
+    },
+    {
+      "file_name": "kick.wav",
+      "instrument_profile": "Kick"
+    },
+    {
+      "file_name": "vocal.wav",
+      "instrument_profile": "Lead_Vocal_Melodic"
+    }
+  ],
+  "space_depth_bus_styles": {}
+}

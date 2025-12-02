@@ -1,0 +1,59 @@
+{
+  "contract_id": "S3_MIXBUS_HEADROOM",
+  "stage_id": "S3_STATIC_MIX",
+  "style_preset": "Unknown",
+  "metrics_from_contract": {
+    "peak_dbfs_min": -12.0,
+    "peak_dbfs_max": -6.0,
+    "lufs_integrated_min": -28.0,
+    "lufs_integrated_max": -20.0
+  },
+  "limits_from_contract": {
+    "max_gain_change_db_per_pass": 3.0
+  },
+  "session": {
+    "peak_dbfs_min_target": -12.0,
+    "peak_dbfs_max_target": -6.0,
+    "lufs_integrated_min_target": -28.0,
+    "lufs_integrated_max_target": -20.0,
+    "mix_peak_dbfs_measured": -6.001651359178463,
+    "mix_lufs_integrated_measured": -29.729848934261412
+  },
+  "stems": [
+    {
+      "file_name": "bass.wav",
+      "file_path": "/app/temp/698bc6b7cbd1434a9c944647652822ce/S3_MIXBUS_HEADROOM/bass.wav",
+      "instrument_profile": "Bass_Electric"
+    },
+    {
+      "file_name": "bongo.wav",
+      "file_path": "/app/temp/698bc6b7cbd1434a9c944647652822ce/S3_MIXBUS_HEADROOM/bongo.wav",
+      "instrument_profile": "Percussion"
+    },
+    {
+      "file_name": "guitar_riff1.wav",
+      "file_path": "/app/temp/698bc6b7cbd1434a9c944647652822ce/S3_MIXBUS_HEADROOM/guitar_riff1.wav",
+      "instrument_profile": "Acoustic_Guitar"
+    },
+    {
+      "file_name": "guitar_riff2.wav",
+      "file_path": "/app/temp/698bc6b7cbd1434a9c944647652822ce/S3_MIXBUS_HEADROOM/guitar_riff2.wav",
+      "instrument_profile": "Acoustic_Guitar"
+    },
+    {
+      "file_name": "guitar_rythm.wav",
+      "file_path": "/app/temp/698bc6b7cbd1434a9c944647652822ce/S3_MIXBUS_HEADROOM/guitar_rythm.wav",
+      "instrument_profile": "Acoustic_Guitar"
+    },
+    {
+      "file_name": "kick.wav",
+      "file_path": "/app/temp/698bc6b7cbd1434a9c944647652822ce/S3_MIXBUS_HEADROOM/kick.wav",
+      "instrument_profile": "Kick"
+    },
+    {
+      "file_name": "vocal.wav",
+      "file_path": "/app/temp/698bc6b7cbd1434a9c944647652822ce/S3_MIXBUS_HEADROOM/vocal.wav",
+      "instrument_profile": "Lead_Vocal_Melodic"
+    }
+  ]
+}

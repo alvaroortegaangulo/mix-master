@@ -1,0 +1,30 @@
+[
+  {
+    "name": "bass.wav",
+    "profile": "Bass_Electric"
+  },
+  {
+    "name": "bongo.wav",
+    "profile": "Percussion"
+  },
+  {
+    "name": "guitar_riff1.wav",
+    "profile": "Acoustic_Guitar"
+  },
+  {
+    "name": "guitar_riff2.wav",
+    "profile": "Acoustic_Guitar"
+  },
+  {
+    "name": "guitar_rythm.wav",
+    "profile": "Acoustic_Guitar"
+  },
+  {
+    "name": "kick.wav",
+    "profile": "Kick"
+  },
+  {
+    "name": "vocal.wav",
+    "profile": "Lead_Vocal_Melodic"
+  }
+]

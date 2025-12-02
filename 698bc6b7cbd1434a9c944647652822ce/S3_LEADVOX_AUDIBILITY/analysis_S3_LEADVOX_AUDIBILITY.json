@@ -1,0 +1,111 @@
+{
+  "contract_id": "S3_LEADVOX_AUDIBILITY",
+  "stage_id": "S3_STATIC_MIX",
+  "style_preset": "Unknown",
+  "metrics_from_contract": {
+    "short_term_lufs_offset_vs_mixbus_min_db": -3.0,
+    "short_term_lufs_offset_vs_mixbus_max_db": 3.0
+  },
+  "limits_from_contract": {
+    "max_gain_change_db_per_pass": 2.0
+  },
+  "session": {
+    "short_term_offset_min_target_db": -3.0,
+    "short_term_offset_max_target_db": 3.0,
+    "short_term_window_sec": 3.0,
+    "short_term_hop_sec": 1.0,
+    "rms_threshold_db": -40.0,
+    "lead_profile_id": "Lead_Vocal_Melodic",
+    "global_short_term_offset_mean_db": -3.4368767738342285,
+    "global_short_term_offset_median_db": -3.4368767738342285,
+    "global_short_term_offset_min_db": -3.4368767738342285,
+    "global_short_term_offset_max_db": -3.4368767738342285,
+    "global_num_lead_stems_with_data": 1
+  },
+  "stems": [
+    {
+      "file_name": "bass.wav",
+      "file_path": "/app/temp/698bc6b7cbd1434a9c944647652822ce/S3_LEADVOX_AUDIBILITY/bass.wav",
+      "instrument_profile": "Bass_Electric",
+      "is_lead_vocal": false,
+      "short_term_offset_mean_db": null,
+      "short_term_offset_median_db": null,
+      "short_term_offset_min_db": null,
+      "short_term_offset_max_db": null,
+      "short_term_num_windows_total": 0,
+      "short_term_num_windows_used": 0
+    },
+    {
+      "file_name": "bongo.wav",
+      "file_path": "/app/temp/698bc6b7cbd1434a9c944647652822ce/S3_LEADVOX_AUDIBILITY/bongo.wav",
+      "instrument_profile": "Percussion",
+      "is_lead_vocal": false,
+      "short_term_offset_mean_db": null,
+      "short_term_offset_median_db": null,
+      "short_term_offset_min_db": null,
+      "short_term_offset_max_db": null,
+      "short_term_num_windows_total": 0,
+      "short_term_num_windows_used": 0
+    },
+    {
+      "file_name": "guitar_riff1.wav",
+      "file_path": "/app/temp/698bc6b7cbd1434a9c944647652822ce/S3_LEADVOX_AUDIBILITY/guitar_riff1.wav",
+      "instrument_profile": "Acoustic_Guitar",
+      "is_lead_vocal": false,
+      "short_term_offset_mean_db": null,
+      "short_term_offset_median_db": null,
+      "short_term_offset_min_db": null,
+      "short_term_offset_max_db": null,
+      "short_term_num_windows_total": 0,
+      "short_term_num_windows_used": 0
+    },
+    {
+      "file_name": "guitar_riff2.wav",
+      "file_path": "/app/temp/698bc6b7cbd1434a9c944647652822ce/S3_LEADVOX_AUDIBILITY/guitar_riff2.wav",
+      "instrument_profile": "Acoustic_Guitar",
+      "is_lead_vocal": false,
+      "short_term_offset_mean_db": null,
+      "short_term_offset_median_db": null,
+      "short_term_offset_min_db": null,
+      "short_term_offset_max_db": null,
+      "short_term_num_windows_total": 0,
+      "short_term_num_windows_used": 0
+    },
+    {
+      "file_name": "guitar_rythm.wav",
+      "file_path": "/app/temp/698bc6b7cbd1434a9c944647652822ce/S3_LEADVOX_AUDIBILITY/guitar_rythm.wav",
+      "instrument_profile": "Acoustic_Guitar",
+      "is_lead_vocal": false,
+      "short_term_offset_mean_db": null,
+      "short_term_offset_median_db": null,
+      "short_term_offset_min_db": null,
+      "short_term_offset_max_db": null,
+      "short_term_num_windows_total": 0,
+      "short_term_num_windows_used": 0
+    },
+    {
+      "file_name": "kick.wav",
+      "file_path": "/app/temp/698bc6b7cbd1434a9c944647652822ce/S3_LEADVOX_AUDIBILITY/kick.wav",
+      "instrument_profile": "Kick",
+      "is_lead_vocal": false,
+      "short_term_offset_mean_db": null,
+      "short_term_offset_median_db": null,
+      "short_term_offset_min_db": null,
+      "short_term_offset_max_db": null,
+      "short_term_num_windows_total": 0,
+      "short_term_num_windows_used": 0
+    },
+    {
+      "file_name": "vocal.wav",
+      "file_path": "/app/temp/698bc6b7cbd1434a9c944647652822ce/S3_LEADVOX_AUDIBILITY/vocal.wav",
+      "instrument_profile": "Lead_Vocal_Melodic",
+      "is_lead_vocal": true,
+      "short_term_offset_mean_db": -3.4368767738342285,
+      "short_term_offset_median_db": -3.233811378479004,
+      "short_term_offset_min_db": -9.84293270111084,
+      "short_term_offset_max_db": -1.5475873947143555,
+      "short_term_num_windows_total": 185,
+      "short_term_num_windows_used": 35
+    }
+  ]
+}

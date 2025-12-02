@@ -1,0 +1,96 @@
+{
+  "contract_id": "S4_STEM_HPF_LPF",
+  "stage_id": "S4_SPECTRAL_CLEANUP",
+  "style_preset": "Unknown",
+  "metrics_from_contract": {
+    "use_instrument_profile_hpf_lpf_ranges": true
+  },
+  "limits_from_contract": {
+    "max_hpf_change_hz_per_pass": 40.0,
+    "max_lpf_change_hz_per_pass": 4000.0
+  },
+  "session": {
+    "use_instrument_profile_hpf_lpf_ranges": true,
+    "max_hpf_change_hz_per_pass": 40.0,
+    "max_lpf_change_hz_per_pass": 4000.0
+  },
+  "stems": [
+    {
+      "file_name": "bass.wav",
+      "file_path": "/app/temp/698bc6b7cbd1434a9c944647652822ce/S4_STEM_HPF_LPF/bass.wav",
+      "instrument_profile": "Bass_Electric",
+      "hpf_target_hz": 30.0,
+      "lpf_target_hz": 12000.0,
+      "samplerate_hz": 48000,
+      "total_rms_db": -35.51888934543678,
+      "low_rel_db": -57.65558119884083,
+      "high_rel_db": -68.8683616961124
+    },
+    {
+      "file_name": "bongo.wav",
+      "file_path": "/app/temp/698bc6b7cbd1434a9c944647652822ce/S4_STEM_HPF_LPF/bongo.wav",
+      "instrument_profile": "Percussion",
+      "hpf_target_hz": 100.0,
+      "lpf_target_hz": 18000.0,
+      "samplerate_hz": 48000,
+      "total_rms_db": -41.52981922131196,
+      "low_rel_db": -51.46463311737061,
+      "high_rel_db": -68.82447696513205
+    },
+    {
+      "file_name": "guitar_riff1.wav",
+      "file_path": "/app/temp/698bc6b7cbd1434a9c944647652822ce/S4_STEM_HPF_LPF/guitar_riff1.wav",
+      "instrument_profile": "Acoustic_Guitar",
+      "hpf_target_hz": 80.0,
+      "lpf_target_hz": 18000.0,
+      "samplerate_hz": 48000,
+      "total_rms_db": -38.23568780035711,
+      "low_rel_db": -54.90795354350907,
+      "high_rel_db": -70.03387573016727
+    },
+    {
+      "file_name": "guitar_riff2.wav",
+      "file_path": "/app/temp/698bc6b7cbd1434a9c944647652822ce/S4_STEM_HPF_LPF/guitar_riff2.wav",
+      "instrument_profile": "Acoustic_Guitar",
+      "hpf_target_hz": 80.0,
+      "lpf_target_hz": 18000.0,
+      "samplerate_hz": 48000,
+      "total_rms_db": -40.032400212711686,
+      "low_rel_db": -52.9673116379406,
+      "high_rel_db": -69.65038449065786
+    },
+    {
+      "file_name": "guitar_rythm.wav",
+      "file_path": "/app/temp/698bc6b7cbd1434a9c944647652822ce/S4_STEM_HPF_LPF/guitar_rythm.wav",
+      "instrument_profile": "Acoustic_Guitar",
+      "hpf_target_hz": 80.0,
+      "lpf_target_hz": 18000.0,
+      "samplerate_hz": 48000,
+      "total_rms_db": -39.6109274643767,
+      "low_rel_db": -53.55885315852285,
+      "high_rel_db": -67.34449129604445
+    },
+    {
+      "file_name": "kick.wav",
+      "file_path": "/app/temp/698bc6b7cbd1434a9c944647652822ce/S4_STEM_HPF_LPF/kick.wav",
+      "instrument_profile": "Kick",
+      "hpf_target_hz": 30.0,
+      "lpf_target_hz": 16000.0,
+      "samplerate_hz": 48000,
+      "total_rms_db": -33.66488258095798,
+      "low_rel_db": -59.87815067673333,
+      "high_rel_db": -77.05992453889552
+    },
+    {
+      "file_name": "vocal.wav",
+      "file_path": "/app/temp/698bc6b7cbd1434a9c944647652822ce/S4_STEM_HPF_LPF/vocal.wav",
+      "instrument_profile": "Lead_Vocal_Melodic",
+      "hpf_target_hz": 70.0,
+      "lpf_target_hz": 18000.0,
+      "samplerate_hz": 48000,
+      "total_rms_db": -34.64725748214834,
+      "low_rel_db": -58.169340910077494,
+      "high_rel_db": -75.27235363732291
+    }
+  ]
+}

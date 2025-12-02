@@ -1,0 +1,23 @@
+{
+  "contract_id": "S8_MIXBUS_COLOR_GENERIC",
+  "stage_id": "S8_MIXBUS_COLOR",
+  "style_preset": "Unknown",
+  "metrics_from_contract": {
+    "target_true_peak_range_dbtp_min": -4.0,
+    "target_true_peak_range_dbtp_max": -2.0,
+    "max_thd_percent": 3.0
+  },
+  "limits_from_contract": {
+    "max_additional_saturation_per_pass": 1.0
+  },
+  "session": {
+    "samplerate_hz": 48000,
+    "pre_true_peak_dbtp": -7.5964881692269035,
+    "pre_rms_dbfs": -30.035037975003434,
+    "noise_floor_dbfs": -56.95993423461914,
+    "target_true_peak_range_dbtp_min": -4.0,
+    "target_true_peak_range_dbtp_max": -2.0,
+    "max_thd_percent": 3.0,
+    "max_additional_saturation_per_pass_db": 1.0
+  }
+}

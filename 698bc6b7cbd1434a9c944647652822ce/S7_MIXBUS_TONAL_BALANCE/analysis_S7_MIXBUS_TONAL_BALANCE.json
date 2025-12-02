@@ -1,0 +1,92 @@
+{
+  "contract_id": "S7_MIXBUS_TONAL_BALANCE",
+  "stage_id": "S7_TONAL_BALANCE",
+  "style_preset": "Unknown",
+  "metrics_from_contract": {
+    "use_style_profile_tonal_balance": true,
+    "max_tonal_balance_error_db": 3.0
+  },
+  "limits_from_contract": {
+    "max_eq_change_db_per_band_per_pass": 1.5
+  },
+  "session": {
+    "samplerate_hz": 48000,
+    "max_tonal_balance_error_db": 3.0,
+    "max_eq_change_db_per_band_per_pass": 1.5,
+    "tonal_bands": {
+      "bands": [
+        {
+          "id": "sub",
+          "f_min": 20.0,
+          "f_max": 40.0
+        },
+        {
+          "id": "bass",
+          "f_min": 40.0,
+          "f_max": 120.0
+        },
+        {
+          "id": "low_mid",
+          "f_min": 120.0,
+          "f_max": 400.0
+        },
+        {
+          "id": "mid",
+          "f_min": 400.0,
+          "f_max": 1000.0
+        },
+        {
+          "id": "high_mid",
+          "f_min": 1000.0,
+          "f_max": 3000.0
+        },
+        {
+          "id": "presence",
+          "f_min": 3000.0,
+          "f_max": 6000.0
+        },
+        {
+          "id": "air",
+          "f_min": 6000.0,
+          "f_max": 12000.0
+        },
+        {
+          "id": "ultra_air",
+          "f_min": 12000.0,
+          "f_max": 20000.0
+        }
+      ],
+      "current_band_db": {
+        "sub": 7.908817468989895,
+        "bass": 42.799899215420595,
+        "low_mid": 52.638023016674765,
+        "mid": 49.14257205412858,
+        "high_mid": 39.39911781398359,
+        "presence": 27.61924300609293,
+        "air": 18.877929559598343,
+        "ultra_air": 4.768434923472215
+      },
+      "target_band_db": {
+        "sub": -4.0,
+        "bass": -2.0,
+        "low_mid": 0.0,
+        "mid": 0.0,
+        "high_mid": -1.0,
+        "presence": -2.0,
+        "air": -3.0,
+        "ultra_air": -4.0
+      },
+      "error_by_band_db": {
+        "sub": 11.908817468989895,
+        "bass": 44.799899215420595,
+        "low_mid": 52.638023016674765,
+        "mid": 49.14257205412858,
+        "high_mid": 40.39911781398359,
+        "presence": 29.61924300609293,
+        "air": 21.877929559598343,
+        "ultra_air": 8.768434923472215
+      },
+      "error_rms_db": 36.054683685302734
+    }
+  }
+}

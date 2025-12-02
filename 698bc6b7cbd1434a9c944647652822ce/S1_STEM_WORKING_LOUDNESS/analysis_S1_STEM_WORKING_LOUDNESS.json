@@ -17,7 +17,7 @@
   "stems": [
     {
       "file_name": "bass.wav",
-      "file_path": "/app/temp/60cc65bd229347d69e1f6b910cb252c6/S1_STEM_WORKING_LOUDNESS/bass.wav",
+      "file_path": "/app/temp/698bc6b7cbd1434a9c944647652822ce/S1_STEM_WORKING_LOUDNESS/bass.wav",
       "samplerate_hz": 48000,
       "integrated_lufs": -24.999998875592617,
       "true_peak_dbfs": -7.586006977423743,
@@ -27,7 +27,7 @@
     },
     {
       "file_name": "bongo.wav",
-      "file_path": "/app/temp/60cc65bd229347d69e1f6b910cb252c6/S1_STEM_WORKING_LOUDNESS/bongo.wav",
+      "file_path": "/app/temp/698bc6b7cbd1434a9c944647652822ce/S1_STEM_WORKING_LOUDNESS/bongo.wav",
       "samplerate_hz": 48000,
       "integrated_lufs": -27.999999949393832,
       "true_peak_dbfs": -3.2375978672342844,
@@ -37,7 +37,7 @@
     },
     {
       "file_name": "guitar_riff1.wav",
-      "file_path": "/app/temp/60cc65bd229347d69e1f6b910cb252c6/S1_STEM_WORKING_LOUDNESS/guitar_riff1.wav",
+      "file_path": "/app/temp/698bc6b7cbd1434a9c944647652822ce/S1_STEM_WORKING_LOUDNESS/guitar_riff1.wav",
       "samplerate_hz": 48000,
       "integrated_lufs": -27.999997293565368,
       "true_peak_dbfs": -5.799194697768676,
@@ -47,7 +47,7 @@
     },
     {
       "file_name": "guitar_riff2.wav",
-      "file_path": "/app/temp/60cc65bd229347d69e1f6b910cb252c6/S1_STEM_WORKING_LOUDNESS/guitar_riff2.wav",
+      "file_path": "/app/temp/698bc6b7cbd1434a9c944647652822ce/S1_STEM_WORKING_LOUDNESS/guitar_riff2.wav",
       "samplerate_hz": 48000,
       "integrated_lufs": -27.999995969684115,
       "true_peak_dbfs": -7.390161307671923,
@@ -57,7 +57,7 @@
     },
     {
       "file_name": "guitar_rythm.wav",
-      "file_path": "/app/temp/60cc65bd229347d69e1f6b910cb252c6/S1_STEM_WORKING_LOUDNESS/guitar_rythm.wav",
+      "file_path": "/app/temp/698bc6b7cbd1434a9c944647652822ce/S1_STEM_WORKING_LOUDNESS/guitar_rythm.wav",
       "samplerate_hz": 48000,
       "integrated_lufs": -27.99999997158486,
       "true_peak_dbfs": -8.76600280485498,
@@ -67,7 +67,7 @@
     },
     {
       "file_name": "kick.wav",
-      "file_path": "/app/temp/60cc65bd229347d69e1f6b910cb252c6/S1_STEM_WORKING_LOUDNESS/kick.wav",
+      "file_path": "/app/temp/698bc6b7cbd1434a9c944647652822ce/S1_STEM_WORKING_LOUDNESS/kick.wav",
       "samplerate_hz": 48000,
       "integrated_lufs": -22.99999914981412,
       "true_peak_dbfs": -2.475655877808555,
@@ -77,7 +77,7 @@
     },
     {
       "file_name": "vocal.wav",
-      "file_path": "/app/temp/60cc65bd229347d69e1f6b910cb252c6/S1_STEM_WORKING_LOUDNESS/vocal.wav",
+      "file_path": "/app/temp/698bc6b7cbd1434a9c944647652822ce/S1_STEM_WORKING_LOUDNESS/vocal.wav",
       "samplerate_hz": 48000,
       "integrated_lufs": -22.967301141112067,
       "true_peak_dbfs": -6.245620241685085,

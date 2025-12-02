@@ -1,0 +1,34 @@
+{
+  "contract_id": "S10_MASTER_FINAL_LIMITS",
+  "style_preset": "Unknown",
+  "targets": {
+    "true_peak_max_dbtp": -1.0,
+    "target_lufs_integrated": -11.0,
+    "style_lufs_tolerance": 0.5,
+    "max_channel_loudness_diff_db": 0.5,
+    "correlation_min": -0.2,
+    "max_eq_trim_db_per_band": 0.5,
+    "max_output_ceiling_adjust_db": 0.2
+  },
+  "pre": {
+    "true_peak_dbtp": -8.596052933257228,
+    "lufs_integrated": -34.46615219116211,
+    "lra": 15.439786911010742,
+    "lufs_L": -34.518192291259766,
+    "lufs_R": -34.29774856567383,
+    "channel_loudness_diff_db": 0.2204437255859375,
+    "correlation": 0.9819524884223938,
+    "lufs_integrated_within_style_tolerance": false
+  },
+  "post": {
+    "true_peak_dbtp": -8.596052933257228,
+    "lufs_integrated": -34.46615219116211,
+    "lra": 15.439786911010742,
+    "lufs_L": -34.518192291259766,
+    "lufs_R": -34.29774856567383,
+    "channel_loudness_diff_db": 0.2204437255859375,
+    "correlation": 0.9819524884223938,
+    "lufs_integrated_within_style_tolerance": false,
+    "trim_db_applied": 0.0
+  }
+}

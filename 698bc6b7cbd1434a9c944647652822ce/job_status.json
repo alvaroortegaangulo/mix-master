@@ -1,0 +1,28 @@
+{
+  "jobId": "698bc6b7cbd1434a9c944647652822ce",
+  "job_id": "698bc6b7cbd1434a9c944647652822ce",
+  "status": "success",
+  "message": "Mix pipeline finished successfully.",
+  "stage_index": 19,
+  "total_stages": 19,
+  "stage_key": "finished",
+  "progress": 100.0,
+  "job_root": "/app/temp/698bc6b7cbd1434a9c944647652822ce",
+  "input_media_dir": "/app/media/698bc6b7cbd1434a9c944647652822ce",
+  "temp_root": "/app/temp/698bc6b7cbd1434a9c944647652822ce",
+  "original_full_song_url": "/files/698bc6b7cbd1434a9c944647652822ce/S0_MIX_ORIGINAL/full_song.wav",
+  "full_song_url": "/files/698bc6b7cbd1434a9c944647652822ce/S10_MASTER_FINAL_LIMITS/full_song.wav",
+  "metrics": {
+    "final_peak_dbfs": -8.596052933257228,
+    "final_rms_dbfs": -31.037781388406966,
+    "tempo_bpm": 0.0,
+    "tempo_confidence": 0.0,
+    "key": "A minor",
+    "scale": "minor",
+    "key_strength": 0.024481691420078278,
+    "vocal_shift_min": 0.0,
+    "vocal_shift_max": 0.0,
+    "vocal_shift_mean": 0.0
+  },
+  "bus_styles": {}
+}

@@ -412,25 +412,68 @@ export function FinalReportModal({ jobId, isOpen, onClose }: FinalReportModalPro
     if (typeof value === "boolean") return value ? "Sí" : "No";
     if (typeof value === "string") return value;
     if (Array.isArray(value)) return value.slice(0, 3).join(", ");
-    return "—";
+    return "–";
   }
 
-  function buildStageSummary(contractId: string): string[] {
-    const analysis = stageAnalyses[contractId];
-    if (!analysis) return [];
-    const session = analysis.session;
+  function summarizeSession(session: any): string[] {
     if (!session || typeof session !== "object") return [];
+    return Object.entries(session).map(([k, v]) => {
+      if (Array.isArray(v)) return `${humanizeKey(k)}: ${v.length} elementos`;
+      if (v && typeof v === "object")
+        return `${humanizeKey(k)}: ${Object.keys(v).length} claves`;
+      return `${humanizeKey(k)}: ${formatValue(v)}`;
+    });
+  }
 
-    const entries = Object.entries(session).filter(
-      ([, v]) =>
-        typeof v === "string" ||
-        typeof v === "number" ||
-        typeof v === "boolean",
-    );
+  function summarizeStems(stems: any[]): string[] {
+    if (!Array.isArray(stems) || stems.length === 0) return [];
+    const bullets: string[] = [`Stems procesados: ${stems.length}`];
+    const preview = stems.slice(0, 3);
+    for (const stem of preview) {
+      const name = stem.file_name || stem.filePath || "stem";
+      const lufs = stem.integrated_lufs;
+      const peak = stem.true_peak_dbfs ?? stem.peak_dbfs;
+      const inst = stem.instrument_profile_resolved || stem.instrument_profile_requested;
+      const bus = stem.bus_target;
+      const parts: string[] = [name];
+      if (inst) parts.push(`perfil: ${inst}`);
+      if (bus) parts.push(`bus: ${bus}`);
+      if (typeof lufs === "number") parts.push(`LUFS: ${lufs.toFixed(1)}`);
+      if (typeof peak === "number") parts.push(`Pico: ${peak.toFixed(1)} dBFS`);
+      bullets.push(parts.join(" · "));
+    }
+    if (stems.length > preview.length) {
+      bullets.push(`… y ${stems.length - preview.length} stems más`);
+    }
+    return bullets;
+  }
 
-    return entries.slice(0, 6).map(
-      ([k, v]) => `${humanizeKey(k)}: ${formatValue(v)}`,
+  function summarizeMetricsBlock(label: string, block: any): string[] {
+    if (!block || typeof block !== "object") return [];
+    return Object.entries(block).map(
+      ([k, v]) => `${label}: ${humanizeKey(k)} = ${formatValue(v)}`,
     );
+  }
+
+  function buildStageSummary(contractId: string): { bullets: string[]; raw?: string } {
+    const analysis = stageAnalyses[contractId];
+    if (!analysis) return { bullets: [] };
+
+    const bullets: string[] = [];
+    bullets.push(...summarizeSession(analysis.session || {}));
+    bullets.push(
+      ...summarizeMetricsBlock("Métrica", analysis.metrics_from_contract),
+      ...summarizeMetricsBlock("Límite", analysis.limits_from_contract),
+    );
+    bullets.push(...summarizeStems(analysis.stems || []));
+
+    const buses = analysis.buses;
+    if (Array.isArray(buses) && buses.length > 0) {
+      bullets.push(`Buses detectados: ${buses.length}`);
+    }
+
+    const raw = JSON.stringify(analysis, null, 2);
+    return { bullets, raw };
   }
 
   // Si el modal no está abierto, no renderizamos nada
@@ -796,7 +839,7 @@ export function FinalReportModal({ jobId, isOpen, onClose }: FinalReportModalPro
                       stage.status === "analyzed"
                         ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-200"
                         : "border-slate-600 bg-slate-800/60 text-slate-200";
-                    const bullets = buildStageSummary(stage.contract_id);
+                    const { bullets, raw } = buildStageSummary(stage.contract_id);
 
                     return (
                       <div
@@ -827,6 +870,16 @@ export function FinalReportModal({ jobId, isOpen, onClose }: FinalReportModalPro
                               <li key={i}>• {line}</li>
                             ))}
                           </ul>
+                        )}
+                        {raw && (
+                          <details className="mt-2 text-[11px] text-slate-300">
+                            <summary className="cursor-pointer text-slate-200 underline">
+                              Ver JSON completo del análisis
+                            </summary>
+                            <pre className="mt-2 max-h-64 overflow-auto rounded border border-slate-800 bg-slate-950 p-2 text-[10px] text-slate-200">
+                              {raw}
+                            </pre>
+                          </details>
                         )}
                         {bullets.length === 0 && !stageAnalysesLoading && (
                           <p className="mt-1 text-[11px] text-slate-400">

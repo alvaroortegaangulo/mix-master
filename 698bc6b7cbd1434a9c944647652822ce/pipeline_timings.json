@@ -1,0 +1,82 @@
+{
+  "stages": [
+    {
+      "contract_id": "S0_SESSION_FORMAT",
+      "duration_sec": 7.185
+    },
+    {
+      "contract_id": "S1_STEM_DC_OFFSET",
+      "duration_sec": 5.215
+    },
+    {
+      "contract_id": "S1_STEM_WORKING_LOUDNESS",
+      "duration_sec": 8.761
+    },
+    {
+      "contract_id": "S1_KEY_DETECTION",
+      "duration_sec": 18.161
+    },
+    {
+      "contract_id": "S1_VOX_TUNING",
+      "duration_sec": 16.18
+    },
+    {
+      "contract_id": "S1_MIXBUS_HEADROOM",
+      "duration_sec": 10.443
+    },
+    {
+      "contract_id": "S2_GROUP_PHASE_DRUMS",
+      "duration_sec": 116.124
+    },
+    {
+      "contract_id": "S3_MIXBUS_HEADROOM",
+      "duration_sec": 11.386
+    },
+    {
+      "contract_id": "S3_LEADVOX_AUDIBILITY",
+      "duration_sec": 35.374
+    },
+    {
+      "contract_id": "S4_STEM_HPF_LPF",
+      "duration_sec": 50.917
+    },
+    {
+      "contract_id": "S4_STEM_RESONANCE_CONTROL",
+      "duration_sec": 11.44
+    },
+    {
+      "contract_id": "S5_STEM_DYNAMICS_GENERIC",
+      "duration_sec": 41.749
+    },
+    {
+      "contract_id": "S5_LEADVOX_DYNAMICS",
+      "duration_sec": 6.177
+    },
+    {
+      "contract_id": "S6_BUS_REVERB_STYLE",
+      "duration_sec": 14.643
+    },
+    {
+      "contract_id": "S7_MIXBUS_TONAL_BALANCE",
+      "duration_sec": 72.235
+    },
+    {
+      "contract_id": "S8_MIXBUS_COLOR_GENERIC",
+      "duration_sec": 39.239
+    },
+    {
+      "contract_id": "S9_MASTER_GENERIC",
+      "duration_sec": 41.196
+    },
+    {
+      "contract_id": "S10_MASTER_FINAL_LIMITS",
+      "duration_sec": 34.491
+    },
+    {
+      "contract_id": "S11_REPORT_GENERATION",
+      "duration_sec": 6.59
+    }
+  ],
+  "total_duration_sec": 547.506,
+  "generated_at_utc": "2025-12-02T04:55:37Z"
+}

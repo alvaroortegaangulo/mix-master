@@ -1,0 +1,100 @@
+{
+  "contract_id": "S5_LEADVOX_DYNAMICS",
+  "stage_id": "S5_DYNAMICS",
+  "style_preset": "Unknown",
+  "metrics_from_contract": {
+    "target_crest_factor_db_min": 10.0,
+    "target_crest_factor_db_max": 26.0,
+    "max_average_gain_reduction_db": 6.0
+  },
+  "limits_from_contract": {
+    "max_vocal_automation_change_db_per_pass": 3.0
+  },
+  "session": {
+    "target_crest_factor_min_db": 10.0,
+    "target_crest_factor_max_db": 26.0,
+    "max_average_gain_reduction_db": 6.0,
+    "max_vocal_automation_change_db_per_pass": 3.0,
+    "lead_profile_id": "Lead_Vocal_Melodic",
+    "num_lead_vocal_stems": 1
+  },
+  "stems": [
+    {
+      "file_name": "bass.wav",
+      "file_path": "/app/temp/698bc6b7cbd1434a9c944647652822ce/S5_LEADVOX_DYNAMICS/bass.wav",
+      "instrument_profile": "Bass_Electric",
+      "is_lead_vocal": false,
+      "samplerate_hz": 48000,
+      "pre_rms_dbfs": -39.78206010503979,
+      "pre_peak_dbfs": -20.880230551408374,
+      "pre_crest_factor_db": 18.901829553631416,
+      "error": null
+    },
+    {
+      "file_name": "bongo.wav",
+      "file_path": "/app/temp/698bc6b7cbd1434a9c944647652822ce/S5_LEADVOX_DYNAMICS/bongo.wav",
+      "instrument_profile": "Percussion",
+      "is_lead_vocal": false,
+      "samplerate_hz": 48000,
+      "pre_rms_dbfs": -42.234182221088005,
+      "pre_peak_dbfs": -11.02192011335049,
+      "pre_crest_factor_db": 31.212262107737516,
+      "error": null
+    },
+    {
+      "file_name": "guitar_riff1.wav",
+      "file_path": "/app/temp/698bc6b7cbd1434a9c944647652822ce/S5_LEADVOX_DYNAMICS/guitar_riff1.wav",
+      "instrument_profile": "Acoustic_Guitar",
+      "is_lead_vocal": false,
+      "samplerate_hz": 48000,
+      "pre_rms_dbfs": -42.95264292841266,
+      "pre_peak_dbfs": -15.421574152557147,
+      "pre_crest_factor_db": 27.53106877585551,
+      "error": null
+    },
+    {
+      "file_name": "guitar_riff2.wav",
+      "file_path": "/app/temp/698bc6b7cbd1434a9c944647652822ce/S5_LEADVOX_DYNAMICS/guitar_riff2.wav",
+      "instrument_profile": "Acoustic_Guitar",
+      "is_lead_vocal": false,
+      "samplerate_hz": 48000,
+      "pre_rms_dbfs": -44.57240169739525,
+      "pre_peak_dbfs": -21.067031076491244,
+      "pre_crest_factor_db": 23.505370620904007,
+      "error": null
+    },
+    {
+      "file_name": "guitar_rythm.wav",
+      "file_path": "/app/temp/698bc6b7cbd1434a9c944647652822ce/S5_LEADVOX_DYNAMICS/guitar_rythm.wav",
+      "instrument_profile": "Acoustic_Guitar",
+      "is_lead_vocal": false,
+      "samplerate_hz": 48000,
+      "pre_rms_dbfs": -44.78939821788284,
+      "pre_peak_dbfs": -20.168081250647845,
+      "pre_crest_factor_db": 24.621316967234996,
+      "error": null
+    },
+    {
+      "file_name": "kick.wav",
+      "file_path": "/app/temp/698bc6b7cbd1434a9c944647652822ce/S5_LEADVOX_DYNAMICS/kick.wav",
+      "instrument_profile": "Kick",
+      "is_lead_vocal": false,
+      "samplerate_hz": 48000,
+      "pre_rms_dbfs": -39.279843867405084,
+      "pre_peak_dbfs": -13.3224534525036,
+      "pre_crest_factor_db": 25.957390414901482,
+      "error": null
+    },
+    {
+      "file_name": "vocal.wav",
+      "file_path": "/app/temp/698bc6b7cbd1434a9c944647652822ce/S5_LEADVOX_DYNAMICS/vocal.wav",
+      "instrument_profile": "Lead_Vocal_Melodic",
+      "is_lead_vocal": true,
+      "samplerate_hz": 48000,
+      "pre_rms_dbfs": -35.20886488932059,
+      "pre_peak_dbfs": -9.423692700887967,
+      "pre_crest_factor_db": 25.785172188432618,
+      "error": null
+    }
+  ]
+}
