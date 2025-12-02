@@ -134,12 +134,9 @@ def _detect_key_from_mix(y: np.ndarray, sr: int) -> Dict[str, Any]:
         audio = resample(audio)
         sr = target_sr
 
-    # KeyExtractor: devuelve (key, scale, strength, first_to_second_relative_strength)
-    # key: "C", "C#", ...
-    # scale: "major" / "minor"
-    # strength: ~0-1 (según Essentia docs)
+    # KeyExtractor: en tu versión devuelve (key, scale, strength)
     key_extractor = es.KeyExtractor()
-    key_str, scale_str, strength, _rel = key_extractor(audio)
+    key_str, scale_str, strength = key_extractor(audio)
 
     # Normalizar strings
     key_str = str(key_str or "").strip()
