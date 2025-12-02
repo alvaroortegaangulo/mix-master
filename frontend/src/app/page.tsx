@@ -259,8 +259,7 @@ export default function HomePage() {
   > = {
     S0_SESSION_FORMAT: {
       title: "Session format & routing",
-      description:
-        "Normalizes samplerate/bit depth and assigns logical buses to start clean.",
+      description: "Normalizes samplerate/bit depth and assigns logical buses to start clean.",
     },
     S1_STEM_DC_OFFSET: {
       title: "DC offset check",
@@ -268,8 +267,7 @@ export default function HomePage() {
     },
     S1_STEM_WORKING_LOUDNESS: {
       title: "Working loudness",
-      description:
-        "Matches working level per stem based on its instrument profile.",
+      description: "Matches working level per stem based on its instrument profile.",
     },
     S1_KEY_DETECTION: {
       title: "Key detection",
@@ -297,8 +295,7 @@ export default function HomePage() {
     },
     S4_STEM_HPF_LPF: {
       title: "HPF/LPF por stem",
-      description:
-        "Applies high/low-pass filters per stem based on instrument profile.",
+      description: "Applies high/low-pass filters per stem based on instrument profile.",
     },
     S4_STEM_RESONANCE_CONTROL: {
       title: "Resonance control",
@@ -330,12 +327,11 @@ export default function HomePage() {
     },
     S9_MASTER_GENERIC: {
       title: "Master prep",
-      description:
-        "Pre-master adjustment (level and balance) before final QC.",
+      description: "Pre-master adjustment (level and balance) before final QC.",
     },
     S10_MASTER_FINAL_LIMITS: {
       title: "Master final QC",
-      description: "Chequeo final de TP/LUFS/correlación con micro-ajustes.",
+      description: "Final check of TP/LUFS/correlation with micro-adjustments.",
     },
   };
 
