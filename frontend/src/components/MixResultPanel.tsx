@@ -701,12 +701,9 @@ export function MixResultPanel({
         <button
           type="button"
           onClick={() => setIsReportModalOpen(true)}
-          className="inline-flex items-center gap-2 rounded-lg border border-emerald-500/50 bg-emerald-950/60 px-3 py-1.5 text-[11px] font-medium text-slate-100 hover:border-indigo-400 hover:bg-slate-900/80"
+          className="inline-flex items-center gap-2 rounded-lg border border-emerald-500/50 bg-emerald-950/60 px-3 py-1.5 text-[11px] font-medium text-emerald-50 hover:border-emerald-300 hover:bg-emerald-900/70"
         >
-          Ver informe global del pipeline
-          <span className="rounded-full bg-emerald-900/70/80 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-indigo-200">
-            S11
-          </span>
+          Ver Informe
         </button>
       </div>
 

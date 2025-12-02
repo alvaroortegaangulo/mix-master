@@ -186,26 +186,12 @@ export function MixPipelinePanel({ result, enabledPipelineStageKeys }: Props) {
                 {activeStage.description}
               </p>
 
-              {/* Solo mostramos la mezcla tras esta etapa */}
               <div className="mt-4">
-                <p className="mb-1 text-xs font-medium text-emerald-100">
-                  Mix tras esta etapa
-                </p>
                 <audio
                   controls
                   src={processedUrl}
                   className="mt-1 w-full rounded-lg bg-emerald-900/70"
                 />
-                <p className="mt-1 text-[11px] text-emerald-200/80">
-                  Esta mezcla refleja todas las etapas habilitadas desde el
-                  inicio hasta{" "}
-                  <span className="font-semibold">
-                    Stage {activeStage.index} · {activeStage.label}
-                  </span>
-                  . Si alguna etapa anterior no genera un bounce propio
-                  todavía, se usa la mezcla más cercana disponible (por
-                  defecto, el master final).
-                </p>
               </div>
             </div>
           </div>
