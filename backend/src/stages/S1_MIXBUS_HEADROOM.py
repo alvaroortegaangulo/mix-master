@@ -46,9 +46,9 @@ def compute_global_gain_db(analysis: Dict[str, Any]) -> float:
       - Solo atenuar.
       - Objetivo con colchón: peak <= peak_dbfs_max - peak_tol y
         LUFS <= lufs_integrated_max - lufs_tol (absorbe el margen del check).
-      - Aplica pasos limitados por max_gain_change_db_per_pass hasta 3
+      - Aplica pasos limitados por max_gain_change_db_per_pass hasta 8
         iteraciones, acumulando ganancia en dB (sin releer audio).
-      - No sigue si dejaría LUFS por debajo de lufs_min (con margen).
+      - No sigue si dejaría LUFS por debajo de lufs_min (con margen), cuando hay métrica de LUFS.
     """
     session: Dict[str, Any] = analysis.get("session", {}) or {}
     metrics: Dict[str, Any] = analysis.get("metrics_from_contract", {}) or {}
@@ -67,7 +67,7 @@ def compute_global_gain_db(analysis: Dict[str, Any]) -> float:
     except (TypeError, ValueError):
         lufs_measured = None
 
-    # Los targets deben venir del contrato; si faltan, no forzamos defaults
+    # Picos: obligatorios
     try:
         peak_dbfs_min = float(metrics["peak_dbfs_min"])
         peak_dbfs_max = float(metrics["peak_dbfs_max"])
@@ -75,18 +75,17 @@ def compute_global_gain_db(analysis: Dict[str, Any]) -> float:
         print("[S1_MIXBUS_HEADROOM] Falta peak_dbfs_min/peak_dbfs_max en metrics; no se ajusta ganancia.")
         return 0.0
 
-    try:
-        lufs_min = float(metrics["lufs_integrated_min"])
-        lufs_max = float(metrics["lufs_integrated_max"])
-    except Exception:
-        print("[S1_MIXBUS_HEADROOM] Falta lufs_integrated_min/lufs_integrated_max en metrics; no se ajusta ganancia.")
-        return 0.0
+    # LUFS: opcionales (si no están, nos guiamos solo por pico)
+    lufs_min_raw = metrics.get("lufs_integrated_min")
+    lufs_max_raw = metrics.get("lufs_integrated_max")
+    lufs_min = float(lufs_min_raw) if lufs_min_raw is not None else None
+    lufs_max = float(lufs_max_raw) if lufs_max_raw is not None else None
 
     peak_tol = 0.2
     lufs_tol = 0.5
     target_peak = peak_dbfs_max - peak_tol
-    target_lufs = lufs_max - lufs_tol
-    lufs_floor = lufs_min - lufs_tol
+    target_lufs = lufs_max - lufs_tol if lufs_max is not None else None
+    lufs_floor = lufs_min - lufs_tol if lufs_min is not None else None
 
     max_change = abs(float(limits.get("max_gain_change_db_per_pass", 3.0)))
 
@@ -94,19 +93,18 @@ def compute_global_gain_db(analysis: Dict[str, Any]) -> float:
     cur_lufs = lufs_measured
     total_gain = 0.0
 
-    # Sin métricas fiables, no hacemos nada
     if cur_peak is None and cur_lufs is None:
         return 0.0
 
-    # Hasta 3 iteraciones para acercarnos al objetivo
-    for _ in range(3):
+    # Iterar hasta cubrir excesos grandes (8 pasos de hasta 3 dB = 24 dB)
+    for _ in range(8):
         gain_candidates: List[float] = []
 
         if cur_peak is not None and cur_peak != float("-inf"):
             if cur_peak > target_peak:
                 gain_candidates.append(target_peak - cur_peak)
 
-        if cur_lufs is not None:
+        if cur_lufs is not None and target_lufs is not None:
             if cur_lufs > target_lufs:
                 gain_candidates.append(target_lufs - cur_lufs)
 
@@ -115,19 +113,16 @@ def compute_global_gain_db(analysis: Dict[str, Any]) -> float:
 
         step = min(gain_candidates)  # más negativo = más restrictivo
 
-        # Limitar por max_gain_change_db_per_pass
         if step < -max_change:
             step = -max_change
 
-        # Evitar dejar LUFS por debajo del mínimo permitido
-        if cur_lufs is not None:
+        if cur_lufs is not None and lufs_floor is not None:
             est_lufs_after = cur_lufs + step
             if est_lufs_after < lufs_floor:
                 break
 
         total_gain += step
 
-        # Actualizar estimaciones (aprox lineal en dB)
         if cur_peak is not None and cur_peak != float("-inf"):
             cur_peak += step
         if cur_lufs is not None:
@@ -176,7 +171,6 @@ def apply_global_gain_to_stems(stems: List[Dict[str, Any]], gain_db: float) -> N
         return
 
     if abs(gain_db) < 0.1:
-        # Cambios pequeños no compensan el coste de reescribir
         return
 
     max_workers = min(4, os.cpu_count() or 1)
