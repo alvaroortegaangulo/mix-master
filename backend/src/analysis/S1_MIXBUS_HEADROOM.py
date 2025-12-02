@@ -126,8 +126,15 @@ def main() -> None:
     # 3) Calcular pico de mixbus en paralelo
     mixbus_peak_dbfs_measured = _compute_mixbus_peak_dbfs_parallel(stem_files)
 
-    # Target de mixbus desde el contrato (si no está, asumimos -6 dBFS)
-    mixbus_peak_target_dbfs = metrics.get("mixbus_peak_target_dbfs", -6.0)
+    # Rango objetivo de pico desde el contrato
+    peak_dbfs_min = float(metrics.get("peak_dbfs_min", -12.0))
+    peak_dbfs_max = float(metrics.get("peak_dbfs_max", -6.0))
+
+    # Target “por defecto”: el techo del rango. Si además defines mixbus_peak_target_dbfs
+    # en el contrato, lo respetamos por encima.
+    mixbus_peak_target_dbfs = float(
+        metrics.get("mixbus_peak_target_dbfs", peak_dbfs_max)
+    )
 
     session_state: Dict[str, Any] = {
         "contract_id": contract_id,
@@ -137,6 +144,8 @@ def main() -> None:
         "session": {
             "mixbus_peak_target_dbfs": mixbus_peak_target_dbfs,
             "mixbus_peak_dbfs_measured": mixbus_peak_dbfs_measured,
+            "peak_dbfs_min": peak_dbfs_min,
+            "peak_dbfs_max": peak_dbfs_max,
         },
         "stems": [
             {
@@ -146,6 +155,7 @@ def main() -> None:
             for p in stem_files
         ],
     }
+
 
     output_path = temp_dir / f"analysis_{contract_id}.json"
     with output_path.open("w", encoding="utf-8") as f:

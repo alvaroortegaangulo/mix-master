@@ -38,35 +38,59 @@ def load_analysis(contract_id: str) -> Dict[str, Any]:
     return data
 
 
-def compute_global_gain_db(session: Dict[str, Any]) -> float:
+def compute_global_gain_db(analysis: Dict[str, Any]) -> float:
     """
-    Calcula la ganancia global en dB a aplicar a todos los stems:
+    Calcula la ganancia global en dB a aplicar a todos los stems.
 
-      gain_db = mixbus_peak_target_dbfs - mixbus_peak_dbfs_measured
+    Nuevo comportamiento más "musical":
 
-    - Solo se atenúa (si el mix ya está por debajo del target, no se sube).
-    - Se puede limitar por max_gain_change_db_per_pass si está en limits.
+      - Se apoya en metrics.peak_dbfs_min / peak_dbfs_max del contrato.
+      - Solo atenuamos si el pico de mixbus supera peak_dbfs_max.
+      - No subimos mezclas que ya estén por debajo del rango.
+      - Respetamos limits.max_gain_change_db_per_pass cuando exista.
     """
-    mix_peak_target = session.get("mixbus_peak_target_dbfs")
+    session: Dict[str, Any] = analysis.get("session", {}) or {}
+    metrics: Dict[str, Any] = analysis.get("metrics_from_contract", {}) or {}
+    limits: Dict[str, Any] = analysis.get("limits_from_contract", {}) or {}
+
     mix_peak_measured = session.get("mixbus_peak_dbfs_measured")
-
-    if mix_peak_target is None or mix_peak_measured is None:
+    if mix_peak_measured is None:
         return 0.0
 
-    mix_peak_target = float(mix_peak_target)
-    mix_peak_measured = float(mix_peak_measured)
+    try:
+        mix_peak_measured = float(mix_peak_measured)
+    except (TypeError, ValueError):
+        return 0.0
 
-    # Si no hay mezcla (o es silencio), no hacemos nada
+    # Si no hay mezcla real (silencio), no hacemos nada
     if mix_peak_measured == float("-inf"):
         return 0.0
 
-    gain_db = mix_peak_target - mix_peak_measured  # suele ser negativo (atenuar)
+    peak_dbfs_min = float(metrics.get("peak_dbfs_min", -12.0))
+    peak_dbfs_max = float(metrics.get("peak_dbfs_max", -6.0))
 
-    # Si el mix ya está más bajo que el target (más headroom), no lo subimos
-    if gain_db >= 0.0:
+    # Filosofía: SOLO atenuar si estamos por encima del techo permitido.
+    # Si ya estamos por debajo o dentro del rango, no tocamos nada.
+    if mix_peak_measured <= peak_dbfs_max:
+        return 0.0
+
+    # Queremos llevar el pico hasta el techo del rango
+    target_dbfs = peak_dbfs_max
+    gain_db = target_dbfs - mix_peak_measured  # será negativo (atenuar)
+
+    # Respetar max_gain_change_db_per_pass si se ha definido
+    max_change = float(limits.get("max_gain_change_db_per_pass", 3.0))
+    max_change = abs(max_change)
+
+    if gain_db < -max_change:
+        gain_db = -max_change
+
+    # Ignoramos cambios ridículos
+    if abs(gain_db) < 0.1:
         return 0.0
 
     return gain_db
+
 
 
 # ---------------------------------------------------------------------
@@ -114,11 +138,11 @@ def apply_global_gain_to_stems(stems: List[Dict[str, Any]], gain_db: float) -> N
         list(ex.map(_apply_gain_worker, args_list))
 
 
-def main() -> None:
+ddef main() -> None:
     """
     Stage S1_MIXBUS_HEADROOM:
       - Lee analysis_S1_MIXBUS_HEADROOM.json.
-      - Calcula una ganancia global para dejar el mixbus en el headroom objetivo.
+      - Calcula una ganancia global para dejar el mixbus en un rango de headroom razonable.
       - Aplica esa ganancia a todos los stems y sobrescribe los archivos (en paralelo).
     """
     if len(sys.argv) < 2:
@@ -128,11 +152,9 @@ def main() -> None:
     contract_id = sys.argv[1]  # "S1_MIXBUS_HEADROOM"
 
     analysis = load_analysis(contract_id)
-
-    session: Dict[str, Any] = analysis.get("session", {})
     stems: List[Dict[str, Any]] = analysis.get("stems", [])
 
-    gain_db = compute_global_gain_db(session)
+    gain_db = compute_global_gain_db(analysis)
 
     apply_global_gain_to_stems(stems, gain_db)
 
@@ -140,6 +162,7 @@ def main() -> None:
         f"[S1_MIXBUS_HEADROOM] Headroom ajustado con ganancia global de {gain_db:.2f} dB "
         f"para {len(stems)} stems."
     )
+
 
 
 if __name__ == "__main__":
