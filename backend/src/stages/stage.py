@@ -10,7 +10,6 @@ import datetime
 from pathlib import Path
 from typing import List, Optional, Dict
 
-MAX_RETRIES = 3
 
 # Stages que trabajan en mixbus/master y necesitan full_song.wav
 # generado a partir de stems ANTES del análisis
@@ -239,34 +238,32 @@ def run_stage(stage_id: str) -> None:
     cleanup_stems_script = base_dir / "utils" / "cleanup_stage_stems.py"
 
     success = False
-    attempt = 0
+
 
     print(f"Running stage: {stage_id}")
     stage_start = time.perf_counter()
 
-    while attempt < MAX_RETRIES:
-        attempt += 1
 
-        # Para stages de mixbus/master, primero necesitamos un full_song.wav
-        # actualizado a partir de los stems de este stage.
-        if stage_id in MIXDOWN_STAGES:
-            _run_script(mixdown_script, stage_id)
 
-        # 1) Análisis previo
-        _run_script(analysis_script, stage_id)
+    # Para stages de mixbus/master, primero necesitamos un full_song.wav
+    # actualizado a partir de los stems de este stage.
+    if stage_id in MIXDOWN_STAGES:
+        _run_script(mixdown_script, stage_id)
 
-        # 2) Procesamiento principal de la etapa
-        _run_script(stage_script, stage_id)
+    # 1) Análisis previo
+    _run_script(analysis_script, stage_id)
 
-        # 3) Análisis posterior
-        _run_script(analysis_script, stage_id)
+    # 2) Procesamiento principal de la etapa
+    _run_script(stage_script, stage_id)
 
-        # 4) Validación de métricas (check_metrics_limits.py)
-        ret = _run_script(check_script, stage_id)
-        success = (ret == 0)
+    # 3) Análisis posterior
+    _run_script(analysis_script, stage_id)
 
-        if success:
-            break
+    # 4) Validación de métricas (check_metrics_limits.py)
+    ret = _run_script(check_script, stage_id)
+    success = (ret == 0)
+
+
 
     resultado = "éxito" if success else "fracaso"
     print(f"Resultado {stage_id}: {resultado}")
