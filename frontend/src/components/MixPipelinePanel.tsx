@@ -8,9 +8,8 @@ import { getBackendBaseUrl } from "../lib/mixApi";
 type Props = {
   result: MixResult;
   /**
-   * Lista de keys de stages del pipeline que se ejecutaron
-   * (tal y como los conoce el backend: dc_offset, loudness, static_mix_eq, etc.)
-   * Si viene undefined o vacía, se muestran todos los stages del backend.
+   * List of pipeline stage keys that were executed for this job.
+   * If undefined or empty, all backend stages are shown.
    */
   enabledPipelineStageKeys?: string[];
 };
@@ -33,7 +32,7 @@ export function MixPipelinePanel({ result, enabledPipelineStageKeys }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [activeKey, setActiveKey] = useState<string>("");
 
-  // Cargar la definición del pipeline desde el backend
+  // Load pipeline definition from the backend
   useEffect(() => {
     const base = getBackendBaseUrl();
     const url = `${base}/pipeline/stages`;
@@ -46,16 +45,15 @@ export function MixPipelinePanel({ result, enabledPipelineStageKeys }: Props) {
         const res = await fetch(url, { signal: controller.signal });
         if (!res.ok) {
           throw new Error(
-            `No se pudo obtener la definición del pipeline (${res.status})`,
+            `Could not fetch pipeline definition (${res.status})`,
           );
         }
         const data = (await res.json()) as PipelineStage[];
 
-        // Ordenamos por index por si acaso
+        // Keep backend order just in case
         const sorted = [...data].sort((a, b) => a.index - b.index);
 
-        // Si tenemos lista de stages habilitados para ESTE job,
-        // filtramos para mostrar sólo esos (respetando el orden del backend).
+        // If we have enabled stages for THIS job, filter to those only.
         const filtered =
           enabledPipelineStageKeys && enabledPipelineStageKeys.length > 0
             ? sorted.filter((s) => enabledPipelineStageKeys.includes(s.key))
@@ -63,12 +61,12 @@ export function MixPipelinePanel({ result, enabledPipelineStageKeys }: Props) {
 
         setStages(filtered);
 
-        // Ajustar la etapa activa
+        // Adjust active stage
         if (!activeKey && filtered.length > 0) {
-          // si no hay etapa activa aún, seleccionamos la última (mastering normalmente)
+          // if no active stage yet, select the last one (usually mastering)
           setActiveKey(filtered[filtered.length - 1].key);
         } else if (activeKey) {
-          // Si hay activa y ya no existe (porque no estaba habilitada), caemos a la última
+          // If the active one no longer exists (disabled), fall back to the last one
           const stillExists = filtered.some((s) => s.key === activeKey);
           if (!stillExists && filtered.length > 0) {
             setActiveKey(filtered[filtered.length - 1].key);
@@ -76,8 +74,8 @@ export function MixPipelinePanel({ result, enabledPipelineStageKeys }: Props) {
         }
       } catch (err: any) {
         if (err?.name === "AbortError") return;
-        console.error("Error cargando pipeline stages", err);
-        setError(err?.message ?? "Error cargando la definición del pipeline.");
+        console.error("Error loading pipeline stages", err);
+        setError(err?.message ?? "Error loading the pipeline definition.");
       } finally {
         setLoading(false);
       }
@@ -92,7 +90,7 @@ export function MixPipelinePanel({ result, enabledPipelineStageKeys }: Props) {
     return stages.find((s) => s.key === activeKey) ?? stages[stages.length - 1];
   }, [stages, activeKey]);
 
-  // URL del audio procesado para la etapa activa
+  // URL of the processed audio for the active stage
   const processedUrl = useMemo(() => {
     if (!stages.length || !activeStage) return fullSongUrl;
 
@@ -113,49 +111,46 @@ export function MixPipelinePanel({ result, enabledPipelineStageKeys }: Props) {
       )}${candidate.previewMixRelPath}`;
     }
 
-    // Fallback: si no hay preview específico, usamos el master final
+    // Fallback: if no preview exists, use the final master
     return fullSongUrl;
   }, [stages, activeStage, fullSongUrl, jobId]);
 
   return (
     <section className="mt-6 rounded-2xl border border-emerald-500/40 bg-emerald-900/30 p-4 text-emerald-50 shadow-inner shadow-emerald-900/40">
-    <details className="group">
-      <summary className="flex cursor-pointer list-none items-center justify-between gap-2 md:flex-row md:items-center md:justify-between [&::-webkit-details-marker]:hidden">
-        <div className="flex-1">
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-emerald-100">
-            Pipeline
-          </h3>
-          <p className="mt-1 text-xs text-emerald-200/90">
-            Explora cómo va evolucionando la mezcla etapa a etapa, escuchando
-            el resultado acumulado hasta la etapa seleccionada.
-          </p>
-        </div>
-        <span
-          aria-hidden="true"
-          className="ml-2 text-xs text-emerald-200 transition-transform duration-200 group-open:rotate-180"
-        >
-          ▼
-        </span>
-      </summary>
-      {/* resto igual */}
-
+      <details className="group">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-2 md:flex-row md:items-center md:justify-between [&::-webkit-details-marker]:hidden">
+          <div className="flex-1">
+            <h3 className="text-sm font-semibold uppercase tracking-wide text-emerald-100">
+              Pipeline
+            </h3>
+            <p className="mt-1 text-xs text-emerald-200/90">
+              Explore how the mix evolves at each stage by listening to the cumulative result.
+            </p>
+          </div>
+          <span
+            aria-hidden="true"
+            className="ml-2 text-xs text-emerald-200 transition-transform duration-200 group-open:rotate-180"
+          >
+            v
+          </span>
+        </summary>
 
         {loading && !stages.length && (
           <p className="mt-3 text-xs text-emerald-200/80">
-            Cargando definición del pipeline…
+            Loading pipeline definition...
           </p>
         )}
 
         {error && (
           <p className="mt-3 text-xs text-red-400">
-            {error} (endpoint esperado:{" "}
+            {error} (expected endpoint:{" "}
             <code className="bg-slate-950 px-1">/pipeline/stages</code>).
           </p>
         )}
 
         {!loading && !error && stages.length > 0 && activeStage && (
           <div className="mt-4">
-            {/* Tabs con índice de etapa (sólo las etapas habilitadas para este job) */}
+            {/* Stage index tabs (only stages enabled for this job) */}
             <div className="flex flex-wrap gap-2">
               {stages.map((stage) => {
                 const isActive = stage.key === activeStage.key;
@@ -177,10 +172,9 @@ export function MixPipelinePanel({ result, enabledPipelineStageKeys }: Props) {
               })}
             </div>
 
-            {/* Contenido de la etapa activa */}
             <div className="mt-4 rounded-xl bg-emerald-950/40 p-4">
               <p className="text-sm font-semibold text-emerald-50">
-                {`Stage ${activeStage.index} · ${activeStage.label}`}
+                {`Stage ${activeStage.index} - ${activeStage.label}`}
               </p>
               <p className="mt-2 text-xs text-emerald-200/90">
                 {activeStage.description}

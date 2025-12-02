@@ -271,7 +271,7 @@ export default function HomePage() {
     },
     S1_KEY_DETECTION: {
       title: "Key detection",
-      description: "Estimates the song’s global key and scale.",
+      description: "Estimates the song's global key and scale.",
     },
     S1_VOX_TUNING: {
       title: "Vocal tuning",
@@ -294,7 +294,7 @@ export default function HomePage() {
       description: "Balances the lead vocal against the static mix.",
     },
     S4_STEM_HPF_LPF: {
-      title: "HPF/LPF por stem",
+      title: "HPF/LPF per stem",
       description: "Applies high/low-pass filters per stem based on instrument profile.",
     },
     S4_STEM_RESONANCE_CONTROL: {
