@@ -42,17 +42,13 @@ def compute_global_gain_db(analysis: Dict[str, Any]) -> float:
     """
     Calcula la ganancia global en dB a aplicar a todos los stems.
 
-    Comportamiento:
-
-      - Usa metrics.peak_dbfs_min / peak_dbfs_max y
-        metrics.lufs_integrated_min / lufs_integrated_max del contrato.
-      - Solo ATENÚA (no sube nivel en este stage).
-      - Atenúa si:
-          * el pico de mixbus supera peak_dbfs_max, y/o
-          * el loudness integrado supera lufs_integrated_max.
-      - No atenúa si el loudness ya está por debajo de lufs_integrated_min
-        para evitar dejar la mezcla "muerta".
-      - Respeta limits.max_gain_change_db_per_pass cuando exista.
+    Estrategia:
+      - Solo atenuar.
+      - Objetivo con colchón: peak <= peak_dbfs_max - peak_tol y
+        LUFS <= lufs_integrated_max - lufs_tol (absorbe el margen del check).
+      - Aplica pasos limitados por max_gain_change_db_per_pass hasta 3
+        iteraciones, acumulando ganancia en dB (sin releer audio).
+      - No sigue si dejaría LUFS por debajo de lufs_min (con margen).
     """
     session: Dict[str, Any] = analysis.get("session", {}) or {}
     metrics: Dict[str, Any] = analysis.get("metrics_from_contract", {}) or {}
@@ -71,69 +67,68 @@ def compute_global_gain_db(analysis: Dict[str, Any]) -> float:
     except (TypeError, ValueError):
         lufs_measured = None
 
-    if mix_peak_measured is None and lufs_measured is None:
-        return 0.0
-
     peak_dbfs_min = float(metrics.get("peak_dbfs_min", -12.0))
     peak_dbfs_max = float(metrics.get("peak_dbfs_max", -6.0))
     lufs_min = float(metrics.get("lufs_integrated_min", -26.0))
     lufs_max = float(metrics.get("lufs_integrated_max", -20.0))
 
-    # ---------------------------------------------------------------
-    # 1) Candidatos de ganancia desde peak y desde LUFS (solo atenuar)
-    # ---------------------------------------------------------------
-    gain_peak = 0.0
-    if mix_peak_measured is not None and mix_peak_measured != float("-inf"):
-        if mix_peak_measured > peak_dbfs_max:
-            # Pico por encima del techo => atenuamos
-            gain_peak = peak_dbfs_max - mix_peak_measured  # negativo
-        else:
-            # Si el pico está dentro o por debajo del rango, no tocamos por peak
-            gain_peak = 0.0
+    peak_tol = 0.2
+    lufs_tol = 0.5
+    target_peak = peak_dbfs_max - peak_tol
+    target_lufs = lufs_max - lufs_tol
+    lufs_floor = lufs_min - lufs_tol
 
-    gain_lufs = 0.0
-    if lufs_measured is not None:
-        if lufs_measured > lufs_max:
-            # Loudness demasiado alto => atenuamos
-            gain_lufs = lufs_max - lufs_measured  # negativo
-        else:
-            # Si el loudness está dentro o por debajo del rango de trabajo,
-            # no atenuamos más SOLO por LUFS.
-            gain_lufs = 0.0
+    max_change = abs(float(limits.get("max_gain_change_db_per_pass", 3.0)))
 
-    candidate_gains = [g for g in (gain_peak, gain_lufs) if g < 0.0]
-    if not candidate_gains:
-        # Nada que atenuar por peak/LUFS
+    cur_peak = mix_peak_measured
+    cur_lufs = lufs_measured
+    total_gain = 0.0
+
+    # Sin métricas fiables, no hacemos nada
+    if cur_peak is None and cur_lufs is None:
         return 0.0
 
-    # Ajuste más restrictivo (el que más atenuación pide)
-    gain_db = min(candidate_gains)
+    # Hasta 3 iteraciones para acercarnos al objetivo
+    for _ in range(3):
+        gain_candidates: List[float] = []
 
-    # ---------------------------------------------------------------
-    # 2) Protección para no bajar por debajo del loudness mínimo
-    #    (aproximación 1 dB ≈ 1 LU)
-    # ---------------------------------------------------------------
-    if lufs_measured is not None:
-        approx_lufs_after = lufs_measured + gain_db
-        if approx_lufs_after < lufs_min:
-            # Si esta atenuación nos dejaría por debajo del mínimo de LUFS de trabajo,
-            # preferimos NO atenuar más en este stage.
-            return 0.0
+        if cur_peak is not None and cur_peak != float("-inf"):
+            if cur_peak > target_peak:
+                gain_candidates.append(target_peak - cur_peak)
 
-    # ---------------------------------------------------------------
-    # 3) Respetar max_gain_change_db_per_pass
-    # ---------------------------------------------------------------
-    max_change = float(limits.get("max_gain_change_db_per_pass", 3.0))
-    max_change = abs(max_change)
+        if cur_lufs is not None:
+            if cur_lufs > target_lufs:
+                gain_candidates.append(target_lufs - cur_lufs)
 
-    if gain_db < -max_change:
-        gain_db = -max_change
+        if not gain_candidates:
+            break
 
-    # Ignorar cambios ridículos
-    if abs(gain_db) < 0.1:
+        step = min(gain_candidates)  # más negativo = más restrictivo
+
+        # Limitar por max_gain_change_db_per_pass
+        if step < -max_change:
+            step = -max_change
+
+        # Evitar dejar LUFS por debajo del mínimo permitido
+        if cur_lufs is not None:
+            est_lufs_after = cur_lufs + step
+            if est_lufs_after < lufs_floor:
+                break
+
+        total_gain += step
+
+        # Actualizar estimaciones (aprox lineal en dB)
+        if cur_peak is not None and cur_peak != float("-inf"):
+            cur_peak += step
+        if cur_lufs is not None:
+            cur_lufs += step
+
+        if abs(step) < 0.1:
+            break
+
+    if abs(total_gain) < 0.1:
         return 0.0
-
-    return gain_db
+    return total_gain
 
 
 # ---------------------------------------------------------------------
@@ -171,7 +166,7 @@ def apply_global_gain_to_stems(stems: List[Dict[str, Any]], gain_db: float) -> N
         return
 
     if abs(gain_db) < 0.1:
-        # Cambios ridículos los ignoramos
+        # Cambios pequeños no compensan el coste de reescribir
         return
 
     max_workers = min(4, os.cpu_count() or 1)
