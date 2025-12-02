@@ -138,7 +138,7 @@ def apply_global_gain_to_stems(stems: List[Dict[str, Any]], gain_db: float) -> N
         list(ex.map(_apply_gain_worker, args_list))
 
 
-ddef main() -> None:
+def main() -> None:
     """
     Stage S1_MIXBUS_HEADROOM:
       - Lee analysis_S1_MIXBUS_HEADROOM.json.
