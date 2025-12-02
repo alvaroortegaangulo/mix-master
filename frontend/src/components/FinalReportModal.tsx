@@ -235,6 +235,8 @@ export function FinalReportModal({ jobId, isOpen, onClose }: FinalReportModalPro
     if (!isOpen || !jobId) return;
     const controller = new AbortController();
 
+    const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
     async function loadReport() {
       setLoading(true);
       setError(null);
@@ -244,20 +246,41 @@ export function FinalReportModal({ jobId, isOpen, onClose }: FinalReportModalPro
           jobId,
         )}/S11_REPORT_GENERATION/analysis_S11_REPORT_GENERATION.json`;
 
-        const res = await fetch(url, { signal: controller.signal });
-        if (!res.ok) {
-          throw new Error(`No se pudo cargar el informe (HTTP ${res.status}).`);
+        let lastErr: any = null;
+        for (let attempt = 0; attempt < 4; attempt++) {
+          try {
+            const res = await fetch(url, { signal: controller.signal });
+            if (!res.ok) {
+              if (res.status === 404 && attempt < 3) {
+                await sleep(800 * (attempt + 1));
+                continue;
+              }
+              throw new Error(`No se pudo cargar el informe (HTTP ${res.status}).`);
+            }
+
+            // Sustituimos los -Infinity/Infinity/NaN por null para que el JSON sea válido.
+            const raw = await res.text();
+            const safe = raw
+              .replace(/-Infinity/g, "null")
+              .replace(/Infinity/g, "null")
+              .replace(/NaN/g, "null");
+
+            const data = JSON.parse(safe) as ReportEnvelope;
+            setReportEnvelope(data);
+            lastErr = null;
+            break;
+          } catch (err: any) {
+            if (err?.name === "AbortError") return;
+            lastErr = err;
+            if (attempt < 3) {
+              await sleep(800 * (attempt + 1));
+            }
+          }
         }
 
-        // Sustituimos los -Infinity/Infinity/NaN por null para que el JSON sea válido.
-        const raw = await res.text();
-        const safe = raw
-          .replace(/-Infinity/g, "null")
-          .replace(/Infinity/g, "null")
-          .replace(/NaN/g, "null");
-
-        const data = JSON.parse(safe) as ReportEnvelope;
-        setReportEnvelope(data);
+        if (lastErr) {
+          throw lastErr;
+        }
       } catch (err: any) {
         if (err?.name === "AbortError") return;
         console.error("[FinalReportModal] Error al cargar informe:", err);
