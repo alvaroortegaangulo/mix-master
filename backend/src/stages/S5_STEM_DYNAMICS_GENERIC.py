@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import sys
-import os
 from pathlib import Path
 from typing import Dict, Any, List, Tuple, Optional
 
@@ -15,13 +14,13 @@ if str(SRC_DIR) not in sys.path:
 
 import json  # noqa: E402
 import numpy as np  # noqa: E402
-import soundfile as sf  # noqa: E402
 
-from utils.analysis_utils import get_temp_dir
-from utils.dynamics_utils import (  # noqa: E402
-    compress_peak_detector,
-    compute_crest_factor_db,
-)
+from utils.analysis_utils import get_temp_dir  # noqa: E402
+from utils.dynamics_utils import compute_crest_factor_db  # noqa: E402
+
+# Pedalboard
+from pedalboard import Pedalboard, Compressor  # noqa: E402
+from pedalboard.io import AudioFile  # noqa: E402
 
 
 def load_analysis(contract_id: str) -> Dict[str, Any]:
@@ -79,6 +78,7 @@ def _compute_threshold_for_stem(
 # ----------------------------------------------------------------------
 # ----------------------------------------------------------------------
 
+
 def _compress_stem_worker(
     args: Tuple[
         str,   # fname
@@ -96,7 +96,7 @@ def _compress_stem_worker(
     """
     Worker que:
       - Lee el archivo de audio.
-      - Aplica compresión peak detector.
+      - Aplica compresión con Pedalboard.
       - Reescribe el archivo.
       - Devuelve métricas post-compresión para el registro.
 
@@ -118,36 +118,123 @@ def _compress_stem_worker(
     path = Path(path_str)
 
     try:
-        data, sr = sf.read(path, always_2d=False)
+        # Leer audio con Pedalboard (forma: (channels, samples))
+        with AudioFile(str(path)) as f:
+            audio = f.read(f.frames)
+            samplerate = f.samplerate
+
     except Exception as e:
         print(f"[S5_STEM_DYNAMICS_GENERIC] {fname}: error al leer el archivo: {e}")
         return None
 
-    if not isinstance(data, np.ndarray):
-        data = np.array(data, dtype=np.float32)
+    if not isinstance(audio, np.ndarray):
+        audio = np.array(audio, dtype=np.float32)
     else:
-        data = data.astype(np.float32)
+        audio = audio.astype(np.float32)
 
-    if data.size == 0:
+    if audio.size == 0:
         print(f"[S5_STEM_DYNAMICS_GENERIC] {fname}: archivo vacío; se omite.")
         return None
 
-    # Aplicar compresión
-    y_out, avg_gr_db, max_gr_db = compress_peak_detector(
-        data,
-        sr,
-        threshold_db=threshold_db,
-        ratio=RATIO,
-        attack_ms=ATTACK_MS,
-        release_ms=RELEASE_MS,
-        makeup_gain_db=MAKEUP_DB,
+    # Normalizar forma para compresor:
+    # - Pedalboard espera (channels, samples)
+    # - Para métricas compatibles con utilidades existentes,
+    #   preservamos una versión "data" similar a soundfile: (samples,) o (samples, channels)
+    if audio.ndim == 1:
+        # Mono
+        audio_for_board = audio.reshape(1, -1)  # (1, samples)
+        data_in = audio.copy()                  # (samples,)
+    elif audio.ndim == 2:
+        # (channels, samples)
+        audio_for_board = audio
+        data_in = audio.T.copy()               # (samples, channels)
+    else:
+        print(
+            f"[S5_STEM_DYNAMICS_GENERIC] {fname}: formato de audio no soportado "
+            f"con ndim={audio.ndim}; se omite."
+        )
+        return None
+
+    # ------------------------------------------------------------------
+    # Compresor genérico con Pedalboard
+    # ------------------------------------------------------------------
+    board = Pedalboard(
+        [
+            Compressor(
+                threshold_db=float(threshold_db),
+                ratio=float(RATIO),
+                attack_ms=float(ATTACK_MS),
+                release_ms=float(RELEASE_MS),
+                makeup_gain_db=float(MAKEUP_DB),
+            )
+        ]
     )
 
-    # Métricas post-compresión (crest factor nuevo)
-    post_rms_db, post_peak_db, post_crest_db = compute_crest_factor_db(y_out)
+    try:
+        processed = board(audio_for_board, samplerate)  # (channels, samples)
+    except Exception as e:
+        print(f"[S5_STEM_DYNAMICS_GENERIC] {fname}: error en compresor: {e}")
+        return None
 
-    # Guardar audio procesado
-    sf.write(path, y_out, sr)
+    if not isinstance(processed, np.ndarray):
+        processed = np.array(processed, dtype=np.float32)
+    else:
+        processed = processed.astype(np.float32)
+
+    # Normalizar salida a la misma convención que data_in para métricas
+    if processed.ndim == 1:
+        data_out = processed.copy()  # (samples,)
+    elif processed.ndim == 2:
+        data_out = processed.T.copy()  # (samples, channels)
+    else:
+        print(
+            f"[S5_STEM_DYNAMICS_GENERIC] {fname}: salida del compresor no soportada "
+            f"con ndim={processed.ndim}; se omite."
+        )
+        return None
+
+    # ------------------------------------------------------------------
+    # Cálculo de ganancia de reducción media y máxima
+    # ------------------------------------------------------------------
+    eps = 1e-12
+
+    # Trabajamos en forma (channels, samples) para GR por muestra
+    if audio_for_board.ndim == 1:
+        in_cs = audio_for_board.reshape(1, -1)
+    else:
+        in_cs = audio_for_board
+
+    if processed.ndim == 1:
+        out_cs = processed.reshape(1, -1)
+    else:
+        out_cs = processed
+
+    in_abs = np.abs(in_cs).astype(np.float32) + eps
+    out_abs = np.abs(out_cs).astype(np.float32) + eps
+
+    # GR por muestra (dB): típicamente <= 0 (reducción)
+    gr_db = 20.0 * np.log10(out_abs / in_abs)
+
+    # Consideramos solo reducción (valores <= 0); ignoramos posibles zonas con out > in
+    gr_db_clipped = np.minimum(gr_db, 0.0)
+
+    # Ganancia de reducción media y máxima como magnitudes positivas
+    avg_gr_db = float(-np.mean(gr_db_clipped))  # media de reducción
+    max_gr_db = float(-np.min(gr_db_clipped))   # máxima reducción
+
+    # ------------------------------------------------------------------
+    # Métricas post-compresión (crest factor nuevo)
+    # ------------------------------------------------------------------
+    post_rms_db, post_peak_db, post_crest_db = compute_crest_factor_db(data_out)
+
+    # Guardar audio procesado sobre el archivo original
+    with AudioFile(
+        str(path),
+        "w",
+        samplerate=samplerate,
+        num_channels=out_cs.shape[0],
+    ) as f:
+        f.write(processed)
 
     return {
         "file_name": fname,
@@ -173,7 +260,7 @@ def main() -> None:
       - Lee analysis_S5_STEM_DYNAMICS_GENERIC.json.
       - Para cada stem:
           * Calcula un umbral de compresión en función de RMS/peak.
-          * Aplica un compresor genérico (ratio moderado).
+          * Aplica un compresor genérico (ratio moderado) con Pedalboard.
           * Registra métricas de GR y crest factor antes/después.
     """
     if len(sys.argv) < 2:
@@ -209,6 +296,7 @@ def main() -> None:
     temp_dir = get_temp_dir(contract_id, create=False)
 
     # ------------------------------------------------------------------
+    # Preparar tareas
     # ------------------------------------------------------------------
     tasks: List[Tuple[str, str, float, float, float, float, float, float, float, float]] = []
 
@@ -266,7 +354,7 @@ def main() -> None:
     metrics_records: List[Dict[str, Any]] = []
 
     # ------------------------------------------------------------------
-    # 2) Ejecutar compresión en serie
+    # Ejecutar compresión en serie
     # ------------------------------------------------------------------
     if tasks:
         for result in map(_compress_stem_worker, tasks):
@@ -294,7 +382,7 @@ def main() -> None:
         )
 
     # ------------------------------------------------------------------
-    # 3) Guardar métricas de dinámica en un JSON auxiliar para el check
+    # Guardar métricas de dinámica en un JSON auxiliar para el check
     # ------------------------------------------------------------------
     metrics_path = temp_dir / "dynamics_metrics_S5_STEM_DYNAMICS_GENERIC.json"
     with metrics_path.open("w", encoding="utf-8") as f:
