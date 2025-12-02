@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import sys
 import os
-from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 from typing import Dict, Any, List, Tuple
 
@@ -97,7 +96,6 @@ def _build_notches_for_stem(
 
 
 # --------------------------------------------------------------------
-# Worker para ProcessPoolExecutor
 # --------------------------------------------------------------------
 
 
@@ -164,7 +162,6 @@ def main() -> None:
           * max_resonance_peak_db_above_local (umbral de "aceptable").
           * max_resonant_cuts_db (corte máx. por resonancia).
           * max_resonant_filters_per_band (máx. resonancias aplicadas por stem).
-      - Usa ProcessPoolExecutor para procesar stems en paralelo.
     """
     if len(sys.argv) < 2:
         print("Uso: python S4_STEM_RESONANCE_CONTROL.py <CONTRACT_ID>")
@@ -219,14 +216,10 @@ def main() -> None:
     total_notches_applied = 0
 
     # Utiliza todos los cores disponibles, pero no más que el número de tareas
-    cpu_count = os.cpu_count() or 1
-    max_workers = min(cpu_count, len(tasks))
-
-    with ProcessPoolExecutor(max_workers=max_workers) as ex:
-        for fname, num_notches in ex.map(_process_stem_worker, tasks):
-            if num_notches > 0:
-                stems_touched += 1
-                total_notches_applied += num_notches
+    for fname, num_notches in map(_process_stem_worker, tasks):
+        if num_notches > 0:
+            stems_touched += 1
+            total_notches_applied += num_notches
 
     print(
         f"[S4_STEM_RESONANCE_CONTROL] Stage completado. "

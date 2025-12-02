@@ -10,7 +10,6 @@ if str(SRC_DIR) not in sys.path:
 
 import json
 import os
-from concurrent.futures import ProcessPoolExecutor
 
 import numpy as np
 import soundfile as sf
@@ -84,7 +83,6 @@ def process_stem(
 
 
 # -------------------------------------------------------------------
-# Worker para ProcessPoolExecutor
 # -------------------------------------------------------------------
 def _process_stem_worker(args: Tuple[Dict[str, Any], float | None]) -> None:
     """
@@ -115,11 +113,9 @@ def main() -> None:
     dc_offset_max_db_target = metrics.get("dc_offset_max_db")
 
     if stems:
-        max_workers = min(4, os.cpu_count() or 1)
         args_list = [(stem_info, dc_offset_max_db_target) for stem_info in stems]
-
-        with ProcessPoolExecutor(max_workers=max_workers) as ex:
-            list(ex.map(_process_stem_worker, args_list))
+        for args in args_list:
+            _process_stem_worker(args)
 
     print(f"[S1_STEM_DC_OFFSET] Corrección de DC offset completada para {len(stems)} stems.")
 

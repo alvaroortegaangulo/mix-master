@@ -13,7 +13,6 @@ if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
 import json  # noqa: E402
-from concurrent.futures import ProcessPoolExecutor  # noqa: E402
 
 import numpy as np  # noqa: E402
 import soundfile as sf  # noqa: E402
@@ -209,7 +208,6 @@ def main() -> None:
 
       - Lee analysis_S8_MIXBUS_COLOR_GENERIC.json.
       - Calcula parámetros de saturación en función de estilo y límites del contrato.
-      - Lanza un ProcessPoolExecutor para procesar full_song.wav en un worker.
       - El worker aplica saturación suave y trim de true peak.
       - Se guardan métricas en color_metrics_S8_MIXBUS_COLOR_GENERIC.json.
     """
@@ -242,18 +240,15 @@ def main() -> None:
         )
         return
 
-    # Procesar el mixbus en un proceso separado
-    with ProcessPoolExecutor(max_workers=1) as ex:
-        future = ex.submit(
-            _process_mixbus_color_worker,
-            str(full_song_path),
-            style_preset,
-            tp_min,
-            tp_max,
-            max_thd_percent,
-            max_sat_per_pass_db,
-        )
-        color_result = future.result()
+    # Procesar el mixbus en serie
+    color_result = _process_mixbus_color_worker(
+        str(full_song_path),
+        style_preset,
+        tp_min,
+        tp_max,
+        max_thd_percent,
+        max_sat_per_pass_db,
+    )
 
     # Guardar métricas para el futuro check
     metrics_path = temp_dir / "color_metrics_S8_MIXBUS_COLOR_GENERIC.json"

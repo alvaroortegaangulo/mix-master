@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import sys
 import os
-from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 from typing import Dict, Any, Tuple
 
@@ -51,7 +50,6 @@ def _eq_channel_worker(
     args: Tuple[np.ndarray, int, Dict[str, float], Any]
 ) -> np.ndarray:
     """
-    Worker para ProcessPoolExecutor: aplica la EQ multibanda a un solo canal.
     """
     x, sr, eq_gains_db, bands = args
     return _apply_multiband_eq_fft_channel(x, sr, eq_gains_db, bands)
@@ -114,7 +112,6 @@ def _apply_multiband_eq_fft(
     - audio: np.ndarray (N,) o (N, C)
     - eq_gains_db: dict band_id -> gain_db a aplicar en esa banda
 
-    Usa ProcessPoolExecutor para procesar canales en paralelo cuando audio es 2D.
     """
     bands = get_freq_bands()
     x = np.asarray(audio, dtype=np.float32)
@@ -129,9 +126,7 @@ def _apply_multiband_eq_fft(
             for ch in range(n_ch)
         ]
 
-        max_workers = min(4, os.cpu_count() or 1)
-        with ProcessPoolExecutor(max_workers=max_workers) as ex:
-            results = list(ex.map(_eq_channel_worker, tasks))
+        results = [_eq_channel_worker(task) for task in tasks]
 
         out = np.zeros_like(x, dtype=np.float32)
         for ch, y_ch in enumerate(results):

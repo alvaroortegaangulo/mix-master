@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import sys
 import os
-from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 from typing import Dict, Any, List, Tuple
 
@@ -88,7 +87,6 @@ def _compute_bus_threshold(
 
 
 # ----------------------------------------------------------------------
-# Worker para ProcessPoolExecutor: lectura de cada stem de Drums
 # ----------------------------------------------------------------------
 
 def _load_drum_stem_worker(args: Tuple[str, str]) -> Tuple[str, str, np.ndarray | None, int | None, str | None]:
@@ -133,7 +131,6 @@ def main() -> None:
         (misma envolvente para todas las pistas del bus).
       - Reescribe los stems de Drums procesados.
       - Guarda métricas de bus (pre/post crest, GR media/máx).
-      - Usa ProcessPoolExecutor para cargar en paralelo los stems de Drums.
     """
     if len(sys.argv) < 2:
         print("Uso: python S5_BUS_DYNAMICS_DRUMS.py <CONTRACT_ID>")
@@ -173,7 +170,6 @@ def main() -> None:
         )
         return
 
-    # 2) Preparar tareas de lectura para ProcessPoolExecutor
     load_tasks: List[Tuple[str, str]] = []
     for s in drum_stems:
         fname = s.get("file_name")
@@ -197,36 +193,33 @@ def main() -> None:
     max_len = 0
     total_channels = 0
 
-    max_workers = min(4, os.cpu_count() or 1)
+    # 3) Leer stems de Drums en serie
+    for fname, path_str, data, sr, err in map(_load_drum_stem_worker, load_tasks):
+        if err is not None or data is None or sr is None:
+            print(f"[S5_BUS_DYNAMICS_DRUMS] Aviso: no se puede leer '{fname}': {err}.")
+            continue
 
-    # 3) Leer stems de Drums en paralelo
-    with ProcessPoolExecutor(max_workers=max_workers) as ex:
-        for fname, path_str, data, sr, err in ex.map(_load_drum_stem_worker, load_tasks):
-            if err is not None or data is None or sr is None:
-                print(f"[S5_BUS_DYNAMICS_DRUMS] Aviso: no se puede leer '{fname}': {err}.")
-                continue
-
-            if sr_ref is None:
-                sr_ref = sr
-            elif sr != sr_ref:
-                print(
-                    f"[S5_BUS_DYNAMICS_DRUMS] Aviso: samplerate inconsistente en {fname} "
-                    f"(sr={sr}, ref={sr_ref}); se omite de la compresión de bus."
-                )
-                continue
-
-            n, c = data.shape
-            buffers.append(data)
-            files_info.append(
-                {
-                    "file_name": fname,
-                    "path": Path(path_str),
-                    "channels": c,
-                    "length": n,
-                }
+        if sr_ref is None:
+            sr_ref = sr
+        elif sr != sr_ref:
+            print(
+                f"[S5_BUS_DYNAMICS_DRUMS] Aviso: samplerate inconsistente en {fname} "
+                f"(sr={sr}, ref={sr_ref}); se omite de la compresión de bus."
             )
-            max_len = max(max_len, n)
-            total_channels += c
+            continue
+
+        n, c = data.shape
+        buffers.append(data)
+        files_info.append(
+            {
+                "file_name": fname,
+                "path": Path(path_str),
+                "channels": c,
+                "length": n,
+            }
+        )
+        max_len = max(max_len, n)
+        total_channels += c
 
     if not buffers or max_len == 0 or sr_ref is None:
         print(

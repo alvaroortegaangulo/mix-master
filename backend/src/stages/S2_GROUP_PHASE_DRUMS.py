@@ -14,7 +14,6 @@ if str(SRC_DIR) not in sys.path:
 
 import json  # noqa: E402
 import os  # noqa: E402
-from concurrent.futures import ProcessPoolExecutor  # noqa: E402
 
 import numpy as np  # noqa: E402
 import soundfile as sf  # noqa: E402
@@ -40,7 +39,6 @@ def load_analysis(contract_id: str) -> Dict[str, Any]:
 
 
 # -------------------------------------------------------------------
-# Worker para ProcessPoolExecutor
 # -------------------------------------------------------------------
 def _process_stem_worker(
     args: Tuple[str, Dict[str, Any], float]
@@ -139,14 +137,14 @@ def main() -> None:
 
     processed = 0
     if candidate_stems:
-        max_workers = min(4, os.cpu_count() or 1)
         args_list: List[Tuple[str, Dict[str, Any], float]] = [
             (str(temp_dir), stem_info, MIN_SHIFT_MS)
             for stem_info in candidate_stems
         ]
 
-        with ProcessPoolExecutor(max_workers=max_workers) as ex:
-            results = list(ex.map(_process_stem_worker, args_list))
+        results = []
+        for args in args_list:
+            results.append(_process_stem_worker(args))
 
         processed = sum(1 for r in results if r)
 

@@ -12,7 +12,6 @@ if str(SRC_DIR) not in sys.path:
 
 import json  # noqa: E402
 import os  # noqa: E402
-from concurrent.futures import ProcessPoolExecutor  # noqa: E402
 
 import numpy as np  # noqa: E402
 import soundfile as sf  # noqa: E402
@@ -94,7 +93,6 @@ def apply_vocal_tuning_to_stem(
 
 
 # -------------------------------------------------------------------
-# Worker para ProcessPoolExecutor
 # -------------------------------------------------------------------
 def _tune_stem_worker(
     args: Tuple[Dict[str, Any], float | None, float | None, float | None, List[int] | None]
@@ -125,7 +123,6 @@ def main() -> None:
       - Lee analysis_S1_VOX_TUNING.json.
       - Aplica afinación nota-a-nota SOLO a stems vocales (según instrument_profile),
         respetando la escala detectada en S1_KEY_DETECTION.
-      - Procesa los stems vocales en paralelo con ProcessPoolExecutor.
     """
     if len(sys.argv) < 2:
         print("Uso: python S1_VOX_TUNING.py <CONTRACT_ID>")
@@ -169,8 +166,8 @@ def main() -> None:
             for stem_info in vocal_stems
         ]
 
-        with ProcessPoolExecutor(max_workers=max_workers) as ex:
-            list(ex.map(_tune_stem_worker, args_list))
+        for args in args_list:
+            _tune_stem_worker(args)
 
     print(f"[S1_VOX_TUNING] Procesados {len(vocal_stems)} stems vocales.")
 

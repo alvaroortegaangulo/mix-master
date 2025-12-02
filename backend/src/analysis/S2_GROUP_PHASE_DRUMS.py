@@ -6,7 +6,6 @@ import sys
 from pathlib import Path
 from typing import Dict, Any, List, Tuple
 import os
-from concurrent.futures import ProcessPoolExecutor
 
 # --- hack para importar utils ---
 THIS_DIR = Path(__file__).resolve().parent
@@ -79,7 +78,6 @@ def _analyze_drum_stem(
     ]
 ) -> Tuple[int, Dict[str, Any]]:
     """
-    Worker para ProcessPoolExecutor.
 
     Recibe:
       - idx: índice del stem en stems_info_raw / stem_files
@@ -359,8 +357,7 @@ def main() -> None:
     # 7) Ejecutar análisis paralelo para candidatos de drums
     if tasks:
         max_workers = min(4, os.cpu_count() or 1)
-        with ProcessPoolExecutor(max_workers=max_workers) as ex:
-            for idx_res, info_res in ex.map(_analyze_drum_stem, tasks):
+                    for idx_res, info_res in map(_analyze_drum_stem, tasks):
                 stems_analysis[idx_res] = info_res
 
     # Por seguridad, rellenar cualquier hueco que pudiera quedar (no debería)

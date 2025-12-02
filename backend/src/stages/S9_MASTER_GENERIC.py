@@ -13,7 +13,6 @@ if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
 import json  # noqa: E402
-from concurrent.futures import ProcessPoolExecutor  # noqa: E402
 
 import numpy as np  # noqa: E402
 import soundfile as sf  # noqa: E402
@@ -260,7 +259,6 @@ def main() -> None:
 
       - Lee analysis_S9_MASTER_GENERIC.json y el full_song.wav actual.
       - Calcula objetivos de mastering a partir de contrato + perfil de estilo.
-      - Lanza un ProcessPoolExecutor para procesar el master en un worker.
       - El worker aplica pre-gain + limitador + ajuste M/S.
       - Recalcula métricas post y las guarda en master_metrics_S9_MASTER_GENERIC.json.
     """
@@ -315,20 +313,17 @@ def main() -> None:
         )
         return
 
-    # Procesar master en un proceso separado
-    with ProcessPoolExecutor(max_workers=1) as ex:
-        future = ex.submit(
-            _process_master_worker,
-            str(full_song_path),
-            max_limiter_gr_db,
-            max_width_change_pct,
-            target_lufs,
-            target_lra_min,
-            target_lra_max,
-            target_ceiling,
-            target_width_factor_style,
-        )
-        result = future.result()
+    # Procesar master en serie
+    result = _process_master_worker(
+        str(full_song_path),
+        max_limiter_gr_db,
+        max_width_change_pct,
+        target_lufs,
+        target_lra_min,
+        target_lra_max,
+        target_ceiling,
+        target_width_factor_style,
+    )
 
     # Guardar métricas para el futuro check
     metrics_path = temp_dir / "master_metrics_S9_MASTER_GENERIC.json"

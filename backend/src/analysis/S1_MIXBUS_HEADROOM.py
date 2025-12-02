@@ -12,7 +12,6 @@ if str(SRC_DIR) not in sys.path:
 
 import json  # noqa: E402
 import os  # noqa: E402
-from concurrent.futures import ProcessPoolExecutor  # noqa: E402
 
 import numpy as np  # noqa: E402
 import soundfile as sf  # noqa: E402
@@ -66,8 +65,7 @@ def _compute_mixbus_peak_and_lufs_parallel(
     ch_ref = None
 
     # 1) Cargar stems en paralelo
-    with ProcessPoolExecutor(max_workers=max_workers) as ex:
-        for data, sr in ex.map(_load_stem_for_mix, stem_path_strs):
+            for data, sr in map(_load_stem_for_mix, stem_path_strs):
             if data is None or sr is None:
                 continue
 

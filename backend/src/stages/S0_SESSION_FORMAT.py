@@ -5,7 +5,6 @@ import sys
 from pathlib import Path
 from typing import Dict, Any, Tuple
 import os
-from concurrent.futures import ProcessPoolExecutor
 
 import numpy as np
 import soundfile as sf
@@ -142,7 +141,6 @@ def process_stem(stem_info: Dict[str, Any], metrics: Dict[str, Any]) -> None:
 
 
 # -------------------------------------------------------------------
-# Worker para ProcessPoolExecutor
 # -------------------------------------------------------------------
 
 def _process_stem_worker(args: Tuple[Dict[str, Any], Dict[str, Any]]) -> None:
@@ -179,12 +177,10 @@ def main() -> None:
         print("[S0_SESSION_FORMAT] No hay stems en el análisis; nada que procesar.")
         return
 
-    # Procesar stems en paralelo
-    max_workers = min(4, os.cpu_count() or 1)
+    # Procesar stems en serie
     args_list = [(stem_info, metrics) for stem_info in stems]
-
-    with ProcessPoolExecutor(max_workers=max_workers) as ex:
-        list(ex.map(_process_stem_worker, args_list))
+    for args in args_list:
+        _process_stem_worker(args)
 
     print(f"[S0_SESSION_FORMAT] Conversión de formato completada para {len(stems)} stems.")
 

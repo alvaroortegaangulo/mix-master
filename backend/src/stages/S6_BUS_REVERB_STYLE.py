@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import sys
 import os
-from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 from scipy.signal import fftconvolve
@@ -105,7 +104,6 @@ def load_analysis(contract_id: str) -> Dict[str, Any]:
 
 
 # ---------------------------------------------------------------------
-# Worker para ProcessPoolExecutor: genera el return de reverb de un stem
 # ---------------------------------------------------------------------
 
 def _render_reverb_return_worker(
@@ -207,7 +205,6 @@ def main() -> None:
       - Ajusta el nivel global de returns hacia un offset de loudness objetivo
         respecto al mix dry (full_song.wav).
       - Guarda métricas de espacio/profundidad para el futuro check.
-      - Usa ProcessPoolExecutor para paralelizar la generación de los returns.
     """
     if len(sys.argv) < 2:
         print("Uso: python S6_BUS_REVERB_STYLE.py <CONTRACT_ID>")
@@ -255,7 +252,6 @@ def main() -> None:
         )
 
     # ------------------------------------------------------------------
-    # 1) Preparar tareas para ProcessPoolExecutor (por stem)
     # ------------------------------------------------------------------
     tasks: List[tuple[str, str, float, float, int]] = []
     SEED_BASE = 12345  # mismo seed base para IRs deterministas
@@ -293,12 +289,10 @@ def main() -> None:
     max_return_len = 0
 
     # ------------------------------------------------------------------
-    # 2) Generar returns en paralelo
+    # 2) Generar returns en serie
     # ------------------------------------------------------------------
     if tasks:
-        max_workers = min(4, os.cpu_count() or 1)
-        with ProcessPoolExecutor(max_workers=max_workers) as ex:
-            for result in ex.map(_render_reverb_return_worker, tasks):
+        for result in map(_render_reverb_return_worker, tasks):
                 if result is None:
                     continue
 

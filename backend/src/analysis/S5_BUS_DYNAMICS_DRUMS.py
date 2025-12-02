@@ -6,7 +6,6 @@ import sys
 from pathlib import Path
 from typing import Dict, Any, List
 import os
-from concurrent.futures import ProcessPoolExecutor
 
 # --- hack para importar utils ---
 THIS_DIR = Path(__file__).resolve().parent
@@ -30,7 +29,6 @@ from utils.dynamics_utils import compute_crest_factor_db  # noqa: E402
 
 def _load_drum_mono(stem_path: Path) -> Dict[str, Any]:
     """
-    Worker para ProcessPoolExecutor.
 
     Lee un stem, lo pasa a mono (float32) y devuelve un dict:
       {
@@ -138,7 +136,6 @@ def main() -> None:
     if drum_files:
         # Carga + mono en paralelo
         max_workers = min(4, os.cpu_count() or 1)
-        with ProcessPoolExecutor(max_workers=max_workers) as ex:
             results: List[Dict[str, Any]] = list(ex.map(_load_drum_mono, drum_files))
 
         buffers: List[np.ndarray] = []

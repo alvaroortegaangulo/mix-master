@@ -14,7 +14,6 @@ if str(SRC_DIR) not in sys.path:
 
 import json  # noqa: E402
 import os  # noqa: E402
-from concurrent.futures import ProcessPoolExecutor  # noqa: E402
 
 import numpy as np  # noqa: E402
 import soundfile as sf  # noqa: E402
@@ -137,7 +136,6 @@ def compute_global_gain_db(analysis: Dict[str, Any]) -> float:
 
 
 # ---------------------------------------------------------------------
-# Worker para ProcessPoolExecutor: aplica ganancia a un solo stem
 # ---------------------------------------------------------------------
 def _apply_gain_worker(args: Tuple[Dict[str, Any], float]) -> None:
     """
@@ -165,7 +163,7 @@ def _apply_gain_worker(args: Tuple[Dict[str, Any], float]) -> None:
 def apply_global_gain_to_stems(stems: List[Dict[str, Any]], gain_db: float) -> None:
     """
     Aplica la ganancia global en dB a todos los stems listados en el análisis.
-    Usa ProcessPoolExecutor para paralelizar el procesado por archivo.
+    Procesa en serie para evitar multiproceso.
     """
     if not stems:
         return
@@ -173,11 +171,9 @@ def apply_global_gain_to_stems(stems: List[Dict[str, Any]], gain_db: float) -> N
     if abs(gain_db) < 0.1:
         return
 
-    max_workers = min(4, os.cpu_count() or 1)
     args_list = [(stem_info, gain_db) for stem_info in stems]
-
-    with ProcessPoolExecutor(max_workers=max_workers) as ex:
-        list(ex.map(_apply_gain_worker, args_list))
+    for args in args_list:
+        _apply_gain_worker(args)
 
 
 def main() -> None:

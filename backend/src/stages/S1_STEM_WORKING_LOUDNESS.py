@@ -14,7 +14,6 @@ if str(SRC_DIR) not in sys.path:
 
 import json  # noqa: E402
 import os  # noqa: E402
-from concurrent.futures import ProcessPoolExecutor  # noqa: E402
 
 import numpy as np  # noqa: E402
 import soundfile as sf  # noqa: E402
@@ -111,7 +110,6 @@ def apply_gain_to_stem(file_path: Path, gain_db: float) -> None:
 
 
 # -------------------------------------------------------------------
-# Worker para ProcessPoolExecutor
 # -------------------------------------------------------------------
 def _process_stem_worker(
     args: tuple[Dict[str, Any], float | None, float | None]
@@ -165,8 +163,8 @@ def main() -> None:
             for stem_info in stems
         ]
 
-        with ProcessPoolExecutor(max_workers=max_workers) as ex:
-            list(ex.map(_process_stem_worker, args_list))
+        for args in args_list:
+            _process_stem_worker(args)
 
     print(
         f"[S1_STEM_WORKING_LOUDNESS] Normalización de trabajo completada para {len(stems)} stems."

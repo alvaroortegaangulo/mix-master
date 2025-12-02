@@ -8,7 +8,6 @@ from typing import Dict, Any, List
 import json
 import datetime
 import os
-from concurrent.futures import ProcessPoolExecutor
 
 # --- hack para importar utils ---
 THIS_DIR = Path(__file__).resolve().parent
@@ -212,7 +211,6 @@ def _load_pipeline_timings(contract_id: str) -> Dict[str, Any]:
 
 def _crest_hist_worker(path: Path) -> Dict[str, Any]:
     """
-    Worker para ProcessPoolExecutor: lee un WAV y calcula crest + histograma.
     Devuelve métricas y posible mensaje de error.
     """
     try:
@@ -255,12 +253,10 @@ def main() -> None:
     cfg = load_session_config(contract_id)
     style_preset = cfg["style_preset"]
 
-    # 3) Construir report.stages recorriendo los contract_ids del pipeline (en paralelo)
-    max_workers = min(4, os.cpu_count() or 1)
-    with ProcessPoolExecutor(max_workers=max_workers) as ex:
-        stages_report: List[Dict[str, Any]] = list(
-            ex.map(_build_stage_report_entry, PIPELINE_CONTRACT_IDS)
-        )
+    # 3) Construir report.stages recorriendo los contract_ids del pipeline (en serie)
+    stages_report: List[Dict[str, Any]] = [
+        _build_stage_report_entry(cid) for cid in PIPELINE_CONTRACT_IDS
+    ]
 
     # 4) Métricas finales desde QC de S10 + audio final para crest / hist
     qc_contract_id = "S10_MASTER_FINAL_LIMITS"
@@ -302,8 +298,7 @@ def main() -> None:
         if not p.exists():
             continue
 
-        with ProcessPoolExecutor(max_workers=max_workers) as ex:
-            result = list(ex.map(_crest_hist_worker, [p]))[0]
+        result = _crest_hist_worker(p)
 
         if result.get("error"):
             # Logeamos el error y pasamos al siguiente path

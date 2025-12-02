@@ -14,7 +14,6 @@ if str(SRC_DIR) not in sys.path:
 
 import json  # noqa: E402
 import os  # noqa: E402
-from concurrent.futures import ProcessPoolExecutor  # noqa: E402
 
 import numpy as np  # noqa: E402
 import soundfile as sf  # noqa: E402
@@ -91,7 +90,6 @@ def _compute_lead_gain_db(
 
 
 # -------------------------------------------------------------------
-# Worker para ProcessPoolExecutor
 # -------------------------------------------------------------------
 def _apply_gain_to_lead_worker(
     args: Tuple[str, Dict[str, Any], float]
@@ -139,7 +137,6 @@ def main() -> None:
       - Lee analysis_S3_LEADVOX_AUDIBILITY.json.
       - Calcula un gain global en dB para todas las pistas de lead vocal.
       - Aplica ese gain a los stems marcados como is_lead_vocal = True,
-        procesando en paralelo con ProcessPoolExecutor.
     """
     if len(sys.argv) < 2:
         print("Uso: python S3_LEADVOX_AUDIBILITY.py <CONTRACT_ID>")
@@ -173,13 +170,13 @@ def main() -> None:
         print("[S3_LEADVOX_AUDIBILITY] No se han encontrado stems marcados como lead vocal.")
         return
 
-    max_workers = min(4, os.cpu_count() or 1)
     args_list: List[Tuple[str, Dict[str, Any], float]] = [
         (str(temp_dir), stem, gain_lin) for stem in lead_stems
     ]
 
-    with ProcessPoolExecutor(max_workers=max_workers) as ex:
-        results = list(ex.map(_apply_gain_to_lead_worker, args_list))
+    results = []
+    for args in args_list:
+        results.append(_apply_gain_to_lead_worker(args))
 
     processed = sum(1 for r in results if r)
 

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import sys
 import os
-from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 from typing import Dict, Any, List, Tuple, Optional
 
@@ -92,7 +91,6 @@ def _compute_vocal_threshold(
 
 
 # ----------------------------------------------------------------------
-# Worker para ProcessPoolExecutor: comprime y reescribe un stem de lead
 # ----------------------------------------------------------------------
 
 def _compress_lead_stem_worker(
@@ -191,7 +189,6 @@ def main() -> None:
       - Si el crest factor es mayor que el target, aplica compresión moderada
         para recortar picos sin matar demasiado la vida.
       - Guarda métricas de GR y crest factor antes/después.
-      - Usa ProcessPoolExecutor para procesar en paralelo los stems de lead.
     """
     if len(sys.argv) < 2:
         print("Uso: python S5_LEADVOX_DYNAMICS.py <CONTRACT_ID>")
@@ -310,37 +307,33 @@ def main() -> None:
         )
 
     # ------------------------------------------------------------------
-    # 2) Ejecutar compresión en paralelo
+    # 2) Ejecutar compresión en serie
     # ------------------------------------------------------------------
     metrics_records: List[Dict[str, Any]] = []
     processed = 0
 
     if tasks:
-        max_workers = min(4, os.cpu_count() or 1)
-        with ProcessPoolExecutor(max_workers=max_workers) as ex:
-            for result in ex.map(_compress_lead_stem_worker, tasks):
-                if result is None:
-                    continue
+        for result in map(_compress_lead_stem_worker, tasks):
+            if result is None:
+                continue
 
-                fname = result["file_name"]
-                threshold_db = result["threshold_db"]
-                avg_gr_db = result["avg_gain_reduction_db"]
-                max_gr_db = result["max_gain_reduction_db"]
-                pre_crest_db = result["pre_crest_db"]
-                post_crest_db = result["post_crest_db"]
+            fname = result["file_name"]
+            threshold_db = result["threshold_db"]
+            avg_gr_db = result["avg_gain_reduction_db"]
+            max_gr_db = result["max_gain_reduction_db"]
+            pre_crest_db = result["pre_crest_db"]
+            post_crest_db = result["post_crest_db"]
 
-                print(
-                    f"[S5_LEADVOX_DYNAMICS] {fname}: threshold={threshold_db:.2f} dBFS, "
-                    f"avg_GR={avg_gr_db:.2f} dB, max_GR={max_gr_db:.2f} dB, "
-                    f"crest_pre={pre_crest_db:.2f} dB, crest_post={post_crest_db:.2f} dB."
-                )
+            print(
+                f"[S5_LEADVOX_DYNAMICS] {fname}: threshold={threshold_db:.2f} dBFS, "
+                f"avg_GR={avg_gr_db:.2f} dB, max_GR={max_gr_db:.2f} dB, "
+                f"crest_pre={pre_crest_db:.2f} dB, crest_post={post_crest_db:.2f} dB."
+            )
 
-                # Añadir a métricas (sin modificar estructura original)
-                record = dict(result)
-                # Añadimos también el límite de automatización para mantener info de contrato
-                record["max_vocal_automation_change_db_per_pass"] = max_auto_change
-                metrics_records.append(record)
-                processed += 1
+            record = dict(result)
+            record["max_vocal_automation_change_db_per_pass"] = max_auto_change
+            metrics_records.append(record)
+            processed += 1
     else:
         print(
             "[S5_LEADVOX_DYNAMICS] No hay stems de lead que requieran compresión "

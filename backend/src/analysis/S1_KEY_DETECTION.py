@@ -14,7 +14,6 @@ if str(SRC_DIR) not in sys.path:
 
 import json  # noqa: E402
 import os  # noqa: E402
-from concurrent.futures import ProcessPoolExecutor  # noqa: E402
 
 import numpy as np  # noqa: E402
 import soundfile as sf  # noqa: E402
@@ -50,7 +49,6 @@ _NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F",
 
 
 # ---------------------------------------------------------------------------
-# Worker para ProcessPoolExecutor: carga un stem y lo pasa a mono
 # ---------------------------------------------------------------------------
 
 def _load_mono_for_mix(path_str: str) -> tuple[np.ndarray, int]:
@@ -74,7 +72,6 @@ def _mix_stems_mono(stem_files: List[Path]) -> tuple[np.ndarray, int]:
     Hace un mix sencillo de todos los stems a mono, para análisis de tonalidad.
     Asume que todos tienen mismo samplerate (garantizado por S0_SESSION_FORMAT).
 
-    Ahora usa ProcessPoolExecutor para paralelizar la carga de cada stem.
     """
     if not stem_files:
         return np.zeros(1, dtype=np.float32), 44100
@@ -83,8 +80,7 @@ def _mix_stems_mono(stem_files: List[Path]) -> tuple[np.ndarray, int]:
 
     # Cargar stems en paralelo y convertir a mono
     max_workers = min(4, os.cpu_count() or 1)
-    with ProcessPoolExecutor(max_workers=max_workers) as ex:
-        results = list(ex.map(_load_mono_for_mix, path_strs))
+    results = list(map(_load_mono_for_mix, path_strs))
 
     data_list: List[np.ndarray] = []
     sr_ref: int | None = None

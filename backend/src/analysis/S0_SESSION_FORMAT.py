@@ -12,7 +12,6 @@ if str(SRC_DIR) not in sys.path:
 import json  # noqa: E402
 from typing import Dict, Any, List  # noqa: E402
 import os  # noqa: E402
-from concurrent.futures import ProcessPoolExecutor  # noqa: E402
 
 import numpy as np  # noqa: E402
 import soundfile as sf  # noqa: E402
@@ -120,14 +119,8 @@ def main() -> None:
     session_max_peak_dbfs = float("-inf")
     samplerates_present = set()
 
-    # --- paralelización del análisis por stem ---
-    if stem_files:
-        max_workers = min(4, os.cpu_count() or 1)
-        with ProcessPoolExecutor(max_workers=max_workers) as ex:
-            # results mantiene el mismo orden que stem_files
-            results = list(ex.map(analyze_stem, stem_files))
-    else:
-        results = []
+    # Análisis de stems en serie (manteniendo el orden)
+    results = [analyze_stem(p) for p in stem_files] if stem_files else []
 
     for stem_info in results:
         file_name = stem_info["file_name"]

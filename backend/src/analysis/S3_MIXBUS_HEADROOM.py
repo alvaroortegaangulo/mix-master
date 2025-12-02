@@ -6,7 +6,6 @@ import sys
 from pathlib import Path
 from typing import Dict, Any, List
 import os
-from concurrent.futures import ProcessPoolExecutor
 
 # --- hack para importar utils cuando se ejecuta como script suelto ---
 THIS_DIR = Path(__file__).resolve().parent
@@ -32,7 +31,6 @@ from utils.loudness_utils import (  # noqa: E402
 
 def _load_stem_mono(stem_path: Path) -> tuple[np.ndarray, int]:
     """
-    Worker para ProcessPoolExecutor.
 
     Lee un stem, lo pasa a mono (float32) y devuelve (y_mono, sr).
     """
@@ -50,15 +48,13 @@ def _mix_stems_to_mono(stem_files: List[Path]) -> tuple[np.ndarray, int]:
 
     - Asume que todos los stems tienen el mismo samplerate (garantizado por S0).
     - Normaliza la mezcla para evitar saturación durante la suma.
-    - Usa ProcessPoolExecutor para paralelizar la carga/monofonización de stems.
     """
     if not stem_files:
         return np.zeros(1, dtype=np.float32), 44100
 
     # Cargar y pasar a mono en paralelo
     max_workers = min(4, os.cpu_count() or 1)
-    with ProcessPoolExecutor(max_workers=max_workers) as ex:
-        results = list(ex.map(_load_stem_mono, stem_files))
+    results = list(map(_load_stem_mono, stem_files))
 
     data_list: List[np.ndarray] = []
     sr_ref: int | None = None

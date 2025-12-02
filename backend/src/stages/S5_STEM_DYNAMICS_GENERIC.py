@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import sys
 import os
-from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 from typing import Dict, Any, List, Tuple, Optional
 
@@ -78,7 +77,6 @@ def _compute_threshold_for_stem(
 
 
 # ----------------------------------------------------------------------
-# Worker para ProcessPoolExecutor: comprime y reescribe un stem
 # ----------------------------------------------------------------------
 
 def _compress_stem_worker(
@@ -177,7 +175,6 @@ def main() -> None:
           * Calcula un umbral de compresión en función de RMS/peak.
           * Aplica un compresor genérico (ratio moderado).
           * Registra métricas de GR y crest factor antes/después.
-      - Usa ProcessPoolExecutor para procesar los stems en paralelo.
     """
     if len(sys.argv) < 2:
         print("Uso: python S5_STEM_DYNAMICS_GENERIC.py <CONTRACT_ID>")
@@ -212,7 +209,6 @@ def main() -> None:
     temp_dir = get_temp_dir(contract_id, create=False)
 
     # ------------------------------------------------------------------
-    # 1) Preparar tareas para ProcessPoolExecutor
     # ------------------------------------------------------------------
     tasks: List[Tuple[str, str, float, float, float, float, float, float, float, float]] = []
 
@@ -270,30 +266,28 @@ def main() -> None:
     metrics_records: List[Dict[str, Any]] = []
 
     # ------------------------------------------------------------------
-    # 2) Ejecutar compresión en paralelo
+    # 2) Ejecutar compresión en serie
     # ------------------------------------------------------------------
     if tasks:
-        max_workers = min(4, os.cpu_count() or 1)
-        with ProcessPoolExecutor(max_workers=max_workers) as ex:
-            for result in ex.map(_compress_stem_worker, tasks):
-                if result is None:
-                    continue
+        for result in map(_compress_stem_worker, tasks):
+            if result is None:
+                continue
 
-                fname = result["file_name"]
-                threshold_db = result["threshold_db"]
-                avg_gr_db = result["avg_gain_reduction_db"]
-                max_gr_db = result["max_gain_reduction_db"]
-                pre_crest_db = result["pre_crest_db"]
-                post_crest_db = result["post_crest_db"]
+            fname = result["file_name"]
+            threshold_db = result["threshold_db"]
+            avg_gr_db = result["avg_gain_reduction_db"]
+            max_gr_db = result["max_gain_reduction_db"]
+            pre_crest_db = result["pre_crest_db"]
+            post_crest_db = result["post_crest_db"]
 
-                print(
-                    f"[S5_STEM_DYNAMICS_GENERIC] {fname}: threshold={threshold_db:.2f} dBFS, "
-                    f"avg_GR={avg_gr_db:.2f} dB, max_GR={max_gr_db:.2f} dB, "
-                    f"crest_pre={pre_crest_db:.2f} dB, crest_post={post_crest_db:.2f} dB."
-                )
+            print(
+                f"[S5_STEM_DYNAMICS_GENERIC] {fname}: threshold={threshold_db:.2f} dBFS, "
+                f"avg_GR={avg_gr_db:.2f} dB, max_GR={max_gr_db:.2f} dB, "
+                f"crest_pre={pre_crest_db:.2f} dB, crest_post={post_crest_db:.2f} dB."
+            )
 
-                metrics_records.append(result)
-                stems_processed += 1
+            metrics_records.append(result)
+            stems_processed += 1
     else:
         print(
             "[S5_STEM_DYNAMICS_GENERIC] No hay stems válidos que requieran compresión."

@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import sys
 import os
-from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 from typing import Dict, Any, List, Tuple
 
@@ -97,7 +96,6 @@ def _compute_global_gain_db(
 
 
 # --------------------------------------------------------------------
-# Worker para ProcessPoolExecutor
 # --------------------------------------------------------------------
 
 def _apply_gain_to_stem_worker(args: Tuple[str, str, float]) -> Tuple[str, bool]:
@@ -152,7 +150,6 @@ def main() -> None:
       - Lee analysis_S3_MIXBUS_HEADROOM.json.
       - Calcula un gain global en dB.
       - Aplica ese gain a todos los stems del stage (no a full_song.wav),
-        usando ProcessPoolExecutor para paralelizar la escritura.
     """
     if len(sys.argv) < 2:
         print("Uso: python S3_MIXBUS_HEADROOM.py <CONTRACT_ID>")
@@ -187,13 +184,11 @@ def main() -> None:
         print("[S3_MIXBUS_HEADROOM] No hay stems a los que aplicar gain.")
         return
 
-    max_workers = min(4, os.cpu_count() or 1)
     processed = 0
 
-    with ProcessPoolExecutor(max_workers=max_workers) as ex:
-        for fname, ok in ex.map(_apply_gain_to_stem_worker, tasks):
-            if ok:
-                processed += 1
+    for fname, ok in map(_apply_gain_to_stem_worker, tasks):
+        if ok:
+            processed += 1
 
     print(
         f"[S3_MIXBUS_HEADROOM] Aplicado gain global de {gain_db:.2f} dB "

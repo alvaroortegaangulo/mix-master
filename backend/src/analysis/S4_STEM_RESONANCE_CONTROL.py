@@ -6,7 +6,6 @@ import sys
 from pathlib import Path
 from typing import Dict, Any, List, Tuple
 import os
-from concurrent.futures import ProcessPoolExecutor
 
 # --- hack para importar utils ---
 THIS_DIR = Path(__file__).resolve().parent
@@ -43,7 +42,6 @@ def _analyze_stem(
     ]
 ) -> Dict[str, Any]:
     """
-    Worker para ProcessPoolExecutor.
 
     Recibe:
       - stem_path: ruta al .wav
@@ -169,7 +167,6 @@ def main() -> None:
     # 5) Ejecutar análisis en paralelo
     if tasks:
         max_workers = min(4, os.cpu_count() or 1)
-        with ProcessPoolExecutor(max_workers=max_workers) as ex:
             stems_analysis: List[Dict[str, Any]] = list(ex.map(_analyze_stem, tasks))
     else:
         stems_analysis = []

@@ -4,7 +4,6 @@ import sys
 from pathlib import Path
 from typing import Dict, Any, List, Tuple
 import os
-from concurrent.futures import ProcessPoolExecutor
 
 # --- hack para poder importar utils cuando se ejecuta como script suelto ---
 THIS_DIR = Path(__file__).resolve().parent
@@ -32,7 +31,6 @@ from utils.pitch_utils import estimate_pitch_deviation  # noqa: E402
 
 def analyze_stem(args: Tuple[Path, str, bool]) -> Dict[str, Any]:
     """
-    Worker para ProcessPoolExecutor.
 
     Recibe:
       - stem_path: ruta al .wav
@@ -132,8 +130,7 @@ def main() -> None:
     # --- Análisis paralelo ---
     if stem_tasks:
         max_workers = min(4, os.cpu_count() or 1)
-        with ProcessPoolExecutor(max_workers=max_workers) as ex:
-            results = list(ex.map(analyze_stem, stem_tasks))
+        results = list(map(analyze_stem, stem_tasks))
     else:
         results = []
 

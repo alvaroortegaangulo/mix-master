@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import sys
 import os
-from concurrent.futures import ProcessPoolExecutor
 from pathlib import Path
 from typing import Dict, Any, List, Tuple
 
@@ -39,7 +38,6 @@ def load_analysis(contract_id: str) -> Dict[str, Any]:
 
 
 # --------------------------------------------------------------------
-# Worker para ProcessPoolExecutor
 # --------------------------------------------------------------------
 
 def _process_stem_worker(args: Tuple[str, Dict[str, Any], float, float]) -> Tuple[str, bool]:
@@ -110,7 +108,6 @@ def main() -> None:
 
       - Lee analysis_S4_STEM_HPF_LPF.json.
       - Aplica HPF/LPF por stem según instrument_profile.
-      - Sobrescribe los stems filtrados, usando ProcessPoolExecutor.
     """
     if len(sys.argv) < 2:
         print("Uso: python S4_STEM_HPF_LPF.py <CONTRACT_ID>")
@@ -138,13 +135,11 @@ def main() -> None:
         print("[S4_STEM_HPF_LPF] No hay stems a procesar.")
         return
 
-    max_workers = min(4, os.cpu_count() or 1)
     processed = 0
 
-    with ProcessPoolExecutor(max_workers=max_workers) as ex:
-        for fname, ok in ex.map(_process_stem_worker, tasks):
-            if ok:
-                processed += 1
+    for fname, ok in map(_process_stem_worker, tasks):
+        if ok:
+            processed += 1
 
     print(
         f"[S4_STEM_HPF_LPF] Stage completado. Stems procesados={processed}."

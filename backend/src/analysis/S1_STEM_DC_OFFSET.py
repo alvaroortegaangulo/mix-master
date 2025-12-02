@@ -12,7 +12,6 @@ if str(SRC_DIR) not in sys.path:
 import json
 from typing import Dict, Any, List
 import os
-from concurrent.futures import ProcessPoolExecutor
 
 import numpy as np  # Puede seguir siendo útil si las utils lo necesitan internamente
 
@@ -27,7 +26,6 @@ from utils.analysis_utils import (
 
 def analyze_stem(stem_path: Path) -> Dict[str, Any]:
     """
-    Worker para ProcessPoolExecutor.
 
     Analiza un stem:
       - DC offset (lineal y en dB)
@@ -85,7 +83,6 @@ def main() -> None:
     # --- Análisis paralelo por stem ---
     if stem_files:
         max_workers = min(4, os.cpu_count() or 1)
-        with ProcessPoolExecutor(max_workers=max_workers) as ex:
             # ex.map mantiene el orden de stem_files
             results = list(ex.map(analyze_stem, stem_files))
     else:

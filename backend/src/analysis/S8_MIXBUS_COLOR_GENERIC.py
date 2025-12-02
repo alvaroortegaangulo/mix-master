@@ -6,7 +6,6 @@ import sys
 from pathlib import Path
 from typing import Dict, Any
 import os
-from concurrent.futures import ProcessPoolExecutor
 
 # --- hack para importar utils ---
 THIS_DIR = Path(__file__).resolve().parent
@@ -51,7 +50,6 @@ def _estimate_noise_floor_dbfs(y: np.ndarray) -> float:
 
 def _analyze_mixbus_color(full_song_path: Path) -> Dict[str, Any]:
     """
-    Worker para ProcessPoolExecutor.
 
     Lee full_song.wav y calcula:
       - true peak
@@ -129,9 +127,7 @@ def main() -> None:
 
     if full_song_path.exists():
         max_workers = min(4, os.cpu_count() or 1)
-        # Aunque sea una sola tarea, usamos ProcessPoolExecutor para consistencia
-        with ProcessPoolExecutor(max_workers=max_workers) as ex:
-            result = list(ex.map(_analyze_mixbus_color, [full_song_path]))[0]
+        result = list(map())[0]
 
         if result["error"] is not None:
             # Error al leer/procesar

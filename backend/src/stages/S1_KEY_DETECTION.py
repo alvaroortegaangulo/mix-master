@@ -14,7 +14,6 @@ if str(SRC_DIR) not in sys.path:
 
 import json  # noqa: E402
 import os  # noqa: E402
-from concurrent.futures import ProcessPoolExecutor  # noqa: E402
 
 from utils.analysis_utils import get_temp_dir
 
@@ -36,7 +35,6 @@ def load_analysis(contract_id: str) -> Dict[str, Any]:
 
 
 # ---------------------------------------------------------------------
-# Worker para ProcessPoolExecutor: formatea una línea de resumen de stem
 # ---------------------------------------------------------------------
 def _format_stem_summary(stem: Dict[str, Any]) -> str:
     """
@@ -80,11 +78,8 @@ def main() -> None:
     print("  - Stems:")
 
     if stems:
-        # Usamos ProcessPoolExecutor para construir las líneas de resumen en paralelo.
-        max_workers = min(4, os.cpu_count() or 1)
-        with ProcessPoolExecutor(max_workers=max_workers) as executor:
-            for line in executor.map(_format_stem_summary, stems):
-                print(line)
+        for line in map(_format_stem_summary, stems):
+            print(line)
     else:
         print("      (ningún stem detectado en el análisis)")
 

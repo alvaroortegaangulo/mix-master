@@ -13,7 +13,6 @@ if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
 import json  # noqa: E402
-from concurrent.futures import ProcessPoolExecutor  # noqa: E402
 
 import numpy as np  # noqa: E402
 import soundfile as sf  # noqa: E402
@@ -224,7 +223,6 @@ def main() -> None:
     Stage S10_MASTER_FINAL_LIMITS:
 
       - Lee analysis_S10_MASTER_FINAL_LIMITS.json y full_song.wav.
-      - Lanza un ProcessPoolExecutor para aplicar, si es necesario,
         un micro-trim global sobre el master.
       - Recalcula métricas post-QC en el worker.
       - Guarda qc_metrics_S10_MASTER_FINAL_LIMITS.json con métricas pre/post.
@@ -270,16 +268,13 @@ def main() -> None:
         return
 
     # Procesar QC final en un proceso separado
-    with ProcessPoolExecutor(max_workers=1) as ex:
-        future = ex.submit(
-            _process_final_limits_worker,
-            str(full_song_path),
-            true_peak_max_dbtp,
-            max_output_ceiling_adjust_db,
-            target_lufs,
-            style_lufs_tolerance,
-        )
-        result = future.result()
+    result = _process_final_limits_worker(
+        str(full_song_path),
+        true_peak_max_dbtp,
+        max_output_ceiling_adjust_db,
+        target_lufs,
+        style_lufs_tolerance,
+    )
 
     # Guardar métricas QC
     qc_path = temp_dir / "qc_metrics_S10_MASTER_FINAL_LIMITS.json"

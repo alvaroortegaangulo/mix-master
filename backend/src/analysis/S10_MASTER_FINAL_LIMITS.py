@@ -6,7 +6,6 @@ import sys
 from pathlib import Path
 from typing import Dict, Any
 import os
-from concurrent.futures import ProcessPoolExecutor
 
 # --- hack para importar utils ---
 THIS_DIR = Path(__file__).resolve().parent
@@ -105,7 +104,6 @@ def _compute_stereo_correlation(y: np.ndarray) -> float:
 
 def _analyze_master_final(full_song_path: Path) -> Dict[str, Any]:
     """
-    Worker para ProcessPoolExecutor.
 
     Lee full_song.wav y calcula:
       - true_peak_dbtp
@@ -186,7 +184,6 @@ def main() -> None:
     # Tolerancia QC más estricta: ±0.5 LU
     style_lufs_tolerance = 0.5
 
-    # 4) Leer master (full_song.wav) usando ProcessPoolExecutor
     full_song_path = temp_dir / "full_song.wav"
     true_peak_dbtp = float("-inf")
     lufs_integrated = float("-inf")
@@ -199,8 +196,7 @@ def main() -> None:
 
     if full_song_path.exists():
         max_workers = min(4, os.cpu_count() or 1)
-        with ProcessPoolExecutor(max_workers=max_workers) as ex:
-            result = list(ex.map(_analyze_master_final, [full_song_path]))[0]
+        result = list(map())[0]
 
         if result["error"] is not None:
             # Error de lectura/procesado

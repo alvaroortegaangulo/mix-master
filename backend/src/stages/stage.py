@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import sys
 import os
@@ -7,7 +7,6 @@ import time
 import importlib.util
 import uuid
 import datetime
-import subprocess
 from pathlib import Path
 from typing import List, Optional, Dict
 
@@ -29,12 +28,12 @@ MIXDOWN_STAGES = {
 # de contract_ids que realmente se van a ejecutar para el job actual.
 ACTIVE_CONTRACT_SEQUENCE: Optional[List[str]] = None
 TIMINGS_FILENAME = "pipeline_timings.json"
-_SCRIPT_USES_POOL_CACHE: Dict[Path, bool] = {}
 
 
 def _get_job_temp_root(create: bool = False) -> Path:
     """
     Raiz temporal del job (respeta MIX_TEMP_ROOT y MIX_JOB_ID).
+    Usa /dev/shm por defecto para aprovechar RAM; si falla, cae a backend/temp.
     Copia la logica de utils.analysis_utils pero sin dependencias
     para que stage.py pueda ejecutarse como script suelto.
     """
@@ -42,15 +41,28 @@ def _get_job_temp_root(create: bool = False) -> Path:
     job_id_env = os.environ.get("MIX_JOB_ID")
     project_root = Path(__file__).resolve().parents[2]  # .../backend
 
+    preferred_base = Path("/dev/shm/mix-master/temp")
+
     if temp_root_env:
-        base = Path(temp_root_env)
-    elif job_id_env:
-        base = project_root / "temp" / job_id_env
+        base_root = Path(temp_root_env)
     else:
-        base = project_root / "temp"
+        base_root = preferred_base
+
+    if job_id_env:
+        base = base_root / job_id_env
+    else:
+        base = base_root
 
     if create:
-        base.mkdir(parents=True, exist_ok=True)
+        try:
+            base.mkdir(parents=True, exist_ok=True)
+        except OSError:
+            # fallback a backend/temp
+            fallback = (
+                project_root / "temp" / job_id_env if job_id_env else project_root / "temp"
+            )
+            fallback.mkdir(parents=True, exist_ok=True)
+            base = fallback
 
     return base
 
@@ -95,21 +107,16 @@ def _record_stage_timing(stage_id: str, duration_sec: float) -> None:
 def _ensure_analysis_file(stage_id: str, analysis_script: Path) -> None:
     """
     Garantiza que exista analysis_<stage_id>.json; si no, re-ejecuta el
-    análisis vía subprocess (fallback).
+    analisis en el mismo proceso.
     """
     temp_dir = _get_job_temp_root(create=True) / stage_id
     analysis_path = temp_dir / f"analysis_{stage_id}.json"
     if analysis_path.exists():
         return
 
-    print(f"[stage] analysis_{stage_id}.json no encontrado, reintentando análisis vía subprocess...")
-    try:
-        subprocess.run(
-          [sys.executable, str(analysis_script), stage_id],
-          check=False,
-        )
-    except Exception as exc:
-        print(f"[stage] Error al reintentar análisis de {stage_id}: {exc}")
+    print(f"[stage] analysis_{stage_id}.json no encontrado, reintentando analisis...")
+    _run_script_main(analysis_script, stage_id)
+
 
 
 def set_active_contract_sequence(ordered_contract_ids: Optional[List[str]]) -> None:
@@ -169,35 +176,11 @@ def _run_script_main(script_path: Path, *args: str) -> int:
             sys.modules.pop(spec.name, None)
 
 
-def _script_uses_process_pool(script_path: Path) -> bool:
-    """
-    Heurística: si el script menciona ProcessPoolExecutor o multiprocessing,
-    lo ejecutamos en subprocess para evitar el error de procesos daemonic.
-    """
-    cached = _SCRIPT_USES_POOL_CACHE.get(script_path)
-    if cached is not None:
-        return cached
-
-    try:
-        text = script_path.read_text(encoding="utf-8", errors="ignore")
-    except Exception:
-        _SCRIPT_USES_POOL_CACHE[script_path] = False
-        return False
-
-    markers = ("ProcessPoolExecutor", "multiprocessing")
-    uses_pool = any(m in text for m in markers)
-    _SCRIPT_USES_POOL_CACHE[script_path] = uses_pool
-    return uses_pool
-
 
 def _run_script(script_path: Path, *args: str) -> int:
     """
-    Ejecuta un script en el mismo proceso o en subprocess según necesite
-    multiproceso interno.
+    Ejecuta un script en el mismo proceso invocando su main().
     """
-    if _script_uses_process_pool(script_path):
-        result = subprocess.run([sys.executable, str(script_path), *args])
-        return result.returncode
     return _run_script_main(script_path, *args)
 
 
@@ -258,6 +241,7 @@ def run_stage(stage_id: str) -> None:
     check_script = base_dir / "utils" / "check_metrics_limits.py"
     mixdown_script = base_dir / "utils" / "mixdown_stems.py"
     copy_script = base_dir / "utils" / "copy_stems.py"
+    cleanup_stems_script = base_dir / "utils" / "cleanup_stage_stems.py"
 
     success = False
     attempt = 0
@@ -302,7 +286,10 @@ def run_stage(stage_id: str) -> None:
     if next_contract_id is not None:
         _run_script(copy_script, stage_id, next_contract_id)
 
-    # Asegurar que el análisis existe (fallback a subprocess si falta)
+    # Limpiar stems del stage actual (conserva full_song.wav)
+    _run_script(cleanup_stems_script, stage_id)
+
+    # Asegurar que el analisis existe
     _ensure_analysis_file(stage_id, analysis_script)
 
     duration_sec = time.perf_counter() - stage_start
@@ -314,3 +301,4 @@ if __name__ == "__main__":
         print("Uso: python stage.py <STAGE_ID>")
     else:
         run_stage(sys.argv[1])
+
