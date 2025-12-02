@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import sys
-import os
 from pathlib import Path
 from typing import Dict, Any, List, Tuple
 
@@ -15,10 +14,11 @@ if str(SRC_DIR) not in sys.path:
 
 import json  # noqa: E402
 import numpy as np  # noqa: E402
-import soundfile as sf  # noqa: E402
 
-from utils.analysis_utils import get_temp_dir
-from utils.resonance_utils import apply_resonance_cuts  # noqa: E402
+from pedalboard import Pedalboard, PeakFilter  # noqa: E402
+from pedalboard.io import AudioFile  # noqa: E402
+
+from utils.analysis_utils import get_temp_dir  # noqa: E402
 
 
 def load_analysis(contract_id: str) -> Dict[str, Any]:
@@ -103,7 +103,7 @@ def _process_stem_worker(
     args: Tuple[str, str, List[Dict[str, float]]]
 ) -> Tuple[str, int]:
     """
-    Aplica los cortes de resonancia a un stem concreto.
+    Aplica los cortes de resonancia a un stem concreto usando Pedalboard.
 
     args:
       - temp_dir_str: carpeta temporal del contrato
@@ -124,18 +124,51 @@ def _process_stem_worker(
         return fname, 0
 
     try:
-        data, sr = sf.read(path, always_2d=False)
+        # Leer audio con pedalboard.io
+        with AudioFile(path) as f:
+            audio = f.read(f.frames)
+            sr = f.samplerate
 
-        if not isinstance(data, np.ndarray):
-            data = np.array(data, dtype=np.float32)
+        # Asegurar tipo float32
+        if not isinstance(audio, np.ndarray):
+            audio = np.asarray(audio, dtype=np.float32)
         else:
-            data = data.astype(np.float32)
+            audio = audio.astype(np.float32)
 
-        if data.size == 0:
+        if audio.size == 0:
             return fname, 0
 
-        data_filt = apply_resonance_cuts(data, sr, notches)
-        sf.write(path, data_filt, sr)
+        # Construir cadena de notches con PeakFilter
+        # Usamos Q relativamente alto para simular notches estrechos.
+        Q_DEFAULT = 10.0
+
+        plugins = []
+        for n in notches:
+            freq_hz = float(n["freq_hz"])
+            cut_db = float(n["cut_db"])
+
+            # PeakFilter con ganancia negativa -> notch
+            plugins.append(
+                PeakFilter(
+                    -cut_db,        # gain_db (negativo = corte)
+                    freq_hz,        # center_frequency_hz
+                    Q_DEFAULT,      # q
+                )
+            )
+
+        board = Pedalboard(plugins)
+
+        # Procesar audio
+        audio_filt = board(audio, sr)
+
+        # Clamp suave por seguridad
+        audio_filt = np.clip(audio_filt, -1.5, 1.5).astype(np.float32)
+
+        # Escribir de vuelta al mismo archivo
+        # Manteniendo samplerate y número de canales original
+        num_channels = 1 if audio_filt.ndim == 1 else audio_filt.shape[1]
+        with AudioFile(path, "w", sr, num_channels) as f:
+            f.write(audio_filt)
 
         notch_str = ", ".join(
             f"{n['freq_hz']:.0f}Hz/{n['cut_db']:.1f}dB" for n in notches
@@ -157,7 +190,8 @@ def main() -> None:
     Stage S4_STEM_RESONANCE_CONTROL:
 
       - Lee analysis_S4_STEM_RESONANCE_CONTROL.json.
-      - Para cada stem, calcula cortes por resonancia y aplica notches en frecuencia.
+      - Para cada stem, calcula cortes por resonancia y aplica notches en frecuencia
+        usando PeakFilter de Pedalboard.
       - Respeta:
           * max_resonance_peak_db_above_local (umbral de "aceptable").
           * max_resonant_cuts_db (corte máx. por resonancia).
@@ -215,7 +249,6 @@ def main() -> None:
     stems_touched = 0
     total_notches_applied = 0
 
-    # Utiliza todos los cores disponibles, pero no más que el número de tareas
     for fname, num_notches in map(_process_stem_worker, tasks):
         if num_notches > 0:
             stems_touched += 1
@@ -223,7 +256,7 @@ def main() -> None:
 
     print(
         f"[S4_STEM_RESONANCE_CONTROL] Stage completado. "
-        f"stems procesados={stems_touched}, notches totales={total_notches_applied}."
+        f"stems procesados={stems_touched}, notches totales={total_notches_aplicados}."
     )
 
 

@@ -16,7 +16,8 @@ import json  # noqa: E402
 import os  # noqa: E402
 
 import numpy as np  # noqa: E402
-import soundfile as sf  # noqa: E402
+from pedalboard import Pedalboard, Gain  # noqa: E402
+from pedalboard.io import AudioFile  # noqa: E402
 
 from utils.analysis_utils import get_temp_dir  # noqa: E402
 
@@ -136,28 +137,72 @@ def compute_global_gain_db(analysis: Dict[str, Any]) -> float:
 
 
 # ---------------------------------------------------------------------
+# Aplicación de ganancia con Pedalboard
 # ---------------------------------------------------------------------
+
 def _apply_gain_worker(args: Tuple[Dict[str, Any], float]) -> None:
     """
     Worker para aplicar la ganancia global a un único stem.
-    Pensado para ejecutarse en procesos hijos.
+
+    - Lee el archivo con pedalboard.AudioFile.
+    - Aplica Gain(gain_db).
+    - Reescribe el archivo con AudioFile.
+
+    Pensado para ejecutarse en procesos hijos (aunque aquí se usa en serie).
     """
     stem_info, gain_db = args
     file_path = Path(stem_info["file_path"])
 
-    data, sr = sf.read(file_path, always_2d=False)
-
-    if not isinstance(data, np.ndarray):
-        data = np.array(data, dtype=np.float32)
-    else:
-        data = data.astype(np.float32)
-
-    if data.size == 0:
+    # Si la ganancia es despreciable, salimos rápido
+    if abs(gain_db) < 0.1:
         return
 
-    scale = 10.0 ** (gain_db / 20.0)
-    data_out = data * scale
-    sf.write(file_path, data_out, sr)
+    # Leer audio
+    try:
+        with AudioFile(str(file_path)) as f:
+            audio = f.read(f.frames)
+            samplerate = f.samplerate
+    except Exception as e:
+        print(f"[S1_MIXBUS_HEADROOM] Error leyendo stem {file_path}: {e}")
+        return
+
+    audio = np.asarray(audio, dtype=np.float32)
+
+    # Configurar cadena de Pedalboard
+    board = Pedalboard([Gain(gain_db=float(gain_db))])
+
+    try:
+        processed = board(audio, samplerate)
+    except Exception as e:
+        print(f"[S1_MIXBUS_HEADROOM] Error aplicando Gain a {file_path}: {e}")
+        return
+
+    processed = np.asarray(processed, dtype=np.float32)
+
+    # Determinar canales para escritura
+    if processed.ndim == 1:
+        num_channels = 1
+    elif processed.ndim == 2:
+        num_channels = processed.shape[1]
+    else:
+        print(
+            f"[S1_MIXBUS_HEADROOM] Formato de audio no soportado para {file_path}: "
+            f"ndim={processed.ndim}"
+        )
+        return
+
+    # Reescribir archivo con el audio procesado
+    try:
+        with AudioFile(
+            str(file_path),
+            "w",
+            samplerate=int(samplerate),
+            num_channels=int(num_channels),
+        ) as f:
+            f.write(processed)
+    except Exception as e:
+        print(f"[S1_MIXBUS_HEADROOM] Error escribiendo stem {file_path}: {e}")
+        return
 
 
 def apply_global_gain_to_stems(stems: List[Dict[str, Any]], gain_db: float) -> None:
@@ -182,7 +227,7 @@ def main() -> None:
       - Lee analysis_S1_MIXBUS_HEADROOM.json.
       - Calcula una ganancia global para dejar el mixbus en un
         rango de headroom y loudness de trabajo razonables.
-      - Aplica esa ganancia a todos los stems y sobrescribe los archivos (en paralelo).
+      - Aplica esa ganancia a todos los stems y sobrescribe los archivos.
     """
     if len(sys.argv) < 2:
         print("Uso: python S1_MIXBUS_HEADROOM.py <CONTRACT_ID>")
@@ -191,7 +236,7 @@ def main() -> None:
     contract_id = sys.argv[1]  # "S1_MIXBUS_HEADROOM"
 
     analysis = load_analysis(contract_id)
-    stems: List[Dict[str, Any]] = analysis.get("stems", [])
+    stems: List[Dict[str, Any]] = analysis.get("stems", []) or []
 
     gain_db = compute_global_gain_db(analysis)
 

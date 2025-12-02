@@ -6,7 +6,6 @@ import sys
 import os
 from pathlib import Path
 from typing import Dict, Any, List, Optional
-from scipy.signal import fftconvolve
 
 # --- hack sys.path para ejecutar como script suelto desde stage.py ---
 THIS_DIR = Path(__file__).resolve().parent
@@ -17,6 +16,7 @@ if str(SRC_DIR) not in sys.path:
 import json  # noqa: E402
 import numpy as np  # noqa: E402
 import soundfile as sf  # noqa: E402
+from pedalboard import Pedalboard, Reverb  # noqa: E402
 
 from utils.analysis_utils import get_temp_dir
 
@@ -36,57 +36,6 @@ def _compute_rms_lufs_like(y: np.ndarray) -> float:
     return 20.0 * np.log10(rms)
 
 
-def _generate_reverb_ir(
-    sr: int,
-    rt60_s: float,
-    seed: int = 12345,
-) -> np.ndarray:
-    """
-    Genera una IR de reverb muy simple:
-      - ruido filtrado con envolvente de decaimiento exponencial.
-      - longitud ~ 2 * rt60_s, limitada a 4 s máx.
-
-    Es determinista vía seed para idempotencia.
-
-    Ajustes respecto a la versión anterior:
-      - Decaimiento calibrado para que a t = rt60_s estemos ≈ -60 dB
-        (no se queda flotando tanto tiempo).
-      - Nivel global algo más contenido para evitar 'sopa' de reverb.
-    """
-    # Evitar valores ridículamente cortos
-    rt60_s = max(rt60_s, 0.2)
-
-    # Longitud total un poco más corta que antes
-    length_s = min(rt60_s * 2.0, 4.0)
-    n = int(sr * length_s)
-    if n <= 0:
-        n = int(sr * 0.4)
-
-    rng = np.random.default_rng(seed)
-    noise = rng.standard_normal(n).astype(np.float32)
-
-    # Suavizado simple (lowpass muy tosco) para que no suene demasiado áspero
-    for i in range(1, n):
-        noise[i] = 0.8 * noise[i - 1] + 0.2 * noise[i]
-
-    t = np.arange(n, dtype=np.float32) / float(sr)
-
-    # Queremos que a t = rt60_s el nivel haya caído ~60 dB:
-    # A(rt60) ~= 10^(-60/20) = 10^-3 -> factor ≈ e^(-6.9078 * t / rt60)
-    decay = np.exp(-np.log(1000.0) * t / rt60_s).astype(np.float32)
-
-    ir = noise * decay
-    peak = float(np.max(np.abs(ir)))
-    if peak > 0.0:
-        ir /= peak
-
-    # Atenuamos algo para evitar excesos; el nivel relativo lo ajustaremos con sends
-    # (más contenido que el 0.4 anterior).
-    ir *= 0.3
-    return ir
-
-
-
 def load_analysis(contract_id: str) -> Dict[str, Any]:
     """
     Carga el JSON de análisis generado por analysis\\S6_BUS_REVERB_STYLE.py.
@@ -104,6 +53,25 @@ def load_analysis(contract_id: str) -> Dict[str, Any]:
 
 
 # ---------------------------------------------------------------------
+# Helpers para reverb con Pedalboard
+# ---------------------------------------------------------------------
+
+def _map_rt60_to_room_size(rt60_s: float) -> float:
+    """
+    Mapea rt60 (segundos) a room_size (0-1) para el Reverb de Pedalboard.
+
+    - Clampa rt60 entre ~0.3 y 3.0 s.
+    - Devuelve room_size en [0.1, 0.99].
+    """
+    rt60_s = float(rt60_s)
+    rt_min, rt_max = 0.3, 3.0
+    rt60_s = max(rt_min, min(rt60_s, rt_max))
+    norm = (rt60_s - rt_min) / (rt_max - rt_min)  # 0..1
+    room_size = 0.1 + norm * (0.99 - 0.1)
+    return float(max(0.1, min(room_size, 0.99)))
+
+
+# ---------------------------------------------------------------------
 # ---------------------------------------------------------------------
 
 def _render_reverb_return_worker(
@@ -112,14 +80,13 @@ def _render_reverb_return_worker(
     """
     Worker que:
       - Lee el stem.
-      - Genera la IR.
-      - Convoluciona por canal.
+      - Aplica Reverb de Pedalboard (100% wet, sin dry).
       - Aplica base_send_db.
       - Devuelve y_rev y metadatos (NO escribe a disco).
 
     Si hay error o el archivo está vacío, devuelve None.
     """
-    fname, stem_path_str, rt60_s, base_send_db, seed = args
+    fname, stem_path_str, rt60_s, base_send_db, seed = args  # seed se mantiene por firma, aunque Reverb es determinista
     stem_path = Path(stem_path_str)
 
     try:
@@ -137,25 +104,43 @@ def _render_reverb_return_worker(
         print(f"[S6_BUS_REVERB_STYLE] {fname}: archivo vacío; se omite su reverb.")
         return None
 
+    # Aseguramos forma (N, C)
     if y.ndim == 1:
         y = y.reshape(-1, 1)
 
-    n, c = y.shape
+    # Configurar Reverb de Pedalboard 100% wet (return puro)
+    room_size = _map_rt60_to_room_size(rt60_s)
 
-    # IR determinista
-    ir = _generate_reverb_ir(sr, rt60_s, seed=seed)
+    board = Pedalboard(
+        [
+            Reverb(
+                room_size=float(room_size),
+                # 100% wet, 0% dry para simular un bus de reverb puro
+                wet_level=1.0,
+                dry_level=0.0,
+            )
+        ]
+    )
 
-    # Convolución simple por canal
-    rev_len = n + len(ir) - 1
-    y_rev = np.zeros((rev_len, c), dtype=np.float32)
+    try:
+        y_rev = board(y, sr)
+    except Exception as e:
+        print(f"[S6_BUS_REVERB_STYLE] Error aplicando Reverb a '{fname}': {e}.")
+        return None
 
-    for ch in range(c):
-        conv = fftconvolve(y[:, ch], ir, mode="full")
-        y_rev[:, ch] = conv.astype(np.float32)
+    if not isinstance(y_rev, np.ndarray):
+        y_rev = np.asarray(y_rev, dtype=np.float32)
+    else:
+        y_rev = y_rev.astype(np.float32)
 
-    # Aplicar base_send_db
+    if y_rev.ndim == 1:
+        y_rev = y_rev.reshape(-1, 1)
+
+    # Aplicar base_send_db como ganancia del return
     send_gain = 10.0 ** (base_send_db / 20.0)
     y_rev *= send_gain
+
+    rev_len = int(y_rev.shape[0])
 
     return {
         "stem_file": fname,
@@ -185,7 +170,7 @@ def _choose_target_offset_db(
     if any(k in style for k in ("flamenco", "rumba", "acoustic", "acústico", "jazz", "folk")):
         pos = 0.2   # reverb claramente sutil
     elif any(k in style for k in ("edm", "club", "trance", "house")):
-        pos = 0.4   # un poco más presente pero sin excesos
+        pos = 0.4   # un poco más presente
     elif any(k in style for k in ("urbano", "trap", "reggaeton", "hiphop", "urban")):
         pos = 0.35
     else:
@@ -195,13 +180,13 @@ def _choose_target_offset_db(
     return offset_min_db + pos * (offset_max_db - offset_min_db)
 
 
-
 def main() -> None:
     """
     Stage S6_BUS_REVERB_STYLE:
 
       - Lee analysis_S6_BUS_REVERB_STYLE.json.
-      - Para cada stem genera un retorno de reverb *_rev.wav en función del estilo y familia.
+      - Para cada stem genera un retorno de reverb *_rev.wav en función del estilo y familia,
+        usando Reverb de Pedalboard (100% wet, controlado por base_send_db).
       - Ajusta el nivel global de returns hacia un offset de loudness objetivo
         respecto al mix dry (full_song.wav).
       - Guarda métricas de espacio/profundidad para el futuro check.
@@ -227,7 +212,6 @@ def main() -> None:
 
     dry_lufs = float(session.get("dry_mix_lufs", float("-inf")))
 
-
     temp_dir = get_temp_dir(contract_id, create=False)
     full_song_path = temp_dir / "full_song.wav"
 
@@ -252,9 +236,10 @@ def main() -> None:
         )
 
     # ------------------------------------------------------------------
+    # Preparar tareas de generación de returns
     # ------------------------------------------------------------------
     tasks: List[tuple[str, str, float, float, int]] = []
-    SEED_BASE = 12345  # mismo seed base para IRs deterministas
+    SEED_BASE = 12345  # mantenido por compatibilidad de firma, aunque no se usa en Reverb
 
     for idx, stem in enumerate(stems):
         fname = stem.get("file_name")
@@ -269,10 +254,7 @@ def main() -> None:
         rt60_s = float(reverb_profile.get("rt60_s", 0.8))
         base_send_db = float(reverb_profile.get("base_send_db", -18.0))
 
-        # Usamos un seed fijo (como en la versión original) para que la IR sea
-        # la misma en todos los stems y la ejecución siga siendo idempotente.
         seed = SEED_BASE
-
         tasks.append(
             (
                 fname,
@@ -293,51 +275,51 @@ def main() -> None:
     # ------------------------------------------------------------------
     if tasks:
         for result in map(_render_reverb_return_worker, tasks):
-                if result is None:
-                    continue
+            if result is None:
+                continue
 
-                fname = result["stem_file"]
-                sr = int(result["sr"])
-                y_rev = result["y_rev"]
-                rt60_s = float(result["rt60_s"])
-                base_send_db = float(result["base_send_db"])
-                rev_len = int(result["length"])
+            fname = result["stem_file"]
+            sr = int(result["sr"])
+            y_rev = result["y_rev"]
+            rt60_s = float(result["rt60_s"])
+            base_send_db = float(result["base_send_db"])
+            rev_len = int(result["length"])
 
-                # Consistencia de samplerate
-                if global_sr is None:
-                    global_sr = sr
-                elif sr != global_sr:
-                    print(
-                        f"[S6_BUS_REVERB_STYLE] Aviso: samplerate inconsistente en {fname} "
-                        f"(sr={sr}, ref={global_sr}); se omite su reverb."
-                    )
-                    continue
-
-                stem_name = Path(fname).stem
-                rev_name = f"{stem_name}_rev.wav"
-                rev_path = temp_dir / rev_name
-
-                # Escribimos el return generado
-                sf.write(rev_path, y_rev, global_sr)
-
+            # Consistencia de samplerate
+            if global_sr is None:
+                global_sr = sr
+            elif sr != global_sr:
                 print(
-                    f"[S6_BUS_REVERB_STYLE] {fname}: rt60={rt60_s:.2f}s, "
-                    f"base_send={base_send_db:.1f} dB, "
-                    f"return -> {rev_name} (len={rev_len})."
+                    f"[S6_BUS_REVERB_STYLE] Aviso: samplerate inconsistente en {fname} "
+                    f"(sr={sr}, ref={global_sr}); se omite su reverb."
                 )
+                continue
 
-                all_returns.append(y_rev)
-                returns_info.append(
-                    {
-                        "stem_file": fname,
-                        "return_file": rev_name,
-                        "rt60_s": rt60_s,
-                        "base_send_db": base_send_db,
-                        "length": rev_len,
-                    }
-                )
-                if rev_len > max_return_len:
-                    max_return_len = rev_len
+            stem_name = Path(fname).stem
+            rev_name = f"{stem_name}_rev.wav"
+            rev_path = temp_dir / rev_name
+
+            # Escribimos el return generado
+            sf.write(rev_path, y_rev, global_sr)
+
+            print(
+                f"[S6_BUS_REVERB_STYLE] {fname}: rt60={rt60_s:.2f}s, "
+                f"base_send={base_send_db:.1f} dB, "
+                f"return -> {rev_name} (len={rev_len})."
+            )
+
+            all_returns.append(y_rev)
+            returns_info.append(
+                {
+                    "stem_file": fname,
+                    "return_file": rev_name,
+                    "rt60_s": rt60_s,
+                    "base_send_db": base_send_db,
+                    "length": rev_len,
+                }
+            )
+            if rev_len > max_return_len:
+                max_return_len = rev_len
 
     if not all_returns or global_sr is None:
         print(
@@ -396,7 +378,6 @@ def main() -> None:
         delta_needed = target_offset - offset_now  # negativo
         delta_db = max(-max_send_change_db, min(0.0, delta_needed))
     else:
-        # ya estamos suficientemente secos o más
         delta_db = 0.0
 
     # 5) Aplicar ajuste global a todos los returns (idempotente por diseño)
