@@ -193,6 +193,11 @@ const STAGE_UI_INFO: Record<string, StageUiInfo> = {
     description:
       "Final master quality-control pass over true-peak level, loudness (LUFS), L/R balance and stereo correlation with only micro-adjustments applied.",
   },
+  S11_REPORT_GENERATION: {
+    label: "REPORT GENERATION",
+    description:
+      "Generation of the final process report, with the parameterization of all stages",
+  }
 };
 
 
@@ -252,6 +257,37 @@ export default function HomePage() {
   const [spaceBusStyles, setSpaceBusStyles] = useState<Record<string, string>>(
      {},
   );
+
+  const STAGE_GROUP_LABELS: Record<string, string> = {
+    S0: "NORMALIZE INPUT",
+    S1: "TECHNICAL PREPARATION",
+    S2: "PHASE & ALIGNMENT",
+    S3: "MIXBUS PREP",
+    S4: "FILTERS & RESONANCE",
+    S5: "DYNAMICS",
+    S6: "SPACE / REVERB",
+    S7: "TONAL BALANCE",
+    S8: "COLOR & SATURATION",
+    S9: "MASTER PREP",
+    S10: "FINAL QC",
+    S11: "REPORTING",
+    OTHER: "OTHER",
+  };
+  const STAGE_GROUP_ORDER = [
+    "S0",
+    "S1",
+    "S2",
+    "S3",
+    "S4",
+    "S5",
+    "S6",
+    "S7",
+    "S8",
+    "S9",
+    "S10",
+    "S11",
+    "OTHER",
+  ];
 
   const HUMAN_STAGE_TEXT: Record<
     string,
@@ -333,6 +369,10 @@ export default function HomePage() {
       title: "Master final QC",
       description: "Final check of TP/LUFS/correlation with micro-adjustments.",
     },
+    S11_REPORT_GENERATION: {
+      title: "REPORT GENERATION",
+      description: "Generation of the final process report, with the parameterization of all stages",
+  }
   };
 
 
@@ -371,6 +411,18 @@ useEffect(() => {
   const clearStages = () => {
     setSelectedStageKeys([]);
   };
+
+  const groupedStages = useMemo(() => {
+    const groups: Record<string, PipelineStage[]> = {};
+    for (const stage of availableStages) {
+      const prefix = stage.key.split("_")[0] || "OTHER";
+      if (!groups[prefix]) {
+        groups[prefix] = [];
+      }
+      groups[prefix].push(stage);
+    }
+    return groups;
+  }, [availableStages]);
 
 
   const visibleSpaceDepthBuses = useMemo(() => {
@@ -660,33 +712,49 @@ useEffect(() => {
                           </div>
                         </div>
 
-                        <div className="mt-3 space-y-2">
-                          {availableStages.map((stage) => (
-                            <label
-                              key={stage.key}
-                              className="flex cursor-pointer items-start gap-2 rounded-lg bg-slate-950/60 px-3 py-2 text-xs text-slate-200 hover:bg-slate-900"
-                            >
-                              <input
-                                type="checkbox"
-                                className="mt-[2px] h-3.5 w-3.5 rounded border-slate-600 bg-slate-900"
-                                checked={selectedStageKeys.includes(
-                                  stage.key,
-                                )}
-                                onChange={() => toggleStage(stage.key)}
-                              />
-                              <div>
-                                <span className="font-semibold">
-                                  {HUMAN_STAGE_TEXT[stage.key]?.title ??
-                                    stage.label}
+                        <div className="mt-3 space-y-4">
+                          {[...STAGE_GROUP_ORDER, ...Object.keys(groupedStages).filter((g) => !STAGE_GROUP_ORDER.includes(g))].map((groupKey) => {
+                            const stages = groupedStages[groupKey];
+                            if (!stages || stages.length === 0) return null;
+                            return (
+                              <div
+                                key={groupKey}
+                                className="relative rounded-2xl border-2 border-dashed border-slate-700/80 bg-slate-950/40 px-3 py-3"
+                              >
+                                <span className="absolute -top-3 right-4 rounded-full bg-slate-950 px-3 py-1 text-[11px] font-semibold tracking-wide text-slate-200 shadow">
+                                  {STAGE_GROUP_LABELS[groupKey] ?? groupKey}
                                 </span>
-                                <p className="mt-0.5 text-[11px] text-slate-400">
-                                  {HUMAN_STAGE_TEXT[stage.key]?.description ??
-                                    stage.description ??
-                                    ""}
-                                </p>
+                                <div className="space-y-2">
+                                  {stages.map((stage) => (
+                                    <label
+                                      key={stage.key}
+                                      className="flex cursor-pointer items-start gap-2 rounded-lg bg-slate-950/60 px-3 py-2 text-xs text-slate-200 hover:bg-slate-900"
+                                    >
+                                      <input
+                                        type="checkbox"
+                                        className="mt-[2px] h-3.5 w-3.5 rounded border-slate-600 bg-slate-900"
+                                        checked={selectedStageKeys.includes(
+                                          stage.key,
+                                        )}
+                                        onChange={() => toggleStage(stage.key)}
+                                      />
+                                      <div>
+                                        <span className="font-semibold">
+                                          {HUMAN_STAGE_TEXT[stage.key]?.title ??
+                                            stage.label}
+                                        </span>
+                                        <p className="mt-0.5 text-[11px] text-slate-400">
+                                          {HUMAN_STAGE_TEXT[stage.key]?.description ??
+                                            stage.description ??
+                                            ""}
+                                        </p>
+                                      </div>
+                                    </label>
+                                  ))}
+                                </div>
                               </div>
-                            </label>
-                          ))}
+                            );
+                          })}
                         </div>
 
 
