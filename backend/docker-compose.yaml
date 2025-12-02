@@ -11,24 +11,28 @@ services:
     environment:
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/0
+      - MIX_TEMP_ROOT=/dev/shm/mix-master/temp
     ports:
       - "8000:8000"        
     volumes:
       - ./media:/app/media
       - ./temp:/app/temp
+    shm_size: "2g"
     depends_on:
       - redis
     restart: unless-stopped
 
   worker:
     build: .
-    command: celery -A celery_app:celery_app worker --loglevel=info --concurrency=4
+    command: celery -A celery_app:celery_app worker --loglevel=info
     environment:
       - CELERY_BROKER_URL=redis://redis:6379/0
       - CELERY_RESULT_BACKEND=redis://redis:6379/1
+      - MIX_TEMP_ROOT=/dev/shm/mix-master/temp
     volumes:
       - ./media:/app/media
       - ./temp:/app/temp
+    shm_size: "1g"
     depends_on:
       - redis
     restart: unless-stopped
