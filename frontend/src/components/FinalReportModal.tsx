@@ -313,7 +313,9 @@ export function FinalReportModal({ jobId, isOpen, onClose }: FinalReportModalPro
       setStageAnalysesLoading(true);
       try {
         const baseUrl = getBackendBaseUrl();
-        const analyzed = (coreReport.stages || []).filter((s) => s.status === "analyzed");
+        const analyzed = (coreReport?.stages ?? []).filter(
+          (s) => s.status === "analyzed",
+        );
 
         const results = await Promise.all(
           analyzed.map(async (stage) => {
