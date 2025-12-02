@@ -15,12 +15,10 @@ if str(SRC_DIR) not in sys.path:
 
 import json  # noqa: E402
 import numpy as np  # noqa: E402
+import soundfile as sf  # noqa: E402
 
-from utils.analysis_utils import get_temp_dir  # noqa: E402
-
-# Pedalboard
-from pedalboard import Pedalboard, HighpassFilter, LowpassFilter  # noqa: E402
-from pedalboard.io import AudioFile  # noqa: E402
+from utils.analysis_utils import get_temp_dir
+from utils.filter_utils import apply_hpf_lpf  # noqa: E402
 
 
 def load_analysis(contract_id: str) -> Dict[str, Any]:
@@ -41,7 +39,6 @@ def load_analysis(contract_id: str) -> Dict[str, Any]:
 
 # --------------------------------------------------------------------
 # --------------------------------------------------------------------
-
 
 def _process_stem_worker(args: Tuple[str, Dict[str, Any], float, float]) -> Tuple[str, bool]:
     """
@@ -82,44 +79,18 @@ def _process_stem_worker(args: Tuple[str, Dict[str, Any], float, float]) -> Tupl
         lpf = 2000.0
 
     try:
-        # Leer el audio con Pedalboard
-        with AudioFile(str(path)) as f:
-            audio = f.read(f.frames)
-            samplerate = f.samplerate
-            num_channels = f.num_channels
+        data, sr = sf.read(path, always_2d=False)
 
-        if not isinstance(audio, np.ndarray):
-            audio = np.array(audio, dtype=np.float32)
+        if not isinstance(data, np.ndarray):
+            data = np.array(data, dtype=np.float32)
         else:
-            audio = audio.astype(np.float32)
+            data = data.astype(np.float32)
 
-        if audio.size == 0:
+        if data.size == 0:
             return fname, False
 
-        # Construir pedalboard HPF + LPF
-        board = Pedalboard(
-            [
-                HighpassFilter(cutoff_frequency_hz=float(hpf)),
-                LowpassFilter(cutoff_frequency_hz=float(lpf)),
-            ]
-        )
-
-        # Procesar (forma (channels, samples))
-        processed = board(audio, samplerate)
-
-        if not isinstance(processed, np.ndarray):
-            processed = np.array(processed, dtype=np.float32)
-        else:
-            processed = processed.astype(np.float32)
-
-        # Guardar sobrescribiendo el archivo original
-        with AudioFile(
-            str(path),
-            "w",
-            samplerate=samplerate,
-            num_channels=num_channels,
-        ) as f:
-            f.write(processed)
+        data_filt = apply_hpf_lpf(data, sr, hpf_hz=hpf, lpf_hz=lpf)
+        sf.write(path, data_filt, sr)
 
         print(
             f"[S4_STEM_HPF_LPF] {fname}: aplicado HPF={hpf:.1f} Hz, LPF={lpf:.1f} Hz."

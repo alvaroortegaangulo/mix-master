@@ -29,3 +29,6 @@ redis
 # torchvision
 # torchaudio
 
+
+pedalboard
+
