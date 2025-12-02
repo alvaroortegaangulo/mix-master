@@ -95,7 +95,7 @@ def main() -> None:
 
     if full_song_path.exists():
         max_workers = min(4, os.cpu_count() or 1)
-            result = list(ex.map(_analyze_mixbus, [full_song_path]))[0]
+            result = _analyze_mixbus(full_song_path)
 
         if result["error"] is not None:
             # Error al leer o procesar el mixbus

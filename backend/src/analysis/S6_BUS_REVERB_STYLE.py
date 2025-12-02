@@ -230,7 +230,7 @@ def main() -> None:
 
     if tasks:
         max_workers = min(4, os.cpu_count() or 1)
-            results: List[Dict[str, Any]] = list(ex.map(_analyze_stem, tasks))
+            results: List[Dict[str, Any]] = [_analyze_stem(t) for t in tasks]
     else:
         results = []
 

@@ -136,7 +136,7 @@ def main() -> None:
     if drum_files:
         # Carga + mono en paralelo
         max_workers = min(4, os.cpu_count() or 1)
-            results: List[Dict[str, Any]] = list(ex.map(_load_drum_mono, drum_files))
+            results: List[Dict[str, Any]] = [_load_drum_mono(f) for f in drum_files]
 
         buffers: List[np.ndarray] = []
         max_len = 0
