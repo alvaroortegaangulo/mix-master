@@ -5,6 +5,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { MixResult } from "../lib/mixApi";
 import { getBackendBaseUrl } from "../lib/mixApi";
 import { MixPipelinePanel } from "./MixPipelinePanel";
+import { FinalReportModal } from "./FinalReportModal";
 
 type Props = {
   result: MixResult;
@@ -526,6 +527,7 @@ export function MixResultPanel({
   const [csvRows, setCsvRows] = useState<StageRow[] | null>(null);
   const [csvLoading, setCsvLoading] = useState(false);
   const [csvError, setCsvError] = useState<string | null>(null);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
 
   const { originalFullSongUrl, fullSongUrl, jobId, metrics } = result;
 
@@ -686,11 +688,31 @@ export function MixResultPanel({
         </div>
       </div>
 
-      {/* Pipeline etapa a etapa (este componente ya tiene su propia sección) */}
+            {/* Panel Pipeline: solo stages elegidos */}
       <MixPipelinePanel
         result={result}
         enabledPipelineStageKeys={enabledPipelineStageKeys}
       />
+
+      <div className="mt-3 flex justify-end">
+        <button
+          type="button"
+          onClick={() => setIsReportModalOpen(true)}
+          className="inline-flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-950/60 px-3 py-1.5 text-[11px] font-medium text-slate-100 hover:border-indigo-400 hover:bg-slate-900/80"
+        >
+          Ver informe global del pipeline
+          <span className="rounded-full bg-slate-800/80 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-indigo-200">
+            S11
+          </span>
+        </button>
+      </div>
+
+      <FinalReportModal
+        jobId={jobId}
+        isOpen={isReportModalOpen}
+        onClose={() => setIsReportModalOpen(false)}
+      />
+
 
 {/* Métricas principales (colapsadas) */}
 <details className="mt-6 rounded-xl bg-slate-950/40 p-4 group">
