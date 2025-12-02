@@ -68,7 +68,7 @@ export function StemsProfilePanel({ stems, onChangeProfile }: Props) {
               </p>
             </div>
             <select
-              className="max-w-[9.5rem] rounded-md border border-amber-500/60 bg-amber-500/10 px-2 py-1 text-[11px] text-amber-50 outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400"
+              className="max-w-[9.5rem] rounded-md border border-amber-500/60 bg-slate-950/80 px-2 py-1 text-[11px] text-amber-50 outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400"
               value={stem.profile}
               onChange={(e) => onChangeProfile(stem.id, e.target.value)}
             >

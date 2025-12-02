@@ -88,7 +88,7 @@ export function SpaceDepthStylePanel({ buses, value, onChange }: Props) {
             </div>
             <div className="flex items-center gap-1">
               <select
-                className="max-w-[10rem] rounded-md border border-amber-500/60 bg-amber-500/10 px-2 py-1 text-[11px] text-amber-50 outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400"
+                className="max-w-[10rem] rounded-md border border-amber-500/60 bg-slate-950/80 px-2 py-1 text-[11px] text-amber-50 outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400"
                 value={value[bus.key] ?? "auto"}
                 onChange={(e) => onChange(bus.key, e.target.value)}
               >
