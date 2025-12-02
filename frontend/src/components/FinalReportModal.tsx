@@ -230,6 +230,8 @@ export function FinalReportModal({ jobId, isOpen, onClose }: FinalReportModalPro
   const [reportEnvelope, setReportEnvelope] = useState<ReportEnvelope | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [stageAnalyses, setStageAnalyses] = useState<Record<string, any>>({});
+  const [stageAnalysesLoading, setStageAnalysesLoading] = useState(false);
 
   useEffect(() => {
     if (!isOpen || !jobId) return;
@@ -302,6 +304,57 @@ export function FinalReportModal({ jobId, isOpen, onClose }: FinalReportModalPro
 
   const coreReport = reportEnvelope?.session?.report;
 
+  useEffect(() => {
+    if (!isOpen || !coreReport?.stages?.length || !jobId) return;
+    const controller = new AbortController();
+    const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+    async function loadStageAnalyses() {
+      setStageAnalysesLoading(true);
+      try {
+        const baseUrl = getBackendBaseUrl();
+        const analyzed = (coreReport.stages || []).filter((s) => s.status === "analyzed");
+
+        const results = await Promise.all(
+          analyzed.map(async (stage) => {
+            const cid = stage.contract_id;
+            const url = `${baseUrl}/files/${encodeURIComponent(
+              jobId,
+            )}/${cid}/analysis_${cid}.json`;
+            try {
+              const res = await fetch(url, { signal: controller.signal });
+              if (!res.ok) {
+                return [cid, null] as const;
+              }
+              const raw = await res.text();
+              const safe = raw
+                .replace(/-Infinity/g, "null")
+                .replace(/Infinity/g, "null")
+                .replace(/NaN/g, "null");
+              return [cid, JSON.parse(safe)] as const;
+            } catch (err: any) {
+              if (err?.name === "AbortError") return [cid, null] as const;
+              // reintento ligero por si está generándose aún
+              await sleep(300);
+              return [cid, null] as const;
+            }
+          }),
+        );
+
+        const map: Record<string, any> = {};
+        for (const [cid, data] of results) {
+          if (data) map[cid] = data;
+        }
+        setStageAnalyses(map);
+      } finally {
+        setStageAnalysesLoading(false);
+      }
+    }
+
+    loadStageAnalyses();
+    return () => controller.abort();
+  }, [isOpen, jobId, coreReport]);
+
   const finalMetrics = useMemo(() => {
     const fm = coreReport?.final_metrics;
     if (!fm) return null;
@@ -341,11 +394,49 @@ export function FinalReportModal({ jobId, isOpen, onClose }: FinalReportModalPro
     });
   }, [pipelineDurations, stages]);
 
+  function humanizeKey(key: string): string {
+    return key
+      .replace(/_/g, " ")
+      .replace(/\s+/g, " ")
+      .trim()
+      .replace(/^\w/, (m) => m.toUpperCase());
+  }
+
+  function formatValue(value: any): string {
+    if (value === null || value === undefined) return "N/A";
+    if (typeof value === "number") {
+      return Number.isInteger(value) ? `${value}` : value.toFixed(2);
+    }
+    if (typeof value === "boolean") return value ? "Sí" : "No";
+    if (typeof value === "string") return value;
+    if (Array.isArray(value)) return value.slice(0, 3).join(", ");
+    return "—";
+  }
+
+  function buildStageSummary(contractId: string): string[] {
+    const analysis = stageAnalyses[contractId];
+    if (!analysis) return [];
+    const session = analysis.session;
+    if (!session || typeof session !== "object") return [];
+
+    const entries = Object.entries(session).filter(
+      ([, v]) =>
+        typeof v === "string" ||
+        typeof v === "number" ||
+        typeof v === "boolean",
+    );
+
+    return entries.slice(0, 6).map(
+      ([k, v]) => `${humanizeKey(k)}: ${formatValue(v)}`,
+    );
+  }
+
   // Si el modal no está abierto, no renderizamos nada
   if (!isOpen) return null;
 
   const stylePreset = coreReport?.style_preset ?? reportEnvelope?.style_preset;
   const generatedAt = coreReport?.generated_at_utc;
+  const analyzedStages = stages.filter((s) => s.status === "analyzed");
 
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/70 p-4">
@@ -439,7 +530,7 @@ export function FinalReportModal({ jobId, isOpen, onClose }: FinalReportModalPro
                     </p>
                     <p className="mt-0.5">
                       El pipeline ha recorrido{" "}
-                      <span className="font-semibold">{stages.length}</span> etapas
+                      <span className="font-semibold">{analyzedStages.length}</span> etapas
                       principales, desde la preparación de sesión hasta el control de
                       límites del master.
                     </p>
@@ -681,12 +772,18 @@ export function FinalReportModal({ jobId, isOpen, onClose }: FinalReportModalPro
                   Recorrido por etapas del pipeline
                 </h3>
                 <p className="mt-1 text-xs text-slate-300">
-                  Cada bloque resume cómo ha contribuido una etapa del pipeline al resultado
-                  final. El texto descriptivo viene del contrato de cada etapa (S0…S10).
+                  Cada bloque resume cómo ha contribuido una etapa realmente ejecutada en
+                  este pipeline. Se muestran los datos clave extraídos de su
+                  <span className="font-mono"> analysis_{"<stage>"} .json</span>.
                 </p>
 
                 <div className="mt-3 space-y-2">
-                  {stages.map((stage, index) => {
+                  {analyzedStages.length === 0 && (
+                    <p className="text-xs text-slate-400">
+                      No se han encontrado etapas analizadas para este job.
+                    </p>
+                  )}
+                  {analyzedStages.map((stage, index) => {
                     const statusLabel =
                       stage.status === "analyzed"
                         ? "Análisis completado"
@@ -697,6 +794,7 @@ export function FinalReportModal({ jobId, isOpen, onClose }: FinalReportModalPro
                       stage.status === "analyzed"
                         ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-200"
                         : "border-slate-600 bg-slate-800/60 text-slate-200";
+                    const bullets = buildStageSummary(stage.contract_id);
 
                     return (
                       <div
@@ -716,13 +814,23 @@ export function FinalReportModal({ jobId, isOpen, onClose }: FinalReportModalPro
                         <p className="mt-1 text-sm font-medium text-slate-100">
                           {stage.name || "Etapa del pipeline"}
                         </p>
-                        <p className="mt-1 text-[11px] text-slate-300">
-                          Esta etapa se encarga del aspecto descrito arriba (por ejemplo,
-                          normalización de formato, control de resonancias, dinámica,
-                          reverb por buses, etc.). El análisis numérico detallado de cada
-                          fase puede consultarse en el panel de Pipeline y en los CSV
-                          asociados.
-                        </p>
+                        {stageAnalysesLoading && bullets.length === 0 && (
+                          <p className="mt-1 text-[11px] text-slate-400">
+                            Cargando resumen de esta etapa…
+                          </p>
+                        )}
+                        {bullets.length > 0 && (
+                          <ul className="mt-2 space-y-1 text-[11px] text-slate-200">
+                            {bullets.map((line, i) => (
+                              <li key={i}>• {line}</li>
+                            ))}
+                          </ul>
+                        )}
+                        {bullets.length === 0 && !stageAnalysesLoading && (
+                          <p className="mt-1 text-[11px] text-slate-400">
+                            No se han podido extraer datos de análisis para esta etapa.
+                          </p>
+                        )}
                       </div>
                     );
                   })}
