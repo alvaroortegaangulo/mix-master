@@ -303,11 +303,6 @@ export function FinalReportModal({ jobId, isOpen, onClose }: FinalReportModalPro
     };
   }, [coreReport]);
 
-  // Si el modal no está abierto, no renderizamos nada
-  if (!isOpen) return null;
-
-  const stylePreset = coreReport?.style_preset ?? reportEnvelope?.style_preset;
-  const generatedAt = coreReport?.generated_at_utc;
   const stages = coreReport?.stages ?? [];
   const pipelineDurations = coreReport?.pipeline_durations ?? null;
   const sortedDurations = useMemo(() => {
@@ -322,6 +317,12 @@ export function FinalReportModal({ jobId, isOpen, onClose }: FinalReportModalPro
       return ia - ib;
     });
   }, [pipelineDurations, stages]);
+
+  // Si el modal no está abierto, no renderizamos nada
+  if (!isOpen) return null;
+
+  const stylePreset = coreReport?.style_preset ?? reportEnvelope?.style_preset;
+  const generatedAt = coreReport?.generated_at_utc;
 
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/70 p-4">
