@@ -664,23 +664,23 @@ useEffect(() => {
                 />
 
                 {showStageSelector && availableStages.length > 0 && (
-                  <section className="mt-6 rounded-xl border border-slate-800/70 bg-slate-900/60">
+                  <section className="mt-6 rounded-2xl border border-amber-500/50 bg-amber-500/10 text-amber-50 shadow-lg">
                     {/* Cabecera plegable */}
                     <button
                       type="button"
                       onClick={() =>
                         setIsPipelineCollapsed((prev) => !prev)
                       }
-                      className="flex w-full items-center justify-between px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-300 hover:bg-slate-900/70"
+                      className="flex w-full items-center justify-between px-4 py-3 text-xs font-semibold uppercase tracking-wide text-amber-100 hover:bg-amber-500/15"
                       aria-expanded={!isPipelineCollapsed}
                     >
                       <span>Pipeline steps</span>
-                      <span className="flex items-center gap-2 text-[11px] text-slate-400 normal-case">
+                      <span className="flex items-center gap-2 text-[11px] text-amber-200 normal-case">
                         <span>
                           {selectedStageKeys.length} /{" "}
                           {availableStages.length} enabled
                         </span>
-                        <span className="text-slate-500">
+                        <span className="text-amber-300">
                           {isPipelineCollapsed ? "▼" : "▲"}
                         </span>
                       </span>
@@ -688,9 +688,9 @@ useEffect(() => {
 
                     {/* Contenido expandible */}
                     {!isPipelineCollapsed && (
-                      <div className="border-t border-slate-800/60 px-4 py-3">
+                      <div className="border-t border-amber-500/40 px-4 py-3">
                         <div className="flex items-center justify-between gap-2">
-                          <span className="text-[11px] font-medium text-slate-300">
+                          <span className="text-[11px] font-medium text-amber-100">
                             Activa o desactiva las etapas del pipeline
                             para este job.
                           </span>
@@ -698,41 +698,41 @@ useEffect(() => {
                             <button
                               type="button"
                               onClick={selectAllStages}
-                              className="rounded-full bg-slate-800 px-2.5 py-1 text-[11px] text-slate-200 hover:bg-slate-700"
+                              className="rounded-full bg-amber-600/80 px-2.5 py-1 text-[11px] text-amber-50 hover:bg-amber-500"
                             >
                               All
                             </button>
                             <button
                               type="button"
                               onClick={clearStages}
-                              className="rounded-full bg-slate-800 px-2.5 py-1 text-[11px] text-slate-200 hover:bg-slate-700"
+                              className="rounded-full bg-amber-600/80 px-2.5 py-1 text-[11px] text-amber-50 hover:bg-amber-500"
                             >
                               None
                             </button>
                           </div>
                         </div>
 
-                        <div className="mt-3 space-y-4">
+                        <div className="mt-5 space-y-4">
                           {[...STAGE_GROUP_ORDER, ...Object.keys(groupedStages).filter((g) => !STAGE_GROUP_ORDER.includes(g))].map((groupKey) => {
                             const stages = groupedStages[groupKey];
                             if (!stages || stages.length === 0) return null;
                             return (
                               <div
                                 key={groupKey}
-                                className="relative rounded-2xl border-2 border-dashed border-slate-700/80 bg-slate-950/40 px-3 py-3"
+                                className="relative rounded-2xl border-2 border-dashed border-amber-500/60 bg-amber-500/5 px-3 py-3"
                               >
-                                <span className="absolute -top-3 right-4 rounded-full bg-slate-950 px-3 py-1 text-[11px] font-semibold tracking-wide text-slate-200 shadow">
+                                <span className="absolute -top-3 right-4 rounded-full bg-slate-950 px-3 py-1 text-[11px] font-semibold tracking-wide text-amber-100 shadow">
                                   {STAGE_GROUP_LABELS[groupKey] ?? groupKey}
                                 </span>
                                 <div className="space-y-2">
                                   {stages.map((stage) => (
                                     <label
                                       key={stage.key}
-                                      className="flex cursor-pointer items-start gap-2 rounded-lg bg-slate-950/60 px-3 py-2 text-xs text-slate-200 hover:bg-slate-900"
+                                      className="flex cursor-pointer items-start gap-2 rounded-lg bg-slate-950/70 px-3 py-2 text-xs text-amber-50 hover:bg-slate-900"
                                     >
                                       <input
                                         type="checkbox"
-                                        className="mt-[2px] h-3.5 w-3.5 rounded border-slate-600 bg-slate-900"
+                                        className="mt-[2px] h-3.5 w-3.5 rounded border-amber-400 bg-slate-950 text-amber-200 focus:ring-amber-400"
                                         checked={selectedStageKeys.includes(
                                           stage.key,
                                         )}
@@ -743,7 +743,7 @@ useEffect(() => {
                                           {HUMAN_STAGE_TEXT[stage.key]?.title ??
                                             stage.label}
                                         </span>
-                                        <p className="mt-0.5 text-[11px] text-slate-400">
+                                        <p className="mt-0.5 text-[11px] text-amber-200/80">
                                           {HUMAN_STAGE_TEXT[stage.key]?.description ??
                                             stage.description ??
                                             ""}
