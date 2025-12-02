@@ -23,6 +23,7 @@ from utils.analysis_utils import (  # noqa: E402
     load_audio_mono,
     compute_peak_dbfs,
     compute_integrated_loudness_lufs,
+    sf_read_limited,
 )
 from utils.session_utils import (  # noqa: E402
     load_session_config,
@@ -65,7 +66,7 @@ def compute_mixbus_peak_dbfs(stem_paths: List[Path]) -> float:
     ch_ref = None
 
     for p in stem_paths:
-        data, sr = sf.read(p, always_2d=True)  # (n_samples, n_channels)
+        data, sr = sf_read_limited(p, always_2d=True)  # (n_samples, n_channels)
         data = data.astype(np.float32)
 
         if sr_ref is None:

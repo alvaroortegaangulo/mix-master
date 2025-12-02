@@ -21,6 +21,7 @@ import soundfile as sf  # noqa: E402
 from utils.analysis_utils import (  # noqa: E402
     load_contract,
     get_temp_dir,
+    sf_read_limited,
 )
 from utils.session_utils import load_session_config  # noqa: E402
 from utils.resonance_utils import (  # noqa: E402
@@ -69,7 +70,7 @@ def _analyze_stem(
     fname = stem_path.name
 
     try:
-        y, sr = sf.read(stem_path, always_2d=False)
+    y, sr = sf_read_limited(stem_path, always_2d=False)
     except Exception as e:
         print(f"[S4_STEM_RESONANCE_CONTROL] Aviso: no se puede leer '{fname}': {e}.")
         return {

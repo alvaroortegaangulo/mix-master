@@ -21,6 +21,7 @@ import soundfile as sf  # noqa: E402
 from utils.analysis_utils import (  # noqa: E402
     load_contract,
     get_temp_dir,
+    sf_read_limited,
 )
 from utils.session_utils import load_session_config  # noqa: E402
 from utils.profiles_utils import get_instrument_family  # noqa: E402
@@ -203,7 +204,7 @@ def main() -> None:
     dry_lufs = float("-inf")
     if full_song_path.exists():
         try:
-            y_mix, sr_mix = sf.read(full_song_path, always_2d=False)
+            y_mix, sr_mix = sf_read_limited(full_song_path, always_2d=False)
             dry_lufs = _compute_rms_lufs_like(y_mix)
             print(
                 f"[S6_BUS_REVERB_STYLE] Mix dry (full_song.wav): "

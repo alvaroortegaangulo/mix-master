@@ -21,6 +21,7 @@ import soundfile as sf  # noqa: E402
 from utils.analysis_utils import (  # noqa: E402
     load_contract,
     get_temp_dir,
+    sf_read_limited,
 )
 from utils.session_utils import load_session_config  # noqa: E402
 from utils.loudness_utils import (  # noqa: E402
@@ -35,7 +36,7 @@ def _load_stem_mono(stem_path: Path) -> tuple[np.ndarray, int]:
 
     Lee un stem, lo pasa a mono (float32) y devuelve (y_mono, sr).
     """
-    y, sr = sf.read(stem_path, always_2d=False)
+    y, sr = sf_read_limited(stem_path, always_2d=False)
     if isinstance(y, np.ndarray) and y.ndim > 1:
         y_mono = np.mean(y, axis=1).astype(np.float32)
     else:

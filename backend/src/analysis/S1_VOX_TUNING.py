@@ -21,6 +21,7 @@ from utils.analysis_utils import (  # noqa: E402
     load_contract,
     get_temp_dir,
     PROJECT_ROOT,
+    sf_read_limited,
 )
 from utils.session_utils import (  # noqa: E402
     load_session_config,
@@ -50,7 +51,7 @@ def analyze_stem(args: Tuple[Path, str, bool]) -> Dict[str, Any]:
 
     if is_vocal:
         # Cargar audio (mono)
-        y, sr = sf.read(stem_path, always_2d=False)
+        y, sr = sf_read_limited(stem_path, always_2d=False)
         if isinstance(y, np.ndarray) and y.ndim > 1:
             y_mono = np.mean(y, axis=1).astype(np.float32)
         else:

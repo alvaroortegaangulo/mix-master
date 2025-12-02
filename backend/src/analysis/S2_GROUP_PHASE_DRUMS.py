@@ -21,6 +21,7 @@ import soundfile as sf  # noqa: E402
 from utils.analysis_utils import (  # noqa: E402
     load_contract,
     get_temp_dir,
+    sf_read_limited,
 )
 from utils.session_utils import load_session_config  # noqa: E402
 from utils.phase_utils import estimate_best_lag_and_corr  # noqa: E402
@@ -107,7 +108,7 @@ def _analyze_drum_stem(
 
     info = dict(base_info)
 
-    cand_data, cand_sr = sf.read(stem_path, always_2d=False)
+    cand_data, cand_sr = sf_read_limited(stem_path, always_2d=False)
     if cand_sr != ref_sr:
         # En teoría no debería pasar tras S0_SESSION_FORMAT
         print(
@@ -289,7 +290,7 @@ def main() -> None:
     ref_path = stem_files[ref_idx]
     ref_name = ref_path.name
 
-    ref_data, ref_sr = sf.read(ref_path, always_2d=False)
+    ref_data, ref_sr = sf_read_limited(ref_path, always_2d=False)
     if isinstance(ref_data, np.ndarray) and ref_data.ndim > 1:
         ref_mono = np.mean(ref_data, axis=1).astype(np.float32)
     else:

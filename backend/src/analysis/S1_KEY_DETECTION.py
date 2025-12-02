@@ -23,6 +23,7 @@ import librosa  # noqa: E402
 from utils.analysis_utils import (  # noqa: E402
     load_contract,
     get_temp_dir,
+    sf_read_limited,
 )
 from utils.session_utils import (  # noqa: E402
     load_session_config,
@@ -58,7 +59,7 @@ def _load_mono_for_mix(path_str: str) -> tuple[np.ndarray, int]:
     Esta función está pensada para ser ejecutada en procesos separados.
     """
     p = Path(path_str)
-    y, sr = sf.read(p, always_2d=False)
+    y, sr = sf_read_limited(p, always_2d=False)
 
     if isinstance(y, np.ndarray) and y.ndim > 1:
         y_mono = np.mean(y, axis=1).astype(np.float32)

@@ -20,6 +20,7 @@ import soundfile as sf  # noqa: E402
 from utils.analysis_utils import (  # noqa: E402
     load_contract,
     get_temp_dir,
+    sf_read_limited,
 )
 from utils.loudness_utils import compute_lufs_and_lra  # noqa: E402
 
@@ -36,7 +37,7 @@ def _load_stem_for_mix(stem_path_str: str):
     """
     stem_path = Path(stem_path_str)
     try:
-        data, sr = sf.read(stem_path, always_2d=True)  # (n_samples, n_channels)
+        data, sr = sf_read_limited(stem_path, always_2d=True)  # (n_samples, n_channels)
         data = data.astype(np.float32)
         return data, sr
     except Exception as e:

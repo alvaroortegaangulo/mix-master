@@ -22,6 +22,7 @@ from utils.analysis_utils import (  # noqa: E402
     load_contract,
     get_temp_dir,
     PROJECT_ROOT,
+    sf_read_limited,
 )
 from utils.session_utils import load_session_config  # noqa: E402
 from utils.loudness_utils import measure_integrated_lufs  # noqa: E402
@@ -55,7 +56,7 @@ def _load_mixbus_signal(temp_dir: Path, sr_fallback: int = 48000) -> tuple[np.nd
     """
     full_song = temp_dir / "full_song.wav"
     if full_song.exists():
-        y, sr = sf.read(full_song, always_2d=False)
+        y, sr = sf_read_limited(full_song, always_2d=False)
         if isinstance(y, np.ndarray) and y.ndim > 1:
             y_mono = np.mean(y, axis=1).astype(np.float32)
         else:
@@ -73,7 +74,7 @@ def _load_mixbus_signal(temp_dir: Path, sr_fallback: int = 48000) -> tuple[np.nd
     data_list = []
     sr_ref = None
     for p in stem_files:
-        y, sr = sf.read(p, always_2d=False)
+        y, sr = sf_read_limited(p, always_2d=False)
         if isinstance(y, np.ndarray) and y.ndim > 1:
             y_mono = np.mean(y, axis=1).astype(np.float32)
         else:
@@ -249,7 +250,7 @@ def _analyze_stem(
         return stem_entry
 
     # Cargar stem lead
-    y, sr = sf.read(stem_path, always_2d=False)
+    y, sr = sf_read_limited(stem_path, always_2d=False)
     if isinstance(y, np.ndarray) and y.ndim > 1:
         y_mono = np.mean(y, axis=1).astype(np.float32)
     else:

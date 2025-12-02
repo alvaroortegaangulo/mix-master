@@ -21,9 +21,9 @@ import soundfile as sf  # noqa: E402
 
 from utils.analysis_utils import (  # noqa: E402
     load_contract,
-    get_temp_dir
+    get_temp_dir,
+    sf_read_limited,
 )
-from utils.analysis_utils import get_temp_dir
 from utils.session_utils import load_session_config  # noqa: E402
 from utils.loudness_utils import compute_lufs_and_lra  # noqa: E402
 from utils.color_utils import compute_true_peak_dbfs  # noqa: E402
@@ -216,7 +216,7 @@ def _crest_hist_worker(path: Path) -> Dict[str, Any]:
     Devuelve métricas y posible mensaje de error.
     """
     try:
-        y, sr = sf.read(path, always_2d=False)
+        y, sr = sf_read_limited(path, always_2d=False)
     except Exception as e:
         return {
             "crest_factor_db": None,

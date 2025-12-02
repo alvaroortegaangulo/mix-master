@@ -20,6 +20,7 @@ import soundfile as sf  # noqa: E402
 from utils.analysis_utils import (  # noqa: E402
     load_contract,
     get_temp_dir,
+    sf_read_limited,
 )
 from utils.session_utils import load_session_config  # noqa: E402
 from utils.loudness_utils import compute_lufs_and_lra  # noqa: E402
@@ -46,7 +47,7 @@ def _analyze_master(full_song_path: Path) -> Dict[str, Any]:
       }
     """
     try:
-        y, sr = sf.read(full_song_path, always_2d=False)
+        y, sr = sf_read_limited(full_song_path, always_2d=False)
     except Exception as e:
         return {
             "sr_mix": None,
