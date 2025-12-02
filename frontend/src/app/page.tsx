@@ -692,13 +692,6 @@ useEffect(() => {
                             </label>
                           ))}
                         </div>
-
-                        <p className="mt-2 text-[11px] text-slate-500">
-                          Las etapas desmarcadas se saltarán en el
-                          pipeline. El orden y la lógica de cada etapa
-                          siguen viniendo de{" "}
-                          <code className="rounded bg-slate-950 px-1">
-                            pipeline.py
                           </code>
                           .
                         </p>
