@@ -11,25 +11,8 @@ import numpy as np
 import soundfile as sf
 
 # Límite global de segundos para análisis (se puede sobrescribir con MIX_ANALYSIS_MAX_SECONDS)
+# Solo se aplica en helpers de análisis; NO se toca el comportamiento global de soundfile.read
 MAX_ANALYSIS_SECONDS = float(os.getenv("MIX_ANALYSIS_MAX_SECONDS", 90.0))
-
-# Monkey-patch suave de sf.read para limitar duración en análisis si no se especifican frames
-_SF_READ_ORIG = sf.read
-
-
-def _sf_read_with_limit(file, *args, **kwargs):
-    frames = kwargs.get("frames")
-    if frames is None and MAX_ANALYSIS_SECONDS is not None:
-        try:
-            info = sf.info(file)
-            max_frames = min(info.frames, int(info.samplerate * MAX_ANALYSIS_SECONDS))
-            kwargs["frames"] = max_frames
-        except Exception:
-            pass
-    return _SF_READ_ORIG(file, *args, **kwargs)
-
-
-sf.read = _sf_read_with_limit  # type: ignore[assignment]
 
 # ---------------------------------------------------------------------
 # Paths base del proyecto
