@@ -1,8 +1,0 @@
-{
-  "contract_id": "S5_LEADVOX_DYNAMICS",
-  "target_crest_factor_min_db": 10.0,
-  "target_crest_factor_max_db": 26.0,
-  "max_average_gain_reduction_db": 6.0,
-  "max_vocal_automation_change_db_per_pass": 3.0,
-  "records": []
-}

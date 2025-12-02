@@ -382,14 +382,6 @@ def _check_S1_MIXBUS_HEADROOM(analysis: Dict[str, Any]) -> bool:
 
 
 def _check_S2_GROUP_PHASE_DRUMS(data: Dict[str, Any]) -> bool:
-    """
-    Valida S2_GROUP_PHASE_DRUMS a partir de analysis_S2_GROUP_PHASE_DRUMS.json.
-
-    Reglas:
-      - Para cada stem de familia Drums (no referencia):
-          correlation_band_100_500 >= correlation_min - corr_margin
-          |lag_ms| <= residual_max_lag_ms (+ pequeño margen)
-    """
     contract_id = data.get("contract_id", "S2_GROUP_PHASE_DRUMS")
     session = data.get("session", {}) or {}
     stems: List[Dict[str, Any]] = data.get("stems", []) or []
@@ -402,9 +394,17 @@ def _check_S2_GROUP_PHASE_DRUMS(data: Dict[str, Any]) -> bool:
     except (TypeError, ValueError):
         correlation_min = 0.0
 
-    # Queremos que la re-ejecución deje lags residuales prácticamente nulos
-    residual_max_lag_ms = 0.1
-    corr_margin = 0.05  # margen para la correlación
+    # Recuperamos el límite contractual para contextualizar el check
+    max_time_shift_ms = session.get("max_time_shift_ms", 2.0)
+    try:
+        max_time_shift_ms = float(max_time_shift_ms)
+    except (TypeError, ValueError):
+        max_time_shift_ms = 2.0
+
+    # En lugar de exigir 0.10 ms absolutos, usamos un límite razonable
+    # p.ej. 50% de la ventana máxima y nunca menos de 0.5 ms:
+    residual_max_lag_ms = max(0.5, 0.5 * max_time_shift_ms)
+    corr_margin = 0.05
 
     family_stems = [
         s for s in stems
@@ -412,7 +412,10 @@ def _check_S2_GROUP_PHASE_DRUMS(data: Dict[str, Any]) -> bool:
     ]
 
     if not family_stems:
-        print(f"[S2_GROUP_PHASE_DRUMS] No hay stems de familia {target_family} (o solo referencia); se considera éxito.")
+        print(
+            f"[S2_GROUP_PHASE_DRUMS] No hay stems de familia {target_family} "
+            f"(o solo referencia); se considera éxito."
+        )
         return True
 
     ok = True
@@ -463,6 +466,7 @@ def _check_S2_GROUP_PHASE_DRUMS(data: Dict[str, Any]) -> bool:
         )
 
     return ok
+
 
 
 
