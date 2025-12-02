@@ -31,4 +31,4 @@ redis
 
 
 pedalboard
-
+essentia

@@ -17,7 +17,7 @@ import os  # noqa: E402
 
 import numpy as np  # noqa: E402
 import soundfile as sf  # noqa: E402
-import librosa  # noqa: E402
+import essentia.standard as es  # noqa: E402
 
 from utils.analysis_utils import (  # noqa: E402
     load_contract,
@@ -28,27 +28,15 @@ from utils.session_utils import (  # noqa: E402
     load_session_config,
 )
 
-
-# Perfiles de Krumhansl-Kessler (mayor/menor), normalizados internamente
-_MAJ_PROFILE = np.array(
-    [6.35, 2.23, 3.48, 2.33, 4.38, 4.09,
-     2.52, 5.19, 2.39, 3.66, 2.29, 2.88],
-    dtype=np.float32
-)
-_MIN_PROFILE = np.array(
-    [6.33, 2.68, 3.52, 5.38, 2.60, 3.53,
-     2.54, 4.75, 3.98, 2.69, 3.34, 3.17],
-    dtype=np.float32
-)
-
-_MAJ_PROFILE /= np.linalg.norm(_MAJ_PROFILE)
-_MIN_PROFILE /= np.linalg.norm(_MIN_PROFILE)
-
-_NOTE_NAMES = ["C", "C#", "D", "D#", "E", "F",
-               "F#", "G", "G#", "A", "A#", "B"]
+# Nota: mantenemos solo los nombres de nota para mapear a pitch class
+_NOTE_NAMES = [
+    "C", "C#", "D", "D#", "E", "F",
+    "F#", "G", "G#", "A", "A#", "B",
+]
 
 
 # ---------------------------------------------------------------------------
+# Carga de stems y mezcla a mono
 # ---------------------------------------------------------------------------
 
 def _load_mono_for_mix(path_str: str) -> tuple[np.ndarray, int]:
@@ -71,15 +59,13 @@ def _mix_stems_mono(stem_files: List[Path]) -> tuple[np.ndarray, int]:
     """
     Hace un mix sencillo de todos los stems a mono, para análisis de tonalidad.
     Asume que todos tienen mismo samplerate (garantizado por S0_SESSION_FORMAT).
-
     """
     if not stem_files:
         return np.zeros(1, dtype=np.float32), 44100
 
     path_strs = [str(p) for p in stem_files]
 
-    # Cargar stems en paralelo y convertir a mono
-    max_workers = min(4, os.cpu_count() or 1)
+    # Cargar stems en serie (si quieres paralelizar, aquí pondrías ProcessPool)
     results = list(map(_load_mono_for_mix, path_strs))
 
     data_list: List[np.ndarray] = []
@@ -103,7 +89,7 @@ def _mix_stems_mono(stem_files: List[Path]) -> tuple[np.ndarray, int]:
         n = len(y)
         mix[:n] += y
 
-    # Normalizar para evitar saturación y estabilizar el chroma
+    # Normalizar para evitar saturación y estabilizar la detección de tonalidad
     peak = float(np.max(np.abs(mix))) if mix.size > 0 else 0.0
     if peak > 0.0:
         mix /= peak
@@ -111,17 +97,20 @@ def _mix_stems_mono(stem_files: List[Path]) -> tuple[np.ndarray, int]:
     return mix, sr_ref
 
 
+# ---------------------------------------------------------------------------
+# Detección de tonalidad con Essentia
+# ---------------------------------------------------------------------------
+
 def _detect_key_from_mix(y: np.ndarray, sr: int) -> Dict[str, Any]:
     """
-    Detecta tonalidad (nota + modo mayor/menor) a partir de un mix mono:
+    Detecta tonalidad (nota + modo mayor/menor) a partir de un mix mono
+    usando Essentia (KeyExtractor):
 
-      - chroma_cqt promedio
-      - correlación con perfiles mayor/menor rotados
-      - devuelve:
-        - key_root_pc (0=C, 1=C#, ...)
+      - Devuelve:
+        - key_root_pc (0=C, 1=C#, ... 11=B)
         - key_mode ("major" o "minor")
         - key_name ("C major", "A minor", etc.)
-        - confidence (0-1 aprox)
+        - confidence (~0-1)
     """
     if y.size == 0:
         return {
@@ -131,55 +120,59 @@ def _detect_key_from_mix(y: np.ndarray, sr: int) -> Dict[str, Any]:
             "confidence": None,
         }
 
-    chroma = librosa.feature.chroma_cqt(y=y, sr=sr)
-    chroma_mean = np.mean(chroma, axis=1)
+    # Aseguramos float32 1D
+    audio = np.asarray(y, dtype=np.float32).flatten()
 
-    if np.all(chroma_mean == 0):
-        return {
-            "key_root_pc": None,
-            "key_mode": None,
-            "key_name": None,
-            "confidence": None,
-        }
-
-    chroma_vec = chroma_mean / np.linalg.norm(chroma_mean, ord=2)
-
-    scores = []
-    labels = []
-
-    # Evaluar 12 tonalidades mayores y 12 menores
-    for pc in range(12):
-        # Mayor
-        prof_maj = np.roll(_MAJ_PROFILE, pc)
-        score_maj = float(np.dot(chroma_vec, prof_maj))
-        scores.append(score_maj)
-        labels.append((pc, "major"))
-
-        # Menor
-        prof_min = np.roll(_MIN_PROFILE, pc)
-        score_min = float(np.dot(chroma_vec, prof_min))
-        scores.append(score_min)
-        labels.append((pc, "minor"))
-
-    scores_arr = np.array(scores, dtype=np.float32)
-    best_idx = int(np.argmax(scores_arr))
-    best_score = float(scores_arr[best_idx])
-    key_root_pc, key_mode = labels[best_idx]
-
-    # Confianza: diferencia entre mejor y segundo mejor normalizada
-    sorted_scores = np.sort(scores_arr)[::-1]
-    if len(sorted_scores) >= 2 and abs(sorted_scores[0]) > 1e-6:
-        confidence = float(
-            (sorted_scores[0] - sorted_scores[1]) / (abs(sorted_scores[0]) + 1e-6)
+    # Essentia trabaja por defecto a 44.1 kHz; si tu sesión no está ahí,
+    # re-muestreamos para estabilizar resultados.
+    target_sr = 44100
+    if sr != target_sr:
+        resample = es.Resample(
+            inputSampleRate=float(sr),
+            outputSampleRate=float(target_sr),
         )
-        confidence = max(0.0, min(confidence, 1.0))
-    else:
-        confidence = 0.0
+        audio = resample(audio)
+        sr = target_sr
 
-    key_name = f"{_NOTE_NAMES[key_root_pc]} {key_mode}"
+    # KeyExtractor: devuelve (key, scale, strength, first_to_second_relative_strength)
+    # key: "C", "C#", ...
+    # scale: "major" / "minor"
+    # strength: ~0-1 (según Essentia docs)
+    key_extractor = es.KeyExtractor()
+    key_str, scale_str, strength, _rel = key_extractor(audio)
+
+    # Normalizar strings
+    key_str = str(key_str or "").strip()
+    scale_str = str(scale_str or "").strip().lower()
+
+    # Mapear nota a pitch class 0-11
+    key_root_pc = None
+    if key_str in _NOTE_NAMES:
+        key_root_pc = int(_NOTE_NAMES.index(key_str))
+
+    # Asegurarnos de que el modo sea "major"/"minor" o None
+    if scale_str not in ("major", "minor"):
+        key_mode = None
+    else:
+        key_mode = scale_str
+
+    if key_root_pc is not None and key_mode is not None:
+        key_name = f"{_NOTE_NAMES[key_root_pc]} {key_mode}"
+    else:
+        key_name = None
+
+    # Confianza: usamos strength de Essentia, clamp 0-1 por seguridad
+    if strength is None:
+        confidence = None
+    else:
+        confidence = float(strength)
+        if confidence < 0.0:
+            confidence = 0.0
+        if confidence > 1.0:
+            confidence = 1.0
 
     return {
-        "key_root_pc": int(key_root_pc),
+        "key_root_pc": key_root_pc,
         "key_mode": key_mode,
         "key_name": key_name,
         "confidence": confidence,
@@ -234,13 +227,17 @@ def main() -> None:
         if p.name.lower() != "full_song.wav"
     )
 
-    # 4) Mix de stems para análisis de tonalidad (con lectura en paralelo)
+    # 4) Mix de stems para análisis de tonalidad
     mix_mono, sr = _mix_stems_mono(stem_files)
     key_info = _detect_key_from_mix(mix_mono, sr)
 
     key_root_pc = key_info["key_root_pc"]
     key_mode = key_info["key_mode"]
-    scale_pcs = _build_scale_degrees_midi(key_root_pc, key_mode) if key_root_pc is not None else None
+    scale_pcs = (
+        _build_scale_degrees_midi(key_root_pc, key_mode)
+        if key_root_pc is not None and key_mode is not None
+        else None
+    )
 
     # 5) Construir JSON de salida
     stems_info: List[Dict[str, Any]] = []

@@ -17,10 +17,16 @@ import json  # noqa: E402
 import numpy as np  # noqa: E402
 import soundfile as sf  # noqa: E402
 
+from pedalboard import Pedalboard, Gain, Limiter  # noqa: E402
+
 from utils.analysis_utils import get_temp_dir
 from utils.loudness_utils import compute_lufs_and_lra  # noqa: E402
 from utils.color_utils import compute_true_peak_dbfs  # noqa: E402
 from utils.mastering_profiles_utils import get_mastering_profile  # noqa: E402
+
+
+# Sample rate global para el limitador de Pedalboard
+_MASTER_SAMPLE_RATE: float | None = None
 
 
 def load_analysis(contract_id: str) -> Dict[str, Any]:
@@ -47,35 +53,49 @@ def _apply_limiter(
     """
     Aplica:
 
-      - pre-gain en dB
-      - limitador por hard clip a ceiling_dbtp
+      - pre-gain en dB (vía pedalboard.Gain)
+      - limitador (vía pedalboard.Limiter) con threshold en ceiling_dbtp
 
     Devuelve:
       - audio limitado
       - gain reduction máxima en picos (dB aprox).
     """
-    arr = np.asarray(x, dtype=np.float32)
-    if arr.ndim == 1:
-        arr = arr.reshape(-1, 1)
+    global _MASTER_SAMPLE_RATE
+    if _MASTER_SAMPLE_RATE is None:
+        raise RuntimeError(
+            "Sample rate no definido en _MASTER_SAMPLE_RATE antes de llamar a _apply_limiter."
+        )
 
+    sr = _MASTER_SAMPLE_RATE
+
+    # Normalizar a float32
+    arr = np.asarray(x, dtype=np.float32)
+
+    # Para medir GR, calculamos el peak tras pre-gain pero antes del limitador
     pre_gain_lin = 10.0 ** (pre_gain_db / 20.0)
     y_pre = arr * pre_gain_lin
-
-    # Peak antes de limitar (en dBFS aprox)
     pre_peak = compute_true_peak_dbfs(y_pre, oversample_factor=4)
 
-    # Threshold en nivel lineal a partir del ceiling dBTP
-    thr_lin = 10.0 ** (ceiling_dbtp / 20.0)
+    # Cadena de mastering: Gain (pre-gain) -> Limiter (ceiling)
+    board = Pedalboard(
+        [
+            Gain(gain_db=float(pre_gain_db)),
+            Limiter(threshold_db=float(ceiling_dbtp)),
+        ]
+    )
 
-    y_lim = np.clip(y_pre, -thr_lin, thr_lin)
+    # Ejecutar limitador
+    y_lim = board(arr, sr)
 
+    # Medir peak tras el limitador
+    y_lim = np.asarray(y_lim, dtype=np.float32)
     post_peak = compute_true_peak_dbfs(y_lim, oversample_factor=4)
 
-    # GR aproximada en el peor pico (si los picos superaban el ceiling)
+    # GR aproximada en el peor pico
     gr_db = max(0.0, (pre_peak - post_peak))
 
-    # Volvemos a la forma original
-    if x.ndim == 1:
+    # Mantener la forma original: si entrada era 1D, devolvemos 1D
+    if x.ndim == 1 and y_lim.ndim == 2 and y_lim.shape[1] == 1:
         y_lim = y_lim[:, 0]
 
     return y_lim.astype(np.float32), gr_db
@@ -98,10 +118,14 @@ def _apply_ms_width(
     Si la señal es mono, no se aplica cambio (factor efectivo=1).
     """
     arr = np.asarray(x, dtype=np.float32)
-    if arr.ndim == 1 or arr.shape[1] == 1:
+    if arr.ndim == 1 or (arr.ndim == 2 and arr.shape[1] == 1):
         # Mono; sin cambio
         mono = arr if arr.ndim == 1 else arr[:, 0]
         return mono.astype(np.float32), 0.0, 0.0
+
+    # Esperamos forma (N, 2)
+    if arr.ndim != 2 or arr.shape[1] < 2:
+        raise ValueError("Se esperaba audio estéreo (N, 2) para M/S width.")
 
     L = arr[:, 0]
     R = arr[:, 1]
@@ -149,11 +173,13 @@ def _process_master_worker(
       - Lee full_song.wav.
       - Calcula métricas pre (TP, LUFS, LRA).
       - Calcula pre_gain_db limitado por max_limiter_gr_db.
-      - Aplica limitador con ceiling target_ceiling.
+      - Aplica limitador (Pedalboard) con ceiling target_ceiling.
       - Aplica cambio de anchura M/S limitado por max_width_change_pct.
       - Escribe el audio procesado en full_song.wav.
       - Devuelve todas las métricas necesarias.
     """
+    global _MASTER_SAMPLE_RATE
+
     full_song_path = Path(full_song_path_str)
 
     # Leer audio actual
@@ -162,6 +188,8 @@ def _process_master_worker(
         y = np.asarray(y, dtype=np.float32)
     else:
         y = y.astype(np.float32)
+
+    _MASTER_SAMPLE_RATE = float(sr)
 
     pre_true_peak = compute_true_peak_dbfs(y, oversample_factor=4)
     pre_lufs, pre_lra = compute_lufs_and_lra(y, sr)
@@ -190,7 +218,7 @@ def _process_master_worker(
         f"pre_gain_db aplicado={pre_gain_db:+.2f} dB (limitado por GR máx={max_limiter_gr_db:.1f} dB)."
     )
 
-    # 2) Aplicar limitador con ceiling target_ceiling
+    # 2) Aplicar limitador con ceiling target_ceiling (Pedalboard)
     y_limited, limiter_gr_db = _apply_limiter(y, pre_gain_db, target_ceiling)
 
     # Métricas tras limitador (antes de width)
@@ -259,7 +287,7 @@ def main() -> None:
 
       - Lee analysis_S9_MASTER_GENERIC.json y el full_song.wav actual.
       - Calcula objetivos de mastering a partir de contrato + perfil de estilo.
-      - El worker aplica pre-gain + limitador + ajuste M/S.
+      - El worker aplica pre-gain + limitador (Pedalboard) + ajuste M/S.
       - Recalcula métricas post y las guarda en master_metrics_S9_MASTER_GENERIC.json.
     """
     if len(sys.argv) < 2:
