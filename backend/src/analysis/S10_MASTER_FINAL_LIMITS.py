@@ -1,4 +1,4 @@
-# C:\mix-master\backend\src\analysis\S10_MASTER_FINAL_LIMITS.py
+﻿# C:\mix-master\backend\src\analysis\S10_MASTER_FINAL_LIMITS.py
 
 from __future__ import annotations
 
@@ -63,7 +63,7 @@ def _compute_channel_lufs_diff(y: np.ndarray, sr: int) -> Dict[str, float]:
             "channel_loudness_diff_db": diff,
         }
 
-    # Más de 2 canales: usamos primer par como L/R
+    # MÃ¡s de 2 canales: usamos primer par como L/R
     L = arr[:, 0]
     R = arr[:, 1]
     lufs_L, _ = compute_lufs_and_lra(L, sr)
@@ -78,7 +78,7 @@ def _compute_channel_lufs_diff(y: np.ndarray, sr: int) -> Dict[str, float]:
 
 def _compute_stereo_correlation(y: np.ndarray) -> float:
     """
-    Correlación estéreo global simple entre L y R (Pearson).
+    CorrelaciÃ³n estÃ©reo global simple entre L y R (Pearson).
     Si es mono, devuelve 1.0.
     """
     arr = np.asarray(y, dtype=np.float32)
@@ -88,7 +88,7 @@ def _compute_stereo_correlation(y: np.ndarray) -> float:
         L = arr[:, 0].astype(np.float32)
         R = arr[:, 1].astype(np.float32)
     else:
-        # más canales: usamos primero par
+        # mÃ¡s canales: usamos primero par
         L = arr[:, 0].astype(np.float32)
         R = arr[:, 1].astype(np.float32)
 
@@ -110,9 +110,9 @@ def _analyze_master_final(full_song_path: Path) -> Dict[str, Any]:
       - lufs_integrated
       - lra
       - lufs por canal L/R y diferencia
-      - correlación estéreo
+      - correlaciÃ³n estÃ©reo
 
-    Devuelve un dict con métricas + posible mensaje de error.
+    Devuelve un dict con mÃ©tricas + posible mensaje de error.
     """
     try:
         y, sr = sf_read_limited(full_song_path, always_2d=False)
@@ -149,7 +149,7 @@ def _analyze_master_final(full_song_path: Path) -> Dict[str, Any]:
 
 def main() -> None:
     """
-    Análisis para S10_MASTER_FINAL_LIMITS.
+    AnÃ¡lisis para S10_MASTER_FINAL_LIMITS.
 
     Uso desde stage.py:
         python analysis/S10_MASTER_FINAL_LIMITS.py S10_MASTER_FINAL_LIMITS
@@ -181,7 +181,7 @@ def main() -> None:
     # 3) Perfil de mastering para obtener el target de LUFS (tolerancia de estilo)
     m_profile = get_mastering_profile(style_preset)
     target_lufs = float(m_profile.get("target_lufs_integrated", -11.0))
-    # Tolerancia QC más estricta: ±0.5 LU
+    # Tolerancia QC mÃ¡s estricta: Â±0.5 LU
     style_lufs_tolerance = 0.5
 
     full_song_path = temp_dir / "full_song.wav"
@@ -195,8 +195,7 @@ def main() -> None:
     sr_mix: int | None = None
 
     if full_song_path.exists():
-        max_workers = min(4, os.cpu_count() or 1)
-        result = list(map())[0]
+        result = _analyze_master_final(full_song_path)
 
         if result["error"] is not None:
             # Error de lectura/procesado
@@ -212,18 +211,18 @@ def main() -> None:
             correlation = result["correlation"]
 
             print(
-                f"[S10_MASTER_FINAL_LIMITS] full_song.wav analizado (sr={sr_mix}). "
-                f"TP={true_peak_dbtp:.2f} dBTP, LUFS={lufs_integrated:.2f}, "
-                f"LRA={lra:.2f}, diff_LR={channel_diff_db:.2f} dB, "
-                f"corr={correlation:.3f}."
+                "[S10_MASTER_FINAL_LIMITS] full_song.wav analizado (sr=" + str(sr_mix) + "). " +
+                "TP=" + f"{true_peak_dbtp:.2f}" + " dBTP, " +
+                "LUFS=" + f"{lufs_integrated:.2f}" + ", LRA=" + f"{lra:.2f}" + ". " +
+                "diff_LR=" + f"{channel_diff_db:.2f}" + " dB, corr=" + f"{correlation:.3f}" + "."
             )
     else:
         print(
-            f"[S10_MASTER_FINAL_LIMITS] Aviso: no existe {full_song_path}, "
+            "[S10_MASTER_FINAL_LIMITS] Aviso: no existe " + str(full_song_path) + ", " +
             "no se puede analizar el master final."
         )
 
-    # 5) Evaluar si LUFS está dentro de tolerancia de estilo
+    # 5) Evaluar si LUFS estÃ¡ dentro de tolerancia de estilo
     lufs_within_style = False
     if lufs_integrated != float("-inf"):
         if abs(lufs_integrated - target_lufs) <= style_lufs_tolerance:
@@ -262,7 +261,7 @@ def main() -> None:
         json.dump(session_state, f, indent=2, ensure_ascii=False)
 
     print(
-        f"[S10_MASTER_FINAL_LIMITS] Análisis completado. JSON: {output_path}"
+        f"[S10_MASTER_FINAL_LIMITS] AnÃ¡lisis completado. JSON: {output_path}"
     )
 
 
