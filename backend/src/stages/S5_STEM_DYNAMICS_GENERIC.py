@@ -18,15 +18,11 @@ import numpy as np  # noqa: E402
 from utils.analysis_utils import get_temp_dir  # noqa: E402
 from utils.dynamics_utils import compute_crest_factor_db  # noqa: E402
 
-# Pedalboard
 from pedalboard import Pedalboard, Compressor  # noqa: E402
 from pedalboard.io import AudioFile  # noqa: E402
 
 
 def load_analysis(contract_id: str) -> Dict[str, Any]:
-    """
-    Carga el JSON de análisis generado por analysis\\S5_STEM_DYNAMICS_GENERIC.py.
-    """
     temp_dir = get_temp_dir(contract_id, create=False)
     analysis_path = temp_dir / f"analysis_{contract_id}.json"
 
@@ -45,27 +41,15 @@ def _compute_threshold_for_stem(
     max_peak_gr_db: float,
     ratio: float,
 ) -> float:
-    """
-    Calcula un umbral de compresión para garantizar que la reducción máxima
-    no supere aproximadamente max_peak_gr_db, con ratio dado.
-
-    GR_max ≈ (peak_db - threshold_db) * (1 - 1/ratio)
-
-    => threshold_db ≈ peak_db - GR_max / (1 - 1/ratio)
-
-    Además, se fuerza a que no baje por debajo de (pre_rms_db + 2 dB)
-    para evitar sobrecomprimir de forma generalizada.
-    """
     inv_ratio = 1.0 / float(max(ratio, 1.0))
-    k = 1.0 - inv_ratio  # factor para GR
+    k = 1.0 - inv_ratio
 
     if k <= 0.0:
-        return pre_peak_db  # sin compresión
+        return pre_peak_db
 
     over_max_target = max_peak_gr_db / k
     threshold_from_peak = pre_peak_db - over_max_target
 
-    # Umbral mínimo: RMS + 2 dB (solo cazar picos)
     if pre_rms_db != float("-inf"):
         min_threshold = pre_rms_db + 2.0
         threshold_db = max(threshold_from_peak, min_threshold)
@@ -73,10 +57,6 @@ def _compute_threshold_for_stem(
         threshold_db = threshold_from_peak
 
     return float(threshold_db)
-
-
-# ----------------------------------------------------------------------
-# ----------------------------------------------------------------------
 
 
 def _compress_stem_worker(
@@ -90,18 +70,9 @@ def _compress_stem_worker(
         float, # RATIO
         float, # ATTACK_MS
         float, # RELEASE_MS
-        float, # MAKEUP_DB
+        float, # MAKEUP_DB (no se usa en Pedalboard, se mantiene por compatibilidad)
     ]
 ) -> Optional[Dict[str, Any]]:
-    """
-    Worker que:
-      - Lee el archivo de audio.
-      - Aplica compresión con Pedalboard.
-      - Reescribe el archivo.
-      - Devuelve métricas post-compresión para el registro.
-
-    Si hay error o el archivo está vacío, devuelve None.
-    """
     (
         fname,
         path_str,
@@ -112,17 +83,15 @@ def _compress_stem_worker(
         RATIO,
         ATTACK_MS,
         RELEASE_MS,
-        MAKEUP_DB,
+        MAKEUP_DB,  # no lo usamos, en este stage ya era 0.0
     ) = args
 
     path = Path(path_str)
 
     try:
-        # Leer audio con Pedalboard (forma: (channels, samples))
         with AudioFile(str(path)) as f:
             audio = f.read(f.frames)
             samplerate = f.samplerate
-
     except Exception as e:
         print(f"[S5_STEM_DYNAMICS_GENERIC] {fname}: error al leer el archivo: {e}")
         return None
@@ -136,18 +105,13 @@ def _compress_stem_worker(
         print(f"[S5_STEM_DYNAMICS_GENERIC] {fname}: archivo vacío; se omite.")
         return None
 
-    # Normalizar forma para compresor:
-    # - Pedalboard espera (channels, samples)
-    # - Para métricas compatibles con utilidades existentes,
-    #   preservamos una versión "data" similar a soundfile: (samples,) o (samples, channels)
+    # Normalizar forma para el compresor
     if audio.ndim == 1:
-        # Mono
         audio_for_board = audio.reshape(1, -1)  # (1, samples)
         data_in = audio.copy()                  # (samples,)
     elif audio.ndim == 2:
-        # (channels, samples)
-        audio_for_board = audio
-        data_in = audio.T.copy()               # (samples, channels)
+        audio_for_board = audio                 # (channels, samples)
+        data_in = audio.T.copy()                # (samples, channels)
     else:
         print(
             f"[S5_STEM_DYNAMICS_GENERIC] {fname}: formato de audio no soportado "
@@ -155,9 +119,7 @@ def _compress_stem_worker(
         )
         return None
 
-    # ------------------------------------------------------------------
-    # Compresor genérico con Pedalboard
-    # ------------------------------------------------------------------
+    # Compresor Pedalboard (sin makeup_gain_db: en este stage ya era 0.0)
     board = Pedalboard(
         [
             Compressor(
@@ -165,13 +127,12 @@ def _compress_stem_worker(
                 ratio=float(RATIO),
                 attack_ms=float(ATTACK_MS),
                 release_ms=float(RELEASE_MS),
-                makeup_gain_db=float(MAKEUP_DB),
             )
         ]
     )
 
     try:
-        processed = board(audio_for_board, samplerate)  # (channels, samples)
+        processed = board(audio_for_board, samplerate)
     except Exception as e:
         print(f"[S5_STEM_DYNAMICS_GENERIC] {fname}: error en compresor: {e}")
         return None
@@ -181,11 +142,10 @@ def _compress_stem_worker(
     else:
         processed = processed.astype(np.float32)
 
-    # Normalizar salida a la misma convención que data_in para métricas
     if processed.ndim == 1:
-        data_out = processed.copy()  # (samples,)
+        data_out = processed.copy()
     elif processed.ndim == 2:
-        data_out = processed.T.copy()  # (samples, channels)
+        data_out = processed.T.copy()
     else:
         print(
             f"[S5_STEM_DYNAMICS_GENERIC] {fname}: salida del compresor no soportada "
@@ -193,12 +153,9 @@ def _compress_stem_worker(
         )
         return None
 
-    # ------------------------------------------------------------------
-    # Cálculo de ganancia de reducción media y máxima
-    # ------------------------------------------------------------------
+    # Ganancia de reducción media y máxima (en función de |in| vs |out|)
     eps = 1e-12
 
-    # Trabajamos en forma (channels, samples) para GR por muestra
     if audio_for_board.ndim == 1:
         in_cs = audio_for_board.reshape(1, -1)
     else:
@@ -212,22 +169,16 @@ def _compress_stem_worker(
     in_abs = np.abs(in_cs).astype(np.float32) + eps
     out_abs = np.abs(out_cs).astype(np.float32) + eps
 
-    # GR por muestra (dB): típicamente <= 0 (reducción)
     gr_db = 20.0 * np.log10(out_abs / in_abs)
+    gr_db_clipped = np.minimum(gr_db, 0.0)  # solo reducción
 
-    # Consideramos solo reducción (valores <= 0); ignoramos posibles zonas con out > in
-    gr_db_clipped = np.minimum(gr_db, 0.0)
+    avg_gr_db = float(-np.mean(gr_db_clipped))
+    max_gr_db = float(-np.min(gr_db_clipped))
 
-    # Ganancia de reducción media y máxima como magnitudes positivas
-    avg_gr_db = float(-np.mean(gr_db_clipped))  # media de reducción
-    max_gr_db = float(-np.min(gr_db_clipped))   # máxima reducción
-
-    # ------------------------------------------------------------------
-    # Métricas post-compresión (crest factor nuevo)
-    # ------------------------------------------------------------------
+    # Métricas post-compresión
     post_rms_db, post_peak_db, post_crest_db = compute_crest_factor_db(data_out)
 
-    # Guardar audio procesado sobre el archivo original
+    # Guardar audio procesado
     with AudioFile(
         str(path),
         "w",
@@ -254,20 +205,11 @@ def _compress_stem_worker(
 
 
 def main() -> None:
-    """
-    Stage S5_STEM_DYNAMICS_GENERIC:
-
-      - Lee analysis_S5_STEM_DYNAMICS_GENERIC.json.
-      - Para cada stem:
-          * Calcula un umbral de compresión en función de RMS/peak.
-          * Aplica un compresor genérico (ratio moderado) con Pedalboard.
-          * Registra métricas de GR y crest factor antes/después.
-    """
     if len(sys.argv) < 2:
         print("Uso: python S5_STEM_DYNAMICS_GENERIC.py <CONTRACT_ID>")
         sys.exit(1)
 
-    contract_id = sys.argv[1]  # "S5_STEM_DYNAMICS_GENERIC"
+    contract_id = sys.argv[1]
 
     analysis = load_analysis(contract_id)
 
@@ -283,21 +225,16 @@ def main() -> None:
     max_release_ms = float(limits.get("max_release_ms", 600.0))
     min_release_ms = float(limits.get("min_release_ms", 20.0))
 
-    # Parámetros globales razonables (ajustables por estilo más adelante)
     RATIO = 4.0
     ATTACK_MS = 10.0
     RELEASE_MS = 120.0
-    MAKEUP_DB = 0.0  # en este stage NO compensamos, solo control de rango
+    MAKEUP_DB = 0.0  # mantenemos por si en el futuro quieres usarlo
 
-    # Clamping a los límites del contrato
     ATTACK_MS = min(max(ATTACK_MS, min_attack_ms), max_attack_ms)
     RELEASE_MS = min(max(RELEASE_MS, min_release_ms), max_release_ms)
 
     temp_dir = get_temp_dir(contract_id, create=False)
 
-    # ------------------------------------------------------------------
-    # Preparar tareas
-    # ------------------------------------------------------------------
     tasks: List[Tuple[str, str, float, float, float, float, float, float, float, float]] = []
 
     for stem in stems:
@@ -324,7 +261,6 @@ def main() -> None:
             )
             continue
 
-        # Si la pista es muy baja de nivel, no hacemos nada
         if pre_peak_db <= -60.0:
             continue
 
@@ -353,9 +289,6 @@ def main() -> None:
     stems_processed = 0
     metrics_records: List[Dict[str, Any]] = []
 
-    # ------------------------------------------------------------------
-    # Ejecutar compresión en serie
-    # ------------------------------------------------------------------
     if tasks:
         for result in map(_compress_stem_worker, tasks):
             if result is None:
@@ -381,9 +314,6 @@ def main() -> None:
             "[S5_STEM_DYNAMICS_GENERIC] No hay stems válidos que requieran compresión."
         )
 
-    # ------------------------------------------------------------------
-    # Guardar métricas de dinámica en un JSON auxiliar para el check
-    # ------------------------------------------------------------------
     metrics_path = temp_dir / "dynamics_metrics_S5_STEM_DYNAMICS_GENERIC.json"
     with metrics_path.open("w", encoding="utf-8") as f:
         json.dump(
