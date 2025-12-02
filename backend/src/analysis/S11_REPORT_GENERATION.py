@@ -53,6 +53,8 @@ PIPELINE_CONTRACT_IDS: List[str] = [
     "S10_MASTER_FINAL_LIMITS",
 ]
 
+TIMINGS_FILENAME = "pipeline_timings.json"
+
 # Pequeña descripción humana por etapa
 STAGE_SUMMARY: Dict[str, str] = {
     "S0_SESSION_FORMAT": "Normalización de formato de sesión (samplerate, bit depth, headroom, asignación de buses).",
@@ -182,6 +184,32 @@ def _compute_crest_and_histogram(
     }
 
 
+def _load_pipeline_timings(contract_id: str) -> Dict[str, Any]:
+    """
+    Lee pipeline_timings.json desde la raiz temp del job (si existe).
+    """
+    temp_dir = get_temp_dir(contract_id, create=False)
+    job_root = temp_dir.parent
+    timings_path = job_root / TIMINGS_FILENAME
+
+    if not timings_path.exists():
+        return {"stages": [], "total_duration_sec": None}
+
+    try:
+        with timings_path.open("r", encoding="utf-8") as f:
+            data = json.load(f)
+        stages = data.get("stages", [])
+        total = data.get("total_duration_sec")
+        return {
+            "stages": stages if isinstance(stages, list) else [],
+            "total_duration_sec": total if isinstance(total, (int, float)) else None,
+            "generated_at_utc": data.get("generated_at_utc"),
+        }
+    except Exception as exc:
+        print(f"[S11_REPORT_GENERATION] Aviso: no se pudo leer timings: {exc}")
+        return {"stages": [], "total_duration_sec": None}
+
+
 def _crest_hist_worker(path: Path) -> Dict[str, Any]:
     """
     Worker para ProcessPoolExecutor: lee un WAV y calcula crest + histograma.
@@ -298,12 +326,15 @@ def main() -> None:
         "level_histogram_db": crest_and_hist.get("level_histogram_db"),
     }
 
+    pipeline_timings = _load_pipeline_timings(contract_id)
+
     report: Dict[str, Any] = {
         "pipeline_version": PIPELINE_VERSION,
         "generated_at_utc": datetime.datetime.utcnow().isoformat(timespec="seconds") + "Z",
         "style_preset": style_preset,
         "stages": stages_report,
         "final_metrics": final_metrics,
+        "pipeline_durations": pipeline_timings,
     }
 
     # 6) Envolver todo en la estructura de análisis estándar

@@ -1,8 +1,12 @@
 from __future__ import annotations
 
 import sys
+import os
 import json
-import subprocess
+import time
+import importlib.util
+import uuid
+import datetime
 from pathlib import Path
 from typing import List, Optional
 
@@ -23,6 +27,67 @@ MIXDOWN_STAGES = {
 # La rellena pipeline.run_pipeline / run_pipeline_for_job con la lista
 # de contract_ids que realmente se van a ejecutar para el job actual.
 ACTIVE_CONTRACT_SEQUENCE: Optional[List[str]] = None
+TIMINGS_FILENAME = "pipeline_timings.json"
+
+
+def _get_job_temp_root(create: bool = False) -> Path:
+    """
+    Raiz temporal del job (respeta MIX_TEMP_ROOT y MIX_JOB_ID).
+    Copia la logica de utils.analysis_utils pero sin dependencias
+    para que stage.py pueda ejecutarse como script suelto.
+    """
+    temp_root_env = os.environ.get("MIX_TEMP_ROOT")
+    job_id_env = os.environ.get("MIX_JOB_ID")
+    project_root = Path(__file__).resolve().parents[2]  # .../backend
+
+    if temp_root_env:
+        base = Path(temp_root_env)
+    elif job_id_env:
+        base = project_root / "temp" / job_id_env
+    else:
+        base = project_root / "temp"
+
+    if create:
+        base.mkdir(parents=True, exist_ok=True)
+
+    return base
+
+
+def _record_stage_timing(stage_id: str, duration_sec: float) -> None:
+    """
+    Guarda/actualiza un JSON con la duracion por etapa y el total acumulado.
+    """
+    job_root = _get_job_temp_root(create=True)
+    timings_path = job_root / TIMINGS_FILENAME
+
+    data: dict = {"stages": [], "total_duration_sec": 0.0}
+    if timings_path.exists():
+        try:
+            with timings_path.open("r", encoding="utf-8") as f:
+                existing = json.load(f)
+            if isinstance(existing, dict):
+                data.update(existing)
+        except Exception:
+            data = {"stages": [], "total_duration_sec": 0.0}
+
+    stages = data.get("stages", [])
+    if not isinstance(stages, list):
+        stages = []
+
+    stages = [s for s in stages if s.get("contract_id") != stage_id]
+    stages.append(
+        {"contract_id": stage_id, "duration_sec": round(float(duration_sec), 3)}
+    )
+    data["stages"] = stages
+    data["total_duration_sec"] = round(
+        sum(s.get("duration_sec", 0.0) for s in stages), 3
+    )
+    data["generated_at_utc"] = (
+        datetime.datetime.utcnow().isoformat(timespec="seconds") + "Z"
+    )
+
+    with timings_path.open("w", encoding="utf-8") as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
 
 
 def set_active_contract_sequence(ordered_contract_ids: Optional[List[str]]) -> None:
@@ -41,10 +106,45 @@ def set_active_contract_sequence(ordered_contract_ids: Optional[List[str]]) -> N
         ACTIVE_CONTRACT_SEQUENCE = None
 
 
-def _run_python_script(script_path: Path, *args: str) -> int:
-    cmd = [sys.executable, str(script_path), *args]
-    result = subprocess.run(cmd)
-    return result.returncode
+def _run_script_main(script_path: Path, *args: str) -> int:
+    """
+    Ejecuta el main() de un script Python (analysis, stage o utils) en el
+    mismo proceso en lugar de lanzar un nuevo intérprete. Esto evita el
+    overhead de crear subprocesos y acelera el pipeline.
+    """
+    spec = importlib.util.spec_from_file_location(
+        f"_pipeline_{script_path.stem}_{uuid.uuid4().hex}", script_path
+    )
+    if spec is None or spec.loader is None:
+        print(f"[stage] No se pudo cargar el módulo {script_path}")
+        return 1
+
+    module = importlib.util.module_from_spec(spec)
+    old_argv = sys.argv[:]
+    sys.argv = [script_path.name, *args]
+
+    try:
+        spec.loader.exec_module(module)  # type: ignore[union-attr]
+        main_fn = getattr(module, "main", None)
+        if callable(main_fn):
+            main_fn()
+            return 0
+
+        print(f"[stage] El script {script_path} no expone main()")
+        return 1
+    except SystemExit as exc:  # scripts pueden llamar sys.exit
+        code = exc.code
+        if isinstance(code, int):
+            return code
+        return 1
+    except Exception as exc:  # pragma: no cover - logging defensivo
+        print(f"[stage] Excepción ejecutando {script_path}: {exc}", file=sys.stderr)
+        return 1
+    finally:
+        sys.argv = old_argv
+        # evitar fugas en sys.modules (no compartimos estado entre invocaciones)
+        if spec.name in sys.modules:
+            sys.modules.pop(spec.name, None)
 
 
 def _get_next_contract_id(base_dir: Path, current_contract_id: str) -> str | None:
@@ -109,6 +209,7 @@ def run_stage(stage_id: str) -> None:
     attempt = 0
 
     print(f"Running stage: {stage_id}")
+    stage_start = time.perf_counter()
 
     while attempt < MAX_RETRIES:
         attempt += 1
@@ -116,19 +217,19 @@ def run_stage(stage_id: str) -> None:
         # Para stages de mixbus/master, primero necesitamos un full_song.wav
         # actualizado a partir de los stems de este stage.
         if stage_id in MIXDOWN_STAGES:
-            _run_python_script(mixdown_script, stage_id)
+            _run_script_main(mixdown_script, stage_id)
 
         # 1) Análisis previo
-        _run_python_script(analysis_script, stage_id)
+        _run_script_main(analysis_script, stage_id)
 
         # 2) Procesamiento principal de la etapa
-        _run_python_script(stage_script, stage_id)
+        _run_script_main(stage_script, stage_id)
 
         # 3) Análisis posterior
-        _run_python_script(analysis_script, stage_id)
+        _run_script_main(analysis_script, stage_id)
 
         # 4) Validación de métricas (check_metrics_limits.py)
-        ret = _run_python_script(check_script, stage_id)
+        ret = _run_script_main(check_script, stage_id)
         success = (ret == 0)
 
         if success:
@@ -140,12 +241,15 @@ def run_stage(stage_id: str) -> None:
     # Para el resto de stages (no master), el mixdown se hace al final
     # para dejar preparado full_song.wav de este contrato.
     if stage_id not in MIXDOWN_STAGES:
-        _run_python_script(mixdown_script, stage_id)
+        _run_script_main(mixdown_script, stage_id)
 
     # Copiar stems a la carpeta del siguiente contrato de la secuencia
     next_contract_id = _get_next_contract_id(base_dir, stage_id)
     if next_contract_id is not None:
-        _run_python_script(copy_script, stage_id, next_contract_id)
+        _run_script_main(copy_script, stage_id, next_contract_id)
+
+    duration_sec = time.perf_counter() - stage_start
+    _record_stage_timing(stage_id, duration_sec)
 
 
 if __name__ == "__main__":

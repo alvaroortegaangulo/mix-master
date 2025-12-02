@@ -25,12 +25,24 @@ type StageReportEntry = {
   key_metrics?: any;
 };
 
+type StageDuration = {
+  contract_id: string;
+  duration_sec: number;
+};
+
+type PipelineDurations = {
+  stages: StageDuration[];
+  total_duration_sec: number | null;
+  generated_at_utc?: string | null;
+};
+
 type ReportCore = {
   pipeline_version: string;
   generated_at_utc: string;
   style_preset: string;
   stages: StageReportEntry[];
   final_metrics: FinalMetrics;
+  pipeline_durations?: PipelineDurations | null;
 };
 
 type ReportEnvelope = {
@@ -90,6 +102,17 @@ function formatUtcToLocal(iso: string | undefined | null): string {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+function formatDurationShort(seconds: number | null | undefined): string {
+  if (seconds === null || seconds === undefined || Number.isNaN(seconds)) {
+    return "N/A";
+  }
+  const total = Math.max(0, Math.round(seconds));
+  const mins = Math.floor(total / 60);
+  const secs = total % 60;
+  if (mins === 0) return `${secs}s`;
+  return `${mins}m ${secs.toString().padStart(2, "0")}s`;
 }
 
 // --- Comentarios "humanizados" para las métricas finales ---
@@ -286,6 +309,19 @@ export function FinalReportModal({ jobId, isOpen, onClose }: FinalReportModalPro
   const stylePreset = coreReport?.style_preset ?? reportEnvelope?.style_preset;
   const generatedAt = coreReport?.generated_at_utc;
   const stages = coreReport?.stages ?? [];
+  const pipelineDurations = coreReport?.pipeline_durations ?? null;
+  const sortedDurations = useMemo(() => {
+    if (!pipelineDurations?.stages) return [];
+    const order = stages.map((s) => s.contract_id);
+    return [...pipelineDurations.stages].sort((a, b) => {
+      const ia = order.indexOf(a.contract_id);
+      const ib = order.indexOf(b.contract_id);
+      if (ia === -1 && ib === -1) return 0;
+      if (ia === -1) return 1;
+      if (ib === -1) return -1;
+      return ia - ib;
+    });
+  }, [pipelineDurations, stages]);
 
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/70 p-4">
@@ -384,8 +420,73 @@ export function FinalReportModal({ jobId, isOpen, onClose }: FinalReportModalPro
                       límites del master.
                     </p>
                   </div>
+                  {pipelineDurations && (
+                    <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-[11px] text-amber-50">
+                      <p className="font-semibold uppercase tracking-wide text-amber-200">
+                        Tiempo del pipeline
+                      </p>
+                      <p className="mt-0.5 text-amber-50">
+                        Duración total:{" "}
+                        <span className="font-semibold">
+                          {formatDurationShort(pipelineDurations.total_duration_sec)}
+                        </span>
+                      </p>
+                      {sortedDurations.length > 0 && (
+                        <p className="mt-1 text-amber-50/90">
+                          Más lento:{" "}
+                          {sortedDurations
+                            .slice(0, 3)
+                            .map((d) => {
+                              const name =
+                                stages.find((s) => s.contract_id === d.contract_id)?.name ||
+                                d.contract_id;
+                              return `${name}: ${formatDurationShort(d.duration_sec)}`;
+                            })
+                            .join(" • ")}
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
               </section>
+
+              {pipelineDurations && (
+                <section className="rounded-xl border border-slate-800 bg-slate-900/40 p-4">
+                  <h3 className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                    Duración por etapa
+                  </h3>
+                  <p className="mt-1 text-xs text-slate-300">
+                    Tiempo total del pipeline:{" "}
+                    <span className="font-semibold text-slate-100">
+                      {formatDurationShort(pipelineDurations.total_duration_sec)}
+                    </span>
+                  </p>
+                  {sortedDurations.length > 0 ? (
+                    <ul className="mt-3 space-y-1 text-xs text-slate-200">
+                      {sortedDurations.map((d) => {
+                        const stageName =
+                          stages.find((s) => s.contract_id === d.contract_id)?.name ||
+                          d.contract_id;
+                        return (
+                          <li
+                            key={d.contract_id}
+                            className="flex items-center justify-between rounded-lg border border-slate-800/70 bg-slate-950/40 px-3 py-2"
+                          >
+                            <span className="font-medium text-slate-100">{stageName}</span>
+                            <span className="font-mono text-slate-200">
+                              {formatDurationShort(d.duration_sec)}
+                            </span>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  ) : (
+                    <p className="mt-2 text-xs text-slate-400">
+                      No se pudo registrar la duración de las etapas.
+                    </p>
+                  )}
+                </section>
+              )}
 
               {/* Métricas finales */}
               <section className="grid gap-4 md:grid-cols-2">
