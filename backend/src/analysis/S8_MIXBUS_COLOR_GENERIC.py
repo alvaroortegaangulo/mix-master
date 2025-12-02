@@ -126,22 +126,21 @@ def main() -> None:
     sr_mix: int | None = None
 
     if full_song_path.exists():
-        max_workers = min(4, os.cpu_count() or 1)
-        result = list(map())[0]
+        result = _analyze_mixbus_color(full_song_path)
 
-        if result["error"] is not None:
+        if result['error'] is not None:
             # Error al leer/procesar
-            print(result["error"])
+            print(result['error'])
         else:
-            sr_mix = result["sr_mix"]
-            pre_true_peak_dbtp = result["pre_true_peak_dbtp"]
-            pre_rms_dbfs = result["pre_rms_dbfs"]
-            noise_floor_dbfs = result["noise_floor_dbfs"]
+            sr_mix = result['sr_mix']
+            pre_true_peak_dbtp = result['pre_true_peak_dbtp']
+            pre_rms_dbfs = result['pre_rms_dbfs']
+            noise_floor_dbfs = result['noise_floor_dbfs']
 
             print(
                 f"[S8_MIXBUS_COLOR_GENERIC] full_song.wav analizado (sr={sr_mix}). "
                 f"true_peak={pre_true_peak_dbtp:.2f} dBTP, RMS={pre_rms_dbfs:.2f} dBFS, "
-                f"noise_floor≈{noise_floor_dbfs:.2f} dBFS."
+                f"noise_floor={noise_floor_dbfs:.2f} dBFS."
             )
     else:
         print(
