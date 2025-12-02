@@ -5,7 +5,7 @@ from __future__ import annotations
 import sys
 import os
 from pathlib import Path
-from typing import Dict, Any, Tuple
+from typing import Dict, Any
 
 # --- hack sys.path para ejecutar como script suelto desde stage.py ---
 THIS_DIR = Path(__file__).resolve().parent
@@ -16,6 +16,13 @@ if str(SRC_DIR) not in sys.path:
 import json  # noqa: E402
 import numpy as np  # noqa: E402
 import soundfile as sf  # noqa: E402
+
+from pedalboard import (  # noqa: E402
+    Pedalboard,
+    LowShelfFilter,
+    HighShelfFilter,
+    PeakFilter,
+)
 
 from utils.analysis_utils import get_temp_dir  # noqa: E402
 from utils.tonal_balance_utils import (      # noqa: E402
@@ -43,97 +50,143 @@ def load_analysis(contract_id: str) -> Dict[str, Any]:
 
 
 # ---------------------------------------------------------------------
-# EQ multibanda FFT (por bandas de get_freq_bands)
+# EQ multibanda con Pedalboard
 # ---------------------------------------------------------------------
 
-def _eq_channel_worker(
-    args: Tuple[np.ndarray, int, Dict[str, float], Any]
-) -> np.ndarray:
-    """
-    """
-    x, sr, eq_gains_db, bands = args
-    return _apply_multiband_eq_fft_channel(x, sr, eq_gains_db, bands)
-
-
-def _apply_multiband_eq_fft_channel(
-    x: np.ndarray,
-    sr: int,
+def _build_pedalboard_eq(
     eq_gains_db: Dict[str, float],
-    bands: Any,
-) -> np.ndarray:
+    sr: int,
+) -> Pedalboard:
     """
-    Aplica la EQ multibanda a un canal mono (1D) usando FFT.
+    Construye una Pedalboard con una cadena de filtros
+    (LowShelf / Peak / HighShelf) a partir de:
+
+      - eq_gains_db: dict band_id -> gain_db
+      - get_freq_bands(): define rangos de frecuencia por banda
+
+    La idea es aproximar el comportamiento del EQ por bandas
+    FFT original usando:
+
+      - LowShelfFilter para la primera banda (graves)
+      - HighShelfFilter para la última banda (agudos)
+      - PeakFilter para las bandas intermedias
     """
-    n = x.size
-    if n == 0 or sr <= 0:
-        return x
+    bands = get_freq_bands()
+    nyquist = float(sr) / 2.0 if sr > 0 else None
 
-    spec = np.fft.rfft(x)
-    freqs = np.fft.rfftfreq(n, 1.0 / float(sr))
+    plugins = []
 
-    gains = np.ones_like(spec.real, dtype=np.float32)
+    if not bands:
+        return Pedalboard([])
 
-    for b in bands:
-        band_id = b["id"]
-        f_min = b["f_min"]
-        f_max = b["f_max"]
+    n_bands = len(bands)
+
+    for idx, band in enumerate(bands):
+        band_id = band.get("id")
+        if band_id is None:
+            continue
+
         gain_db = float(eq_gains_db.get(band_id, 0.0))
-
+        # Evitar filtros inútiles
         if abs(gain_db) < 1e-3:
             continue
 
-        if f_min >= sr / 2.0:
+        f_min = float(band.get("f_min", 0.0))
+        f_max = float(band.get("f_max", 0.0))
+
+        # Clamp básico al rango útil
+        if nyquist is not None and nyquist > 0.0:
+            f_min = max(0.0, min(f_min, nyquist))
+            f_max = max(0.0, min(f_max, nyquist))
+
+        if f_max <= 0.0:
             continue
 
-        idx = (freqs >= f_min) & (freqs < min(f_max, sr / 2.0))
-        if not np.any(idx):
+        # Banda inferior -> LowShelf
+        if idx == 0 or f_min <= 0.0:
+            cutoff = max(20.0, f_max if nyquist is None else min(f_max, nyquist))
+            q = 0.707  # Q moderada
+            plugins.append(
+                LowShelfFilter(
+                    cutoff_frequency_hz=cutoff,
+                    gain_db=gain_db,
+                    q=q,
+                )
+            )
             continue
 
-        g_lin = 10.0 ** (gain_db / 20.0)
-        gains[idx] *= g_lin
+        # Banda superior -> HighShelf
+        if idx == n_bands - 1 or (nyquist is not None and f_max >= nyquist * 0.9):
+            cutoff = max(20.0, f_min if nyquist is None else min(f_min, nyquist))
+            q = 0.707
+            plugins.append(
+                HighShelfFilter(
+                    cutoff_frequency_hz=cutoff,
+                    gain_db=gain_db,
+                    q=q,
+                )
+            )
+            continue
 
-    spec *= gains.astype(spec.dtype)
-    y = np.fft.irfft(spec, n=n)
+        # Bandas intermedias -> PeakFilter centrado en la banda
+        # Centro geométrico para evitar sesgo hacia f_max
+        if f_min <= 0.0:
+            center = f_max
+        else:
+            center = (f_min * f_max) ** 0.5
 
-    # Clamp suave para evitar picos muy extremos
-    y = np.clip(y, -1.5, 1.5)
-    return y.astype(np.float32)
+        if nyquist is not None:
+            center = max(20.0, min(center, nyquist))
+
+        bandwidth = max(f_max - f_min, 1.0)
+        # Q aproximado: ratio centro / ancho
+        q = float(center / bandwidth) if bandwidth > 0.0 else 1.0
+        q = max(0.1, min(q, 4.0))  # valores razonables
+
+        plugins.append(
+            PeakFilter(
+                cutoff_frequency_hz=center,
+                gain_db=gain_db,
+                q=q,
+            )
+        )
+
+    return Pedalboard(plugins)
 
 
-def _apply_multiband_eq_fft(
+def _apply_multiband_eq_pedalboard(
     audio: np.ndarray,
     sr: int,
     eq_gains_db: Dict[str, float],
 ) -> np.ndarray:
     """
-    Aplica un EQ multibanda muy simple en el dominio de la frecuencia
-    usando una ganancia constante por banda (step-wise).
+    Aplica un EQ multibanda usando Pedalboard.
 
     - audio: np.ndarray (N,) o (N, C)
     - eq_gains_db: dict band_id -> gain_db a aplicar en esa banda
-
     """
-    bands = get_freq_bands()
     x = np.asarray(audio, dtype=np.float32)
 
-    if x.ndim == 1:
-        return _apply_multiband_eq_fft_channel(x, sr, eq_gains_db, bands)
+    if x.size == 0 or sr <= 0:
+        return x
 
-    if x.ndim == 2:
-        n_ch = x.shape[1]
-        tasks: list[Tuple[np.ndarray, int, Dict[str, float], Any]] = [
-            (x[:, ch].copy(), sr, eq_gains_db, bands)  # copia para aislar memoria
-            for ch in range(n_ch)
-        ]
+    if not eq_gains_db or all(abs(v) < 1e-3 for v in eq_gains_db.values()):
+        # Sin ganancia relevante, devolvemos tal cual
+        return x
 
-        results = [_eq_channel_worker(task) for task in tasks]
+    board = _build_pedalboard_eq(eq_gains_db, sr)
 
-        out = np.zeros_like(x, dtype=np.float32)
-        for ch, y_ch in enumerate(results):
-            out[:, ch] = y_ch
-        return out
+    if len(board) == 0:
+        return x
 
-    raise ValueError("Audio debe ser 1D o 2D.")
+    # Pedalboard detecta automáticamente si la forma es (N,) o (N, C)
+    y = board(x, sr)
+
+    y = np.asarray(y, dtype=np.float32)
+    # Clamp suave para evitar picos muy extremos (igual que antes)
+    y = np.clip(y, -1.5, 1.5)
+
+    return y
 
 
 # ---------------------------------------------------------------------
@@ -148,7 +201,7 @@ def main() -> None:
       - Si el error RMS de tonal balance ya está por debajo del umbral,
         actúa como no-op (idempotente).
       - Si no, calcula ganancia por banda (limitada por contrato) y aplica
-        un EQ multibanda en full_song.wav.
+        un EQ multibanda en full_song.wav usando Pedalboard.
       - Recalcula el tonal balance y guarda métricas en
         tonal_metrics_S7_MIXBUS_TONAL_BALANCE.json para el check.
     """
@@ -242,14 +295,14 @@ def main() -> None:
     for b_id, g in eq_gains_db.items():
         print(f"  - {b_id}: {g:+.2f} dB")
 
-    # 4) Leer full_song y aplicar EQ
+    # 4) Leer full_song y aplicar EQ con Pedalboard
     y, sr = sf.read(full_song_path, always_2d=False)
     if not isinstance(y, np.ndarray):
         y = np.asarray(y, dtype=np.float32)
     else:
         y = y.astype(np.float32)
 
-    y_eq = _apply_multiband_eq_fft(y, sr, eq_gains_db)
+    y_eq = _apply_multiband_eq_pedalboard(y, sr, eq_gains_db)
 
     # Guardar mixbus ecualizado
     sf.write(full_song_path, y_eq, sr)
