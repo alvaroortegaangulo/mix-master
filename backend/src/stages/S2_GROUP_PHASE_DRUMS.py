@@ -1,5 +1,3 @@
-# C:\mix-master\backend\src\stages\S2_GROUP_PHASE_DRUMS.py
-
 from __future__ import annotations
 
 import sys
@@ -13,6 +11,8 @@ if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
 import json  # noqa: E402
+import os  # noqa: E402
+
 import numpy as np  # noqa: E402
 import soundfile as sf  # noqa: E402
 
@@ -36,18 +36,37 @@ def load_analysis(contract_id: str) -> Dict[str, Any]:
     return data
 
 
+# -------------------------------------------------------------------
+# -------------------------------------------------------------------
 def _process_stem_worker(
     args: Tuple[str, Dict[str, Any], float]
 ) -> bool:
     """
-    Aplica el shift temporal y posible flip de polaridad a un stem
-    de familia Drums (excepto la referencia).
+    Aplica alineación de fase/tiempo y posible flip de polaridad
+    a un único stem de familia Drums (excepto la referencia).
 
-    Devuelve True si realmente se ha procesado el stem.
+    Convención (coherente con utils.phase_utils.estimate_best_lag_and_corr):
+
+      - El análisis devuelve 'lag_samples' TAL Y COMO SE MIDE:
+          lag > 0  => el candidato está retrasado respecto a la referencia.
+          lag < 0  => el candidato está adelantado.
+
+      - Para corregirlo, debemos aplicar un shift de signo opuesto:
+          shift_samples = -lag_samples
+
+      - apply_time_shift_samples implementa:
+          new_y[n] = y[n - lag_samples]
+
+        de forma que:
+          * lag_samples > 0 desplaza el audio hacia ADELANTE (más tarde).
+          * lag_samples < 0 desplaza el audio hacia ATRÁS (antes).
+
+    Devuelve True si el stem ha sido procesado, False en caso contrario.
     """
     temp_dir_str, stem_info, min_shift_ms = args
     temp_dir = Path(temp_dir_str)
 
+    # Solo procesamos stems de familia Drums que no son referencia
     if not stem_info.get("in_family", False):
         return False
     if stem_info.get("is_reference", False):
@@ -58,7 +77,10 @@ def _process_stem_worker(
         return False
 
     file_path = temp_dir / file_name
+    if not file_path.exists():
+        return False
 
+    # Datos del análisis
     lag_samples = stem_info.get("lag_samples", 0.0)
     lag_ms = stem_info.get("lag_ms", 0.0)
     use_flip = bool(stem_info.get("use_polarity_flip", False))
@@ -67,45 +89,41 @@ def _process_stem_worker(
         lag_ms = float(lag_ms)
         lag_samples = float(lag_samples)
     except (TypeError, ValueError):
-        print(
-            f"[S2_GROUP_PHASE_DRUMS] {file_name}: lag inválido "
-            f"(lag_ms={lag_ms!r}, lag_samples={lag_samples!r}); se omite."
-        )
         return False
 
-    # Para evitar micro‐ajustes ridículos y preservar idempotencia:
+    # Para evitar micro-ajustes ridículos y mantener idempotencia:
+    # si el lag es muy pequeño y no hay flip, no tocamos.
     if abs(lag_ms) < min_shift_ms and not use_flip:
         return False
 
-    try:
-        data, sr = sf.read(file_path, always_2d=False)
-    except Exception as e:
-        print(f"[S2_GROUP_PHASE_DRUMS] {file_name}: error leyendo audio: {e}")
-        return False
-
+    # Leer audio
+    data, sr = sf.read(file_path, always_2d=False)
     if not isinstance(data, np.ndarray):
         data = np.array(data, dtype=np.float32)
     else:
         data = data.astype(np.float32)
 
     if data.size == 0:
-        print(f"[S2_GROUP_PHASE_DRUMS] {file_name}: archivo vacío; se omite.")
         return False
 
-    # El análisis devuelve el lag que maximiza correlación;
-    # para corregirlo debemos aplicar el shift con signo contrario.
+    # Shift a aplicar ES EL OPUESTO del lag medido
     shift_samples = -int(round(lag_samples))
+    shift_ms = -lag_ms  # mismo cálculo conceptual, solo para log
 
+    # Aplicar shift temporal
     shifted = apply_time_shift_samples(data, shift_samples)
 
+    # Flip de polaridad si procede
     if use_flip:
         shifted = -shifted
 
     sf.write(file_path, shifted, sr)
 
     print(
-        f"[S2_GROUP_PHASE_DRUMS] {file_name}: lag_aplicado={shift_samples} samples "
-        f"({-lag_ms:.3f} ms aprox), flip={use_flip}"
+        f"[S2_GROUP_PHASE_DRUMS] {file_name}: "
+        f"lag_inicial={lag_ms:.3f} ms, "
+        f"shift_aplicado={shift_samples} samples ({shift_ms:.3f} ms aprox), "
+        f"flip={use_flip}"
     )
 
     return True
@@ -115,8 +133,9 @@ def main() -> None:
     """
     Stage S2_GROUP_PHASE_DRUMS:
       - Lee analysis_S2_GROUP_PHASE_DRUMS.json.
-      - Aplica el shift y posible flip a los stems de familia Drums
-        (excepto la referencia).
+      - Aplica alineación de fase/tiempo y posible flip de polaridad
+        a los stems de familia Drums (excepto la referencia).
+      - Sobrescribe los archivos .wav correspondientes, procesando en serie.
     """
     if len(sys.argv) < 2:
         print("Uso: python S2_GROUP_PHASE_DRUMS.py <CONTRACT_ID>")
@@ -125,17 +144,19 @@ def main() -> None:
     contract_id = sys.argv[1]  # "S2_GROUP_PHASE_DRUMS"
 
     analysis = load_analysis(contract_id)
+
     session: Dict[str, Any] = analysis.get("session", {}) or {}
     stems: List[Dict[str, Any]] = analysis.get("stems", []) or []
 
     reference_name = session.get("reference_stem_name")
-    max_time_shift_ms = float(session.get("max_time_shift_ms", 2.0))
 
-    # Umbral mínimo para no hacer micro‐ajustes
+    # Umbral mínimo en ms para no mover si ya está prácticamente alineado
+    # (esto SOLO se usa para decidir si aplicamos shift, no se usa en el análisis).
     MIN_SHIFT_MS = 0.1
 
     temp_dir = get_temp_dir(contract_id, create=False)
 
+    # Stems candidatos: Drums no referencia
     candidate_stems: List[Dict[str, Any]] = [
         s
         for s in stems
@@ -149,11 +170,10 @@ def main() -> None:
             for stem_info in candidate_stems
         ]
 
-        results = []
+        # Procesamos en serie para mantenerlo simple y estable
         for args in args_list:
-            results.append(_process_stem_worker(args))
-
-        processed = sum(1 for r in results if r)
+            if _process_stem_worker(args):
+                processed += 1
 
     print(
         f"[S2_GROUP_PHASE_DRUMS] Stage completado. "
