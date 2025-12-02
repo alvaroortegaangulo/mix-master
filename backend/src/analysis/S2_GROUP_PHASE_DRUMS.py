@@ -354,11 +354,10 @@ def main() -> None:
             )
         )
 
-    # 7) Ejecutar análisis paralelo para candidatos de drums
+    # 7) Ejecutar análisis para candidatos de drums en serie
     if tasks:
-        max_workers = min(4, os.cpu_count() or 1)
-                    for idx_res, info_res in map(_analyze_drum_stem, tasks):
-                stems_analysis[idx_res] = info_res
+        for idx_res, info_res in map(_analyze_drum_stem, tasks):
+            stems_analysis[idx_res] = info_res
 
     # Por seguridad, rellenar cualquier hueco que pudiera quedar (no debería)
     for idx, val in enumerate(stems_analysis):
