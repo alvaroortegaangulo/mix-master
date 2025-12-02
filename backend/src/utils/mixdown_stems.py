@@ -46,53 +46,88 @@ def main() -> None:
         print(f"[mixdown_stems] No se han encontrado stems en {stage_dir}")
         return
 
-    data_list = []
     sr_ref = None
     ch_ref = None
+    valid_paths = []
 
-    # Leemos todos los stems; asumimos mismo samplerate y canales
-    # (garantizado por S0_SESSION_FORMAT). Si alguno no coincide, se omite.
+    # Leemos metadatos; asumimos mismo samplerate y canales (garantizado por S0_SESSION_FORMAT).
     for p in stem_paths:
         try:
-            data, sr = sf.read(p, always_2d=True)  # shape: (n_samples, n_channels)
+            with sf.SoundFile(p, "r") as f:
+                sr = f.samplerate
+                ch = f.channels
         except Exception as e:
             print(f"[mixdown_stems] Aviso: no se pudo leer {p}: {e}")
             continue
 
-        data = data.astype(np.float32)
-
         if sr_ref is None:
             sr_ref = sr
-            ch_ref = data.shape[1]
+            ch_ref = ch
         else:
-            if sr != sr_ref or data.shape[1] != ch_ref:
+            if sr != sr_ref or ch != ch_ref:
                 print(
                     f"[mixdown_stems] Aviso: se omite {p} por sr/canales inconsistentes "
-                    f"(sr={sr}, ch={data.shape[1]} vs ref sr={sr_ref}, ch={ch_ref})"
+                    f"(sr={sr}, ch={ch} vs ref sr={sr_ref}, ch={ch_ref})"
                 )
                 continue
 
-        data_list.append(data)
+        valid_paths.append(p)
 
-    if not data_list or sr_ref is None or ch_ref is None:
+    if not valid_paths or sr_ref is None or ch_ref is None:
         print(f"[mixdown_stems] No hay stems válidos para mixdown en {stage_dir}")
         return
 
-    max_len = max(d.shape[0] for d in data_list)
-    mix = np.zeros((max_len, ch_ref), dtype=np.float32)
+    blocksize = 65536
 
-    # Suma directa, rellenando con ceros donde falten muestras
-    for d in data_list:
-        n = d.shape[0]
-        mix[:n, :] += d
+    def _compute_peak(paths):
+        peak_val = 0.0
+        files = [sf.SoundFile(p, "r") for p in paths]
+        try:
+            while True:
+                sum_block = np.zeros((blocksize, ch_ref), dtype=np.float32)
+                max_len = 0
+                for f in files:
+                    data = f.read(blocksize, dtype="float32", always_2d=True)
+                    if data.size == 0:
+                        continue
+                    n = data.shape[0]
+                    max_len = max(max_len, n)
+                    sum_block[:n, :] += data
+                if max_len == 0:
+                    break
+                peak_val = max(peak_val, float(np.max(np.abs(sum_block[:max_len]))))
+        finally:
+            for f in files:
+                f.close()
+        return peak_val
 
-    # Evitar clipping: si excede 1.0, normalizamos
-    peak = float(np.max(np.abs(mix)))
-    if peak > 1.0 and peak > 0.0:
-        mix /= peak
+    peak_mix = _compute_peak(valid_paths)
+    if peak_mix <= 0.0:
+        peak_mix = 1.0
+    norm_gain = 1.0 / peak_mix if peak_mix > 1.0 else 1.0
 
     out_path = stage_dir / "full_song.wav"
-    sf.write(out_path, mix, sr_ref)
+    files = [sf.SoundFile(p, "r") for p in valid_paths]
+    try:
+        with sf.SoundFile(out_path, "w", samplerate=sr_ref, channels=ch_ref, subtype="FLOAT") as out_f:
+            while True:
+                sum_block = np.zeros((blocksize, ch_ref), dtype=np.float32)
+                max_len = 0
+                for f in files:
+                    data = f.read(blocksize, dtype="float32", always_2d=True)
+                    if data.size == 0:
+                        continue
+                    n = data.shape[0]
+                    max_len = max(max_len, n)
+                    sum_block[:n, :] += data
+                if max_len == 0:
+                    break
+                if norm_gain != 1.0:
+                    sum_block[:max_len, :] *= norm_gain
+                out_f.write(sum_block[:max_len, :])
+    finally:
+        for f in files:
+            f.close()
 
     print(f"[mixdown_stems] Mixdown completado en: {out_path}")
 

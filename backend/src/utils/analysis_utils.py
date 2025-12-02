@@ -169,54 +169,62 @@ def compute_peak_dbfs(mono: np.ndarray) -> float:
 
 def compute_mixbus_peak_dbfs(stem_paths: List[Path]) -> float:
     """
-    Calcula el pico máximo en dBFS de la suma unity de todos los stems.
+    Calcula el pico m?ximo en dBFS de la suma unity de todos los stems.
 
-    - Asume mismo samplerate y nº de canales (garantizado por S0_SESSION_FORMAT).
-    - Si detecta stems con sr o canales distintos, los omite con un aviso.
-    - Si no hay stems válidos, devuelve -inf.
+    - Asume mismo samplerate y n? de canales (garantizado por S0_SESSION_FORMAT).
+    - Si detecta stems con sr o canales distintos, los omite.
+    - Si no hay stems v?lidos, devuelve -inf.
     """
     if not stem_paths:
         return float("-inf")
 
-    data_list: List[np.ndarray] = []
     sr_ref: Optional[int] = None
     ch_ref: Optional[int] = None
+    valid_paths: List[Path] = []
 
     for p in stem_paths:
         try:
-            data, sr = sf.read(p, always_2d=True)  # (n_samples, n_channels)
+            with sf.SoundFile(p, "r") as f:
+                sr = f.samplerate
+                ch = f.channels
         except Exception:
-            # En caso de error de lectura, simplemente se omite
             continue
-
-        data = data.astype(np.float32)
 
         if sr_ref is None:
             sr_ref = sr
-            ch_ref = data.shape[1]
+            ch_ref = ch
         else:
-            # Verificar consistencia básica
-            if sr != sr_ref or data.shape[1] != ch_ref:
-                # Inconsistente: se omite este stem
+            if sr != sr_ref or ch != ch_ref:
                 continue
+        valid_paths.append(p)
 
-        data_list.append(data)
-
-    if not data_list or ch_ref is None:
+    if not valid_paths or ch_ref is None:
         return float("-inf")
 
-    max_len = max(d.shape[0] for d in data_list)
-    mix = np.zeros((max_len, ch_ref), dtype=np.float32)
+    blocksize = 65536
+    peak_val = 0.0
+    files = [sf.SoundFile(p, "r") for p in valid_paths]
+    try:
+        while True:
+            sum_block = np.zeros((blocksize, ch_ref), dtype=np.float32)
+            max_len = 0
+            for f in files:
+                data = f.read(blocksize, dtype="float32", always_2d=True)
+                if data.size == 0:
+                    continue
+                n = data.shape[0]
+                max_len = max(max_len, n)
+                sum_block[:n, :] += data
+            if max_len == 0:
+                break
+            peak_val = max(peak_val, float(np.max(np.abs(sum_block[:max_len]))))
+    finally:
+        for f in files:
+            f.close()
 
-    for d in data_list:
-        n = d.shape[0]
-        mix[:n, :] += d
-
-    peak = float(np.max(np.abs(mix)))
-    if peak <= 0.0:
+    if peak_val <= 0.0:
         return float("-inf")
-
-    return float(20.0 * np.log10(peak))
+    return float(20.0 * np.log10(peak_val))
 
 
 def compute_integrated_loudness_lufs(mono: np.ndarray, sr: int) -> float:
