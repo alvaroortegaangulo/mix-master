@@ -7,6 +7,7 @@ import time
 import importlib.util
 import uuid
 import datetime
+import subprocess
 from pathlib import Path
 from typing import List, Optional
 
@@ -88,6 +89,26 @@ def _record_stage_timing(stage_id: str, duration_sec: float) -> None:
 
     with timings_path.open("w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
+
+
+def _ensure_analysis_file(stage_id: str, analysis_script: Path) -> None:
+    """
+    Garantiza que exista analysis_<stage_id>.json; si no, re-ejecuta el
+    análisis vía subprocess (fallback).
+    """
+    temp_dir = _get_job_temp_root(create=True) / stage_id
+    analysis_path = temp_dir / f"analysis_{stage_id}.json"
+    if analysis_path.exists():
+        return
+
+    print(f"[stage] analysis_{stage_id}.json no encontrado, reintentando análisis vía subprocess...")
+    try:
+        subprocess.run(
+          [sys.executable, str(analysis_script), stage_id],
+          check=False,
+        )
+    except Exception as exc:
+        print(f"[stage] Error al reintentar análisis de {stage_id}: {exc}")
 
 
 def set_active_contract_sequence(ordered_contract_ids: Optional[List[str]]) -> None:
@@ -247,6 +268,9 @@ def run_stage(stage_id: str) -> None:
     next_contract_id = _get_next_contract_id(base_dir, stage_id)
     if next_contract_id is not None:
         _run_script_main(copy_script, stage_id, next_contract_id)
+
+    # Asegurar que el análisis existe (fallback a subprocess si falta)
+    _ensure_analysis_file(stage_id, analysis_script)
 
     duration_sec = time.perf_counter() - stage_start
     _record_stage_timing(stage_id, duration_sec)
