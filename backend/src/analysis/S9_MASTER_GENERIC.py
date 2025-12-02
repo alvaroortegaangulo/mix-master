@@ -110,8 +110,7 @@ def main() -> None:
     sr_mix: int | None = None
 
     if full_song_path.exists():
-        max_workers = min(4, os.cpu_count() or 1)
-        result = list(map())[0]
+        result = _analyze_master(full_song_path)
 
         if result["error"] is not None:
             # Error al leer/procesar
@@ -132,7 +131,6 @@ def main() -> None:
             f"[S9_MASTER_GENERIC] Aviso: no existe {full_song_path}, "
             "no se puede analizar el mastering."
         )
-
     session_state: Dict[str, Any] = {
         "contract_id": contract_id,
         "stage_id": stage_id,
