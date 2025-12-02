@@ -37,9 +37,9 @@ type StyleDoc = {
 
 const STYLE_DOCS: Record<string, StyleDoc> = {
   auto: {
-    label: "Auto (según material)",
+    label: "Auto (based on material)",
     description:
-      "Modo automático conservador. Usa rooms y plates cortos, envíos moderados y filtros agresivos en graves para evitar que la mezcla se emborrone. Es un punto de partida seguro si no se elige un estilo específico.",
+      "Conservative automatic mode. Uses short rooms/plates, moderate sends and aggressive low-cut to avoid muddy mixes. Safe default if no style is chosen.",
     buses: {},
   },
 };
@@ -57,8 +57,7 @@ export function SpaceDepthStylePanel({ buses, value, onChange }: Props) {
             Space / Depth by bus
           </h3>
           <p className="mt-1 text-[11px] text-amber-200">
-            Asigna un estilo de reverb/espacio a cada bus familiar para guiar las
-            etapas posteriores.
+            Assign a reverb/space style per bus family to guide later stages.
           </p>
         </div>
         <button
@@ -107,12 +106,10 @@ export function SpaceDepthStylePanel({ buses, value, onChange }: Props) {
       {showDocs && (
         <div className="mt-3 rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-[11px] text-amber-100">
           <p className="font-semibold uppercase tracking-wide text-amber-200">
-            Referencias rápidas
+            Quick references
           </p>
           <p className="mt-1 text-amber-50/90">
-            En modo Auto se aplican rooms/plates cortos con envíos moderados y
-            filtros agresivos en graves para evitar enmascaramiento. Selecciona
-            un estilo para forzar un espacio concreto por bus.
+            In Auto mode we apply short rooms/plates with moderate sends and strong low filtering to avoid masking. Choose a style to force a specific space per bus.
           </p>
         </div>
       )}
