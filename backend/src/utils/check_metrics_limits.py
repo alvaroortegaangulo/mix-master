@@ -3,6 +3,7 @@ from __future__ import annotations
 import sys
 import json
 from pathlib import Path
+import numpy as np
 from typing import Dict, Any, List
 
 # --- hack para poder importar utils cuando se ejecuta como script suelto ---
