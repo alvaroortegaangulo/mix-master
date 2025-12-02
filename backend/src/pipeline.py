@@ -78,6 +78,80 @@ def _run_copy_and_mixdown(src_stage: str, dst_stage: str) -> None:
     )
 
 
+def _write_session_config(stage_dir: Path, profiles_by_name: Optional[Dict[str, str]]) -> None:
+    """
+    Genera session_config.json en stage_dir con los instrument_profile
+    seleccionados en frontend. Se basa en los wav presentes en stage_dir.
+    """
+    def _load_profiles_from_work() -> Dict[str, str]:
+        """
+        Si el mapping no llega por argumento (p.ej. por cambios de API),
+        intentamos cargarlo del fichero persistido en work/stem_profiles.json.
+        """
+        work_profiles = stage_dir.parent / "work" / "stem_profiles.json"
+        if not work_profiles.exists():
+            return {}
+        try:
+            raw = json.loads(work_profiles.read_text(encoding="utf-8"))
+        except Exception:
+            return {}
+
+        mapping: Dict[str, str] = {}
+        if isinstance(raw, list):
+            for item in raw:
+                if not isinstance(item, dict):
+                    continue
+                name = str(item.get("name") or "").strip()
+                profile = str(item.get("profile") or "").strip() or "auto"
+                if name:
+                    mapping[name] = profile
+        return mapping
+
+    def _load_space_depth_bus_styles() -> Dict[str, str]:
+        """
+        Recupera estilos por bus seleccionados en frontend (Space/Depth)
+        si existen en work/space_depth_bus_styles.json.
+        """
+        path = stage_dir.parent / "work" / "space_depth_bus_styles.json"
+        if not path.exists():
+            return {}
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+            return data if isinstance(data, dict) else {}
+        except Exception:
+            return {}
+
+    try:
+        # Prioridad: mapping recibido -> fallback al persistido en work/
+        profiles_map = dict(profiles_by_name or {})
+        if not profiles_map:
+            profiles_map = _load_profiles_from_work()
+
+        space_depth_bus_styles = _load_space_depth_bus_styles()
+
+        wavs = [
+            p.name
+            for p in stage_dir.glob("*.wav")
+            if p.is_file() and p.name.lower() != "full_song.wav"
+        ]
+        stems = []
+        for name in sorted(wavs):
+            prof = profiles_map.get(name, "auto")
+            stems.append({"file_name": name, "instrument_profile": prof})
+
+        cfg = {
+            "style_preset": "Unknown",
+            "stems": stems,
+            "space_depth_bus_styles": space_depth_bus_styles,
+        }
+
+        cfg_path = stage_dir / "session_config.json"
+        cfg_path.parent.mkdir(parents=True, exist_ok=True)
+        cfg_path.write_text(json.dumps(cfg, indent=2, ensure_ascii=False), encoding="utf-8")
+    except Exception as exc:
+        logger.warning("[pipeline] No se pudo escribir session_config en %s: %s", stage_dir, exc)
+
+
 def _run_contracts_global(enabled_stage_keys: Optional[List[str]] = None) -> None:
     """
     Versión global (sin job_id) basada en contracts.json.
@@ -186,6 +260,9 @@ def run_pipeline_for_job(
         dst = s0_original_dir / src.name
         shutil.copy2(src, dst)
         logger.info("[pipeline] Copiado stem %s -> %s", src.name, dst)
+
+    # Persistir session_config con los perfiles seleccionados
+    _write_session_config(s0_original_dir, profiles_by_name)
 
     # ------------------------------------------------------------------
     # 1) Mixdown de S0_MIX_ORIGINAL (full_song.wav original)

@@ -1,0 +1,89 @@
+{
+  "contract_id": "S1_STEM_WORKING_LOUDNESS",
+  "stage_id": "S1_TECH_PREP",
+  "style_preset": "Unknown",
+  "metrics_from_contract": {
+    "use_instrument_profile_work_loudness": true
+  },
+  "limits_from_contract": {
+    "max_gain_change_db_per_pass": 6.0
+  },
+  "session": {
+    "true_peak_per_stem_target_max_dbtp": -3.0,
+    "mixbus_peak_target_max_dbfs": -6.0,
+    "max_true_peak_dbfs_measured": -6.237463199634908,
+    "mixbus_peak_dbfs_measured": -1.5229765466257537
+  },
+  "stems": [
+    {
+      "file_name": "bass.wav",
+      "file_path": "/app/temp/960b6d3dfd8b4d23a0a4046d76e86653/S1_STEM_WORKING_LOUDNESS/bass.wav",
+      "samplerate_hz": 48000,
+      "integrated_lufs": -30.999998955509312,
+      "true_peak_dbfs": -13.586315709886863,
+      "instrument_profile_requested": "Other",
+      "instrument_profile_resolved": "Other",
+      "bus_target": "Bus_Other"
+    },
+    {
+      "file_name": "bongo.wav",
+      "file_path": "/app/temp/960b6d3dfd8b4d23a0a4046d76e86653/S1_STEM_WORKING_LOUDNESS/bongo.wav",
+      "samplerate_hz": 48000,
+      "integrated_lufs": -30.999998673994476,
+      "true_peak_dbfs": -6.237463199634908,
+      "instrument_profile_requested": "Other",
+      "instrument_profile_resolved": "Other",
+      "bus_target": "Bus_Other"
+    },
+    {
+      "file_name": "guitar_riff1.wav",
+      "file_path": "/app/temp/960b6d3dfd8b4d23a0a4046d76e86653/S1_STEM_WORKING_LOUDNESS/guitar_riff1.wav",
+      "samplerate_hz": 48000,
+      "integrated_lufs": -30.999998570708687,
+      "true_peak_dbfs": -8.798789408706085,
+      "instrument_profile_requested": "Other",
+      "instrument_profile_resolved": "Other",
+      "bus_target": "Bus_Other"
+    },
+    {
+      "file_name": "guitar_riff2.wav",
+      "file_path": "/app/temp/960b6d3dfd8b4d23a0a4046d76e86653/S1_STEM_WORKING_LOUDNESS/guitar_riff2.wav",
+      "samplerate_hz": 48000,
+      "integrated_lufs": -30.99999828144635,
+      "true_peak_dbfs": -10.390155439343346,
+      "instrument_profile_requested": "Other",
+      "instrument_profile_resolved": "Other",
+      "bus_target": "Bus_Other"
+    },
+    {
+      "file_name": "guitar_rythm.wav",
+      "file_path": "/app/temp/960b6d3dfd8b4d23a0a4046d76e86653/S1_STEM_WORKING_LOUDNESS/guitar_rythm.wav",
+      "samplerate_hz": 48000,
+      "integrated_lufs": -30.999998703059713,
+      "true_peak_dbfs": -11.766726460519148,
+      "instrument_profile_requested": "Other",
+      "instrument_profile_resolved": "Other",
+      "bus_target": "Bus_Other"
+    },
+    {
+      "file_name": "kick.wav",
+      "file_path": "/app/temp/960b6d3dfd8b4d23a0a4046d76e86653/S1_STEM_WORKING_LOUDNESS/kick.wav",
+      "samplerate_hz": 48000,
+      "integrated_lufs": -30.995800883305662,
+      "true_peak_dbfs": -10.476061268771664,
+      "instrument_profile_requested": "Other",
+      "instrument_profile_resolved": "Other",
+      "bus_target": "Bus_Other"
+    },
+    {
+      "file_name": "vocal.wav",
+      "file_path": "/app/temp/960b6d3dfd8b4d23a0a4046d76e86653/S1_STEM_WORKING_LOUDNESS/vocal.wav",
+      "samplerate_hz": 48000,
+      "integrated_lufs": -30.950919859753483,
+      "true_peak_dbfs": -14.24532092848752,
+      "instrument_profile_requested": "Other",
+      "instrument_profile_resolved": "Other",
+      "bus_target": "Bus_Other"
+    }
+  ]
+}

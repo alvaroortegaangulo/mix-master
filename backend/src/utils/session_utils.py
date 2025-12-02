@@ -16,6 +16,7 @@ def load_session_config(contract_id: str) -> Dict[str, Any]:
     Devuelve:
       - style_preset: str
       - instrument_by_file: dict[file_name -> instrument_profile]
+      - space_depth_bus_styles: dict[bus_key -> style_id]
 
     Comportamiento:
       - Modo CLI (single-job):
@@ -30,12 +31,19 @@ def load_session_config(contract_id: str) -> Dict[str, Any]:
 
     style_preset = "Unknown"
     instrument_by_file: Dict[str, str] = {}
+    space_depth_bus_styles: Dict[str, str] = {}
 
     if config_path.exists():
         with config_path.open("r", encoding="utf-8") as f:
             cfg = json.load(f)
 
         style_preset = cfg.get("style_preset", "Unknown")
+
+        raw_sd = cfg.get("space_depth_bus_styles")
+        if isinstance(raw_sd, dict):
+            space_depth_bus_styles = {
+                str(k): str(v) for k, v in raw_sd.items()
+            }
 
         for stem in cfg.get("stems", []):
             if not isinstance(stem, dict):
@@ -48,6 +56,7 @@ def load_session_config(contract_id: str) -> Dict[str, Any]:
     return {
         "style_preset": style_preset,
         "instrument_by_file": instrument_by_file,
+        "space_depth_bus_styles": space_depth_bus_styles,
     }
 
 
