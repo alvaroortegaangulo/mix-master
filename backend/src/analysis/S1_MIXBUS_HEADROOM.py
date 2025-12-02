@@ -58,22 +58,20 @@ def _compute_mixbus_peak_and_lufs_parallel(
         return float("-inf"), None
 
     stem_path_strs = [str(p) for p in stem_paths]
-    max_workers = min(4, os.cpu_count() or 1)
-
     data_list = []
     sr_ref = None
     ch_ref = None
 
-    # 1) Cargar stems en paralelo
-            for data, sr in map(_load_stem_for_mix, stem_path_strs):
-            if data is None or sr is None:
-                continue
+    # 1) Cargar stems en serie
+    for data, sr in map(_load_stem_for_mix, stem_path_strs):
+        if data is None or sr is None:
+            continue
 
-            if sr_ref is None:
-                sr_ref = sr
-                ch_ref = data.shape[1]
+        if sr_ref is None:
+            sr_ref = sr
+            ch_ref = data.shape[1]
 
-            data_list.append(data)
+        data_list.append(data)
 
     if not data_list or ch_ref is None or sr_ref is None:
         return float("-inf"), None
