@@ -528,6 +528,7 @@ export function MixResultPanel({
   const [csvLoading, setCsvLoading] = useState(false);
   const [csvError, setCsvError] = useState<string | null>(null);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [showOriginal, setShowOriginal] = useState(false);
 
   const { originalFullSongUrl, fullSongUrl, jobId, metrics } = result;
 
@@ -665,33 +666,29 @@ export function MixResultPanel({
   return (
     <section className="mt-6 rounded-3xl border border-slate-800/70 bg-slate-900/80 p-6 text-slate-50 shadow-xl shadow-black/40">
       {/* Cabecera con players: original vs master */}
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="space-y-2">
         <div>
           <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-300">
-            Your AI Mix
+            {showOriginal ? "Mix original" : "AI mix & mastering (resultado)"}
           </h2>
           <p className="mt-1 text-xs text-slate-400">
-            Original mix (antes del procesamiento)
+            {showOriginal
+              ? "Original mix (antes del procesamiento)"
+              : "Escucha el resultado final tras la mezcla"}
           </p>
           <audio
             controls
-            src={originalFullSongUrl}
+            src={showOriginal ? originalFullSongUrl : fullSongUrl}
             className="mt-2 w-full rounded-lg bg-slate-800"
           />
         </div>
-        <div>
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-300">
-            AI mix &amp; mastering (resultado)
-          </h2>
-          <p className="mt-1 text-xs text-slate-400">
-            Escucha el resultado final tras la mezcla
-          </p>
-          <audio
-            controls
-            src={fullSongUrl}
-            className="mt-2 w-full rounded-lg bg-slate-800"
-          />
-        </div>
+        <button
+          type="button"
+          onClick={() => setShowOriginal((v) => !v)}
+          className="inline-flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-950/60 px-3 py-1.5 text-[11px] font-medium text-slate-100 hover:border-indigo-400 hover:bg-slate-900/80"
+        >
+          {showOriginal ? "AI mix & mastering" : "Mix Original"}
+        </button>
       </div>
 
             {/* Panel Pipeline: solo stages elegidos */}
