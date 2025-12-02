@@ -260,78 +260,78 @@ export default function HomePage() {
     S0_SESSION_FORMAT: {
       title: "Session format & routing",
       description:
-        "Normaliza samplerate/bit depth y asigna buses lógicos para empezar limpio.",
+        "Normalizes samplerate/bit depth and assigns logical buses to start clean.",
     },
     S1_STEM_DC_OFFSET: {
       title: "DC offset check",
-      description: "Detecta y corrige desplazamientos DC en cada stem.",
+      description: "Detects and fixes DC offsets on each stem.",
     },
     S1_STEM_WORKING_LOUDNESS: {
       title: "Working loudness",
       description:
-        "Iguala el nivel de trabajo por stem según su perfil de instrumento.",
+        "Matches working level per stem based on its instrument profile.",
     },
     S1_KEY_DETECTION: {
       title: "Key detection",
-      description: "Estima la tonalidad global (key + escala) del tema.",
+      description: "Estimates the song’s global key and scale.",
     },
     S1_VOX_TUNING: {
       title: "Vocal tuning",
-      description: "Afina la voz principal respetando la tonalidad detectada.",
+      description: "Tunes the lead vocal while respecting the detected key.",
     },
     S1_MIXBUS_HEADROOM: {
       title: "Mixbus headroom",
-      description: "Ajusta el headroom global para dejar espacio a procesar.",
+      description: "Adjusts global headroom to leave space for processing.",
     },
     S2_GROUP_PHASE_DRUMS: {
       title: "Phase alignment (drums)",
-      description: "Alinea fase/polaridad en el grupo de baterías/percusión.",
+      description: "Aligns phase/polarity across drums and percussion.",
     },
     S3_MIXBUS_HEADROOM: {
       title: "Mixbus headroom",
-      description: "Ajusta el headroom global para dejar espacio a procesar.",
+      description: "Adjusts global headroom to leave space for processing.",
     },
     S3_LEADVOX_AUDIBILITY: {
       title: "Lead vocal audibility",
-      description: "Equilibra la voz principal frente al mix estático.",
+      description: "Balances the lead vocal against the static mix.",
     },
     S4_STEM_HPF_LPF: {
       title: "HPF/LPF por stem",
       description:
-        "Aplica filtros pasa-altos/bajos según el perfil del instrumento.",
+        "Applies high/low-pass filters per stem based on instrument profile.",
     },
     S4_STEM_RESONANCE_CONTROL: {
       title: "Resonance control",
-      description: "Detecta y atenúa resonancias estrechas en cada stem.",
+      description: "Detects and tames narrow resonances on each stem.",
     },
     S5_STEM_DYNAMICS_GENERIC: {
       title: "Stem dynamics",
-      description: "Control dinámico genérico por pista (compresión/gate).",
+      description: "Generic per-track dynamics control (compression/gate).",
     },
     S5_LEADVOX_DYNAMICS: {
       title: "Lead vocal dynamics",
-      description: "Compresión y control de dinámica para la voz principal.",
+      description: "Compression and dynamics control for the lead vocal.",
     },
     S5_BUS_DYNAMICS_DRUMS: {
       title: "Drum bus dynamics",
-      description: "Compresión en el bus de baterías para pegada y glue.",
+      description: "Bus compression on drums for punch and glue.",
     },
     S6_BUS_REVERB_STYLE: {
       title: "Space / reverb style",
-      description: "Asigna estilos de reverb/espacio por familia de buses.",
+      description: "Assigns reverb/space styles per bus family.",
     },
     S7_MIXBUS_TONAL_BALANCE: {
       title: "Mixbus tonal balance",
-      description: "EQ broad-band para ajustar el balance tonal al estilo.",
+      description: "Broad EQ to match the tonal balance to the target style.",
     },
     S8_MIXBUS_COLOR_GENERIC: {
       title: "Mixbus color",
-      description: "Saturación/coloración suave en el mixbus para cohesión.",
+      description: "Gentle saturation/color on the mixbus for cohesion.",
     },
     S9_MASTER_GENERIC: {
       title: "Master prep",
       description:
-        "Ajuste previo de mastering (nivel y balance) antes del QC final.",
+        "Pre-master adjustment (level and balance) before final QC.",
     },
     S10_MASTER_FINAL_LIMITS: {
       title: "Master final QC",
