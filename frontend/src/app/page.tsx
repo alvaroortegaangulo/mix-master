@@ -248,6 +248,88 @@ export default function HomePage() {
      {},
   );
 
+  const HUMAN_STAGE_TEXT: Record<
+    string,
+    { title: string; description: string }
+  > = {
+    S0_SESSION_FORMAT: {
+      title: "Session format & routing",
+      description:
+        "Normaliza samplerate/bit depth y asigna buses lógicos para empezar limpio.",
+    },
+    S1_STEM_DC_OFFSET: {
+      title: "DC offset check",
+      description: "Detecta y corrige desplazamientos DC en cada stem.",
+    },
+    S1_STEM_WORKING_LOUDNESS: {
+      title: "Working loudness",
+      description:
+        "Iguala el nivel de trabajo por stem según su perfil de instrumento.",
+    },
+    S1_KEY_DETECTION: {
+      title: "Key detection",
+      description: "Estima la tonalidad global (key + escala) del tema.",
+    },
+    S1_VOX_TUNING: {
+      title: "Vocal tuning",
+      description: "Afina la voz principal respetando la tonalidad detectada.",
+    },
+    S2_GROUP_PHASE_DRUMS: {
+      title: "Phase alignment (drums)",
+      description: "Alinea fase/polaridad en el grupo de baterías/percusión.",
+    },
+    S3_MIXBUS_HEADROOM: {
+      title: "Mixbus headroom",
+      description: "Ajusta el headroom global para dejar espacio a procesar.",
+    },
+    S3_LEADVOX_AUDIBILITY: {
+      title: "Lead vocal audibility",
+      description: "Equilibra la voz principal frente al mix estático.",
+    },
+    S4_STEM_HPF_LPF: {
+      title: "HPF/LPF por stem",
+      description:
+        "Aplica filtros pasa-altos/bajos según el perfil del instrumento.",
+    },
+    S4_STEM_RESONANCE_CONTROL: {
+      title: "Resonance control",
+      description: "Detecta y atenúa resonancias estrechas en cada stem.",
+    },
+    S5_STEM_DYNAMICS_GENERIC: {
+      title: "Stem dynamics",
+      description: "Control dinámico genérico por pista (compresión/gate).",
+    },
+    S5_LEADVOX_DYNAMICS: {
+      title: "Lead vocal dynamics",
+      description: "Compresión y control de dinámica para la voz principal.",
+    },
+    S5_BUS_DYNAMICS_DRUMS: {
+      title: "Drum bus dynamics",
+      description: "Compresión en el bus de baterías para pegada y glue.",
+    },
+    S6_BUS_REVERB_STYLE: {
+      title: "Space / reverb style",
+      description: "Asigna estilos de reverb/espacio por familia de buses.",
+    },
+    S7_MIXBUS_TONAL_BALANCE: {
+      title: "Mixbus tonal balance",
+      description: "EQ broad-band para ajustar el balance tonal al estilo.",
+    },
+    S8_MIXBUS_COLOR_GENERIC: {
+      title: "Mixbus color",
+      description: "Saturación/coloración suave en el mixbus para cohesión.",
+    },
+    S9_MASTER_GENERIC: {
+      title: "Master prep",
+      description:
+        "Ajuste previo de mastering (nivel y balance) antes del QC final.",
+    },
+    S10_MASTER_FINAL_LIMITS: {
+      title: "Master final QC",
+      description: "Chequeo final de TP/LUFS/correlación con micro-ajustes.",
+    },
+  };
+
 
 useEffect(() => {
   // Limpiar temp siempre que se entra / recarga la página
@@ -589,13 +671,14 @@ useEffect(() => {
                               />
                               <div>
                                 <span className="font-semibold">
-                                  Stage {stage.index}: {stage.label}
+                                  {HUMAN_STAGE_TEXT[stage.key]?.title ??
+                                    stage.label}
                                 </span>
-                                {stage.description && (
-                                  <p className="mt-0.5 text-[11px] text-slate-400">
-                                    {stage.description}
-                                  </p>
-                                )}
+                                <p className="mt-0.5 text-[11px] text-slate-400">
+                                  {HUMAN_STAGE_TEXT[stage.key]?.description ??
+                                    stage.description ??
+                                    ""}
+                                </p>
                               </div>
                             </label>
                           ))}
