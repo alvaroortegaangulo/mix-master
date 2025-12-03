@@ -64,11 +64,13 @@ def compute_band_energies(y: np.ndarray, sr: int) -> Dict[str, float]:
             band_energies[band_id] = float("-inf")
             continue
 
-        band_power = float(np.mean(power[idx]))
+        # Usamos suma de energía en la banda (no media) para compensar
+        # el ancho de banda variable (logarítmico). Así, ruido rosa
+        # (energía constante por octava) se verá plano.
+        band_power = float(np.sum(power[idx]))
         if band_power <= 0.0:
             band_db = float("-inf")
         else:
-            # 10*log10(power) es más coherente con energía
             band_db = 10.0 * np.log10(band_power)
 
         band_energies[band_id] = band_db
