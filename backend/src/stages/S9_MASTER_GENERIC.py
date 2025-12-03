@@ -77,10 +77,15 @@ def _apply_limiter(
     pre_peak = compute_true_peak_dbfs(y_pre, oversample_factor=4)
 
     # Cadena de mastering: Gain (pre-gain) -> Limiter (ceiling)
+    # Forzamos ceiling un poco más bajo (-0.5 extra) para compensar posibles ISPs
+    # y overshoot del limitador cuando hay mucha reducción de ganancia.
+    # Si target es -1.0, pondremos -1.5, para asegurar que TP final quede <= -1.0.
+    safe_ceiling = float(ceiling_dbtp) - 0.5
+
     board = Pedalboard(
         [
             Gain(gain_db=float(pre_gain_db)),
-            Limiter(threshold_db=float(ceiling_dbtp)),
+            Limiter(threshold_db=safe_ceiling),
         ]
     )
 
@@ -202,20 +207,31 @@ def _process_master_worker(
     # 1) Calcular pre-gain para acercar LUFS al target, respetando límite de GR
     delta_lufs = target_lufs - pre_lufs  # cuánto nos gustaría subir/bajar
 
+    # Lógica mejorada: separando ganancia de volumen vs. GR del limitador.
+    # El GR del limitador es, aproximadamente: (Peak + Gain) - Ceiling.
+    # Queremos que GR <= max_limiter_gr_db.
+    # => Peak + Gain - Ceiling <= max_limiter_gr_db
+    # => Gain <= max_limiter_gr_db + Ceiling - Peak
+
     pre_gain_db = 0.0
     if delta_lufs > 0.0:
-        # Queremos subir volumen. Limitamos por GR:
-        # pre_peak + pre_gain_db - target_ceiling <= max_limiter_gr_db
         allowed_gain_by_gr = max_limiter_gr_db + target_ceiling - pre_true_peak
+
+        # Si el resultado es negativo (el peak ya viola el límite de GR sin ganancia),
+        # no podemos subir nada. Si es positivo, podemos subir hasta ahí.
+        # Pero si el peak es muy bajo, allowed_gain_by_gr podría ser enorme.
+        # Lo lógico es subir lo que pida LUFS (delta_lufs), pero sin pasarse del límite de GR.
+
         pre_gain_db = min(delta_lufs, allowed_gain_by_gr)
         pre_gain_db = max(pre_gain_db, 0.0)
     else:
-        # Si estamos por encima del target, atenuamos (no limitado por GR)
-        pre_gain_db = delta_lufs  # valor negativo
+        # Si estamos por encima del target, atenuamos
+        pre_gain_db = delta_lufs
 
     print(
         f"[S9_MASTER_GENERIC] delta_lufs={delta_lufs:+.2f} dB, "
-        f"pre_gain_db aplicado={pre_gain_db:+.2f} dB (limitado por GR máx={max_limiter_gr_db:.1f} dB)."
+        f"allowed_gain_by_gr={allowed_gain_by_gr if delta_lufs > 0 else 'N/A':.2f} dB, "
+        f"pre_gain_db aplicado={pre_gain_db:+.2f} dB."
     )
 
     # 2) Aplicar limitador con ceiling target_ceiling (Pedalboard)
