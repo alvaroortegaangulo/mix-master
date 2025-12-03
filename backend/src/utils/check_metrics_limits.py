@@ -2022,7 +2022,11 @@ def _check_S10_MASTER_FINAL_LIMITS(data: Dict[str, Any]) -> bool:
     Reglas clave:
 
       - TP_post <= true_peak_max_dbtp + TP_MARGIN.
-      - |LUFS_post - target_LUFS| <= style_lufs_tolerance + LUFS_MARGIN.
+      - LUFS_post:
+          * Si el master pre ya está razonablemente cerca del target de estilo,
+            debe seguir dentro de la banda objetivo.
+          * Si está lejos, S10 no debe cambiar el LUFS más de un pequeño delta
+            (QC neutro, no corrige loudness).
       - diff_LR_post <= max_channel_loudness_diff_db + CH_MARGIN.
       - corr_post >= correlation_min - CORR_MARGIN.
       - |trim_db_applied| <= max_output_ceiling_adjust_db + TRIM_MARGIN.
@@ -2098,6 +2102,9 @@ def _check_S10_MASTER_FINAL_LIMITS(data: Dict[str, Any]) -> bool:
     IDEM_DELTA_LRA_MAX = 0.20
     IDEM_DELTA_DIFFLR_MAX = 0.10
 
+    # Delta máximo permitido de LUFS en QC cuando el pre está fuera de estilo
+    QC_DELTA_LUFS_MAX = 0.3
+
     ok = True
 
     # 1) True peak final
@@ -2108,20 +2115,41 @@ def _check_S10_MASTER_FINAL_LIMITS(data: Dict[str, Any]) -> bool:
         )
         ok = False
 
-    # 2) LUFS final cerca del target (±0.5 LU + margen)
+    # 2) LUFS final: rango si ya estaba en estilo, o neutral si estaba lejos
     if post_lufs == float("-inf"):
         print("[S10_MASTER_FINAL_LIMITS] LUFS post no válido (inf); fracaso.")
         ok = False
     else:
         lufs_low = target_lufs - style_lufs_tol - LUFS_MARGIN
         lufs_high = target_lufs + style_lufs_tol + LUFS_MARGIN
-        if not (lufs_low <= post_lufs <= lufs_high):
-            print(
-                f"[S10_MASTER_FINAL_LIMITS] LUFS post={post_lufs:.2f} fuera de "
-                f"[{target_lufs - style_lufs_tol:.2f}, {target_lufs + style_lufs_tol:.2f}] "
-                f"(±{LUFS_MARGIN:.1f} margen)."
-            )
-            ok = False
+
+        pre_lufs_ok = (
+            pre_lufs != float("-inf")
+            and abs(pre_lufs - target_lufs) <= style_lufs_tol + LUFS_MARGIN
+        )
+
+        if pre_lufs_ok:
+            # El master ya estaba razonablemente cerca del target →
+            # exigimos mantenerlo dentro de la banda.
+            if not (lufs_low <= post_lufs <= lufs_high):
+                print(
+                    f"[S10_MASTER_FINAL_LIMITS] LUFS post={post_lufs:.2f} fuera de "
+                    f"[{target_lufs - style_lufs_tol:.2f}, {target_lufs + style_lufs_tol:.2f}] "
+                    f"(±{LUFS_MARGIN:.1f} margen) pese a que el pre ya estaba en rango."
+                )
+                ok = False
+        else:
+            # Master lejos del target → S10 no corrige loudness,
+            # sólo debe ser prácticamente neutro.
+            if pre_lufs != float("-inf"):
+                delta_lufs_qc = post_lufs - pre_lufs
+                if abs(delta_lufs_qc) > QC_DELTA_LUFS_MAX:
+                    print(
+                        f"[S10_MASTER_FINAL_LIMITS] LUFS ha cambiado demasiado en QC: "
+                        f"pre={pre_lufs:.2f}, post={post_lufs:.2f} (Δ={delta_lufs_qc:+.2f} dB) "
+                        f"> {QC_DELTA_LUFS_MAX:.2f} dB permitidos."
+                    )
+                    ok = False
 
     # 3) Diferencia de loudness L/R
     if post_diff_lr > max_ch_diff + CH_MARGIN:
@@ -2200,7 +2228,7 @@ def _check_S10_MASTER_FINAL_LIMITS(data: Dict[str, Any]) -> bool:
     if ok:
         print(
             f"[S10_MASTER_FINAL_LIMITS] OK: TP={post_tp:.2f} dBTP <= {tp_max:.2f} (+{TP_MARGIN:.1f}), "
-            f"LUFS={post_lufs:.2f} cerca de target={target_lufs:.2f} "
+            f"LUFS={post_lufs:.2f} tratado de forma coherente con el target={target_lufs:.2f} "
             f"(tol_estilo=±{style_lufs_tol:.1f} + {LUFS_MARGIN:.1f}), "
             f"diff_LR={post_diff_lr:.2f} dB <= {max_ch_diff:.2f} (+{CH_MARGIN:.1f}), "
             f"corr={post_corr:.3f} >= {corr_min:.3f} (-{CORR_MARGIN:.2f}), "
@@ -2209,6 +2237,7 @@ def _check_S10_MASTER_FINAL_LIMITS(data: Dict[str, Any]) -> bool:
         )
 
     return ok
+
 
 
 def _check_S11_REPORT_GENERATION(data: Dict[str, Any]) -> bool:
