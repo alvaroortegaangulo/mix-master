@@ -2,6 +2,7 @@ from utils.logger import logger
 # C:\mix-master\backend\src\utils\mixdown_stems.py
 
 from __future__ import annotations
+from utils.logger import logger
 
 import sys
 from pathlib import Path

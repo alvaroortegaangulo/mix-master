@@ -349,9 +349,7 @@ def main() -> None:
     with output_path.open("w", encoding="utf-8") as f:
         json.dump(session_state, f, indent=2, ensure_ascii=False)
 
-    logger.logger.info(
-        f"[S11_REPORT_GENERATION] Análisis completado. Reporte JSON: {output_path}"
-    )
+    # logger.logger.debug(f"[S11_REPORT_GENERATION] Analysis complete. JSON: {output_path}")
 
 
 if __name__ == "__main__":

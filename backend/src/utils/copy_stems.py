@@ -2,6 +2,7 @@ from utils.logger import logger
 # C:\mix-master\backend\src\utils\copy_stems.py
 
 from __future__ import annotations
+from utils.logger import logger
 
 import sys
 import shutil

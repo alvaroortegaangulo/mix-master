@@ -29,12 +29,15 @@ class PipelineLogger:
 
     def print_header(self, title: str):
         border = "=" * 60
-        self.logger.info(f"\n{CYAN}{BOLD}{border}{RESET}")
+        # Print an empty line separately to ensure prefix applies cleanly if needed
+        self.logger.info("")
+        self.logger.info(f"{CYAN}{BOLD}{border}{RESET}")
         self.logger.info(f"{CYAN}{BOLD}{title.center(60)}{RESET}")
         self.logger.info(f"{CYAN}{BOLD}{border}{RESET}")
 
     def print_section(self, title: str):
-        self.logger.info(f"\n{BLUE}{BOLD}>> {title}{RESET}")
+        self.logger.info("")
+        self.logger.info(f"{BLUE}{BOLD}>> {title}{RESET}")
 
     def print_metric(self, name: str, value: Any, target: Any = None, status: str = "INFO", details: str = ""):
         """
