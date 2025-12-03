@@ -1,6 +1,7 @@
 # C:\mix-master\backend\src\analysis\S7_MIXBUS_TONAL_BALANCE.py
 
 from __future__ import annotations
+from utils.logger import logger
 
 import sys
 from pathlib import Path
@@ -105,7 +106,7 @@ def process(context: PipelineContext, *args) -> bool:
 
         if result["error"] is not None:
             # Error al leer o procesar el mixbus
-            print(result["error"])
+            logger.logger.info(result["error"])
             band_current_db = {b["id"]: float("-inf") for b in freq_bands}
             band_target_db = style_profile
             band_error_db = {}
@@ -117,12 +118,12 @@ def process(context: PipelineContext, *args) -> bool:
             band_error_db, error_rms_db = compute_tonal_error(
                 band_current_db, band_target_db
             )
-            print(
+            logger.logger.info(
                 f"[S7_MIXBUS_TONAL_BALANCE] full_song.wav analizado (sr={sr_mix}). "
                 f"error_RMS={error_rms_db:.2f} dB."
             )
     else:
-        print(
+        logger.logger.info(
             f"[S7_MIXBUS_TONAL_BALANCE] Aviso: no existe {full_song_path}, "
             "no se puede medir el tonal balance del mixbus."
         )
@@ -155,7 +156,7 @@ def process(context: PipelineContext, *args) -> bool:
     with output_path.open("w", encoding="utf-8") as f:
         json.dump(session_state, f, indent=2, ensure_ascii=False)
 
-    print(
+    logger.logger.info(
         f"[S7_MIXBUS_TONAL_BALANCE] Análisis completado. error_RMS={error_rms_db:.2f} dB. "
         f"JSON: {output_path}"
     )
@@ -167,7 +168,7 @@ def main() -> None:
     Legacy entry point.
     """
     if len(sys.argv) < 2:
-        print("Uso: python S7_MIXBUS_TONAL_BALANCE.py <CONTRACT_ID>")
+        logger.logger.info("Uso: python S7_MIXBUS_TONAL_BALANCE.py <CONTRACT_ID>")
         sys.exit(1)
 
     contract_id = sys.argv[1]

@@ -1,6 +1,7 @@
 ﻿# C:\mix-master\backend\src\analysis\S10_MASTER_FINAL_LIMITS.py
 
 from __future__ import annotations
+from utils.logger import logger
 
 import sys
 from pathlib import Path
@@ -155,7 +156,7 @@ def main() -> None:
         python analysis/S10_MASTER_FINAL_LIMITS.py S10_MASTER_FINAL_LIMITS
     """
     if len(sys.argv) < 2:
-        print("Uso: python S10_MASTER_FINAL_LIMITS.py <CONTRACT_ID>")
+        logger.logger.info("Uso: python S10_MASTER_FINAL_LIMITS.py <CONTRACT_ID>")
         sys.exit(1)
 
     contract_id = sys.argv[1]  # "S10_MASTER_FINAL_LIMITS"
@@ -199,7 +200,7 @@ def main() -> None:
 
         if result["error"] is not None:
             # Error de lectura/procesado
-            print(result["error"])
+            logger.logger.info(result["error"])
         else:
             sr_mix = result["sr_mix"]
             true_peak_dbtp = result["true_peak_dbtp"]
@@ -210,14 +211,14 @@ def main() -> None:
             channel_diff_db = result["channel_diff_db"]
             correlation = result["correlation"]
 
-            print(
+            logger.logger.info(
                 "[S10_MASTER_FINAL_LIMITS] full_song.wav analizado (sr=" + str(sr_mix) + "). " +
                 "TP=" + f"{true_peak_dbtp:.2f}" + " dBTP, " +
                 "LUFS=" + f"{lufs_integrated:.2f}" + ", LRA=" + f"{lra:.2f}" + ". " +
                 "diff_LR=" + f"{channel_diff_db:.2f}" + " dB, corr=" + f"{correlation:.3f}" + "."
             )
     else:
-        print(
+        logger.logger.info(
             "[S10_MASTER_FINAL_LIMITS] Aviso: no existe " + str(full_song_path) + ", " +
             "no se puede analizar el master final."
         )
@@ -260,7 +261,7 @@ def main() -> None:
     with output_path.open("w", encoding="utf-8") as f:
         json.dump(session_state, f, indent=2, ensure_ascii=False)
 
-    print(
+    logger.logger.info(
         f"[S10_MASTER_FINAL_LIMITS] AnÃ¡lisis completado. JSON: {output_path}"
     )
 

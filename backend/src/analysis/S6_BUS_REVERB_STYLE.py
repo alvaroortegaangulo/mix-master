@@ -1,6 +1,7 @@
 # C:\mix-master\backend\src\analysis\S6_BUS_REVERB_STYLE.py
 
 from __future__ import annotations
+from utils.logger import logger
 
 import sys
 from pathlib import Path
@@ -176,7 +177,7 @@ def main() -> None:
         python analysis/S6_BUS_REVERB_STYLE.py S6_BUS_REVERB_STYLE
     """
     if len(sys.argv) < 2:
-        print("Uso: python S6_BUS_REVERB_STYLE.py <CONTRACT_ID>")
+        logger.logger.info("Uso: python S6_BUS_REVERB_STYLE.py <CONTRACT_ID>")
         sys.exit(1)
 
     contract_id = sys.argv[1]  # "S6_BUS_REVERB_STYLE"
@@ -204,12 +205,12 @@ def main() -> None:
         try:
             y_mix, sr_mix = sf_read_limited(full_song_path, always_2d=False)
             dry_lufs = _compute_rms_lufs_like(y_mix)
-            print(
+            logger.logger.info(
                 f"[S6_BUS_REVERB_STYLE] Mix dry (full_song.wav): "
                 f"aprox_LUFS={dry_lufs:.2f} dB."
             )
         except Exception as e:
-            print(
+            logger.logger.info(
                 f"[S6_BUS_REVERB_STYLE] Aviso: no se puede leer full_song.wav: {e}."
             )
 
@@ -237,7 +238,7 @@ def main() -> None:
     for stem_entry in results:
         log_msg = stem_entry.pop("log_msg", None)
         if log_msg:
-            print(log_msg)
+            logger.logger.info(log_msg)
         stems_analysis.append(stem_entry)
 
     session_state: Dict[str, Any] = {
@@ -259,7 +260,7 @@ def main() -> None:
     with output_path.open("w", encoding="utf-8") as f:
         json.dump(session_state, f, indent=2, ensure_ascii=False)
 
-    print(
+    logger.logger.info(
         f"[S6_BUS_REVERB_STYLE] Análisis completado para {len(stems_analysis)} stems. "
         f"JSON: {output_path}"
     )

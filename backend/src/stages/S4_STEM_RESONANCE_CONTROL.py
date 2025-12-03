@@ -1,6 +1,7 @@
 # C:\mix-master\backend\src\stages\S4_STEM_RESONANCE_CONTROL.py
 
 from __future__ import annotations
+from utils.logger import logger
 
 import sys
 from pathlib import Path
@@ -272,7 +273,7 @@ def _process_stem_worker(
         sf.write(path, audio_filt, sr)
 
         notch_str = ", ".join(log_parts)
-        print(
+        logger.logger.info(
             f"[S4_STEM_RESONANCE_CONTROL] {fname}: aplicadas {len(plugins)} notches "
             f"({notch_str})."
         )
@@ -280,7 +281,7 @@ def _process_stem_worker(
         return fname, len(plugins)
 
     except Exception as e:
-        print(f"[S4_STEM_RESONANCE_CONTROL] Error procesando {fname}: {e}")
+        logger.logger.info(f"[S4_STEM_RESONANCE_CONTROL] Error procesando {fname}: {e}")
         return fname, 0
 
 
@@ -298,7 +299,7 @@ def main() -> None:
           * max_resonant_filters_per_band (máx. resonancias aplicadas por stem).
     """
     if len(sys.argv) < 2:
-        print("Uso: python S4_STEM_RESONANCE_CONTROL.py <CONTRACT_ID>")
+        logger.logger.info("Uso: python S4_STEM_RESONANCE_CONTROL.py <CONTRACT_ID>")
         sys.exit(1)
 
     contract_id = sys.argv[1]  # "S4_STEM_RESONANCE_CONTROL"
@@ -340,7 +341,7 @@ def main() -> None:
         tasks.append((temp_dir_str, fname, notches))
 
     if not tasks:
-        print(
+        logger.logger.info(
             "[S4_STEM_RESONANCE_CONTROL] No hay stems con resonancias a procesar. "
             "Stage completado sin cambios."
         )
@@ -355,7 +356,7 @@ def main() -> None:
             stems_touched += 1
             total_notches_applied += num_notches
 
-    print(
+    logger.logger.info(
         f"[S4_STEM_RESONANCE_CONTROL] Stage completado. "
         f"stems procesados={stems_touched}, notches totales={total_notches_applied}."
     )

@@ -1,6 +1,7 @@
 # C:\mix-master\backend\src\stages\S7_MIXBUS_TONAL_BALANCE.py
 
 from __future__ import annotations
+from utils.logger import logger
 
 import sys
 import os
@@ -240,7 +241,7 @@ def process(context: PipelineContext, *args) -> bool:
     full_song_path = temp_dir / "full_song.wav"
 
     if not full_song_path.exists():
-        print(
+        logger.logger.info(
             f"[S7_MIXBUS_TONAL_BALANCE] No existe {full_song_path}; "
             f"no se puede aplicar EQ de tonal balance."
         )
@@ -267,7 +268,7 @@ def process(context: PipelineContext, *args) -> bool:
      # 2) Caso idempotente: ya está dentro de tolerancia
     MARGIN_RMS = 0.25
     if prev_error_rms <= max_tonal_error_db + MARGIN_RMS:
-        print(
+        logger.logger.info(
             f"[S7_MIXBUS_TONAL_BALANCE] error_RMS={prev_error_rms:.2f} dB "
             f"<= umbral {max_tonal_error_db:.2f} dB (+{MARGIN_RMS:.2f}); no-op."
         )
@@ -298,9 +299,9 @@ def process(context: PipelineContext, *args) -> bool:
             gain = 0.0
         eq_gains_db[band_id] = float(gain)
 
-    print("[S7_MIXBUS_TONAL_BALANCE] Ganancias de EQ por banda (dB):")
+    logger.logger.info("[S7_MIXBUS_TONAL_BALANCE] Ganancias de EQ por banda (dB):")
     for b_id, g in eq_gains_db.items():
-        print(f"  - {b_id}: {g:+.2f} dB")
+        logger.logger.info(f"  - {b_id}: {g:+.2f} dB")
 
     # 4) Leer full_song y aplicar EQ
     y, sr = sf.read(full_song_path, always_2d=False)
@@ -312,13 +313,13 @@ def process(context: PipelineContext, *args) -> bool:
     y_eq = _apply_multiband_eq_pedalboard(y, sr, eq_gains_db)
 
     sf.write(full_song_path, y_eq, sr)
-    print(f"[S7_MIXBUS_TONAL_BALANCE] EQ multibanda aplicada sobre {full_song_path.name}.")
+    logger.logger.info(f"[S7_MIXBUS_TONAL_BALANCE] EQ multibanda aplicada sobre {full_song_path.name}.")
 
     # 5) Recalcular tonal balance post-EQ
     post_band_db = compute_band_energies(y_eq, sr)
     _, post_error_rms = compute_tonal_error(post_band_db, target_band_db)
 
-    print(
+    logger.logger.info(
         f"[S7_MIXBUS_TONAL_BALANCE] error_RMS pre={prev_error_rms:.2f} dB, "
         f"post={post_error_rms:.2f} dB."
     )
@@ -345,7 +346,7 @@ def main() -> None:
     Legacy entry point.
     """
     if len(sys.argv) < 2:
-        print("Uso: python S7_MIXBUS_TONAL_BALANCE.py <CONTRACT_ID>")
+        logger.logger.info("Uso: python S7_MIXBUS_TONAL_BALANCE.py <CONTRACT_ID>")
         sys.exit(1)
 
     contract_id = sys.argv[1]
@@ -376,7 +377,7 @@ def main() -> None:
         process(ctx)
     else:
         # Fallback extremo si no pudiéramos cargar context (raro)
-        print("Error: PipelineContext not available in legacy main wrapper")
+        logger.logger.info("Error: PipelineContext not available in legacy main wrapper")
         sys.exit(1)
 
 
@@ -418,7 +419,7 @@ def _save_tonal_metrics(
     with metrics_path.open("w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
 
-    print(
+    logger.logger.info(
         f"[S7_MIXBUS_TONAL_BALANCE] Métricas de tonal balance guardadas en: {metrics_path}"
     )
 

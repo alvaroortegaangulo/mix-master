@@ -1,6 +1,7 @@
 # C:\mix-master\backend\src\stages\S5_BUS_DYNAMICS_DRUMS.py
 
 from __future__ import annotations
+from utils.logger import logger
 
 import sys
 import os
@@ -133,7 +134,7 @@ def main() -> None:
       - Guarda métricas de bus (pre/post crest, GR media/máx).
     """
     if len(sys.argv) < 2:
-        print("Uso: python S5_BUS_DYNAMICS_DRUMS.py <CONTRACT_ID>")
+        logger.logger.info("Uso: python S5_BUS_DYNAMICS_DRUMS.py <CONTRACT_ID>")
         sys.exit(1)
 
     contract_id = sys.argv[1]  # "S5_BUS_DYNAMICS_DRUMS"
@@ -164,7 +165,7 @@ def main() -> None:
     ]
 
     if not drum_stems:
-        print(
+        logger.logger.info(
             f"[S5_BUS_DYNAMICS_DRUMS] No hay stems de familia {target_family}; "
             f"no se aplica compresión de bus."
         )
@@ -181,7 +182,7 @@ def main() -> None:
         load_tasks.append((fname, str(path)))
 
     if not load_tasks:
-        print(
+        logger.logger.info(
             f"[S5_BUS_DYNAMICS_DRUMS] No hay archivos válidos para familia {target_family}; "
             f"no se aplica compresión."
         )
@@ -196,13 +197,13 @@ def main() -> None:
     # 3) Leer stems de Drums en serie
     for fname, path_str, data, sr, err in map(_load_drum_stem_worker, load_tasks):
         if err is not None or data is None or sr is None:
-            print(f"[S5_BUS_DYNAMICS_DRUMS] Aviso: no se puede leer '{fname}': {err}.")
+            logger.logger.info(f"[S5_BUS_DYNAMICS_DRUMS] Aviso: no se puede leer '{fname}': {err}.")
             continue
 
         if sr_ref is None:
             sr_ref = sr
         elif sr != sr_ref:
-            print(
+            logger.logger.info(
                 f"[S5_BUS_DYNAMICS_DRUMS] Aviso: samplerate inconsistente en {fname} "
                 f"(sr={sr}, ref={sr_ref}); se omite de la compresión de bus."
             )
@@ -222,7 +223,7 @@ def main() -> None:
         total_channels += c
 
     if not buffers or max_len == 0 or sr_ref is None:
-        print(
+        logger.logger.info(
             f"[S5_BUS_DYNAMICS_DRUMS] No hay buffers válidos para bus {target_family}; "
             f"no se aplica compresión."
         )
@@ -242,7 +243,7 @@ def main() -> None:
     bus_mono_pre = np.mean(bus_data, axis=1)
     pre_rms_db, pre_peak_db, pre_crest_db = compute_crest_factor_db(bus_mono_pre)
 
-    print(
+    logger.logger.info(
         f"[S5_BUS_DYNAMICS_DRUMS] Bus {target_family} PRE: "
         f"RMS={pre_rms_db:.2f} dBFS, peak={pre_peak_db:.2f} dBFS, "
         f"crest={pre_crest_db:.2f} dB."
@@ -259,7 +260,7 @@ def main() -> None:
     )
 
     if threshold_db is None:
-        print(
+        logger.logger.info(
             f"[S5_BUS_DYNAMICS_DRUMS] Crest={pre_crest_db:.2f} dB ya dentro de rango "
             f"o cercano a target; no se aplica compresión de bus."
         )
@@ -283,7 +284,7 @@ def main() -> None:
         bus_mono_post = np.mean(y_out, axis=1)
         post_rms_db, post_peak_db, post_crest_db = compute_crest_factor_db(bus_mono_post)
 
-        print(
+        logger.logger.info(
             f"[S5_BUS_DYNAMICS_DRUMS] Bus {target_family} POST: "
             f"RMS={post_rms_db:.2f} dBFS, peak={post_peak_db:.2f} dBFS, "
             f"crest={post_crest_db:.2f} dB, "
@@ -304,7 +305,7 @@ def main() -> None:
                 stem_data_out = stem_data_out.reshape(-1)
 
             sf.write(path, stem_data_out, sr_ref)
-            print(
+            logger.logger.info(
                 f"[S5_BUS_DYNAMICS_DRUMS] {fname}: reescrito con compresión de bus aplicada."
             )
 
@@ -338,7 +339,7 @@ def main() -> None:
             ensure_ascii=False,
         )
 
-    print(
+    logger.logger.info(
         f"[S5_BUS_DYNAMICS_DRUMS] Stage completado para familia {target_family}. "
         f"Métricas guardadas en: {metrics_path}"
     )

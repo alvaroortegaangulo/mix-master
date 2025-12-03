@@ -1,6 +1,7 @@
 # C:\mix-master\backend\src\analysis\S5_BUS_DYNAMICS_DRUMS.py
 
 from __future__ import annotations
+from utils.logger import logger
 
 import sys
 from pathlib import Path
@@ -75,7 +76,7 @@ def main() -> None:
         python analysis/S5_BUS_DYNAMICS_DRUMS.py S5_BUS_DYNAMICS_DRUMS
     """
     if len(sys.argv) < 2:
-        print("Uso: python S5_BUS_DYNAMICS_DRUMS.py <CONTRACT_ID>")
+        logger.logger.info("Uso: python S5_BUS_DYNAMICS_DRUMS.py <CONTRACT_ID>")
         sys.exit(1)
 
     contract_id = sys.argv[1]  # "S5_BUS_DYNAMICS_DRUMS"
@@ -136,7 +137,7 @@ def main() -> None:
     if drum_files:
         # Carga + mono en paralelo
         max_workers = min(4, os.cpu_count() or 1)
-            results: List[Dict[str, Any]] = [_load_drum_mono(f) for f in drum_files]
+        results: List[Dict[str, Any]] = [_load_drum_mono(f) for f in drum_files]
 
         buffers: List[np.ndarray] = []
         max_len = 0
@@ -149,7 +150,7 @@ def main() -> None:
 
             if err is not None:
                 # Mantenemos el mismo tipo de aviso que antes
-                print(err)
+                logger.logger.info(err)
                 continue
 
             if y_mono is None or sr is None:
@@ -158,7 +159,7 @@ def main() -> None:
             if sr_ref is None:
                 sr_ref = sr
             elif sr != sr_ref:
-                print(
+                logger.logger.info(
                     f"[S5_BUS_DYNAMICS_DRUMS] Aviso: samplerate inconsistente en {fname} "
                     f"(sr={sr}, ref={sr_ref}); se omite del bus."
                 )
@@ -174,18 +175,18 @@ def main() -> None:
                 bus[:n] += y_mono
 
             bus_rms_db, bus_peak_db, bus_crest_db = compute_crest_factor_db(bus)
-            print(
+            logger.logger.info(
                 f"[S5_BUS_DYNAMICS_DRUMS] Bus {target_family}: "
                 f"RMS={bus_rms_db:.2f} dBFS, peak={bus_peak_db:.2f} dBFS, "
                 f"crest={bus_crest_db:.2f} dB (stems={len(buffers)})."
             )
         else:
-            print(
+            logger.logger.info(
                 f"[S5_BUS_DYNAMICS_DRUMS] Sin buffers válidos para familia {target_family}; "
                 f"no se calcula crest."
             )
     else:
-        print(
+        logger.logger.info(
             f"[S5_BUS_DYNAMICS_DRUMS] No se han encontrado stems de familia {target_family} "
             f"en {temp_dir}."
         )
@@ -214,7 +215,7 @@ def main() -> None:
     with output_path.open("w", encoding="utf-8") as f:
         json.dump(session_state, f, indent=2, ensure_ascii=False)
 
-    print(
+    logger.logger.info(
         f"[S5_BUS_DYNAMICS_DRUMS] Análisis completado para {len(stems_analysis)} stems "
         f"(familia objetivo={target_family}, en bus={len(drum_files)}). JSON: {output_path}"
     )

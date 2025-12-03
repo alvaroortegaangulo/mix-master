@@ -1,6 +1,7 @@
 # C:\mix-master\backend\src\stages\S9_MASTER_GENERIC.py
 
 from __future__ import annotations
+from utils.logger import logger
 
 import sys
 from pathlib import Path
@@ -194,7 +195,7 @@ def _process_master_worker(
     pre_true_peak = compute_true_peak_dbfs(y, oversample_factor=4)
     pre_lufs, pre_lra = compute_lufs_and_lra(y, sr)
 
-    print(
+    logger.logger.info(
         f"[S9_MASTER_GENERIC] PRE: true_peak={pre_true_peak:.2f} dBTP, "
         f"LUFS={pre_lufs:.2f}, LRA={pre_lra:.2f}."
     )
@@ -213,7 +214,7 @@ def _process_master_worker(
         # Si estamos por encima del target, atenuamos (no limitado por GR)
         pre_gain_db = delta_lufs  # valor negativo
 
-    print(
+    logger.logger.info(
         f"[S9_MASTER_GENERIC] delta_lufs={delta_lufs:+.2f} dB, "
         f"pre_gain_db aplicado={pre_gain_db:+.2f} dB (limitado por GR máx={max_limiter_gr_db:.1f} dB)."
     )
@@ -225,7 +226,7 @@ def _process_master_worker(
     post_true_peak_lim = compute_true_peak_dbfs(y_limited, oversample_factor=4)
     post_lufs_lim, post_lra_lim = compute_lufs_and_lra(y_limited, sr)
 
-    print(
+    logger.logger.info(
         f"[S9_MASTER_GENERIC] POST-LIMITER: true_peak={post_true_peak_lim:.2f} dBTP, "
         f"LUFS={post_lufs_lim:.2f}, LRA={post_lra_lim:.2f}, "
         f"limiter_GR_max≈{limiter_gr_db:.2f} dB."
@@ -239,7 +240,7 @@ def _process_master_worker(
     clamped_delta = max(-max_width_delta, min(max_width_delta, raw_delta))
     width_factor = 1.0 + clamped_delta
 
-    print(
+    logger.logger.info(
         f"[S9_MASTER_GENERIC] target_width_style={target_width_factor_style:.2f}, "
         f"width_factor_aplicado={width_factor:.2f} (máx cambio={max_width_delta*100:.1f}%)."
     )
@@ -263,12 +264,12 @@ def _process_master_worker(
         post_true_peak = compute_true_peak_dbfs(y_ms, oversample_factor=4)
         post_lufs, post_lra = compute_lufs_and_lra(y_ms, sr)
 
-        print(
+        logger.logger.info(
             f"[S9_MASTER_GENERIC] Safety trim adicional de {trim_peak_db:+.2f} dB "
             f"para respetar ceiling {target_ceiling:.2f} dBTP con holgura."
         )
 
-    print(
+    logger.logger.info(
         f"[S9_MASTER_GENERIC] POST-FINAL: true_peak={post_true_peak:.2f} dBTP, "
         f"LUFS={post_lufs:.2f}, LRA={post_lra:.2f}, "
         f"width_ratio_pre={width_ratio_pre:.3f}, width_ratio_post={width_ratio_post:.3f}."
@@ -279,7 +280,7 @@ def _process_master_worker(
 
     # Escribir master final (sobrescribiendo full_song.wav)
     sf.write(full_song_path, y_ms, sr)
-    print(f"[S9_MASTER_GENERIC] Master final reescrito en {full_song_path}.")
+    logger.logger.info(f"[S9_MASTER_GENERIC] Master final reescrito en {full_song_path}.")
 
 
     return {
@@ -310,7 +311,7 @@ def main() -> None:
       - Recalcula métricas post y las guarda en master_metrics_S9_MASTER_GENERIC.json.
     """
     if len(sys.argv) < 2:
-        print("Uso: python S9_MASTER_GENERIC.py <CONTRACT_ID>")
+        logger.logger.info("Uso: python S9_MASTER_GENERIC.py <CONTRACT_ID>")
         sys.exit(1)
 
     contract_id = sys.argv[1]  # "S9_MASTER_GENERIC"
@@ -354,7 +355,7 @@ def main() -> None:
     full_song_path = temp_dir / "full_song.wav"
 
     if not full_song_path.exists():
-        print(
+        logger.logger.info(
             f"[S9_MASTER_GENERIC] No existe {full_song_path}; "
             "no se puede aplicar mastering."
         )
@@ -414,7 +415,7 @@ def main() -> None:
             ensure_ascii=False,
         )
 
-    print(
+    logger.logger.info(
         f"[S9_MASTER_GENERIC] Métricas de mastering guardadas en: {metrics_path}"
     )
 

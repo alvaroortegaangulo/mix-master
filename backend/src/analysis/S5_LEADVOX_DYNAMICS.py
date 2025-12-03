@@ -1,6 +1,7 @@
 # C:\mix-master\backend\src\analysis\S5_LEADVOX_DYNAMICS.py
 
 from __future__ import annotations
+from utils.logger import logger
 
 import sys
 from pathlib import Path
@@ -97,7 +98,7 @@ def main() -> None:
         python analysis/S5_LEADVOX_DYNAMICS.py S5_LEADVOX_DYNAMICS
     """
     if len(sys.argv) < 2:
-        print("Uso: python S5_LEADVOX_DYNAMICS.py <CONTRACT_ID>")
+        logger.logger.info("Uso: python S5_LEADVOX_DYNAMICS.py <CONTRACT_ID>")
         sys.exit(1)
 
     contract_id = sys.argv[1]  # "S5_LEADVOX_DYNAMICS"
@@ -153,7 +154,7 @@ def main() -> None:
 
         if err is not None:
             # Error de lectura
-            print(err)
+            logger.logger.info(err)
             continue
 
         # Solo contamos como lead si hay métricas válidas
@@ -165,12 +166,12 @@ def main() -> None:
             continue
 
         if is_lead:
-            print(
+            logger.logger.info(
                 f"[S5_LEADVOX_DYNAMICS] LEAD {fname}: "
                 f"RMS={rms_db:.2f} dBFS, peak={peak_db:.2f} dBFS, crest={crest_db:.2f} dB."
             )
         else:
-            print(
+            logger.logger.info(
                 f"[S5_LEADVOX_DYNAMICS] {fname}: "
                 f"RMS={rms_db:.2f} dBFS, peak={peak_db:.2f} dBFS, crest={crest_db:.2f} dB."
             )
@@ -196,7 +197,7 @@ def main() -> None:
     with output_path.open("w", encoding="utf-8") as f:
         json.dump(session_state, f, indent=2, ensure_ascii=False)
 
-    print(
+    logger.logger.info(
         f"[S5_LEADVOX_DYNAMICS] Análisis completado para {len(stems_analysis)} stems "
         f"(lead_vocals={n_lead}). JSON: {output_path}"
     )

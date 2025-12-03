@@ -1,3 +1,4 @@
+from utils.logger import logger
 import os
 
 # Ruta del directorio raíz que quieres analizar
@@ -12,10 +13,10 @@ def print_tree(path: str, prefix: str = "") -> None:
     try:
         entries = sorted(os.listdir(path))
     except PermissionError:
-        print(prefix + "└── [PERMISO DENEGADO]")
+        logger.logger.info(prefix + "└── [PERMISO DENEGADO]")
         return
     except FileNotFoundError:
-        print(prefix + f"[NO ENCONTRADO]: {path}")
+        logger.logger.info(prefix + f"[NO ENCONTRADO]: {path}")
         return
 
     total = len(entries)
@@ -24,7 +25,7 @@ def print_tree(path: str, prefix: str = "") -> None:
         is_last = index == (total - 1)
 
         connector = "└── " if is_last else "├── "
-        print(prefix + connector + entry)
+        logger.logger.info(prefix + connector + entry)
 
         if os.path.isdir(full_path):
             # Si es directorio, continuar recursivamente
@@ -34,5 +35,5 @@ def print_tree(path: str, prefix: str = "") -> None:
 
 if __name__ == "__main__":
     # Imprimir el nombre del directorio raíz
-    print(ROOT_DIR)
+    logger.logger.info(ROOT_DIR)
     print_tree(ROOT_DIR)

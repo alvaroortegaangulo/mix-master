@@ -1,6 +1,7 @@
 # C:\mix-master\backend\src\stages\S10_MASTER_FINAL_LIMITS.py
 
 from __future__ import annotations
+from utils.logger import logger
 
 import sys
 from pathlib import Path
@@ -142,7 +143,7 @@ def _process_final_limits_worker(
         and abs(pre_lufs - target_lufs) <= style_lufs_tolerance
     )
 
-    print(
+    logger.logger.info(
         f"[S10_MASTER_FINAL_LIMITS] PRE-QC: TP={pre_true_peak:.2f} dBTP, "
         f"LUFS={pre_lufs:.2f}, LRA={pre_lra:.2f}, "
         f"diff_LR={pre_channel_diff:.2f} dB, corr={pre_corr:.3f}."
@@ -159,13 +160,13 @@ def _process_final_limits_worker(
     if trim_db > 0.0:
         gain_lin = 10.0 ** (-trim_db / 20.0)
         y_post = (y * gain_lin).astype(np.float32)
-        print(
+        logger.logger.info(
             f"[S10_MASTER_FINAL_LIMITS] Aplicando micro-trim de {trim_db:.2f} dB "
             f"para acercar TP a {true_peak_max_dbtp:.2f} dBTP."
         )
     else:
         y_post = y.copy()
-        print(
+        logger.logger.info(
             "[S10_MASTER_FINAL_LIMITS] TP dentro de límites o ajuste < 0.01 dB; "
             "no se aplica trim."
         )
@@ -187,7 +188,7 @@ def _process_final_limits_worker(
         and abs(post_lufs - target_lufs) <= style_lufs_tolerance
     )
 
-    print(
+    logger.logger.info(
         f"[S10_MASTER_FINAL_LIMITS] POST-QC: TP={post_true_peak:.2f} dBTP, "
         f"LUFS={post_lufs:.2f}, LRA={post_lra:.2f}, "
         f"diff_LR={post_channel_diff:.2f} dB, corr={post_corr:.3f}."
@@ -195,7 +196,7 @@ def _process_final_limits_worker(
 
     # Escribir master QC final (sobrescribe full_song.wav)
     sf.write(full_song_path, y_post, sr)
-    print(f"[S10_MASTER_FINAL_LIMITS] Master QC reescrito en {full_song_path}.")
+    logger.logger.info(f"[S10_MASTER_FINAL_LIMITS] Master QC reescrito en {full_song_path}.")
 
     return {
         "pre_true_peak_dbtp": float(pre_true_peak),
@@ -228,7 +229,7 @@ def main() -> None:
       - Guarda qc_metrics_S10_MASTER_FINAL_LIMITS.json con métricas pre/post.
     """
     if len(sys.argv) < 2:
-        print("Uso: python S10_MASTER_FINAL_LIMITS.py <CONTRACT_ID>")
+        logger.logger.info("Uso: python S10_MASTER_FINAL_LIMITS.py <CONTRACT_ID>")
         sys.exit(1)
 
     contract_id = sys.argv[1]  # "S10_MASTER_FINAL_LIMITS"
@@ -261,7 +262,7 @@ def main() -> None:
     full_song_path = temp_dir / "full_song.wav"
 
     if not full_song_path.exists():
-        print(
+        logger.logger.info(
             f"[S10_MASTER_FINAL_LIMITS] No existe {full_song_path}; "
             "no se puede aplicar QC de master."
         )
@@ -323,7 +324,7 @@ def main() -> None:
             ensure_ascii=False,
         )
 
-    print(
+    logger.logger.info(
         f"[S10_MASTER_FINAL_LIMITS] Métricas QC guardadas en: {qc_path}"
     )
 

@@ -1,4 +1,5 @@
 from __future__ import annotations
+from utils.logger import logger
 
 import sys
 from pathlib import Path
@@ -79,7 +80,7 @@ def main() -> None:
         python analysis/S1_VOX_TUNING.py S1_VOX_TUNING
     """
     if len(sys.argv) < 2:
-        print("Uso: python S1_VOX_TUNING.py <CONTRACT_ID>")
+        logger.logger.info("Uso: python S1_VOX_TUNING.py <CONTRACT_ID>")
         sys.exit(1)
 
     contract_id = sys.argv[1]  # "S1_VOX_TUNING"
@@ -162,7 +163,7 @@ def main() -> None:
     with output_path.open("w", encoding="utf-8") as f:
         json.dump(session_state, f, indent=2, ensure_ascii=False)
 
-    print(
+    logger.logger.info(
         f"[S1_VOX_TUNING] Análisis completado. "
         f"{vocal_count} stems vocales detectados de {len(stems_analysis)}. "
         f"JSON guardado en: {output_path}"
