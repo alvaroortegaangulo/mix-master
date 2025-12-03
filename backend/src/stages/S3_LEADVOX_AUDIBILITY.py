@@ -49,6 +49,11 @@ def _compute_lead_gain_db(
 
     Queremos que offset esté dentro de [offset_min, offset_max].
     Elegimos como objetivo el centro (que en este contrato es 0 dB).
+
+    Estrategia:
+      - Simulamos varias "pasadas virtuales" de hasta max_gain_change_db_per_pass
+        cada una, acumulando un gain total que acerque el offset al objetivo
+        y lo deje dentro de rango en una sola ejecución del stage.
     """
     offset_min = float(metrics.get("short_term_lufs_offset_vs_mixbus_min_db", -3.0))
     offset_max = float(metrics.get("short_term_lufs_offset_vs_mixbus_max_db", 3.0))
@@ -65,28 +70,47 @@ def _compute_lead_gain_db(
 
     max_gain_step = float(limits.get("max_gain_change_db_per_pass", 2.0))
 
-    # ¿Ya estamos en rango?
+    # Margen que usa también el check
     MARGIN_DB = 0.5
-    if offset_min - MARGIN_DB <= offset_mean <= offset_max + MARGIN_DB:
+    target_offset = 0.5 * (offset_min + offset_max)  # en este contrato, 0 dB
+
+    # Simulación de varias pasadas virtuales
+    cur_offset = offset_mean
+    total_gain = 0.0
+
+    # Igual que en S1_MIXBUS_HEADROOM: hasta 8 pasos razonables
+    MAX_STEPS = 8
+
+    for _ in range(MAX_STEPS):
+        # ¿Ya estamos dentro del rango (con margen)?
+        if offset_min - MARGIN_DB <= cur_offset <= offset_max + MARGIN_DB:
+            break
+
+        # Ganancia ideal para ir al centro
+        desired_gain = target_offset - cur_offset  # subir/bajar lead
+
+        # Limitar por step máximo
+        if desired_gain > max_gain_step:
+            step = max_gain_step
+        elif desired_gain < -max_gain_step:
+            step = -max_gain_step
+        else:
+            step = desired_gain
+
+        # Evitar micro-ajustes ridículos
+        if abs(step) < 0.1:
+            break
+
+        # Aplicar paso virtual:
+        # si subimos la voz X dB, el offset lead-mix sube también X dB.
+        total_gain += step
+        cur_offset += step
+
+    # Si el gain total es muy pequeño, lo ignoramos
+    if abs(total_gain) < 0.1:
         return 0.0
 
-    # Objetivo: centro del rango (en este contrato, 0 dB)
-    target_offset = 0.5 * (offset_min + offset_max)
-
-    # Ganancia necesaria: movemos offset hacia target_offset
-    gain_db = target_offset - offset_mean
-
-    # Limitar al máximo cambio por pasada
-    if gain_db > max_gain_step:
-        gain_db = max_gain_step
-    elif gain_db < -max_gain_step:
-        gain_db = -max_gain_step
-
-    # Ignorar micro-cambios
-    if abs(gain_db) < 0.1:
-        gain_db = 0.0
-
-    return float(gain_db)
+    return float(total_gain)
 
 
 # -------------------------------------------------------------------
@@ -136,7 +160,7 @@ def main() -> None:
 
       - Lee analysis_S3_LEADVOX_AUDIBILITY.json.
       - Calcula un gain global en dB para todas las pistas de lead vocal.
-      - Aplica ese gain a los stems marcados como is_lead_vocal = True,
+      - Aplica ese gain a los stems marcados como is_lead_vocal = True.
     """
     if len(sys.argv) < 2:
         print("Uso: python S3_LEADVOX_AUDIBILITY.py <CONTRACT_ID>")
@@ -146,10 +170,10 @@ def main() -> None:
 
     analysis = load_analysis(contract_id)
 
-    metrics: Dict[str, Any] = analysis.get("metrics_from_contract", {})
-    limits: Dict[str, Any] = analysis.get("limits_from_contract", {})
-    session: Dict[str, Any] = analysis.get("session", {})
-    stems: List[Dict[str, Any]] = analysis.get("stems", [])
+    metrics: Dict[str, Any] = analysis.get("metrics_from_contract", {}) or {}
+    limits: Dict[str, Any] = analysis.get("limits_from_contract", {}) or {}
+    session: Dict[str, Any] = analysis.get("session", {}) or {}
+    stems: List[Dict[str, Any]] = analysis.get("stems", []) or []
 
     gain_db = _compute_lead_gain_db(session, metrics, limits)
 
