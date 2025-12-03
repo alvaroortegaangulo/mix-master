@@ -255,10 +255,10 @@
           "target_scope": "mixbus",
           "metrics": {
             "use_style_profile_tonal_balance": true,
-            "max_tonal_balance_error_db": 3.0
+            "max_tonal_balance_error_db": 4.0
           },
           "limits": {
-            "max_eq_change_db_per_band_per_pass": 1.5
+            "max_eq_change_db_per_band_per_pass": 3.0
           }
         }
       ]
