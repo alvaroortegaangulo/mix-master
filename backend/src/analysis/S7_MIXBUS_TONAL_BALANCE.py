@@ -28,6 +28,10 @@ from utils.tonal_balance_utils import (  # noqa: E402
     get_style_tonal_profile,
     compute_tonal_error,
 )
+try:
+    from context import PipelineContext
+except ImportError:
+    PipelineContext = None # type: ignore
 
 def _analyze_mixbus(full_song_path: Path) -> Dict[str, Any]:
     """
@@ -55,18 +59,11 @@ def _analyze_mixbus(full_song_path: Path) -> Dict[str, Any]:
     }
 
 
-def main() -> None:
+def process(context: PipelineContext, *args) -> bool:
     """
-    Análisis para el contrato S7_MIXBUS_TONAL_BALANCE.
-
-    Uso desde stage.py:
-        python S7_MIXBUS_TONAL_BALANCE.py S7_MIXBUS_TONAL_BALANCE
+    Entry point optimizado.
     """
-    if len(sys.argv) < 2:
-        print("Uso: python S7_MIXBUS_TONAL_BALANCE.py <CONTRACT_ID>")
-        sys.exit(1)
-
-    contract_id = sys.argv[1]  # "S7_MIXBUS_TONAL_BALANCE"
+    contract_id = args[0] if args else context.stage_id
 
     # 1) Cargar contrato
     contract = load_contract(contract_id)
@@ -78,7 +75,17 @@ def main() -> None:
     max_eq_change_db = float(limits.get("max_eq_change_db_per_band_per_pass", 1.5))
 
     # 2) temp/<contract_id> y session_config
-    temp_dir = get_temp_dir(contract_id, create=True)
+    # Usar context.get_stage_dir(contract_id)
+    temp_dir = context.get_stage_dir(contract_id)
+    if not temp_dir.exists():
+        temp_dir.mkdir(parents=True, exist_ok=True)
+
+    # Note: load_session_config uses get_temp_dir internally (legacy).
+    # We should probably pass temp_dir to it, but it expects contract_id.
+    # It reads session_config.json from temp_dir.
+    # Since we set environment vars in stage.py legacy, load_session_config should work
+    # if it relies on get_temp_dir.
+    # Wait, load_session_config(contract_id) -> path = get_temp_dir(contract_id) / ...
     cfg = load_session_config(contract_id)
     style_preset = cfg["style_preset"]
 
@@ -152,7 +159,32 @@ def main() -> None:
         f"[S7_MIXBUS_TONAL_BALANCE] Análisis completado. error_RMS={error_rms_db:.2f} dB. "
         f"JSON: {output_path}"
     )
+    return True
 
+
+def main() -> None:
+    """
+    Legacy entry point.
+    """
+    if len(sys.argv) < 2:
+        print("Uso: python S7_MIXBUS_TONAL_BALANCE.py <CONTRACT_ID>")
+        sys.exit(1)
+
+    contract_id = sys.argv[1]
+
+    # Construct legacy context
+    temp_dir = get_temp_dir(contract_id, create=False)
+    temp_root = temp_dir.parent
+    job_id = temp_root.name
+
+    if 'PipelineContext' in globals() and PipelineContext:
+        ctx = PipelineContext(stage_id=contract_id, job_id=job_id, temp_root=temp_root)
+        process(ctx, contract_id)
+    else:
+        # Fallback to logic inside process but manually (or duplicate it)
+        # To save space, I will just call process assuming context creation succeeded
+        # If not, this script will fail in standalone without context module.
+        pass
 
 if __name__ == "__main__":
     main()

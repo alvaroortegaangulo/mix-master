@@ -10,6 +10,7 @@ from typing import Callable, Dict, Any, List, Optional
 
 from .stages.stage import run_stage, set_active_contract_sequence
 from .utils.analysis_utils import get_temp_dir
+from .context import PipelineContext
 
 logger = logging.getLogger(__name__)
 
@@ -321,6 +322,13 @@ def run_pipeline_for_job(
     # ------------------------------------------------------------------
     # 4) Ejecutar cada contrato en orden
     # ------------------------------------------------------------------
+    # Crear contexto único para todo el job
+    context = PipelineContext(
+        stage_id="", # Se actualizará en cada iteración
+        job_id=job_id,
+        temp_root=temp_root
+    )
+
     for idx, contract_id in enumerate(contract_ids, start=1):
         logger.info(
             "[pipeline] Ejecutando contrato %s (%d/%d)",
@@ -340,7 +348,7 @@ def run_pipeline_for_job(
             )
 
         # Ejecuta análisis, stage y check con reintentos, copia al siguiente contrato, etc.
-        run_stage(contract_id)
+        run_stage(contract_id, context=context)
 
 
 if __name__ == "__main__":

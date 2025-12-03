@@ -5,7 +5,7 @@ from __future__ import annotations
 import sys
 import os
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 # --- hack sys.path para ejecutar como script suelto desde stage.py ---
 THIS_DIR = Path(__file__).resolve().parent
@@ -31,14 +31,33 @@ from utils.tonal_balance_utils import (      # noqa: E402
     get_style_tonal_profile,
     compute_tonal_error,
 )
+try:
+    from context import PipelineContext
+except ImportError:
+    pass
 
 
 def load_analysis(contract_id: str) -> Dict[str, Any]:
     """
     Carga el JSON de análisis generado por analysis\\S7_MIXBUS_TONAL_BALANCE.py.
     """
+    # NOTE: load_analysis still relies on get_temp_dir using env vars if run standalone
+    # Or we can refactor it to take temp_dir path.
     temp_dir = get_temp_dir(contract_id, create=False)
     analysis_path = temp_dir / f"analysis_{contract_id}.json"
+
+    if not analysis_path.exists():
+        raise FileNotFoundError(f"No se encuentra el análisis en {analysis_path}")
+
+    with analysis_path.open("r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    return data
+
+def load_analysis_with_context(context: PipelineContext) -> Dict[str, Any]:
+    stage_id = context.stage_id
+    temp_dir = context.get_stage_dir()
+    analysis_path = temp_dir / f"analysis_{stage_id}.json"
 
     if not analysis_path.exists():
         raise FileNotFoundError(f"No se encuentra el análisis en {analysis_path}")
@@ -63,13 +82,6 @@ def _build_pedalboard_eq(
 
       - eq_gains_db: dict band_id -> gain_db
       - get_freq_bands(): define rangos de frecuencia por banda
-
-    La idea es aproximar el comportamiento del EQ por bandas
-    FFT original usando:
-
-      - LowShelfFilter para la primera banda (graves)
-      - HighShelfFilter para la última banda (agudos)
-      - PeakFilter para las bandas intermedias
     """
     bands = get_freq_bands()
     nyquist = float(sr) / 2.0 if sr > 0 else None
@@ -193,26 +205,23 @@ def _apply_multiband_eq_pedalboard(
 # Stage principal
 # ---------------------------------------------------------------------
 
-def main() -> None:
+def process(context: PipelineContext, *args) -> bool:
     """
-    Stage S7_MIXBUS_TONAL_BALANCE:
-
-      - Lee analysis_S7_MIXBUS_TONAL_BALANCE.json.
-      - Si el error RMS de tonal balance ya está por debajo del umbral,
-        actúa como no-op (idempotente).
-      - Si no, calcula ganancia por banda (limitada por contrato) y aplica
-        un EQ multibanda en full_song.wav usando Pedalboard.
-      - Recalcula el tonal balance y guarda métricas en
-        tonal_metrics_S7_MIXBUS_TONAL_BALANCE.json para el check.
+    Función de entrada para el pipeline optimizado.
+    Recibe el contexto y devuelve True si éxito, False si error.
     """
-    if len(sys.argv) < 2:
-        print("Uso: python S7_MIXBUS_TONAL_BALANCE.py <CONTRACT_ID>")
-        sys.exit(1)
-
-    contract_id = sys.argv[1]  # "S7_MIXBUS_TONAL_BALANCE"
+    contract_id = context.stage_id
+    temp_dir = context.get_stage_dir()
 
     # 1) Cargar análisis previo
-    analysis = load_analysis(contract_id)
+    # Usamos la funcion refactorizada que toma context, o la anterior si no.
+    # Pero load_analysis usa get_temp_dir legacy.
+    # Mejor usar load_analysis_with_context
+    try:
+        analysis = load_analysis_with_context(context)
+    except FileNotFoundError:
+        # Fallback to legacy
+        analysis = load_analysis(contract_id)
 
     metrics: Dict[str, Any] = analysis.get("metrics_from_contract", {}) or {}
     limits: Dict[str, Any] = analysis.get("limits_from_contract", {}) or {}
@@ -228,7 +237,6 @@ def main() -> None:
     max_tonal_error_db = float(metrics.get("max_tonal_balance_error_db", 3.0))
     max_eq_change_db = float(limits.get("max_eq_change_db_per_band_per_pass", 1.5))
 
-    temp_dir = get_temp_dir(contract_id, create=False)
     full_song_path = temp_dir / "full_song.wav"
 
     if not full_song_path.exists():
@@ -250,7 +258,7 @@ def main() -> None:
             max_tonal_error_db=max_tonal_error_db,
             max_eq_change_db=max_eq_change_db,
         )
-        return
+        return True
 
     # Si las bandas/targets vienen vacíos (por algún motivo), reconstruimos objetivo desde estilo
     if not target_band_db:
@@ -276,18 +284,16 @@ def main() -> None:
             max_tonal_error_db=max_tonal_error_db,
             max_eq_change_db=max_eq_change_db,
         )
-        return
+        return True
 
 
-    # 3) Calcular ganancia por banda para reducir error (limitada por max_eq_change_db)
-    #    err_db = current - target ⇒ queremos mover hacia target: gain ≈ -err_db
+    # 3) Calcular ganancia por banda para reducir error
     errors_by_band, _ = compute_tonal_error(current_band_db, target_band_db)
     eq_gains_db: Dict[str, float] = {}
 
     for band_id, err_db in errors_by_band.items():
         desired_gain = -float(err_db)
         gain = max(-max_eq_change_db, min(max_eq_change_db, desired_gain))
-        # Evitar microajustes ridículos
         if abs(gain) < 0.1:
             gain = 0.0
         eq_gains_db[band_id] = float(gain)
@@ -296,7 +302,7 @@ def main() -> None:
     for b_id, g in eq_gains_db.items():
         print(f"  - {b_id}: {g:+.2f} dB")
 
-    # 4) Leer full_song y aplicar EQ con Pedalboard
+    # 4) Leer full_song y aplicar EQ
     y, sr = sf.read(full_song_path, always_2d=False)
     if not isinstance(y, np.ndarray):
         y = np.asarray(y, dtype=np.float32)
@@ -305,7 +311,6 @@ def main() -> None:
 
     y_eq = _apply_multiband_eq_pedalboard(y, sr, eq_gains_db)
 
-    # Guardar mixbus ecualizado
     sf.write(full_song_path, y_eq, sr)
     print(f"[S7_MIXBUS_TONAL_BALANCE] EQ multibanda aplicada sobre {full_song_path.name}.")
 
@@ -318,7 +323,7 @@ def main() -> None:
         f"post={post_error_rms:.2f} dB."
     )
 
-    # 6) Guardar métricas para el futuro check
+    # 6) Guardar métricas
     _save_tonal_metrics(
         temp_dir=temp_dir,
         contract_id=contract_id,
@@ -332,6 +337,47 @@ def main() -> None:
         max_tonal_error_db=max_tonal_error_db,
         max_eq_change_db=max_eq_change_db,
     )
+    return True
+
+
+def main() -> None:
+    """
+    Legacy entry point.
+    """
+    if len(sys.argv) < 2:
+        print("Uso: python S7_MIXBUS_TONAL_BALANCE.py <CONTRACT_ID>")
+        sys.exit(1)
+
+    contract_id = sys.argv[1]
+
+    # Simular contexto para reutilizar lógica
+    # No tenemos job_id ni temp_root fácilmente aquí sin env vars.
+    # Pero process() usa get_stage_dir que falla si no hay temp_root.
+    # Así que construimos un contexto compatible con legacy env vars
+
+    # Importar PipelineContext localmente si no está disponible (hack)
+    # Ya está importado arriba o None.
+
+    # Mejor: si llamamos a main(), usamos la logica vieja que estaba en main()
+    # O adaptamos main para llamar a process con un contexto fake.
+
+    # Dado que process() ahora contiene la lógica, deberíamos llamar a process().
+    # Para eso necesitamos un contexto.
+
+    # Recuperamos get_temp_dir para saber el root
+    temp_dir = get_temp_dir(contract_id, create=False)
+    # temp_dir es .../temp/job_id/stage_id
+    temp_root = temp_dir.parent
+    job_id = temp_root.name
+
+    # Asumimos que PipelineContext está disponible (por el sys.path insert al principio)
+    if 'PipelineContext' in globals() and PipelineContext:
+        ctx = PipelineContext(stage_id=contract_id, job_id=job_id, temp_root=temp_root)
+        process(ctx)
+    else:
+        # Fallback extremo si no pudiéramos cargar context (raro)
+        print("Error: PipelineContext not available in legacy main wrapper")
+        sys.exit(1)
 
 
 def _save_tonal_metrics(

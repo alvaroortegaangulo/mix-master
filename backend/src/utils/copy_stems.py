@@ -16,34 +16,39 @@ if str(SRC_DIR) not in sys.argv:
         _sys.path.insert(0, str(SRC_DIR))
 
 from utils.analysis_utils import get_temp_dir  # noqa: E402
+try:
+    from context import PipelineContext
+except ImportError:
+    PipelineContext = None # type: ignore
 
 
-def main() -> None:
-    if len(sys.argv) < 3:
-        print("Uso: python copy_stems.py <SRC_STAGE_ID> <DST_STAGE_ID>")
-        sys.exit(1)
+def process(context: PipelineContext, *args) -> bool:
+    """
+    Copia stems de src_stage a dst_stage.
+    args puede ser (src_stage, dst_stage) o (dst_stage) si src es context.stage_id?
+    stage.py llama a: _run_script(copy_script, context, stage_id, next_contract_id)
+    => args = (stage_id, next_contract_id)
+    """
+    if len(args) < 2:
+        print("[copy_stems] Error: Se requieren src_stage_id y dst_stage_id en args")
+        return False
 
-    src_stage_id = sys.argv[1]
-    dst_stage_id = sys.argv[2]
+    src_stage_id = args[0]
+    dst_stage_id = args[1]
 
-    # En modo single-job:
-    #   src_dir = PROJECT_ROOT/temp/<SRC_STAGE_ID>
-    #   dst_dir = PROJECT_ROOT/temp/<DST_STAGE_ID>
-    #
-    # En modo multi-job (Celery, con MIX_JOB_ID/MIX_TEMP_ROOT):
-    #   src_dir = PROJECT_ROOT/temp/<MIX_JOB_ID>/<SRC_STAGE_ID>
-    #   dst_dir = PROJECT_ROOT/temp/<MIX_JOB_ID>/<DST_STAGE_ID>
-    #
-    # La lógica está encapsulada en get_temp_dir.
-    src_dir = get_temp_dir(src_stage_id, create=False)
-    dst_dir = get_temp_dir(dst_stage_id, create=True)
+    # Resolver directorios usando contexto
+    src_dir = context.get_stage_dir(src_stage_id)
+    dst_dir = context.get_stage_dir(dst_stage_id)
+
+    if not dst_dir.exists():
+        dst_dir.mkdir(parents=True, exist_ok=True)
 
     if not src_dir.exists():
         print(
             f"[copy_stems] Aviso: carpeta origen {src_dir} no existe; "
             f"no se copian stems de {src_stage_id} a {dst_stage_id}."
         )
-        return
+        return True # No es error fatal, el pipeline continua
 
     count = 0
     for wav_path in src_dir.glob("*.wav"):
@@ -59,7 +64,25 @@ def main() -> None:
         shutil.copy2(config_src, dst_dir / "session_config.json")
 
     print(f"[copy_stems] Copiados {count} stems de {src_stage_id} a {dst_stage_id}")
+    return True
 
+
+def main() -> None:
+    if len(sys.argv) < 3:
+        print("Uso: python copy_stems.py <SRC_STAGE_ID> <DST_STAGE_ID>")
+        sys.exit(1)
+
+    src_stage_id = sys.argv[1]
+    dst_stage_id = sys.argv[2]
+
+    # Construir context legacy
+    temp_dir = get_temp_dir(src_stage_id, create=False)
+    temp_root = temp_dir.parent
+    job_id = temp_root.name
+
+    if 'PipelineContext' in globals() and PipelineContext:
+        ctx = PipelineContext(stage_id=src_stage_id, job_id=job_id, temp_root=temp_root)
+        process(ctx, src_stage_id, dst_stage_id)
 
 if __name__ == "__main__":
     main()

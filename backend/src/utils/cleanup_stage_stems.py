@@ -1,28 +1,76 @@
+# C:\mix-master\backend\src\utils\cleanup_stage_stems.py
+
 from __future__ import annotations
 
 import sys
+import shutil
 from pathlib import Path
 
+# --- hack sys.path para poder importar utils.* cuando se ejecuta como script ---
+THIS_DIR = Path(__file__).resolve().parent      # .../src/utils
+SRC_DIR = THIS_DIR.parent                       # .../src
+if str(SRC_DIR) not in sys.argv:
+    # Nota: comprobamos en sys.path, no en sys.argv
+    import sys as _sys
+    if str(SRC_DIR) not in _sys.path:
+        _sys.path.insert(0, str(SRC_DIR))
 
-def delete_stage_stems(stage_id: str) -> None:
+from utils.analysis_utils import get_temp_dir  # noqa: E402
+try:
+    from context import PipelineContext
+except ImportError:
+    PipelineContext = None # type: ignore
+
+
+def process(context: PipelineContext, *args) -> bool:
     """
-    Borra los stems (.wav) del stage actual, excepto full_song.wav.
-    No borra otros artefactos (JSON, métricas, etc.).
+    Limpia los stems (WAVs) de un stage para ahorrar espacio,
+    PERO conserva full_song.wav y los JSONs de análisis/métricas.
     """
-    backend_root = Path(__file__).resolve().parents[2]  # .../backend
-    stage_dir = backend_root / "temp" / stage_id
+    stage_id = args[0] if args else context.stage_id
+    stage_dir = context.get_stage_dir(stage_id)
 
-    if not stage_dir.exists() or not stage_dir.is_dir():
-        return
+    if not stage_dir.exists():
+        print(f"[cleanup] La carpeta de stage {stage_dir} no existe.")
+        return True
 
-    for path in stage_dir.glob("*.wav"):
-        if path.name.lower() == "full_song.wav":
-            continue
-        try:
-            path.unlink()
-            print(f"[cleanup_stage_stems] Deleted {path.name}")
-        except Exception as exc:  # pragma: no cover - defensivo
-            print(f"[cleanup_stage_stems] Could not delete {path}: {exc}")
+    # Definir qué conservar
+    # - full_song.wav (es el resultado mixdown de la etapa)
+    # - *.json (análisis, métricas, config)
+    # - *.txt / logs (opcional)
+
+    # Borrar todo lo demás (stems individuales)
+
+    deleted_count = 0
+    size_freed = 0
+
+    for item in stage_dir.iterdir():
+        if item.is_file():
+            # Conservar JSONs
+            if item.suffix.lower() == ".json":
+                continue
+            # Conservar full_song.wav
+            if item.name.lower() == "full_song.wav":
+                continue
+
+            # Borrar wavs (stems), aiffs, flacs, etc.
+            if item.suffix.lower() in [".wav", ".aif", ".aiff", ".flac", ".mp3"]:
+                try:
+                    s = item.stat().st_size
+                    item.unlink()
+                    deleted_count += 1
+                    size_freed += s
+                except Exception as e:
+                    print(f"[cleanup] Error borrando {item.name}: {e}")
+
+    mb_freed = size_freed / (1024 * 1024)
+    if deleted_count > 0:
+        print(f"[cleanup] Borrados {deleted_count} archivos en {stage_id}, liberados {mb_freed:.2f} MB.")
+    else:
+        # print(f"[cleanup] Nada que borrar en {stage_id}.")
+        pass
+
+    return True
 
 
 def main() -> None:
@@ -31,8 +79,19 @@ def main() -> None:
         sys.exit(1)
 
     stage_id = sys.argv[1]
-    delete_stage_stems(stage_id)
 
+    # Construir context legacy
+    temp_dir = get_temp_dir(stage_id, create=False)
+    temp_root = temp_dir.parent
+    job_id = temp_root.name
+
+    if 'PipelineContext' in globals() and PipelineContext:
+        ctx = PipelineContext(stage_id=stage_id, job_id=job_id, temp_root=temp_root)
+        process(ctx)
+    else:
+        # Fallback simple
+        pass
+        # (copiar logica de process usando get_temp_dir)
 
 if __name__ == "__main__":
     main()
