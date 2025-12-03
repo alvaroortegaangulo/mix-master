@@ -184,8 +184,8 @@ def _process_mixbus_color_worker(
     target_mid = 0.5 * (tp_min + tp_max)  # p.ej. -3 dBTP
     needed_trim = target_mid - post_true_peak_dbtp_raw
 
-    # Limitar trim a ±1 dB para mantener cambios suaves
-    MAX_TRIM_DB = 1.0
+    # Limitar trim a ±6 dB para permitir corregir mezclas bajas antes de mastering
+    MAX_TRIM_DB = 6.0
     trim_db = max(-MAX_TRIM_DB, min(MAX_TRIM_DB, needed_trim))
 
     if abs(trim_db) > 0.05:
