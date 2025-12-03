@@ -1,5 +1,3 @@
-# C:\mix-master\backend\src\stages\S4_STEM_RESONANCE_CONTROL.py
-
 from __future__ import annotations
 
 import sys
@@ -46,9 +44,6 @@ def _build_notches_for_stem(
     """
     A partir de la info de resonancias de un stem, construye la lista de notches
     (freq_hz, cut_db) ya filtrada y limitada.
-
-    Se ejecuta en el proceso padre para evitar pasar 'stem' completo
-    a los workers.
     """
     resonances = stem.get("resonances", []) or []
     if not resonances:
@@ -124,8 +119,8 @@ def _process_stem_worker(
         return fname, 0
 
     try:
-        # Leer audio con pedalboard.io
-        with AudioFile(path) as f:
+        # Leer audio con pedalboard.io (necesita str, no Path)
+        with AudioFile(str(path)) as f:
             audio = f.read(f.frames)
             sr = f.samplerate
 
@@ -139,20 +134,18 @@ def _process_stem_worker(
             return fname, 0
 
         # Construir cadena de notches con PeakFilter
-        # Usamos Q relativamente alto para simular notches estrechos.
-        Q_DEFAULT = 10.0
+        Q_DEFAULT = 10.0  # relativamente alto para notches estrechos
 
         plugins = []
         for n in notches:
             freq_hz = float(n["freq_hz"])
             cut_db = float(n["cut_db"])
 
-            # PeakFilter con ganancia negativa -> notch
             plugins.append(
                 PeakFilter(
-                    -cut_db,        # gain_db (negativo = corte)
-                    freq_hz,        # center_frequency_hz
-                    Q_DEFAULT,      # q
+                    gain_db=-cut_db,        # negativo = corte
+                    center_frequency_hz=freq_hz,
+                    q=Q_DEFAULT,
                 )
             )
 
@@ -166,8 +159,12 @@ def _process_stem_worker(
 
         # Escribir de vuelta al mismo archivo
         # Manteniendo samplerate y número de canales original
-        num_channels = 1 if audio_filt.ndim == 1 else audio_filt.shape[1]
-        with AudioFile(path, "w", sr, num_channels) as f:
+        if audio_filt.ndim == 1:
+            num_channels = 1
+        else:
+            num_channels = audio_filt.shape[1]
+
+        with AudioFile(str(path), "w", sr, num_channels) as f:
             f.write(audio_filt)
 
         notch_str = ", ".join(
@@ -256,7 +253,7 @@ def main() -> None:
 
     print(
         f"[S4_STEM_RESONANCE_CONTROL] Stage completado. "
-        f"stems procesados={stems_touched}, notches totales={total_notches_aplicados}."
+        f"stems procesados={stems_touched}, notches totales={total_notches_applied}."
     )
 
 
