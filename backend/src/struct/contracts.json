@@ -298,7 +298,7 @@
             "use_style_profile_mastering_targets": true
           },
           "limits": {
-            "max_limiter_gain_reduction_db": 4.0,
+            "max_limiter_gain_reduction_db": 20.0,
             "max_eq_change_db_per_band_per_pass": 2.0,
             "max_stereo_width_change_percent": 10.0
           }
