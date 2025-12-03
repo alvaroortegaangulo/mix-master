@@ -1419,12 +1419,15 @@ def _check_S7_MIXBUS_TONAL_BALANCE(data: Dict[str, Any]) -> bool:
 
     Reglas:
 
-      - error_RMS_post <= max_tonal_balance_error_db + MARGIN_ERR.
-      - Si error_RMS_pre > umbral -> se espera mejora (o al menos no empeorar).
-      - Si error_RMS_pre ya <= umbral -> Stage debe ser casi no-op
-        (ganancias por banda pequeñas).
-      - |gain_banda| <= max_eq_change_db_per_band_per_pass + MARGIN_EQ_LIMIT.
-      - error por banda (post) |post - target| <= max_tonal_balance_error_db + MARGIN_ERR.
+      - Si error_RMS_pre <= max_tonal_balance_error_db + MARGIN_ERR_DB:
+          * El Stage debe ser casi no-op (ganancias pequeñas).
+          * El error RMS no debe sacar la mezcla de tolerancia ni empeorar claramente.
+          * Si está en tolerancia global, también se valida banda a banda.
+      - Si error_RMS_pre > max_tonal_balance_error_db + MARGIN_ERR_DB:
+          * No se exige alcanzar el umbral en un solo pase.
+          * Sí se exige una mejora mínima del error RMS.
+      - En todos los casos:
+          * |gain_banda| <= max_eq_change_db_per_band_per_pass + MARGIN_EQ_LIMIT_DB.
     """
     contract_id = data.get("contract_id", "S7_MIXBUS_TONAL_BALANCE")
     metrics_from_contract = data.get("metrics_from_contract", {}) or {}
@@ -1476,33 +1479,39 @@ def _check_S7_MIXBUS_TONAL_BALANCE(data: Dict[str, Any]) -> bool:
         return False
 
     # Tolerancias
-    MARGIN_ERR_DB = 0.5       # margen para error RMS y por banda
-    MARGIN_EQ_LIMIT_DB = 0.1  # margen sobre max_eq_change
+    MARGIN_ERR_DB = 0.5         # margen para error RMS y por banda
+    MARGIN_EQ_LIMIT_DB = 0.1    # margen sobre max_eq_change
     MARGIN_IDEMP_GAIN_DB = 0.5  # si ya está bien, ganancias deberían ser < ~0.5 dB
-    MARGIN_IMPROVE_DB = 0.25  # no permitir que el error empeore claramente
+    MARGIN_IMPROVE_DB = 0.25    # mejora mínima exigida cuando está fuera de tolerancia
 
     ok = True
 
-    # 1) Siempre: error RMS final debe estar bajo el umbral (con margen)
-    if post_error_rms > max_err_contract + MARGIN_ERR_DB:
-        print(
-            f"[S7_MIXBUS_TONAL_BALANCE] error_RMS post={post_error_rms:.2f} dB "
-            f"> max {max_err_contract:.2f} dB (+{MARGIN_ERR_DB:.1f} margen)."
-        )
-        ok = False
+    # ------------------------------------------------------------------
+    # 1) Comportamiento según estaba la mezcla antes
+    # ------------------------------------------------------------------
+    if pre_error_rms <= max_err_contract + MARGIN_ERR_DB:
+        # Caso B: ya estaba dentro de tolerancia (con margen) → Stage casi no-op
 
-    # 2) Comportamiento según estaba la mezcla antes
-    if pre_error_rms > max_err_contract + MARGIN_ERR_DB:
-        # Caso A: antes estaba fuera de tolerancia → se espera mejora
+        # 1.a) El RMS final no debe sacar la mezcla de tolerancia
+        if post_error_rms > max_err_contract + MARGIN_ERR_DB:
+            print(
+                f"[S7_MIXBUS_TONAL_BALANCE] Mezcla estaba en tolerancia "
+                f"(pre={pre_error_rms:.2f} dB) y ha salido tras el Stage: "
+                f"post={post_error_rms:.2f} dB > max {max_err_contract:.2f} dB "
+                f"(+{MARGIN_ERR_DB:.1f} margen)."
+            )
+            ok = False
+
+        # 1.b) No debe empeorar de forma clara
         if post_error_rms > pre_error_rms + MARGIN_IMPROVE_DB:
             print(
-                f"[S7_MIXBUS_TONAL_BALANCE] error_RMS ha empeorado: "
+                f"[S7_MIXBUS_TONAL_BALANCE] Mezcla estaba en tolerancia y ha empeorado: "
                 f"pre={pre_error_rms:.2f} dB, post={post_error_rms:.2f} dB "
                 f"(+{MARGIN_IMPROVE_DB:.1f} margen)."
             )
             ok = False
-    else:
-        # Caso B: ya estaba dentro de tolerancia → Stage debe ser casi no-op
+
+        # 1.c) Ganancias por banda muy pequeñas (idempotencia)
         for band_id, gain in eq_gains_db.items():
             try:
                 g = float(gain)
@@ -1515,7 +1524,19 @@ def _check_S7_MIXBUS_TONAL_BALANCE(data: Dict[str, Any]) -> bool:
                 )
                 ok = False
 
-    # 3) Límite formal de EQ por banda
+    else:
+        # Caso A: antes estaba fuera de tolerancia → se exige mejora mínima
+        if post_error_rms > pre_error_rms - MARGIN_IMPROVE_DB:
+            print(
+                f"[S7_MIXBUS_TONAL_BALANCE] Mezcla fuera de tolerancia pero no mejora "
+                f"lo suficiente: pre={pre_error_rms:.2f} dB, post={post_error_rms:.2f} dB "
+                f"(se esperaba al menos {MARGIN_IMPROVE_DB:.1f} dB de reducción)."
+            )
+            ok = False
+
+    # ------------------------------------------------------------------
+    # 2) Límite formal de EQ por banda
+    # ------------------------------------------------------------------
     for band_id, gain in eq_gains_db.items():
         try:
             g = float(gain)
@@ -1528,36 +1549,41 @@ def _check_S7_MIXBUS_TONAL_BALANCE(data: Dict[str, Any]) -> bool:
             )
             ok = False
 
-    # 4) Error por banda después de la EQ (|post - target| <= max_err + margen)
-    for band_id, post_val in post_band_db.items():
-        tgt_val = target_band_db.get(band_id)
-        if tgt_val is None:
-            continue
+    # ------------------------------------------------------------------
+    # 3) Error por banda después de la EQ
+    #    Solo se aplica si el RMS final está dentro del umbral global.
+    # ------------------------------------------------------------------
+    if post_error_rms <= max_err_contract + MARGIN_ERR_DB:
+        for band_id, post_val in post_band_db.items():
+            tgt_val = target_band_db.get(band_id)
+            if tgt_val is None:
+                continue
 
-        try:
-            post_v = float(post_val)
-            tgt_v = float(tgt_val)
-        except (TypeError, ValueError):
-            continue
+            try:
+                post_v = float(post_val)
+                tgt_v = float(tgt_val)
+            except (TypeError, ValueError):
+                continue
 
-        err_band = post_v - tgt_v
-        if abs(err_band) > max_err_contract + MARGIN_ERR_DB:
-            print(
-                f"[S7_MIXBUS_TONAL_BALANCE] Banda {band_id}: error={err_band:+.2f} dB "
-                f"> max {max_err_contract:.2f} dB (+{MARGIN_ERR_DB:.1f})."
-            )
-            ok = False
+            err_band = post_v - tgt_v
+            if abs(err_band) > max_err_contract + MARGIN_ERR_DB:
+                print(
+                    f"[S7_MIXBUS_TONAL_BALANCE] Banda {band_id}: error={err_band:+.2f} dB "
+                    f"> max {max_err_contract:.2f} dB (+{MARGIN_ERR_DB:.1f})."
+                )
+                ok = False
 
     if ok:
         print(
             f"[S7_MIXBUS_TONAL_BALANCE] OK: error_RMS pre={pre_error_rms:.2f} dB, "
             f"post={post_error_rms:.2f} dB (umbral={max_err_contract:.2f} dB), "
             f"ganancias por banda dentro de ±{max_eq_change_contract:.1f} dB "
-            f"(+{MARGIN_EQ_LIMIT_DB:.1f}), y errores por banda dentro de "
-            f"±{max_err_contract:.1f} dB (+{MARGIN_ERR_DB:.1f})."
+            f"(+{MARGIN_EQ_LIMIT_DB:.1f}) y comportamiento coherente con el estado "
+            f"inicial (idempotente si ya estaba en tolerancia, con mejora si no lo estaba)."
         )
 
     return ok
+
 
 
 def _check_S8_MIXBUS_COLOR_GENERIC(data: Dict[str, Any]) -> bool:

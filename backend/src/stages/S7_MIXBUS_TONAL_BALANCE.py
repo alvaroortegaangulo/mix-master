@@ -256,7 +256,7 @@ def main() -> None:
     if not target_band_db:
         target_band_db = get_style_tonal_profile(style_preset)
 
-    # 2) Caso idempotente: ya está dentro de tolerancia
+     # 2) Caso idempotente: ya está dentro de tolerancia
     MARGIN_RMS = 0.25
     if prev_error_rms <= max_tonal_error_db + MARGIN_RMS:
         print(
@@ -277,6 +277,7 @@ def main() -> None:
             max_eq_change_db=max_eq_change_db,
         )
         return
+
 
     # 3) Calcular ganancia por banda para reducir error (limitada por max_eq_change_db)
     #    err_db = current - target ⇒ queremos mover hacia target: gain ≈ -err_db
