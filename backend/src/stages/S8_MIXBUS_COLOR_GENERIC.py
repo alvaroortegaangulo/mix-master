@@ -105,10 +105,11 @@ def _process_mixbus_color_worker(
 
       - Lee full_song.wav.
       - Calcula métricas pre (RMS / true peak).
-      - Determina drive de saturación según estilo y límites.
+      - Determina drive de saturación según estilo, estado previo y límites.
       - Aplica saturación usando pedalboard.Distortion y ajusta drive si
         se excede el límite de THD.
-      - Aplica un trim suave para acercar el true peak al rango objetivo.
+      - Aplica un trim para llevar el true peak al rango objetivo, con
+        límites distintos si la mezcla ya estaba en rango (idempotencia).
       - Escribe el audio procesado en el mismo full_song.wav.
       - Devuelve métricas clave (pre/post, drive, trim, THD).
     """
@@ -129,11 +130,29 @@ def _process_mixbus_color_worker(
         f"RMS={pre_rms_dbfs:.2f} dBFS."
     )
 
+    # --------------------------------------------------------------
+    # Lógica de idempotencia / rango previo
+    # --------------------------------------------------------------
+    TP_MARGIN = 0.3          # mismo margen que usa el check
+    IDEMP_DRIVE_MAX_DB = 0.5 # debe coincidir con IDEMP_SMALL_DB del check
+    IDEMP_TRIM_MAX_DB = 0.5
+
+    pre_in_range = (
+        pre_true_peak_dbtp >= tp_min - TP_MARGIN
+        and pre_true_peak_dbtp <= tp_max + TP_MARGIN
+    )
+
     # Factor por estilo
     style_factor = _style_saturation_factor(style_preset)
     drive_db = max_sat_per_pass_db * style_factor
 
-    # Si el drive resultante es muy pequeño, casi no hacemos nada
+    # Si la mezcla ya está en rango, reducimos drive para respetar idempotencia
+    if pre_in_range and drive_db > IDEMP_DRIVE_MAX_DB:
+        drive_db = IDEMP_DRIVE_MAX_DB
+
+    # --------------------------------------------------------------
+    # Saturación con Pedalboard + control de THD
+    # --------------------------------------------------------------
     if drive_db < 0.1:
         print(
             "[S8_MIXBUS_COLOR_GENERIC] Drive calculado < 0.1 dB; "
@@ -142,7 +161,7 @@ def _process_mixbus_color_worker(
         y_sat = y.copy()
         thd_pct = 0.0
     else:
-        # Saturación inicial con Pedalboard
+        # Saturación inicial
         y_sat = _apply_pedalboard_saturation(y, sr, drive_db=drive_db)
 
         # Estimar THD incremental
@@ -180,13 +199,29 @@ def _process_mixbus_color_worker(
     # True peak tras saturación (antes de trim)
     post_true_peak_dbtp_raw = compute_true_peak_dbfs(y_sat, oversample_factor=4)
 
-    # Ajuste de trim ligero para acercar true peak al rango objetivo
+    # --------------------------------------------------------------
+    # Trim hacia el rango objetivo de true peak
+    # --------------------------------------------------------------
     target_mid = 0.5 * (tp_min + tp_max)  # p.ej. -3 dBTP
     needed_trim = target_mid - post_true_peak_dbtp_raw
 
-    # Limitar trim a ±1 dB para mantener cambios suaves
-    MAX_TRIM_DB = 1.0
-    trim_db = max(-MAX_TRIM_DB, min(MAX_TRIM_DB, needed_trim))
+    # Límites de trim:
+    #  - si ya estaba en rango → cambios muy pequeños (idempotencia).
+    #  - si estaba fuera de rango → se permite subir bastante más
+    #    para llevar el true peak al rango de contrato en un pase.
+    if pre_in_range:
+        max_trim_up_db = IDEMP_TRIM_MAX_DB
+        max_trim_down_db = IDEMP_TRIM_MAX_DB
+    else:
+        max_trim_up_db = 6.0   # levantar mezclas bajas hasta el rango objetivo
+        max_trim_down_db = 2.0 # atenuación moderada para no tirar el RMS
+
+    if needed_trim >= 0.0:
+        # Necesitamos subir nivel
+        trim_db = min(needed_trim, max_trim_up_db)
+    else:
+        # Necesitamos bajar nivel
+        trim_db = max(needed_trim, -max_trim_down_db)
 
     if abs(trim_db) > 0.05:
         trim_lin = 10.0 ** (trim_db / 20.0)
@@ -229,6 +264,7 @@ def _process_mixbus_color_worker(
         "trim_db_applied": float(trim_db),
         "thd_percent": float(thd_pct),
     }
+
 
 
 def main() -> None:
