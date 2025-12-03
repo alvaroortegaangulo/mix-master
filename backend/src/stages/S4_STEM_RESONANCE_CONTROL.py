@@ -14,9 +14,9 @@ if str(SRC_DIR) not in sys.path:
 
 import json  # noqa: E402
 import numpy as np  # noqa: E402
+import soundfile as sf  # noqa: E402
 
 from pedalboard import Pedalboard, PeakFilter  # noqa: E402
-from pedalboard.io import AudioFile  # noqa: E402
 
 from utils.analysis_utils import get_temp_dir  # noqa: E402
 
@@ -121,16 +121,11 @@ def _process_stem_worker(
         return fname, 0
 
     try:
-        # Leer audio con pedalboard.io (necesita str, no Path)
-        with AudioFile(str(path)) as f:
-            audio = f.read(f.frames)
-            sr = f.samplerate
+        # Leer audio con soundfile (forma estable en tu pipeline)
+        audio, sr = sf.read(path, always_2d=True)  # (N, C)
 
-        # Asegurar tipo float32
-        if not isinstance(audio, np.ndarray):
-            audio = np.asarray(audio, dtype=np.float32)
-        else:
-            audio = audio.astype(np.float32)
+        # Asegurar float32
+        audio = np.asarray(audio, dtype=np.float32)
 
         if audio.size == 0:
             return fname, 0
@@ -143,32 +138,24 @@ def _process_stem_worker(
             freq_hz = float(n["freq_hz"])
             cut_db = float(n["cut_db"])
 
-            # Firma correcta de PeakFilter:
-            # PeakFilter(cutoff_frequency_hz, gain_db, q)
             plugins.append(
                 PeakFilter(
                     cutoff_frequency_hz=freq_hz,
-                    gain_db=-cut_db,     # negativo = corte
+                    gain_db=-cut_db,   # negativo = corte
                     q=Q_DEFAULT,
                 )
             )
 
         board = Pedalboard(plugins)
 
-        # Procesar audio
+        # Pedalboard espera (num_frames, num_channels)
         audio_filt = board(audio, sr)
 
         # Clamp suave por seguridad
         audio_filt = np.clip(audio_filt, -1.5, 1.5).astype(np.float32)
 
-        # Escribir de vuelta al mismo archivo
-        if audio_filt.ndim == 1:
-            num_channels = 1
-        else:
-            num_channels = audio_filt.shape[1]
-
-        with AudioFile(str(path), "w", sr, num_channels) as f:
-            f.write(audio_filt)
+        # Escribir de vuelta al mismo archivo, preservando sr y canales
+        sf.write(path, audio_filt, sr)
 
         notch_str = ", ".join(
             f"{n['freq_hz']:.0f}Hz/{n['cut_db']:.1f}dB" for n in notches
