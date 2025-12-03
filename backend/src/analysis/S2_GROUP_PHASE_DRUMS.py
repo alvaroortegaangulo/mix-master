@@ -1,6 +1,7 @@
 # C:\mix-master\backend\src\analysis\S2_GROUP_PHASE_DRUMS.py
 
 from __future__ import annotations
+from utils.logger import logger
 
 import sys
 from pathlib import Path
@@ -109,7 +110,7 @@ def _analyze_drum_stem(
     cand_data, cand_sr = sf_read_limited(stem_path, always_2d=False)
     if cand_sr != ref_sr:
         # En teoría no debería pasar tras S0_SESSION_FORMAT
-        print(
+        logger.logger.info(
             f"[S2_GROUP_PHASE_DRUMS] Advertencia: samplerate distinto en {stem_path.name} "
             f"({cand_sr} vs {ref_sr}), se trunca al menor."
         )
@@ -182,7 +183,7 @@ def main() -> None:
         python analysis/S2_GROUP_PHASE_DRUMS.py S2_GROUP_PHASE_DRUMS
     """
     if len(sys.argv) < 2:
-        print("Uso: python S2_GROUP_PHASE_DRUMS.py <CONTRACT_ID>")
+        logger.logger.info("Uso: python S2_GROUP_PHASE_DRUMS.py <CONTRACT_ID>")
         sys.exit(1)
 
     contract_id = sys.argv[1]  # "S2_GROUP_PHASE_DRUMS"
@@ -212,7 +213,7 @@ def main() -> None:
     )
 
     if not stem_files:
-        print("[S2_GROUP_PHASE_DRUMS] No se han encontrado stems en temp.")
+        logger.logger.info("[S2_GROUP_PHASE_DRUMS] No se han encontrado stems en temp.")
         # Aun así generamos un JSON vacío
         session_state = {
             "contract_id": contract_id,
@@ -254,7 +255,7 @@ def main() -> None:
             drum_indices.append(idx)
 
     if not drum_indices:
-        print("[S2_GROUP_PHASE_DRUMS] No hay stems de familia Drums según instrument_profile.")
+        logger.logger.info("[S2_GROUP_PHASE_DRUMS] No hay stems de familia Drums según instrument_profile.")
         # Aun así generamos JSON
         session_state = {
             "contract_id": contract_id,
@@ -389,7 +390,7 @@ def main() -> None:
     with output_path.open("w", encoding="utf-8") as f:
         json.dump(session_state, f, indent=2, ensure_ascii=False)
 
-    print(
+    logger.logger.info(
         f"[S2_GROUP_PHASE_DRUMS] Análisis completado para {len(stems_analysis_final)} stems "
         f"(familia={target_family}, ref={ref_name}). JSON: {output_path}"
     )

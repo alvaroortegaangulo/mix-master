@@ -1,4 +1,5 @@
 from __future__ import annotations
+from utils.logger import logger
 
 import sys
 import os
@@ -20,8 +21,13 @@ try:
     from context import PipelineContext
 except ImportError:
     # Fallback por si acaso
-    print("[stage] Warning: Could not import PipelineContext from context")
+    # We can't use logger here if imports are broken, but try anyway as it is imported above
+    try:
+        logger.logger.warning("[stage] Warning: Could not import PipelineContext from context")
+    except:
+        print("[stage] Warning: Could not import PipelineContext from context")
     PipelineContext = None
+
 
 
 # Stages que trabajan en mixbus/master y necesitan full_song.wav
@@ -149,7 +155,7 @@ def _import_module(script_path: Path):
         _MODULE_CACHE[script_path] = module
         return module
     except Exception as e:
-        print(f"[stage] Error importing {script_path}: {e}")
+        logger.logger.info(f"[stage] Error importing {script_path}: {e}")
         traceback.print_exc()
         return None
 
@@ -162,7 +168,7 @@ def _run_script(script_path: Path, context: PipelineContext, *args: str) -> int:
     """
     module = _import_module(script_path)
     if not module:
-        print(f"[stage] No se pudo cargar el módulo {script_path}")
+        logger.logger.error(f"[stage] No se pudo cargar el módulo {script_path}")
         return 1
 
     # 1. Intentar método process(context, *args)
@@ -174,7 +180,7 @@ def _run_script(script_path: Path, context: PipelineContext, *args: str) -> int:
                 return 1
             return 0
         except Exception as exc:
-            print(f"[stage] Excepción en process() de {script_path.name}: {exc}")
+            logger.logger.error(f"[stage] Excepción en process() de {script_path.name}: {exc}")
             traceback.print_exc()
             return 1
 
@@ -189,7 +195,7 @@ def _run_script(script_path: Path, context: PipelineContext, *args: str) -> int:
             main_fn()
             return 0
 
-        print(f"[stage] El script {script_path} no expone process() ni main()")
+        logger.logger.error(f"[stage] El script {script_path} no expone process() ni main()")
         return 1
     except SystemExit as exc:
         code = exc.code
@@ -197,7 +203,7 @@ def _run_script(script_path: Path, context: PipelineContext, *args: str) -> int:
             return code
         return 1
     except Exception as exc:
-        print(f"[stage] Excepción en main() de {script_path}: {exc}")
+        logger.logger.error(f"[stage] Excepción en main() de {script_path}: {exc}")
         traceback.print_exc()
         return 1
     finally:
@@ -248,9 +254,26 @@ def _ensure_analysis_file(stage_id: str, analysis_script: Path, context: Pipelin
     if analysis_path.exists():
         return
 
-    print(f"[stage] analysis_{stage_id}.json no encontrado, reintentando analisis...")
+    logger.logger.warning(f"[stage] analysis_{stage_id}.json no encontrado, reintentando analisis...")
     # Pasamos stage_id como argumento por si es legacy, aunque context ya lo tiene
     _run_script(analysis_script, context, stage_id)
+
+
+def _load_analysis_json(context: PipelineContext, stage_id: str) -> Dict:
+    """Helper to load analysis JSON safely."""
+    if context.temp_root:
+        temp_dir = context.temp_root / stage_id
+    else:
+        temp_dir = _get_job_temp_root(create=True) / stage_id
+
+    path = temp_dir / f"analysis_{stage_id}.json"
+    if path.exists():
+        try:
+            with path.open("r", encoding="utf-8") as f:
+                return json.load(f)
+        except Exception as e:
+            logger.logger.error(f"Failed to load analysis JSON: {e}")
+    return {}
 
 
 def run_stage(stage_id: str, context: Optional[PipelineContext] = None) -> None:
@@ -276,7 +299,7 @@ def run_stage(stage_id: str, context: Optional[PipelineContext] = None) -> None:
     copy_script = base_dir / "utils" / "copy_stems.py"
     cleanup_stems_script = base_dir / "utils" / "cleanup_stage_stems.py"
 
-    print(f"Running stage: {stage_id}")
+    logger.print_header(f"Running stage: {stage_id}")
     stage_start = time.perf_counter()
 
     # Pre-Mixdown (Legacy args: stage_id)
@@ -285,19 +308,25 @@ def run_stage(stage_id: str, context: Optional[PipelineContext] = None) -> None:
 
     # 1) Análisis previo (Legacy args: stage_id)
     _run_script(analysis_script, context, stage_id)
+    pre_analysis = _load_analysis_json(context, stage_id)
 
     # 2) Procesamiento principal (Legacy args: stage_id)
     _run_script(stage_script, context, stage_id)
 
     # 3) Análisis posterior (Legacy args: stage_id)
     _run_script(analysis_script, context, stage_id)
+    post_analysis = _load_analysis_json(context, stage_id)
+
+    # Log Comparison
+    if pre_analysis and post_analysis:
+        logger.print_comparison(pre_analysis, post_analysis)
 
     # 4) Validación (Legacy args: stage_id)
+    logger.print_section("Metrics Limits Check")
     ret = _run_script(check_script, context, stage_id)
     success = (ret == 0)
 
-    resultado = "éxito" if success else "fracaso"
-    print(f"Resultado {stage_id}: {resultado}")
+    logger.log_stage_result(stage_id, success)
 
     # Post-Mixdown
     if stage_id not in MIXDOWN_STAGES:
@@ -321,6 +350,6 @@ def run_stage(stage_id: str, context: Optional[PipelineContext] = None) -> None:
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Uso: python stage.py <STAGE_ID>")
+        logger.logger.info("Uso: python stage.py <STAGE_ID>")
     else:
         run_stage(sys.argv[1])

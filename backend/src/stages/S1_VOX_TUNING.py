@@ -1,4 +1,5 @@
 from __future__ import annotations
+from utils.logger import logger
 
 import sys
 from pathlib import Path
@@ -67,7 +68,7 @@ def apply_vocal_tuning_to_stem(
         data = data.astype(np.float32)
 
     if data.size == 0:
-        print(f"[S1_VOX_TUNING] {stem_name}: archivo vacío, se omite.")
+        logger.logger.info(f"[S1_VOX_TUNING] {stem_name}: archivo vacío, se omite.")
         return
 
     y_tuned = tune_vocal_time_varying(
@@ -85,7 +86,7 @@ def apply_vocal_tuning_to_stem(
 
     sf.write(file_path, y_tuned, sr)
 
-    print(
+    logger.logger.info(
         f"[S1_VOX_TUNING] {stem_name}: afinación time-varying aplicada "
         f"(tuning_strength={tuning_strength}, max_shift={max_pitch_shift_semitones}, "
         f"scale_pcs={scale_pcs})."
@@ -125,7 +126,7 @@ def main() -> None:
         respetando la escala detectada en S1_KEY_DETECTION.
     """
     if len(sys.argv) < 2:
-        print("Uso: python S1_VOX_TUNING.py <CONTRACT_ID>")
+        logger.logger.info("Uso: python S1_VOX_TUNING.py <CONTRACT_ID>")
         sys.exit(1)
 
     contract_id = sys.argv[1]  # "S1_VOX_TUNING"
@@ -169,7 +170,7 @@ def main() -> None:
         for args in args_list:
             _tune_stem_worker(args)
 
-    print(f"[S1_VOX_TUNING] Procesados {len(vocal_stems)} stems vocales.")
+    logger.logger.info(f"[S1_VOX_TUNING] Procesados {len(vocal_stems)} stems vocales.")
 
 
 if __name__ == "__main__":

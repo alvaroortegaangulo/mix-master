@@ -1,6 +1,7 @@
 # C:\mix-master\backend\src\analysis\S11_REPORT_GENERATION.py
 
 from __future__ import annotations
+from utils.logger import logger
 
 import sys
 from pathlib import Path
@@ -205,7 +206,7 @@ def _load_pipeline_timings(contract_id: str) -> Dict[str, Any]:
             "generated_at_utc": data.get("generated_at_utc"),
         }
     except Exception as exc:
-        print(f"[S11_REPORT_GENERATION] Aviso: no se pudo leer timings: {exc}")
+        logger.logger.info(f"[S11_REPORT_GENERATION] Aviso: no se pudo leer timings: {exc}")
         return {"stages": [], "total_duration_sec": None}
 
 
@@ -237,7 +238,7 @@ def main() -> None:
       - métricas finales (LUFS, LRA, TP, correlación, crest, histograma de niveles).
     """
     if len(sys.argv) < 2:
-        print("Uso: python S11_REPORT_GENERATION.py <CONTRACT_ID>")
+        logger.logger.info("Uso: python S11_REPORT_GENERATION.py <CONTRACT_ID>")
         sys.exit(1)
 
     contract_id = sys.argv[1]  # "S11_REPORT_GENERATION"
@@ -280,7 +281,7 @@ def main() -> None:
             final_corr = float(post.get("correlation", float("nan")))
             final_diff_lr = float(post.get("channel_loudness_diff_db", float("nan")))
         except Exception as e:
-            print(f"[S11_REPORT_GENERATION] Aviso: no se pudo leer {qc_path}: {e}")
+            logger.logger.info(f"[S11_REPORT_GENERATION] Aviso: no se pudo leer {qc_path}: {e}")
 
     # 5) Leer audio final (master) para crest & histograma
     #    Preferimos el full_song de S11; si no existe o falla, usamos el de S10.
@@ -302,7 +303,7 @@ def main() -> None:
 
         if result.get("error"):
             # Logeamos el error y pasamos al siguiente path
-            print(result["error"])
+            logger.logger.info(result["error"])
             continue
 
         crest_and_hist = {
@@ -348,7 +349,7 @@ def main() -> None:
     with output_path.open("w", encoding="utf-8") as f:
         json.dump(session_state, f, indent=2, ensure_ascii=False)
 
-    print(
+    logger.logger.info(
         f"[S11_REPORT_GENERATION] Análisis completado. Reporte JSON: {output_path}"
     )
 

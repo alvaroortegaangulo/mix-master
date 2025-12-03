@@ -1,6 +1,7 @@
 # C:\mix-master\backend\src\analysis\S3_LEADVOX_AUDIBILITY.py
 
 from __future__ import annotations
+from utils.logger import logger
 
 import sys
 from pathlib import Path
@@ -256,7 +257,7 @@ def _analyze_stem(
 
     if sr != sr_mix:
         # En teoría no debería ocurrir tras S0, pero por robustez cortamos al menor
-        print(
+        logger.logger.info(
             f"[S3_LEADVOX_AUDIBILITY] Advertencia: sr distinto en {fname} "
             f"({sr} vs {sr_mix}); se usa longitud mínima común."
         )
@@ -292,7 +293,7 @@ def main() -> None:
         python analysis/S3_LEADVOX_AUDIBILITY.py S3_LEADVOX_AUDIBILITY
     """
     if len(sys.argv) < 2:
-        print("Uso: python S3_LEADVOX_AUDIBILITY.py <CONTRACT_ID>")
+        logger.logger.info("Uso: python S3_LEADVOX_AUDIBILITY.py <CONTRACT_ID>")
         sys.exit(1)
 
     contract_id = sys.argv[1]  # "S3_LEADVOX_AUDIBILITY"
@@ -413,7 +414,7 @@ def main() -> None:
     with output_path.open("w", encoding="utf-8") as f:
         json.dump(session_state, f, indent=2, ensure_ascii=False)
 
-    print(
+    logger.logger.info(
         f"[S3_LEADVOX_AUDIBILITY] Análisis completado. "
         f"global_offset_mean={global_mean} dB, stems_lead_con_datos={len(all_offsets)}. "
         f"JSON: {output_path}"

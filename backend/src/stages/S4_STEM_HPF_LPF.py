@@ -1,6 +1,7 @@
 # C:\mix-master\backend\src\stages\S4_STEM_HPF_LPF.py
 
 from __future__ import annotations
+from utils.logger import logger
 
 import sys
 import os
@@ -121,13 +122,13 @@ def _process_stem_worker(args: Tuple[str, Dict[str, Any], float, float]) -> Tupl
         ) as f:
             f.write(processed)
 
-        print(
+        logger.logger.info(
             f"[S4_STEM_HPF_LPF] {fname}: aplicado HPF={hpf:.1f} Hz, LPF={lpf:.1f} Hz."
         )
         return fname, True
 
     except Exception as e:
-        print(f"[S4_STEM_HPF_LPF] Error procesando {fname}: {e}")
+        logger.logger.info(f"[S4_STEM_HPF_LPF] Error procesando {fname}: {e}")
         return fname, False
 
 
@@ -139,7 +140,7 @@ def main() -> None:
       - Aplica HPF/LPF por stem según instrument_profile.
     """
     if len(sys.argv) < 2:
-        print("Uso: python S4_STEM_HPF_LPF.py <CONTRACT_ID>")
+        logger.logger.info("Uso: python S4_STEM_HPF_LPF.py <CONTRACT_ID>")
         sys.exit(1)
 
     contract_id = sys.argv[1]  # "S4_STEM_HPF_LPF"
@@ -161,7 +162,7 @@ def main() -> None:
         tasks.append((contract_id, stem, max_hpf_step, max_lpf_step))
 
     if not tasks:
-        print("[S4_STEM_HPF_LPF] No hay stems a procesar.")
+        logger.logger.info("[S4_STEM_HPF_LPF] No hay stems a procesar.")
         return
 
     processed = 0
@@ -170,7 +171,7 @@ def main() -> None:
         if ok:
             processed += 1
 
-    print(
+    logger.logger.info(
         f"[S4_STEM_HPF_LPF] Stage completado. Stems procesados={processed}."
     )
 

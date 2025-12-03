@@ -1,6 +1,7 @@
 # C:\mix-master\backend\src\analysis\S4_STEM_RESONANCE_CONTROL.py
 
 from __future__ import annotations
+from utils.logger import logger
 
 import sys
 from pathlib import Path
@@ -70,7 +71,7 @@ def _analyze_stem(
     try:
         y, sr = sf_read_limited(stem_path, always_2d=False)
     except Exception as e:
-        print(f"[S4_STEM_RESONANCE_CONTROL] Aviso: no se puede leer '{fname}': {e}.")
+        logger.logger.info(f"[S4_STEM_RESONANCE_CONTROL] Aviso: no se puede leer '{fname}': {e}.")
         return {
             "file_name": fname,
             "file_path": str(stem_path),
@@ -111,7 +112,7 @@ def main() -> None:
         python analysis/S4_STEM_RESONANCE_CONTROL.py S4_STEM_RESONANCE_CONTROL
     """
     if len(sys.argv) < 2:
-        print("Uso: python S4_STEM_RESONANCE_CONTROL.py <CONTRACT_ID>")
+        logger.logger.info("Uso: python S4_STEM_RESONANCE_CONTROL.py <CONTRACT_ID>")
         sys.exit(1)
 
     contract_id = sys.argv[1]  # "S4_STEM_RESONANCE_CONTROL"
@@ -176,7 +177,7 @@ def main() -> None:
         num_res = stem_entry.get("num_resonances_detected", 0)
         total_resonances += num_res
         if num_res > 0 and stem_entry.get("samplerate_hz") is not None:
-            print(
+            logger.logger.info(
                 f"[S4_STEM_RESONANCE_CONTROL] {stem_entry['file_name']}: detectadas "
                 f"{num_res} resonancias por encima de {max_res_peak_db:.1f} dB sobre la "
                 f"media local."
@@ -201,7 +202,7 @@ def main() -> None:
     with output_path.open("w", encoding="utf-8") as f:
         json.dump(session_state, f, indent=2, ensure_ascii=False)
 
-    print(
+    logger.logger.info(
         f"[S4_STEM_RESONANCE_CONTROL] Análisis completado para {len(stems_analysis)} stems. "
         f"Resonancias totales detectadas={total_resonances}. JSON: {output_path}"
     )

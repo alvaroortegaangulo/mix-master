@@ -1,6 +1,7 @@
 # C:\mix-master\backend\src\analysis\S1_KEY_DETECTION.py
 
 from __future__ import annotations
+from utils.logger import logger
 
 import sys
 from pathlib import Path
@@ -200,7 +201,7 @@ def main() -> None:
         python analysis/S1_KEY_DETECTION.py S1_KEY_DETECTION
     """
     if len(sys.argv) < 2:
-        print("Uso: python S1_KEY_DETECTION.py <CONTRACT_ID>")
+        logger.logger.info("Uso: python S1_KEY_DETECTION.py <CONTRACT_ID>")
         sys.exit(1)
 
     contract_id = sys.argv[1]  # "S1_KEY_DETECTION"
@@ -269,7 +270,7 @@ def main() -> None:
     with output_path.open("w", encoding="utf-8") as f:
         json.dump(session_state, f, indent=2, ensure_ascii=False)
 
-    print(
+    logger.logger.info(
         f"[S1_KEY_DETECTION] Análisis completado. "
         f"Tonalidad detectada: {key_info['key_name']} "
         f"(conf={key_info['confidence']:.2f}). JSON: {output_path}"
