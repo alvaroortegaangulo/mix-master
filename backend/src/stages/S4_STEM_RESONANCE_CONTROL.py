@@ -1,3 +1,5 @@
+# C:\mix-master\backend\src\stages\S4_STEM_RESONANCE_CONTROL.py
+
 from __future__ import annotations
 
 import sys
@@ -141,10 +143,12 @@ def _process_stem_worker(
             freq_hz = float(n["freq_hz"])
             cut_db = float(n["cut_db"])
 
+            # Firma correcta de PeakFilter:
+            # PeakFilter(cutoff_frequency_hz, gain_db, q)
             plugins.append(
                 PeakFilter(
-                    gain_db=-cut_db,        # negativo = corte
-                    center_frequency_hz=freq_hz,
+                    cutoff_frequency_hz=freq_hz,
+                    gain_db=-cut_db,     # negativo = corte
                     q=Q_DEFAULT,
                 )
             )
@@ -158,7 +162,6 @@ def _process_stem_worker(
         audio_filt = np.clip(audio_filt, -1.5, 1.5).astype(np.float32)
 
         # Escribir de vuelta al mismo archivo
-        # Manteniendo samplerate y número de canales original
         if audio_filt.ndim == 1:
             num_channels = 1
         else:
