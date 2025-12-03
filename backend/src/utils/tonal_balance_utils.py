@@ -176,6 +176,19 @@ def compute_tonal_error(
     errors: Dict[str, float] = {}
     diffs: List[float] = []
 
+    # Calculate offset to align the average level of current bands to target bands
+    valid_cur = []
+    valid_tgt = []
+    for band_id, cur_val in current_band_db.items():
+        tgt_val = target_band_db.get(band_id)
+        if tgt_val is not None and cur_val != float("-inf"):
+            valid_cur.append(cur_val)
+            valid_tgt.append(tgt_val)
+
+    offset = 0.0
+    if valid_cur and valid_tgt:
+        offset = float(np.mean(valid_tgt)) - float(np.mean(valid_cur))
+
     for band_id, cur_val in current_band_db.items():
         tgt_val = target_band_db.get(band_id)
         if tgt_val is None:
@@ -183,7 +196,8 @@ def compute_tonal_error(
         if cur_val == float("-inf"):
             continue
 
-        err = float(cur_val) - float(tgt_val)
+        # Error relative to shape, normalized by offset
+        err = (float(cur_val) + offset) - float(tgt_val)
         errors[band_id] = err
         diffs.append(err)
 
