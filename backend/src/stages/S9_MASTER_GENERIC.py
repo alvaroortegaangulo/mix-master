@@ -246,9 +246,27 @@ def _process_master_worker(
 
     y_ms, width_ratio_pre, width_ratio_post = _apply_ms_width(y_limited, width_factor)
 
-    # 4) Métricas post finales (tras width)
+    # 4) Métricas post-width (antes de trim de seguridad)
     post_true_peak = compute_true_peak_dbfs(y_ms, oversample_factor=4)
     post_lufs, post_lra = compute_lufs_and_lra(y_ms, sr)
+
+    # 4.b) Trim de seguridad para asegurar que TP_final queda bajo el ceiling
+    CEIL_SAFETY_DB = 0.3  # dejaremos el pico aprox. a ceiling - 0.3 dB
+    trim_peak_db = 0.0
+    if post_true_peak > target_ceiling:
+        # Queremos llevar el pico a (ceiling - CEIL_SAFETY_DB)
+        trim_peak_db = (target_ceiling - CEIL_SAFETY_DB) - post_true_peak
+        trim_lin = 10.0 ** (trim_peak_db / 20.0)
+        y_ms = (y_ms * trim_lin).astype(np.float32)
+
+        # Recalcular métricas tras el safety trim
+        post_true_peak = compute_true_peak_dbfs(y_ms, oversample_factor=4)
+        post_lufs, post_lra = compute_lufs_and_lra(y_ms, sr)
+
+        print(
+            f"[S9_MASTER_GENERIC] Safety trim adicional de {trim_peak_db:+.2f} dB "
+            f"para respetar ceiling {target_ceiling:.2f} dBTP con holgura."
+        )
 
     print(
         f"[S9_MASTER_GENERIC] POST-FINAL: true_peak={post_true_peak:.2f} dBTP, "
@@ -262,6 +280,7 @@ def _process_master_worker(
     # Escribir master final (sobrescribiendo full_song.wav)
     sf.write(full_song_path, y_ms, sr)
     print(f"[S9_MASTER_GENERIC] Master final reescrito en {full_song_path}.")
+
 
     return {
         "pre_true_peak_dbtp": float(pre_true_peak),

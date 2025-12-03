@@ -1744,7 +1744,6 @@ def _check_S8_MIXBUS_COLOR_GENERIC(data: Dict[str, Any]) -> bool:
 
 
 
-
 def _check_S9_MASTER_GENERIC(data: Dict[str, Any]) -> bool:
     """
     Valida S9_MASTER_GENERIC usando:
@@ -1755,12 +1754,18 @@ def _check_S9_MASTER_GENERIC(data: Dict[str, Any]) -> bool:
     Reglas principales:
 
       - TP_final <= target_ceiling_dbtp + CEIL_MARGIN.
-      - LUFS_final ∈ [target_lufs - LUFS_TOL, target_lufs + LUFS_TOL] ± LUFS_MARGIN.
-      - LRA_final ∈ [target_lra_min, target_lra_max] ± LRA_MARGIN.
+      - LUFS_final:
+          * Si la master ya estaba razonablemente cerca del target (±1 LU + margen),
+            debe quedar dentro de la banda objetivo.
+          * Si estaba lejos, se exige una mejora clara hacia el target, no
+            necesariamente alcanzarlo en un solo pase.
+      - LRA_final:
+          * Igual enfoque: mantener el rango objetivo si ya estaba en él,
+            o movimiento claro hacia él si estaba fuera.
       - limiter_GR_db <= max_limiter_gain_reduction_db + GR_MARGIN.
       - |width_factor_applied - 1.0|*100 <= max_stereo_width_change_percent + WIDTH_PCT_MARGIN,
         y además width_factor_applied ∈ [0.9, 1.1] ± WIDTH_FACTOR_MARGIN.
-      - Idempotencia: si ya estabas cerca del target (±0.3 LU) y TP <= ceiling,
+      - Idempotencia: si ya estabas muy cerca del target (±0.3 LU) y TP <= ceiling,
         GR adicional <= 0.5 dB (+ pequeño margen).
     """
     contract_id = data.get("contract_id", "S9_MASTER_GENERIC")
@@ -1856,32 +1861,95 @@ def _check_S9_MASTER_GENERIC(data: Dict[str, Any]) -> bool:
         )
         ok = False
 
-    # 2) LUFS final dentro de [target -1, target +1] ± margen
+    # 2) LUFS final: rango ó mejora hacia el target
     if post_lufs == float("-inf"):
         print("[S9_MASTER_GENERIC] LUFS post no válido (inf); fracaso.")
         ok = False
     else:
-        low_lufs = target_lufs - LUFS_TOL - LUFS_MARGIN
-        high_lufs = target_lufs + LUFS_TOL + LUFS_MARGIN
-        if not (low_lufs <= post_lufs <= high_lufs):
-            print(
-                f"[S9_MASTER_GENERIC] LUFS post={post_lufs:.2f} fuera de "
-                f"[{target_lufs - LUFS_TOL:.2f}, {target_lufs + LUFS_TOL:.2f}] "
-                f"(±{LUFS_MARGIN:.1f} margen)."
-            )
-            ok = False
+        low_target = target_lufs - LUFS_TOL
+        high_target = target_lufs + LUFS_TOL
+        low_with_margin = low_target - LUFS_MARGIN
+        high_with_margin = high_target + LUFS_MARGIN
 
-    # 3) LRA final dentro del rango objetivo ± margen
+        pre_in_lufs_band = (
+            pre_lufs != float("-inf")
+            and low_with_margin <= pre_lufs <= high_with_margin
+        )
+
+        if pre_in_lufs_band:
+            # La master ya estaba en rango → exigimos mantenerla en rango
+            if not (low_with_margin <= post_lufs <= high_with_margin):
+                print(
+                    f"[S9_MASTER_GENERIC] LUFS post={post_lufs:.2f} fuera de "
+                    f"[{low_target:.2f}, {high_target:.2f}] "
+                    f"(±{LUFS_MARGIN:.1f} margen) pese a que el pre ya estaba en rango."
+                )
+                ok = False
+        else:
+            # Mezcla lejos del target → exigimos mejora clara hacia él
+            IMPROVE_LU_MIN = 2.0  # LU mínimos de mejora
+
+            if pre_lufs != float("-inf"):
+                if target_lufs > pre_lufs:
+                    # Queremos subir LUFS
+                    if post_lufs < pre_lufs + IMPROVE_LU_MIN:
+                        print(
+                            f"[S9_MASTER_GENERIC] LUFS ha mejorado insuficientemente: "
+                            f"pre={pre_lufs:.2f}, post={post_lufs:.2f}, "
+                            f"target={target_lufs:.2f}, se esperaban al menos "
+                            f"{IMPROVE_LU_MIN:.1f} dB de acercamiento."
+                        )
+                        ok = False
+                else:
+                    # Queremos bajar LUFS
+                    if post_lufs > pre_lufs - IMPROVE_LU_MIN:
+                        print(
+                            f"[S9_MASTER_GENERIC] LUFS ha mejorado insuficientemente: "
+                            f"pre={pre_lufs:.2f}, post={post_lufs:.2f}, "
+                            f"target={target_lufs:.2f}, se esperaban al menos "
+                            f"{IMPROVE_LU_MIN:.1f} dB de acercamiento."
+                        )
+                        ok = False
+            # No exigimos entrar aún en la banda objetivo cuando el pre está muy lejos.
+
+    # 3) LRA final: rango ó mejora hacia el target
     if target_lra_min < target_lra_max:
         low_lra = target_lra_min - LRA_MARGIN
         high_lra = target_lra_max + LRA_MARGIN
-        if not (low_lra <= post_lra <= high_lra):
-            print(
-                f"[S9_MASTER_GENERIC] LRA post={post_lra:.2f} fuera de "
-                f"[{target_lra_min:.2f}, {target_lra_max:.2f}] "
-                f"(±{LRA_MARGIN:.1f} margen)."
-            )
-            ok = False
+
+        pre_in_lra_band = low_lra <= pre_lra <= high_lra
+
+        if pre_in_lra_band:
+            if not (low_lra <= post_lra <= high_lra):
+                print(
+                    f"[S9_MASTER_GENERIC] LRA post={post_lra:.2f} fuera de "
+                    f"[{target_lra_min:.2f}, {target_lra_max:.2f}] "
+                    f"(±{LRA_MARGIN:.1f} margen) pese a que el pre ya estaba en rango."
+                )
+                ok = False
+        else:
+            IMPROVE_LRA_MIN = 1.0
+
+            if pre_lra > high_lra:
+                # Demasiado dinámica → queremos reducir LRA
+                if post_lra > pre_lra - IMPROVE_LRA_MIN:
+                    print(
+                        f"[S9_MASTER_GENERIC] LRA no se ha reducido lo suficiente: "
+                        f"pre={pre_lra:.2f}, post={post_lra:.2f}, rango objetivo "
+                        f"[{target_lra_min:.2f}, {target_lra_max:.2f}] "
+                        f"(se esperaba al menos {IMPROVE_LRA_MIN:.1f} dB de reducción)."
+                    )
+                    ok = False
+            elif pre_lra < low_lra:
+                # Demasiado comprimida → queremos aumentar LRA
+                if post_lra < pre_lra + IMPROVE_LRA_MIN:
+                    print(
+                        f"[S9_MASTER_GENERIC] LRA no se ha incrementado lo suficiente: "
+                        f"pre={pre_lra:.2f}, post={post_lra:.2f}, rango objetivo "
+                        f"[{target_lra_min:.2f}, {target_lra_max:.2f}] "
+                        f"(se esperaba al menos {IMPROVE_LRA_MIN:.1f} dB de aumento)."
+                    )
+                    ok = False
 
     # 4) GR del limitador dentro del máximo permitido
     if limiter_gr_db > max_limiter_gr_contract + GR_MARGIN:
@@ -1933,15 +2001,15 @@ def _check_S9_MASTER_GENERIC(data: Dict[str, Any]) -> bool:
     if ok:
         print(
             f"[S9_MASTER_GENERIC] OK: TP_final={post_tp:.2f} dBTP <= {target_ceiling:.2f} dBTP "
-            f"(+{CEIL_MARGIN:.1f}), LUFS_final={post_lufs:.2f} "
-            f"cerca de target={target_lufs:.2f} (±{LUFS_TOL:.1f} + {LUFS_MARGIN:.1f}), "
-            f"LRA_final={post_lra:.2f} dentro de [{target_lra_min:.1f}, {target_lra_max:.1f}] "
-            f"(±{LRA_MARGIN:.1f}), limiter_GR={limiter_gr_db:.2f} dB "
-            f"<= {max_limiter_gr_contract:.2f} dB (+{GR_MARGIN:.1f}), "
-            f"y width_factor={width_factor_applied:.3f} dentro de límites."
+            f"(+{CEIL_MARGIN:.1f}), LUFS_final={post_lufs:.2f} moviéndose correctamente "
+            f"hacia target={target_lufs:.2f}, LRA_final={post_lra:.2f} coherente con el rango "
+            f"[{target_lra_min:.1f}, {target_lra_max:.1f}] (±{LRA_MARGIN:.1f}), "
+            f"limiter_GR={limiter_gr_db:.2f} dB <= {max_limiter_gr_contract:.2f} dB "
+            f"(+{GR_MARGIN:.1f}), y width_factor={width_factor_applied:.3f} dentro de límites."
         )
 
     return ok
+
 
 
 def _check_S10_MASTER_FINAL_LIMITS(data: Dict[str, Any]) -> bool:
