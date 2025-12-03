@@ -14,6 +14,7 @@ if str(SRC_DIR) not in sys.path:
 
 from utils.profiles_utils import get_instrument_profile  # noqa: E402
 from utils.analysis_utils import get_temp_dir
+from utils.tonal_balance_utils import compute_tonal_error  # noqa: E402
 
 def _load_analysis(contract_id: str) -> Dict[str, Any]:
     """
@@ -1528,19 +1529,24 @@ def _check_S7_MIXBUS_TONAL_BALANCE(data: Dict[str, Any]) -> bool:
             )
             ok = False
 
-    # 4) Error por banda después de la EQ (|post - target| <= max_err + margen)
-    for band_id, post_val in post_band_db.items():
-        tgt_val = target_band_db.get(band_id)
-        if tgt_val is None:
-            continue
-
+    # 4) Error por banda después de la EQ (usando compute_tonal_error para normalización)
+    #    Reconstruimos diccionarios limpios para la función
+    c_band_db = {}
+    t_band_db = {}
+    for k, v in post_band_db.items():
         try:
-            post_v = float(post_val)
-            tgt_v = float(tgt_val)
+            c_band_db[k] = float(v)
         except (TypeError, ValueError):
-            continue
+            pass
+    for k, v in target_band_db.items():
+        try:
+            t_band_db[k] = float(v)
+        except (TypeError, ValueError):
+            pass
 
-        err_band = post_v - tgt_v
+    errors_by_band, _ = compute_tonal_error(c_band_db, t_band_db)
+
+    for band_id, err_band in errors_by_band.items():
         if abs(err_band) > max_err_contract + MARGIN_ERR_DB:
             print(
                 f"[S7_MIXBUS_TONAL_BALANCE] Banda {band_id}: error={err_band:+.2f} dB "
