@@ -179,7 +179,7 @@
           },
           "limits": {
             "max_resonant_cuts_db": 8.0,
-            "max_resonant_filters_per_band": 3
+            "max_resonant_filters_per_band": 4
           }
         }
       ]

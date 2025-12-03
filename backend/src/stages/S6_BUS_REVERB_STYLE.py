@@ -1,5 +1,3 @@
-# C:\mix-master\backend\src\stages\S6_BUS_REVERB_STYLE.py
-
 from __future__ import annotations
 
 import sys
@@ -86,7 +84,7 @@ def _render_reverb_return_worker(
 
     Si hay error o el archivo está vacío, devuelve None.
     """
-    fname, stem_path_str, rt60_s, base_send_db, seed = args  # seed se mantiene por firma, aunque Reverb es determinista
+    fname, stem_path_str, rt60_s, base_send_db, seed = args  # seed se mantiene por firma
     stem_path = Path(stem_path_str)
 
     try:
@@ -115,9 +113,8 @@ def _render_reverb_return_worker(
         [
             Reverb(
                 room_size=float(room_size),
-                # 100% wet, 0% dry para simular un bus de reverb puro
-                wet_level=1.0,
-                dry_level=0.0,
+                wet_level=1.0,  # 100% wet
+                dry_level=0.0,  # 0% dry
             )
         ]
     )
@@ -188,7 +185,7 @@ def main() -> None:
       - Para cada stem genera un retorno de reverb *_rev.wav en función del estilo y familia,
         usando Reverb de Pedalboard (100% wet, controlado por base_send_db).
       - Ajusta el nivel global de returns hacia un offset de loudness objetivo
-        respecto al mix dry (full_song.wav).
+        respecto al mix dry (full_song.wav o referencia fija).
       - Guarda métricas de espacio/profundidad para el futuro check.
     """
     if len(sys.argv) < 2:
@@ -236,10 +233,10 @@ def main() -> None:
         )
 
     # ------------------------------------------------------------------
-    # Preparar tareas de generación de returns
+    # 1) Preparar tareas de generación de returns
     # ------------------------------------------------------------------
     tasks: List[tuple[str, str, float, float, int]] = []
-    SEED_BASE = 12345  # mantenido por compatibilidad de firma, aunque no se usa en Reverb
+    SEED_BASE = 12345  # mantenido por compatibilidad de firma
 
     for idx, stem in enumerate(stems):
         fname = stem.get("file_name")
@@ -363,48 +360,59 @@ def main() -> None:
         f"offset_vs_dry={offset_now:.2f} dB."
     )
 
-    # 4) Calcular offset objetivo (claramente hacia el lado 'seco', dependiente de estilo)
+    # ------------------------------------------------------------------
+    # 4) Calcular y aplicar offset objetivo (ahora simétrico: puede subir o bajar reverb)
+    # ------------------------------------------------------------------
     target_offset = _choose_target_offset_db(
         offset_min_db=offset_min_db,
         offset_max_db=offset_max_db,
         style_preset=style_preset,
     )
 
-    # Queremos mover el offset hacia target_offset, pero si ya estamos más secos
-    # que el objetivo, preferimos no subir el nivel de reverb.
-    delta_db = 0.0
-    if offset_now > target_offset:
-        # reverb demasiado alta (offset menos negativo)
-        delta_needed = target_offset - offset_now  # negativo
-        delta_db = max(-max_send_change_db, min(0.0, delta_needed))
-    else:
-        delta_db = 0.0
+    # Si estamos muy fuera de rango por abajo o por arriba, forzamos a entrar
+    # en la ventana del contrato antes de aplicar fine-tuning por estilo.
+    MARGIN_IN_RANGE = 0.5  # dB
+    MAX_GLOBAL_DELTA_DB = 12.0  # límite de seguridad para swings grandes
 
-    # 5) Aplicar ajuste global a todos los returns (idempotente por diseño)
-    if abs(delta_db) > 1e-3:
-        gain_global = 10.0 ** (delta_db / 20.0)
+    # Desplazamiento necesario para ir hacia el objetivo
+    delta_needed = target_offset - offset_now
+
+    if abs(delta_needed) <= MARGIN_IN_RANGE:
+        delta_db = 0.0
+        print(
+            "[S6_BUS_REVERB_STYLE] Offset de reverb ya suficientemente cercano al objetivo; "
+            "no se ajusta nivel global de returns."
+        )
+    else:
+        # Permitimos subir o bajar la reverb, pero limitando la corrección global
+        # a un valor razonable para evitar cosas absurdas si la medición se va.
+        delta_db = float(
+            max(-MAX_GLOBAL_DELTA_DB, min(MAX_GLOBAL_DELTA_DB, delta_needed))
+        )
+
+        direction = "subiendo" if delta_db > 0.0 else "bajando"
         print(
             f"[S6_BUS_REVERB_STYLE] Ajustando returns globalmente {delta_db:.2f} dB "
-            f"hacia offset objetivo {target_offset:.2f} dB."
+            f"({direction}) hacia offset objetivo {target_offset:.2f} dB."
         )
+
+        gain_global = 10.0 ** (delta_db / 20.0)
+
         # Reescalar cada archivo *_rev.wav y actualizar buffers en memoria
         for info, y_rev in zip(returns_info, all_returns):
             rev_path = temp_dir / info["return_file"]
             y_scaled = y_rev * gain_global
             sf.write(rev_path, y_scaled, global_sr)
+            # Actualizamos el buffer en memoria por coherencia
+            y_rev[:] = y_scaled
 
         # Actualizar sum_ret para métricas finales
         sum_ret *= gain_global
         current_reverb_lufs = _compute_rms_lufs_like(sum_ret)
         offset_now = current_reverb_lufs - dry_lufs
-    else:
-        print(
-            "[S6_BUS_REVERB_STYLE] Offset de reverb ya cercano al objetivo; "
-            "no se ajusta nivel global de returns."
-        )
 
     # ------------------------------------------------------------------
-    # 6) Guardar métricas para el futuro check
+    # 5) Guardar métricas para el futuro check
     # ------------------------------------------------------------------
     metrics_path = temp_dir / "space_depth_metrics_S6_BUS_REVERB_STYLE.json"
     with metrics_path.open("w", encoding="utf-8") as f:
