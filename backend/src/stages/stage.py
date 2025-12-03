@@ -1,4 +1,5 @@
 from __future__ import annotations
+from utils.logger import logger
 
 import sys
 import os
@@ -20,10 +21,15 @@ try:
     from context import PipelineContext
 except ImportError:
     # Fallback por si acaso
-    print("[stage] Warning: Could not import PipelineContext from context")
+    # We can't use logger here if imports are broken, but try anyway as it is imported above
+    try:
+        logger.logger.warning("[stage] Warning: Could not import PipelineContext from context")
+    except:
+        print("[stage] Warning: Could not import PipelineContext from context")
     PipelineContext = None
 
 from utils.logger import logger
+
 
 
 # Stages que trabajan en mixbus/master y necesitan full_song.wav
@@ -151,7 +157,7 @@ def _import_module(script_path: Path):
         _MODULE_CACHE[script_path] = module
         return module
     except Exception as e:
-        print(f"[stage] Error importing {script_path}: {e}")
+        logger.logger.info(f"[stage] Error importing {script_path}: {e}")
         traceback.print_exc()
         return None
 
@@ -346,6 +352,6 @@ def run_stage(stage_id: str, context: Optional[PipelineContext] = None) -> None:
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print("Uso: python stage.py <STAGE_ID>")
+        logger.logger.info("Uso: python stage.py <STAGE_ID>")
     else:
         run_stage(sys.argv[1])

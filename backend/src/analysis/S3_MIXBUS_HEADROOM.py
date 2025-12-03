@@ -1,6 +1,7 @@
 # C:\mix-master\backend\src\analysis\S3_MIXBUS_HEADROOM.py
 
 from __future__ import annotations
+from utils.logger import logger
 
 import sys
 from pathlib import Path
@@ -92,7 +93,7 @@ def main() -> None:
         python analysis/S3_MIXBUS_HEADROOM.py S3_MIXBUS_HEADROOM
     """
     if len(sys.argv) < 2:
-        print("Uso: python S3_MIXBUS_HEADROOM.py <CONTRACT_ID>")
+        logger.logger.info("Uso: python S3_MIXBUS_HEADROOM.py <CONTRACT_ID>")
         sys.exit(1)
 
     contract_id = sys.argv[1]  # "S3_MIXBUS_HEADROOM"
@@ -165,7 +166,7 @@ def main() -> None:
     with output_path.open("w", encoding="utf-8") as f:
         json.dump(session_state, f, indent=2, ensure_ascii=False)
 
-    print(
+    logger.logger.info(
         f"[S3_MIXBUS_HEADROOM] Análisis completado. "
         f"peak={mix_peak_dbfs:.2f} dBFS, LUFS={mix_lufs_integrated:.2f}. "
         f"JSON: {output_path}"

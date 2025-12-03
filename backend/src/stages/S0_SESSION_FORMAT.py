@@ -1,3 +1,4 @@
+from utils.logger import logger
 # C:\mix-master\backend\src\stages\S0_SESSION_FORMAT.py
 
 import json
@@ -159,7 +160,7 @@ def main() -> None:
       - Sobrescribe los stems en temp/<contract_id>/.
     """
     if len(sys.argv) < 2:
-        print("Uso: python S0_SESSION_FORMAT.py <CONTRACT_ID>")
+        logger.logger.info("Uso: python S0_SESSION_FORMAT.py <CONTRACT_ID>")
         sys.exit(1)
 
     contract_id = sys.argv[1]  # "S0_SESSION_FORMAT"
@@ -174,7 +175,7 @@ def main() -> None:
     stems = analysis.get("stems", [])
 
     if not stems:
-        print("[S0_SESSION_FORMAT] No hay stems en el análisis; nada que procesar.")
+        logger.logger.info("[S0_SESSION_FORMAT] No hay stems en el análisis; nada que procesar.")
         return
 
     # Procesar stems en serie
@@ -182,7 +183,7 @@ def main() -> None:
     for args in args_list:
         _process_stem_worker(args)
 
-    print(f"[S0_SESSION_FORMAT] Conversión de formato completada para {len(stems)} stems.")
+    logger.logger.info(f"[S0_SESSION_FORMAT] Conversión de formato completada para {len(stems)} stems.")
 
 
 if __name__ == "__main__":

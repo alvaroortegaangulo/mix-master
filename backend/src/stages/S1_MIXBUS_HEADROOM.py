@@ -1,6 +1,7 @@
 # C:\mix-master\backend\src\stages\S1_MIXBUS_HEADROOM.py
 
 from __future__ import annotations
+from utils.logger import logger
 
 import sys
 from pathlib import Path
@@ -72,7 +73,7 @@ def compute_global_gain_db(analysis: Dict[str, Any]) -> float:
         peak_dbfs_min = float(metrics["peak_dbfs_min"])
         peak_dbfs_max = float(metrics["peak_dbfs_max"])
     except Exception:
-        print("[S1_MIXBUS_HEADROOM] Falta peak_dbfs_min/peak_dbfs_max en metrics; no se ajusta ganancia.")
+        logger.logger.info("[S1_MIXBUS_HEADROOM] Falta peak_dbfs_min/peak_dbfs_max en metrics; no se ajusta ganancia.")
         return 0.0
 
     # LUFS: opcionales (si no están, nos guiamos solo por pico)
@@ -160,7 +161,7 @@ def _apply_gain_worker(args: Tuple[Dict[str, Any], float]) -> None:
     try:
         data, sr = sf.read(file_path, always_2d=False)
     except Exception as e:
-        print(f"[S1_MIXBUS_HEADROOM] Error leyendo stem {file_path}: {e}")
+        logger.logger.info(f"[S1_MIXBUS_HEADROOM] Error leyendo stem {file_path}: {e}")
         return
 
     if not isinstance(data, np.ndarray):
@@ -169,7 +170,7 @@ def _apply_gain_worker(args: Tuple[Dict[str, Any], float]) -> None:
         data = data.astype(np.float32)
 
     if data.size == 0:
-        print(f"[S1_MIXBUS_HEADROOM] {file_path.name}: archivo vacío; se omite.")
+        logger.logger.info(f"[S1_MIXBUS_HEADROOM] {file_path.name}: archivo vacío; se omite.")
         return
 
     # Cadena de Pedalboard con un único Gain
@@ -178,7 +179,7 @@ def _apply_gain_worker(args: Tuple[Dict[str, Any], float]) -> None:
     try:
         processed = board(data, sr)
     except Exception as e:
-        print(f"[S1_MIXBUS_HEADROOM] Error aplicando Gain a {file_path}: {e}")
+        logger.logger.info(f"[S1_MIXBUS_HEADROOM] Error aplicando Gain a {file_path}: {e}")
         return
 
     processed = np.asarray(processed, dtype=np.float32)
@@ -187,7 +188,7 @@ def _apply_gain_worker(args: Tuple[Dict[str, Any], float]) -> None:
     try:
         sf.write(file_path, processed, sr)
     except Exception as e:
-        print(f"[S1_MIXBUS_HEADROOM] Error escribiendo stem {file_path}: {e}")
+        logger.logger.info(f"[S1_MIXBUS_HEADROOM] Error escribiendo stem {file_path}: {e}")
         return
 
 
@@ -216,7 +217,7 @@ def main() -> None:
       - Aplica esa ganancia a todos los stems y sobrescribe los archivos.
     """
     if len(sys.argv) < 2:
-        print("Uso: python S1_MIXBUS_HEADROOM.py <CONTRACT_ID>")
+        logger.logger.info("Uso: python S1_MIXBUS_HEADROOM.py <CONTRACT_ID>")
         sys.exit(1)
 
     contract_id = sys.argv[1]  # "S1_MIXBUS_HEADROOM"
@@ -228,7 +229,7 @@ def main() -> None:
 
     apply_global_gain_to_stems(stems, gain_db)
 
-    print(
+    logger.logger.info(
         f"[S1_MIXBUS_HEADROOM] Headroom ajustado con ganancia global de {gain_db:.2f} dB "
         f"para {len(stems)} stems."
     )

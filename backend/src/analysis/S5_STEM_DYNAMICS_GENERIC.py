@@ -1,6 +1,7 @@
 # C:\mix-master\backend\src\analysis\S5_STEM_DYNAMICS_GENERIC.py
 
 from __future__ import annotations
+from utils.logger import logger
 
 import sys
 from pathlib import Path
@@ -78,7 +79,7 @@ def main() -> None:
         python analysis/S5_STEM_DYNAMICS_GENERIC.py S5_STEM_DYNAMICS_GENERIC
     """
     if len(sys.argv) < 2:
-        print("Uso: python S5_STEM_DYNAMICS_GENERIC.py <CONTRACT_ID>")
+        logger.logger.info("Uso: python S5_STEM_DYNAMICS_GENERIC.py <CONTRACT_ID>")
         sys.exit(1)
 
     contract_id = sys.argv[1]  # "S5_STEM_DYNAMICS_GENERIC"
@@ -123,7 +124,7 @@ def main() -> None:
         err = stem_entry.get("error")
 
         if err is not None:
-            print(err)
+            logger.logger.info(err)
             continue
 
         rms_db = stem_entry["pre_rms_dbfs"]
@@ -133,7 +134,7 @@ def main() -> None:
         if rms_db is None or peak_db is None or crest_db is None:
             continue
 
-        print(
+        logger.logger.info(
             f"[S5_STEM_DYNAMICS_GENERIC] {fname}: "
             f"RMS={rms_db:.2f} dBFS, peak={peak_db:.2f} dBFS, crest={crest_db:.2f} dB."
         )
@@ -155,7 +156,7 @@ def main() -> None:
     with output_path.open("w", encoding="utf-8") as f:
         json.dump(session_state, f, indent=2, ensure_ascii=False)
 
-    print(
+    logger.logger.info(
         f"[S5_STEM_DYNAMICS_GENERIC] Análisis completado para {len(stems_analysis)} stems. "
         f"JSON: {output_path}"
     )

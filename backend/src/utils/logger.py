@@ -18,8 +18,12 @@ class PipelineLogger:
     def __init__(self):
         self.logger = logging.getLogger("pipeline")
         self.logger.setLevel(logging.INFO)
+        # Prevent propagation to root logger to avoid double printing or system prefixes
+        self.logger.propagate = False
+
         if not self.logger.handlers:
             handler = logging.StreamHandler(sys.stdout)
+            # Clean formatter, just the message
             handler.setFormatter(logging.Formatter("%(message)s"))
             self.logger.addHandler(handler)
 
@@ -82,7 +86,7 @@ class PipelineLogger:
 
         keys = set(pre_sess.keys()) | set(post_sess.keys())
 
-        # Filter for interesting numeric metrics
+        # Filter for numeric metrics but show ALL of them as requested
         interesting_keys = sorted([k for k in keys if isinstance(pre_sess.get(k), (int, float)) or isinstance(post_sess.get(k), (int, float))])
 
         if not interesting_keys:
@@ -106,7 +110,7 @@ class PipelineLogger:
             v2_str = f"{v2:.2f}" if isinstance(v2, (int, float)) else str(v2)
 
             diff_str = "-"
-            diff_color = RESET
+            row_color = RESET
 
             if isinstance(v1, (int, float)) and isinstance(v2, (int, float)):
                 diff = v2 - v1
@@ -114,16 +118,11 @@ class PipelineLogger:
                     diff_str = "="
                 else:
                     diff_str = f"{diff:+.2f}"
-                    # Color logic: this is context dependent, but generally changes > 0 might be blue?
-                    # Let's keep it neutral or use standard colors.
+                    row_color = YELLOW # Highlight changed rows
 
-            # Highlight if changed
-            if v1 != v2:
-                row = f"{k:<40} | {v1_str:<15} | {v2_str:<15} | {diff_color}{diff_str:<10}{RESET}"
-                self.logger.info(row)
-            # Else skip equality to reduce noise? User said "show a summary with differences".
-            # But maybe showing context is good. Let's show only differences for now, or major ones.
-            # Actually, user example: "RMS_1 = -32 || RMS_2 = -30". Implies showing the change.
+            # Print row
+            row = f"{row_color}{k:<40} | {v1_str:<15} | {v2_str:<15} | {diff_str:<10}{RESET}"
+            self.logger.info(row)
 
         # Also check Stems if manageable
         # Stems comparison is tricky because it's a list. We assume same order or match by name.

@@ -1,3 +1,4 @@
+from utils.logger import logger
 # C:\mix-master\backend\src\analysis\S1_MIXBUS_HEADROOM.py
 
 import sys
@@ -40,7 +41,7 @@ def _load_stem_for_mix(stem_path_str: str):
         data = data.astype(np.float32)
         return data, sr
     except Exception as e:
-        print(f"[S1_MIXBUS_HEADROOM] Aviso: no se pudo leer {stem_path}: {e}")
+        logger.logger.info(f"[S1_MIXBUS_HEADROOM] Aviso: no se pudo leer {stem_path}: {e}")
         return None, None
 
 
@@ -98,7 +99,7 @@ def _compute_mixbus_peak_and_lufs_parallel(
             lufs_integrated, _ = compute_lufs_and_lra(mix, sr_ref)
             lufs_integrated = float(lufs_integrated)
         except Exception as e:
-            print(
+            logger.logger.info(
                 f"[S1_MIXBUS_HEADROOM] Aviso: no se pudo calcular LUFS del mixbus: {e}"
             )
             lufs_integrated = None
@@ -114,7 +115,7 @@ def main() -> None:
         python analysis/S1_MIXBUS_HEADROOM.py S1_MIXBUS_HEADROOM
     """
     if len(sys.argv) < 2:
-        print("Uso: python S1_MIXBUS_HEADROOM.py <CONTRACT_ID>")
+        logger.logger.info("Uso: python S1_MIXBUS_HEADROOM.py <CONTRACT_ID>")
         sys.exit(1)
 
     contract_id = sys.argv[1]  # "S1_MIXBUS_HEADROOM"
@@ -175,7 +176,7 @@ def main() -> None:
     with output_path.open("w", encoding="utf-8") as f:
         json.dump(session_state, f, indent=2, ensure_ascii=False)
 
-    print(f"[S1_MIXBUS_HEADROOM] Análisis completado. JSON guardado en: {output_path}")
+    # logger.logger.debug("Analysis complete")
 
 
 if __name__ == "__main__":

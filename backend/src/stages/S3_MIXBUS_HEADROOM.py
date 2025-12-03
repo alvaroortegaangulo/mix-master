@@ -1,6 +1,7 @@
 # C:\mix-master\backend\src\stages\S3_MIXBUS_HEADROOM.py
 
 from __future__ import annotations
+from utils.logger import logger
 
 import sys
 import os
@@ -134,12 +135,12 @@ def _apply_gain_to_stem_worker(args: Tuple[str, str, float]) -> Tuple[str, bool]
 
         sf.write(path, data_out, sr)
 
-        print(
+        logger.logger.info(
             f"[S3_MIXBUS_HEADROOM] {fname}: aplicado gain global de {gain_db:.2f} dB."
         )
         return fname, True
     except Exception as e:
-        print(f"[S3_MIXBUS_HEADROOM] Error procesando {fname}: {e}")
+        logger.logger.info(f"[S3_MIXBUS_HEADROOM] Error procesando {fname}: {e}")
         return fname, False
 
 
@@ -152,7 +153,7 @@ def main() -> None:
       - Aplica ese gain a todos los stems del stage (no a full_song.wav),
     """
     if len(sys.argv) < 2:
-        print("Uso: python S3_MIXBUS_HEADROOM.py <CONTRACT_ID>")
+        logger.logger.info("Uso: python S3_MIXBUS_HEADROOM.py <CONTRACT_ID>")
         sys.exit(1)
 
     contract_id = sys.argv[1]  # "S3_MIXBUS_HEADROOM"
@@ -167,7 +168,7 @@ def main() -> None:
     gain_db = _compute_global_gain_db(session, metrics, limits)
 
     if abs(gain_db) < 1e-6:
-        print("[S3_MIXBUS_HEADROOM] Mezcla ya dentro de rango; no se aplica cambio de gain.")
+        logger.logger.info("[S3_MIXBUS_HEADROOM] Mezcla ya dentro de rango; no se aplica cambio de gain.")
         return
 
     # Preparar lista de tareas para los stems válidos (excluyendo full_song.wav)
@@ -181,7 +182,7 @@ def main() -> None:
         tasks.append((contract_id, fname, gain_db))
 
     if not tasks:
-        print("[S3_MIXBUS_HEADROOM] No hay stems a los que aplicar gain.")
+        logger.logger.info("[S3_MIXBUS_HEADROOM] No hay stems a los que aplicar gain.")
         return
 
     processed = 0
@@ -190,7 +191,7 @@ def main() -> None:
         if ok:
             processed += 1
 
-    print(
+    logger.logger.info(
         f"[S3_MIXBUS_HEADROOM] Aplicado gain global de {gain_db:.2f} dB "
         f"a {processed} stems."
     )

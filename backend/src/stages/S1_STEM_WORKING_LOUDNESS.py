@@ -1,6 +1,7 @@
 # C:\mix-master\backend\src\stages\S1_STEM_WORKING_LOUDNESS.py
 
 from __future__ import annotations
+from utils.logger import logger
 
 import sys
 from pathlib import Path
@@ -139,7 +140,7 @@ def main() -> None:
       - Aplica la ganancia y sobrescribe los stems (en paralelo por archivo).
     """
     if len(sys.argv) < 2:
-        print("Uso: python S1_STEM_WORKING_LOUDNESS.py <CONTRACT_ID>")
+        logger.logger.info("Uso: python S1_STEM_WORKING_LOUDNESS.py <CONTRACT_ID>")
         sys.exit(1)
 
     contract_id = sys.argv[1]  # "S1_STEM_WORKING_LOUDNESS"
@@ -166,7 +167,7 @@ def main() -> None:
         for args in args_list:
             _process_stem_worker(args)
 
-    print(
+    logger.logger.info(
         f"[S1_STEM_WORKING_LOUDNESS] Normalización de trabajo completada para {len(stems)} stems."
     )
 

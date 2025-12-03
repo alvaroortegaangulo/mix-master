@@ -1,6 +1,7 @@
 # C:\mix-master\backend\src\stages\S5_STEM_DYNAMICS_GENERIC.py
 
 from __future__ import annotations
+from utils.logger import logger
 
 import sys
 from pathlib import Path
@@ -93,7 +94,7 @@ def _compress_stem_worker(
             audio = f.read(f.frames)
             samplerate = f.samplerate
     except Exception as e:
-        print(f"[S5_STEM_DYNAMICS_GENERIC] {fname}: error al leer el archivo: {e}")
+        logger.logger.info(f"[S5_STEM_DYNAMICS_GENERIC] {fname}: error al leer el archivo: {e}")
         return None
 
     if not isinstance(audio, np.ndarray):
@@ -102,7 +103,7 @@ def _compress_stem_worker(
         audio = audio.astype(np.float32)
 
     if audio.size == 0:
-        print(f"[S5_STEM_DYNAMICS_GENERIC] {fname}: archivo vacío; se omite.")
+        logger.logger.info(f"[S5_STEM_DYNAMICS_GENERIC] {fname}: archivo vacío; se omite.")
         return None
 
     # Normalizar forma para el compresor
@@ -113,7 +114,7 @@ def _compress_stem_worker(
         audio_for_board = audio                 # (channels, samples)
         data_in = audio.T.copy()                # (samples, channels)
     else:
-        print(
+        logger.logger.info(
             f"[S5_STEM_DYNAMICS_GENERIC] {fname}: formato de audio no soportado "
             f"con ndim={audio.ndim}; se omite."
         )
@@ -134,7 +135,7 @@ def _compress_stem_worker(
     try:
         processed = board(audio_for_board, samplerate)
     except Exception as e:
-        print(f"[S5_STEM_DYNAMICS_GENERIC] {fname}: error en compresor: {e}")
+        logger.logger.info(f"[S5_STEM_DYNAMICS_GENERIC] {fname}: error en compresor: {e}")
         return None
 
     if not isinstance(processed, np.ndarray):
@@ -147,7 +148,7 @@ def _compress_stem_worker(
     elif processed.ndim == 2:
         data_out = processed.T.copy()
     else:
-        print(
+        logger.logger.info(
             f"[S5_STEM_DYNAMICS_GENERIC] {fname}: salida del compresor no soportada "
             f"con ndim={processed.ndim}; se omite."
         )
@@ -206,7 +207,7 @@ def _compress_stem_worker(
 
 def main() -> None:
     if len(sys.argv) < 2:
-        print("Uso: python S5_STEM_DYNAMICS_GENERIC.py <CONTRACT_ID>")
+        logger.logger.info("Uso: python S5_STEM_DYNAMICS_GENERIC.py <CONTRACT_ID>")
         sys.exit(1)
 
     contract_id = sys.argv[1]
@@ -255,7 +256,7 @@ def main() -> None:
             pre_peak_db = float(pre_peak_db)
             pre_crest_db = float(pre_crest_db)
         except (TypeError, ValueError):
-            print(
+            logger.logger.info(
                 f"[S5_STEM_DYNAMICS_GENERIC] {fname}: métricas previas inválidas; "
                 f"se omite compresión."
             )
@@ -301,7 +302,7 @@ def main() -> None:
             pre_crest_db = result["pre_crest_db"]
             post_crest_db = result["post_crest_db"]
 
-            print(
+            logger.logger.info(
                 f"[S5_STEM_DYNAMICS_GENERIC] {fname}: threshold={threshold_db:.2f} dBFS, "
                 f"avg_GR={avg_gr_db:.2f} dB, max_GR={max_gr_db:.2f} dB, "
                 f"crest_pre={pre_crest_db:.2f} dB, crest_post={post_crest_db:.2f} dB."
@@ -310,7 +311,7 @@ def main() -> None:
             metrics_records.append(result)
             stems_processed += 1
     else:
-        print(
+        logger.logger.info(
             "[S5_STEM_DYNAMICS_GENERIC] No hay stems válidos que requieran compresión."
         )
 
@@ -328,7 +329,7 @@ def main() -> None:
             ensure_ascii=False,
         )
 
-    print(
+    logger.logger.info(
         f"[S5_STEM_DYNAMICS_GENERIC] Stage completado. Stems procesados={stems_processed}. "
         f"Métricas guardadas en: {metrics_path}"
     )

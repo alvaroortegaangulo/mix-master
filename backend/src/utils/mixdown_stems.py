@@ -1,3 +1,4 @@
+from utils.logger import logger
 # C:\mix-master\backend\src\utils\mixdown_stems.py
 
 from __future__ import annotations
@@ -34,7 +35,7 @@ def process(context: PipelineContext, *args) -> bool:
     stage_dir = context.get_stage_dir(stage_id)
 
     if not stage_dir.exists():
-        print(f"[mixdown_stems] La carpeta de stage {stage_dir} no existe.")
+        logger.logger.info(f"[mixdown_stems] La carpeta de stage {stage_dir} no existe.")
         return False # O True si queremos ser permisivos? Originalmente retornaba sin error.
 
     # Tomar todos los .wav excepto full_song.wav (por si ya existiera)
@@ -44,7 +45,7 @@ def process(context: PipelineContext, *args) -> bool:
     ]
 
     if not stem_paths:
-        print(f"[mixdown_stems] No se han encontrado stems en {stage_dir}")
+        logger.logger.info(f"[mixdown_stems] No se han encontrado stems en {stage_dir}")
         return True # No es error critico quizas?
 
     sr_ref = None
@@ -58,7 +59,7 @@ def process(context: PipelineContext, *args) -> bool:
                 sr = f.samplerate
                 ch = f.channels
         except Exception as e:
-            print(f"[mixdown_stems] Aviso: no se pudo leer {p}: {e}")
+            logger.logger.info(f"[mixdown_stems] Aviso: no se pudo leer {p}: {e}")
             continue
 
         if sr_ref is None:
@@ -66,7 +67,7 @@ def process(context: PipelineContext, *args) -> bool:
             ch_ref = ch
         else:
             if sr != sr_ref or ch != ch_ref:
-                print(
+                logger.logger.info(
                     f"[mixdown_stems] Aviso: se omite {p} por sr/canales inconsistentes "
                     f"(sr={sr}, ch={ch} vs ref sr={sr_ref}, ch={ch_ref})"
                 )
@@ -75,7 +76,7 @@ def process(context: PipelineContext, *args) -> bool:
         valid_paths.append(p)
 
     if not valid_paths or sr_ref is None or ch_ref is None:
-        print(f"[mixdown_stems] No hay stems válidos para mixdown en {stage_dir}")
+        logger.logger.info(f"[mixdown_stems] No hay stems válidos para mixdown en {stage_dir}")
         return True
 
     blocksize = 65536
@@ -130,13 +131,13 @@ def process(context: PipelineContext, *args) -> bool:
         for f in files:
             f.close()
 
-    print(f"[mixdown_stems] Mixdown completado en: {out_path}")
+    logger.logger.info(f"[mixdown_stems] Mixdown completado en: {out_path}")
     return True
 
 
 def main() -> None:
     if len(sys.argv) < 2:
-        print("Uso: python mixdown_stems.py <STAGE_ID>")
+        logger.logger.info("Uso: python mixdown_stems.py <STAGE_ID>")
         sys.exit(1)
 
     stage_id = sys.argv[1]
