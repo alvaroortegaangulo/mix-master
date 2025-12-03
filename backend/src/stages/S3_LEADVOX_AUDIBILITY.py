@@ -13,12 +13,11 @@ if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
 import json  # noqa: E402
-import os  # noqa: E402
 
 import numpy as np  # noqa: E402
 import soundfile as sf  # noqa: E402
 
-from utils.analysis_utils import get_temp_dir
+from utils.analysis_utils import get_temp_dir  # noqa: E402
 
 
 def load_analysis(contract_id: str) -> Dict[str, Any]:
@@ -48,12 +47,12 @@ def _compute_lead_gain_db(
     offset = LUFS_lead_short_term - LUFS_mix_short_term (media global).
 
     Queremos que offset esté dentro de [offset_min, offset_max].
-    Elegimos como objetivo el centro (que en este contrato es 0 dB).
+    Objetivo: el centro del rango (en este contrato, 0 dB).
 
     Estrategia:
-      - Simulamos varias "pasadas virtuales" de hasta max_gain_change_db_per_pass
-        cada una, acumulando un gain total que acerque el offset al objetivo
-        y lo deje dentro de rango en una sola ejecución del stage.
+      - Usar el offset medido una sola vez.
+      - Calcular el gain ideal directo para ir al centro.
+      - Limitar el gain total a un múltiplo de max_gain_change_db_per_pass.
     """
     offset_min = float(metrics.get("short_term_lufs_offset_vs_mixbus_min_db", -3.0))
     offset_max = float(metrics.get("short_term_lufs_offset_vs_mixbus_max_db", 3.0))
@@ -70,47 +69,41 @@ def _compute_lead_gain_db(
 
     max_gain_step = float(limits.get("max_gain_change_db_per_pass", 2.0))
 
-    # Margen que usa también el check
+    # Mismo margen que usa el check
     MARGIN_DB = 0.5
-    target_offset = 0.5 * (offset_min + offset_max)  # en este contrato, 0 dB
-
-    # Simulación de varias pasadas virtuales
-    cur_offset = offset_mean
-    total_gain = 0.0
-
-    # Igual que en S1_MIXBUS_HEADROOM: hasta 8 pasos razonables
-    MAX_STEPS = 8
-
-    for _ in range(MAX_STEPS):
-        # ¿Ya estamos dentro del rango (con margen)?
-        if offset_min - MARGIN_DB <= cur_offset <= offset_max + MARGIN_DB:
-            break
-
-        # Ganancia ideal para ir al centro
-        desired_gain = target_offset - cur_offset  # subir/bajar lead
-
-        # Limitar por step máximo
-        if desired_gain > max_gain_step:
-            step = max_gain_step
-        elif desired_gain < -max_gain_step:
-            step = -max_gain_step
-        else:
-            step = desired_gain
-
-        # Evitar micro-ajustes ridículos
-        if abs(step) < 0.1:
-            break
-
-        # Aplicar paso virtual:
-        # si subimos la voz X dB, el offset lead-mix sube también X dB.
-        total_gain += step
-        cur_offset += step
-
-    # Si el gain total es muy pequeño, lo ignoramos
-    if abs(total_gain) < 0.1:
+    if offset_min - MARGIN_DB <= offset_mean <= offset_max + MARGIN_DB:
+        # Ya estamos dentro de rango (con margen)
         return 0.0
 
-    return float(total_gain)
+    # Centro del rango objetivo (en tu contrato -3..+3 => 0 dB)
+    target_offset = 0.5 * (offset_min + offset_max)
+
+    # Gain ideal para llevar offset_mean a target_offset
+    desired_gain = target_offset - offset_mean  # si offset=-7 => +7 dB
+
+    # Permitimos que una sola ejecución pueda acumular varios "steps"
+    # p.ej. 4 pasos de 2 dB => 8 dB máx. de corrección total.
+    MAX_STEPS = 4
+    max_total_gain = max_gain_step * MAX_STEPS
+
+    if desired_gain > max_total_gain:
+        gain_db = max_total_gain
+    elif desired_gain < -max_total_gain:
+        gain_db = -max_total_gain
+    else:
+        gain_db = desired_gain
+
+    # Ignorar micro-cambios
+    if abs(gain_db) < 0.1:
+        gain_db = 0.0
+
+    print(
+        f"[S3_LEADVOX_AUDIBILITY] offset_mean={offset_mean:.2f} dB, "
+        f"target_offset={target_offset:.2f} dB, desired_gain={desired_gain:.2f} dB, "
+        f"gain_db_clamped={gain_db:.2f} dB (max_total={max_total_gain:.2f} dB)."
+    )
+
+    return float(gain_db)
 
 
 # -------------------------------------------------------------------
@@ -160,7 +153,7 @@ def main() -> None:
 
       - Lee analysis_S3_LEADVOX_AUDIBILITY.json.
       - Calcula un gain global en dB para todas las pistas de lead vocal.
-      - Aplica ese gain a los stems marcados como is_lead_vocal = True.
+      - Aplica ese gain a los stems marcados como is_lead_vocal = True,
     """
     if len(sys.argv) < 2:
         print("Uso: python S3_LEADVOX_AUDIBILITY.py <CONTRACT_ID>")
