@@ -12,6 +12,8 @@ SRC_DIR = THIS_DIR.parent  # .../src
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
+from stages.pipeline_context import PipelineContext
+
 import json  # noqa: E402
 
 import numpy as np  # noqa: E402
@@ -218,7 +220,7 @@ def _process_final_limits_worker(
     }
 
 
-def main() -> None:
+def process(context: PipelineContext) -> None:
     """
     Stage S10_MASTER_FINAL_LIMITS:
 
@@ -227,11 +229,8 @@ def main() -> None:
       - Recalcula métricas post-QC en el worker.
       - Guarda qc_metrics_S10_MASTER_FINAL_LIMITS.json con métricas pre/post.
     """
-    if len(sys.argv) < 2:
-        print("Uso: python S10_MASTER_FINAL_LIMITS.py <CONTRACT_ID>")
-        sys.exit(1)
 
-    contract_id = sys.argv[1]  # "S10_MASTER_FINAL_LIMITS"
+    contract_id = context.contract_id  # "S10_MASTER_FINAL_LIMITS"
 
     analysis = load_analysis(contract_id)
 
@@ -329,4 +328,14 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) < 2:
+        print(f"Uso: python {Path(__file__).name} <CONTRACT_ID>")
+        sys.exit(1)
+
+    from dataclasses import dataclass
+    @dataclass
+    class _MockContext:
+        contract_id: str
+        next_contract_id: str | None = None
+
+    process(_MockContext(contract_id=sys.argv[1]))

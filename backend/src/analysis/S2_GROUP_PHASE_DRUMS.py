@@ -13,6 +13,8 @@ SRC_DIR = THIS_DIR.parent  # .../src
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
+from stages.pipeline_context import PipelineContext
+
 import json  # noqa: E402
 import numpy as np  # noqa: E402
 import soundfile as sf  # noqa: E402
@@ -174,18 +176,15 @@ def _analyze_drum_stem(
     return idx, info
 
 
-def main() -> None:
+def process(context: PipelineContext) -> None:
     """
     Análisis para el contrato S2_GROUP_PHASE_DRUMS.
 
     Uso esperado desde stage.py:
         python analysis/S2_GROUP_PHASE_DRUMS.py S2_GROUP_PHASE_DRUMS
     """
-    if len(sys.argv) < 2:
-        print("Uso: python S2_GROUP_PHASE_DRUMS.py <CONTRACT_ID>")
-        sys.exit(1)
 
-    contract_id = sys.argv[1]  # "S2_GROUP_PHASE_DRUMS"
+    contract_id = context.contract_id  # "S2_GROUP_PHASE_DRUMS"
 
     # 1) Cargar contrato
     contract = load_contract(contract_id)
@@ -396,4 +395,14 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) < 2:
+        print(f"Uso: python {Path(__file__).name} <CONTRACT_ID>")
+        sys.exit(1)
+
+    from dataclasses import dataclass
+    @dataclass
+    class _MockContext:
+        contract_id: str
+        next_contract_id: str | None = None
+
+    process(_MockContext(contract_id=sys.argv[1]))

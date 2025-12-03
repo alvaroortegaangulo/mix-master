@@ -1,3 +1,4 @@
+from stages.pipeline_context import PipelineContext
 import os
 
 # Ruta del directorio raíz que quieres analizar

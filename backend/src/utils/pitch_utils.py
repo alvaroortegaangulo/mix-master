@@ -1,6 +1,7 @@
 # C:\mix-master\backend\src\utils\pitch_utils.py
 
 from __future__ import annotations
+from stages.pipeline_context import PipelineContext
 
 from typing import Dict, Any, Tuple, List
 

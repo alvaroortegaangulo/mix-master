@@ -9,6 +9,8 @@ SRC_DIR = THIS_DIR.parent  # .../src
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
+from stages.pipeline_context import PipelineContext
+
 import json
 from typing import Dict, Any, List
 import os
@@ -49,18 +51,15 @@ def analyze_stem(stem_path: Path) -> Dict[str, Any]:
     }
 
 
-def main() -> None:
+def process(context: PipelineContext) -> None:
     """
     Análisis para el contrato S1_STEM_DC_OFFSET.
 
     Uso esperado desde stage.py:
         python analysis/S1_STEM_DC_OFFSET.py S1_STEM_DC_OFFSET
     """
-    if len(sys.argv) < 2:
-        print("Uso: python S1_STEM_DC_OFFSET.py <CONTRACT_ID>")
-        sys.exit(1)
 
-    contract_id = sys.argv[1]  # debería ser "S1_STEM_DC_OFFSET"
+    contract_id = context.contract_id  # debería ser "S1_STEM_DC_OFFSET"
 
     # 1) Cargar contrato y carpeta temp/<contract_id>
     contract = load_contract(contract_id)
@@ -125,4 +124,14 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) < 2:
+        print(f"Uso: python {Path(__file__).name} <CONTRACT_ID>")
+        sys.exit(1)
+
+    from dataclasses import dataclass
+    @dataclass
+    class _MockContext:
+        contract_id: str
+        next_contract_id: str | None = None
+
+    process(_MockContext(contract_id=sys.argv[1]))

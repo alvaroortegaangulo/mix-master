@@ -13,8 +13,11 @@ SRC_DIR = THIS_DIR.parent  # .../src
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
+from stages.pipeline_context import PipelineContext
+
 import json  # noqa: E402
 import soundfile as sf  # noqa: E402
+
 
 from utils.analysis_utils import (  # noqa: E402
     load_contract,
@@ -55,18 +58,11 @@ def _analyze_mixbus(full_song_path: Path) -> Dict[str, Any]:
     }
 
 
-def main() -> None:
+def process(context: PipelineContext) -> None:
     """
     Análisis para el contrato S7_MIXBUS_TONAL_BALANCE.
-
-    Uso desde stage.py:
-        python S7_MIXBUS_TONAL_BALANCE.py S7_MIXBUS_TONAL_BALANCE
     """
-    if len(sys.argv) < 2:
-        print("Uso: python S7_MIXBUS_TONAL_BALANCE.py <CONTRACT_ID>")
-        sys.exit(1)
-
-    contract_id = sys.argv[1]  # "S7_MIXBUS_TONAL_BALANCE"
+    contract_id = context.contract_id
 
     # 1) Cargar contrato
     contract = load_contract(contract_id)
@@ -155,4 +151,14 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) < 2:
+        print("Uso: python S7_MIXBUS_TONAL_BALANCE.py <CONTRACT_ID>")
+        sys.exit(1)
+
+    from dataclasses import dataclass
+    @dataclass
+    class _MockContext:
+        contract_id: str
+        next_contract_id: str | None = None
+
+    process(_MockContext(contract_id=sys.argv[1]))

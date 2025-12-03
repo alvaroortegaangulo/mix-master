@@ -12,6 +12,8 @@ SRC_DIR = THIS_DIR.parent  # .../src
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
+from stages.pipeline_context import PipelineContext
+
 import json  # noqa: E402
 import os  # noqa: E402
 
@@ -192,18 +194,11 @@ def _build_scale_degrees_midi(key_root_pc: int, key_mode: str) -> List[int]:
     return pcs
 
 
-def main() -> None:
+def process(context: PipelineContext) -> None:
     """
     Análisis para el contrato S1_KEY_DETECTION.
-
-    Uso esperado desde stage.py:
-        python analysis/S1_KEY_DETECTION.py S1_KEY_DETECTION
     """
-    if len(sys.argv) < 2:
-        print("Uso: python S1_KEY_DETECTION.py <CONTRACT_ID>")
-        sys.exit(1)
-
-    contract_id = sys.argv[1]  # "S1_KEY_DETECTION"
+    contract_id = context.contract_id
 
     # 1) Cargar contrato
     contract = load_contract(contract_id)
@@ -277,4 +272,14 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) < 2:
+        print("Uso: python S1_KEY_DETECTION.py <CONTRACT_ID>")
+        sys.exit(1)
+
+    from dataclasses import dataclass
+    @dataclass
+    class _MockContext:
+        contract_id: str
+        next_contract_id: str | None = None
+
+    process(_MockContext(contract_id=sys.argv[1]))

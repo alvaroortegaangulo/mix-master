@@ -11,6 +11,8 @@ SRC_DIR = THIS_DIR.parent  # .../src
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
+from stages.pipeline_context import PipelineContext
+
 import json  # noqa: E402
 import numpy as np  # noqa: E402
 import soundfile as sf  # noqa: E402
@@ -177,7 +179,7 @@ def _choose_target_offset_db(
     return offset_min_db + pos * (offset_max_db - offset_min_db)
 
 
-def main() -> None:
+def process(context: PipelineContext) -> None:
     """
     Stage S6_BUS_REVERB_STYLE:
 
@@ -188,11 +190,8 @@ def main() -> None:
         respecto al mix dry (full_song.wav o referencia fija).
       - Guarda métricas de espacio/profundidad para el futuro check.
     """
-    if len(sys.argv) < 2:
-        print("Uso: python S6_BUS_REVERB_STYLE.py <CONTRACT_ID>")
-        sys.exit(1)
 
-    contract_id = sys.argv[1]  # "S6_BUS_REVERB_STYLE"
+    contract_id = context.contract_id  # "S6_BUS_REVERB_STYLE"
 
     analysis = load_analysis(contract_id)
 
@@ -443,4 +442,14 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) < 2:
+        print(f"Uso: python {Path(__file__).name} <CONTRACT_ID>")
+        sys.exit(1)
+
+    from dataclasses import dataclass
+    @dataclass
+    class _MockContext:
+        contract_id: str
+        next_contract_id: str | None = None
+
+    process(_MockContext(contract_id=sys.argv[1]))

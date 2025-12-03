@@ -1,6 +1,7 @@
 # C:\mix-master\backend\src\utils\phase_utils.py
 
 from __future__ import annotations
+from stages.pipeline_context import PipelineContext
 
 from typing import Dict, Any, Optional
 

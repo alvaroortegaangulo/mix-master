@@ -15,6 +15,8 @@ SRC_DIR = THIS_DIR.parent  # .../src
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
+from stages.pipeline_context import PipelineContext
+
 import numpy as np  # noqa: E402
 import soundfile as sf  # noqa: E402
 
@@ -227,7 +229,7 @@ def _crest_hist_worker(path: Path) -> Dict[str, Any]:
     return metrics
 
 
-def main() -> None:
+def process(context: PipelineContext) -> None:
     """
     Análisis para S11_REPORT_GENERATION.
 
@@ -236,11 +238,8 @@ def main() -> None:
       - resumen por stage con métricas clave (lo que haya en 'session' de cada análisis).
       - métricas finales (LUFS, LRA, TP, correlación, crest, histograma de niveles).
     """
-    if len(sys.argv) < 2:
-        print("Uso: python S11_REPORT_GENERATION.py <CONTRACT_ID>")
-        sys.exit(1)
 
-    contract_id = sys.argv[1]  # "S11_REPORT_GENERATION"
+    contract_id = context.contract_id  # "S11_REPORT_GENERATION"
 
     # 1) Cargar contrato
     contract = load_contract(contract_id)
@@ -354,4 +353,14 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) < 2:
+        print(f"Uso: python {Path(__file__).name} <CONTRACT_ID>")
+        sys.exit(1)
+
+    from dataclasses import dataclass
+    @dataclass
+    class _MockContext:
+        contract_id: str
+        next_contract_id: str | None = None
+
+    process(_MockContext(contract_id=sys.argv[1]))

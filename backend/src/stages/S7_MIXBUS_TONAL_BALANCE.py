@@ -13,9 +13,12 @@ SRC_DIR = THIS_DIR.parent  # .../src
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
+from stages.pipeline_context import PipelineContext
+
 import json  # noqa: E402
 import numpy as np  # noqa: E402
 import soundfile as sf  # noqa: E402
+
 
 from pedalboard import (  # noqa: E402
     Pedalboard,
@@ -193,7 +196,7 @@ def _apply_multiband_eq_pedalboard(
 # Stage principal
 # ---------------------------------------------------------------------
 
-def main() -> None:
+def process(context: PipelineContext) -> None:
     """
     Stage S7_MIXBUS_TONAL_BALANCE:
 
@@ -205,11 +208,7 @@ def main() -> None:
       - Recalcula el tonal balance y guarda métricas en
         tonal_metrics_S7_MIXBUS_TONAL_BALANCE.json para el check.
     """
-    if len(sys.argv) < 2:
-        print("Uso: python S7_MIXBUS_TONAL_BALANCE.py <CONTRACT_ID>")
-        sys.exit(1)
-
-    contract_id = sys.argv[1]  # "S7_MIXBUS_TONAL_BALANCE"
+    contract_id = context.contract_id
 
     # 1) Cargar análisis previo
     analysis = load_analysis(contract_id)
@@ -377,4 +376,14 @@ def _save_tonal_metrics(
 
 
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) < 2:
+        print("Uso: python S7_MIXBUS_TONAL_BALANCE.py <CONTRACT_ID>")
+        sys.exit(1)
+
+    from dataclasses import dataclass
+    @dataclass
+    class _MockContext:
+        contract_id: str
+        next_contract_id: str | None = None
+
+    process(_MockContext(contract_id=sys.argv[1]))

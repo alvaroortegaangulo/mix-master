@@ -12,6 +12,8 @@ SRC_DIR = THIS_DIR.parent                          # .../src
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
+from stages.pipeline_context import PipelineContext
+
 from utils.profiles_utils import get_instrument_profile  # noqa: E402
 from utils.analysis_utils import get_temp_dir
 
@@ -24,7 +26,8 @@ def _load_analysis(contract_id: str) -> Dict[str, Any]:
 
     if not analysis_path.exists():
         print(f"[check_metrics] ERROR: No se encuentra el análisis en {analysis_path}", file=sys.stderr)
-        sys.exit(1)
+        # Instead of sys.exit(1), we raise Exception to be caught by process()
+        raise FileNotFoundError(f"Analysis file not found: {analysis_path}")
 
     with analysis_path.open("r", encoding="utf-8") as f:
         data = json.load(f)
@@ -2277,18 +2280,12 @@ def _check_S11_REPORT_GENERATION(data: Dict[str, Any]) -> bool:
 # ----------------- DISPATCH GENERAL -----------------
 
 
-def main() -> None:
+def process(context: PipelineContext) -> bool:
     """
-    Uso esperado desde stage.py:
-        python utils/check_metrics_limits.py <CONTRACT_ID>
-
-    Devuelve exit code 0 si el contrato se considera cumplido, 1 si no.
+    Check metrics limits for the given contract.
+    Returns True if passed, False otherwise.
     """
-    if len(sys.argv) < 2:
-        print("Uso: python check_metrics_limits.py <CONTRACT_ID>", file=sys.stderr)
-        sys.exit(1)
-
-    contract_id = sys.argv[1]
+    contract_id = context.contract_id
 
     analysis = _load_analysis(contract_id)
 
@@ -2335,6 +2332,21 @@ def main() -> None:
         print(f"[check_metrics] No hay validación específica para {contract_id}, se considera éxito por defecto.")
         ok = True
 
+    return ok
+
+
+def main() -> None:
+    if len(sys.argv) < 2:
+        print("Uso: python check_metrics_limits.py <CONTRACT_ID>", file=sys.stderr)
+        sys.exit(1)
+
+    from dataclasses import dataclass
+    @dataclass
+    class _MockContext:
+        contract_id: str
+        next_contract_id: str | None = None
+
+    ok = process(_MockContext(contract_id=sys.argv[1]))
     sys.exit(0 if ok else 1)
 
 

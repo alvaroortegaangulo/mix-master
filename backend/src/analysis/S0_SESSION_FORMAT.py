@@ -2,27 +2,31 @@
 
 import sys
 from pathlib import Path
+from typing import Dict, Any, List
+import json
+import numpy as np
+import soundfile as sf
 
-# Añadir .../src al sys.path para poder hacer "from utils ..."
+# Import for type checking or direct import if needed
+
+# Hack for standalone run or when context import fails?
+# Usually in the pipeline, stages.pipeline_context will be available.
+# We don't need the sys.path hack anymore if running via stage.py,
+# but we keep it for safety in standalone execution if needed.
 THIS_DIR = Path(__file__).resolve().parent
-SRC_DIR = THIS_DIR.parent  # .../src
+SRC_DIR = THIS_DIR.parent
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-import json  # noqa: E402
-from typing import Dict, Any, List  # noqa: E402
-import os  # noqa: E402
+from stages.pipeline_context import PipelineContext
 
-import numpy as np  # noqa: E402
-import soundfile as sf  # noqa: E402
-
-from utils.analysis_utils import (  # noqa: E402
+from utils.analysis_utils import (
     load_contract,
     get_temp_dir,
     load_audio_mono,
     compute_peak_dbfs,
 )
-from utils.session_utils import (  # noqa: E402
+from utils.session_utils import (
     load_session_config,
     infer_bus_target,
 )
@@ -83,18 +87,11 @@ def analyze_stem(stem_path: Path) -> Dict[str, Any]:
     }
 
 
-def main() -> None:
+def process(context: PipelineContext) -> None:
     """
     Script de análisis para el contrato S0_SESSION_FORMAT.
-
-    Uso esperado desde stage.py:
-        python analysis/S0_SESSION_FORMAT.py S0_SESSION_FORMAT
     """
-    if len(sys.argv) < 2:
-        print("Uso: python S0_SESSION_FORMAT.py <CONTRACT_ID>")
-        sys.exit(1)
-
-    contract_id = sys.argv[1]  # "S0_SESSION_FORMAT"
+    contract_id = context.contract_id
 
     # 1) Cargar contrato y temp/<contract_id>
     contract = load_contract(contract_id)
@@ -182,4 +179,15 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) < 2:
+        print("Uso: python S0_SESSION_FORMAT.py <CONTRACT_ID>")
+        sys.exit(1)
+
+    # Minimal context wrapper for standalone run
+    from dataclasses import dataclass
+    @dataclass
+    class _MockContext:
+        contract_id: str
+        next_contract_id: str | None = None
+
+    process(_MockContext(contract_id=sys.argv[1]))

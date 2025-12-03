@@ -12,6 +12,8 @@ SRC_DIR = THIS_DIR.parent  # .../src
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
+from stages.pipeline_context import PipelineContext
+
 import json  # noqa: E402
 import numpy as np  # noqa: E402
 
@@ -204,12 +206,9 @@ def _compress_stem_worker(
     }
 
 
-def main() -> None:
-    if len(sys.argv) < 2:
-        print("Uso: python S5_STEM_DYNAMICS_GENERIC.py <CONTRACT_ID>")
-        sys.exit(1)
+def process(context: PipelineContext) -> None:
 
-    contract_id = sys.argv[1]
+    contract_id = context.contract_id
 
     analysis = load_analysis(contract_id)
 
@@ -335,4 +334,14 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) < 2:
+        print(f"Uso: python {Path(__file__).name} <CONTRACT_ID>")
+        sys.exit(1)
+
+    from dataclasses import dataclass
+    @dataclass
+    class _MockContext:
+        contract_id: str
+        next_contract_id: str | None = None
+
+    process(_MockContext(contract_id=sys.argv[1]))

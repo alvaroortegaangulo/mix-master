@@ -10,6 +10,8 @@ SRC_DIR = THIS_DIR.parent  # .../src
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
+from stages.pipeline_context import PipelineContext
+
 import json  # noqa: E402
 import os  # noqa: E402
 
@@ -106,18 +108,15 @@ def _compute_mixbus_peak_and_lufs_parallel(
     return peak_dbfs, lufs_integrated
 
 
-def main() -> None:
+def process(context: PipelineContext) -> None:
     """
     Análisis para el contrato S1_MIXBUS_HEADROOM.
 
     Uso esperado desde stage.py:
         python analysis/S1_MIXBUS_HEADROOM.py S1_MIXBUS_HEADROOM
     """
-    if len(sys.argv) < 2:
-        print("Uso: python S1_MIXBUS_HEADROOM.py <CONTRACT_ID>")
-        sys.exit(1)
 
-    contract_id = sys.argv[1]  # "S1_MIXBUS_HEADROOM"
+    contract_id = context.contract_id  # "S1_MIXBUS_HEADROOM"
 
     # 1) Cargar contrato y directorio temp/<contract_id>
     contract = load_contract(contract_id)
@@ -179,4 +178,14 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) < 2:
+        print(f"Uso: python {Path(__file__).name} <CONTRACT_ID>")
+        sys.exit(1)
+
+    from dataclasses import dataclass
+    @dataclass
+    class _MockContext:
+        contract_id: str
+        next_contract_id: str | None = None
+
+    process(_MockContext(contract_id=sys.argv[1]))

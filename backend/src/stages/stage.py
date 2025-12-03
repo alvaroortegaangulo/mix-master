@@ -1,15 +1,16 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import sys
 import os
 import json
 import time
-import importlib.util
-import uuid
 import datetime
+import importlib
 from pathlib import Path
-from typing import List, Optional, Dict
+from typing import List, Optional, Any, Callable, TYPE_CHECKING
 
+if TYPE_CHECKING:
+    from stages.pipeline_context import PipelineContext
 
 # Stages que trabajan en mixbus/master y necesitan full_song.wav
 # generado a partir de stems ANTES del análisis
@@ -27,6 +28,9 @@ MIXDOWN_STAGES = {
 # de contract_ids que realmente se van a ejecutar para el job actual.
 ACTIVE_CONTRACT_SEQUENCE: Optional[List[str]] = None
 TIMINGS_FILENAME = "pipeline_timings.json"
+
+# Cache for imported modules to avoid re-importing
+_MODULE_CACHE = {}
 
 
 def _get_job_temp_root(create: bool = False) -> Path:
@@ -98,21 +102,6 @@ def _record_stage_timing(stage_id: str, duration_sec: float) -> None:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
 
-def _ensure_analysis_file(stage_id: str, analysis_script: Path) -> None:
-    """
-    Garantiza que exista analysis_<stage_id>.json; si no, re-ejecuta el
-    analisis en el mismo proceso.
-    """
-    temp_dir = _get_job_temp_root(create=True) / stage_id
-    analysis_path = temp_dir / f"analysis_{stage_id}.json"
-    if analysis_path.exists():
-        return
-
-    print(f"[stage] analysis_{stage_id}.json no encontrado, reintentando analisis...")
-    _run_script_main(analysis_script, stage_id)
-
-
-
 def set_active_contract_sequence(ordered_contract_ids: Optional[List[str]]) -> None:
     """
     Define la secuencia efectiva de contratos que se están ejecutando
@@ -127,55 +116,6 @@ def set_active_contract_sequence(ordered_contract_ids: Optional[List[str]]) -> N
         ACTIVE_CONTRACT_SEQUENCE = list(ordered_contract_ids)
     else:
         ACTIVE_CONTRACT_SEQUENCE = None
-
-
-def _run_script_main(script_path: Path, *args: str) -> int:
-    """
-    Ejecuta el main() de un script Python (analysis, stage o utils) en el
-    mismo proceso en lugar de lanzar un nuevo intérprete. Esto evita el
-    overhead de crear subprocesos y acelera el pipeline.
-    """
-    spec = importlib.util.spec_from_file_location(
-        f"_pipeline_{script_path.stem}_{uuid.uuid4().hex}", script_path
-    )
-    if spec is None or spec.loader is None:
-        print(f"[stage] No se pudo cargar el módulo {script_path}")
-        return 1
-
-    module = importlib.util.module_from_spec(spec)
-    old_argv = sys.argv[:]
-    sys.argv = [script_path.name, *args]
-
-    try:
-        spec.loader.exec_module(module)  # type: ignore[union-attr]
-        main_fn = getattr(module, "main", None)
-        if callable(main_fn):
-            main_fn()
-            return 0
-
-        print(f"[stage] El script {script_path} no expone main()")
-        return 1
-    except SystemExit as exc:  # scripts pueden llamar sys.exit
-        code = exc.code
-        if isinstance(code, int):
-            return code
-        return 1
-    except Exception as exc:  # pragma: no cover - logging defensivo
-        print(f"[stage] Excepción ejecutando {script_path}: {exc}", file=sys.stderr)
-        return 1
-    finally:
-        sys.argv = old_argv
-        # evitar fugas en sys.modules (no compartimos estado entre invocaciones)
-        if spec.name in sys.modules:
-            sys.modules.pop(spec.name, None)
-
-
-
-def _run_script(script_path: Path, *args: str) -> int:
-    """
-    Ejecuta un script en el mismo proceso invocando su main().
-    """
-    return _run_script_main(script_path, *args)
 
 
 def _get_next_contract_id(base_dir: Path, current_contract_id: str) -> str | None:
@@ -222,6 +162,26 @@ def _get_next_contract_id(base_dir: Path, current_contract_id: str) -> str | Non
     return None
 
 
+def _import_and_get_process_func(module_name: str) -> Callable[[PipelineContext], Any]:
+    """
+    Importa un módulo (si no está ya en caché) y devuelve su función process(context).
+    """
+    if module_name in _MODULE_CACHE:
+        return _MODULE_CACHE[module_name]
+
+    try:
+        module = importlib.import_module(module_name)
+    except ImportError as e:
+        raise ImportError(f"No se pudo importar el módulo {module_name}: {e}")
+
+    process_fn = getattr(module, "process", None)
+    if not callable(process_fn):
+        raise AttributeError(f"El módulo {module_name} no expone una función process(context).")
+
+    _MODULE_CACHE[module_name] = process_fn
+    return process_fn
+
+
 def run_stage(stage_id: str) -> None:
     """
     Ejecuta el análisis, el procesamiento y la validación de un contrato
@@ -230,40 +190,66 @@ def run_stage(stage_id: str) -> None:
     """
     base_dir = Path(__file__).resolve().parent.parent  # .../src
 
-    analysis_script = base_dir / "analysis" / f"{stage_id}.py"
-    stage_script = base_dir / "stages" / f"{stage_id}.py"
-    check_script = base_dir / "utils" / "check_metrics_limits.py"
-    mixdown_script = base_dir / "utils" / "mixdown_stems.py"
-    copy_script = base_dir / "utils" / "copy_stems.py"
-    cleanup_stems_script = base_dir / "utils" / "cleanup_stage_stems.py"
+    # Import locally to avoid issues when running as standalone script before sys.path hack
+    from stages.pipeline_context import PipelineContext
+
+    # Utility modules names
+    mixdown_module_name = "utils.mixdown_stems"
+    copy_module_name = "utils.copy_stems"
+    cleanup_module_name = "utils.cleanup_stage_stems"
+    check_metrics_module_name = "utils.check_metrics_limits"
+
+    # Stage specific modules names
+    analysis_module_name = f"analysis.{stage_id}"
+    stage_module_name = f"stages.{stage_id}"
 
     success = False
-
 
     print(f"Running stage: {stage_id}")
     stage_start = time.perf_counter()
 
+    # Context setup
+    next_contract_id = _get_next_contract_id(base_dir, stage_id)
+    ctx = PipelineContext(
+        contract_id=stage_id,
+        next_contract_id=next_contract_id
+    )
 
+    # Helper to run a process step
+    def run_step(module_name: str, context: PipelineContext) -> Any:
+        try:
+            func = _import_and_get_process_func(module_name)
+            return func(context)
+        except Exception as e:
+            print(f"[stage] Error ejecutando {module_name}: {e}")
+            raise
 
     # Para stages de mixbus/master, primero necesitamos un full_song.wav
     # actualizado a partir de los stems de este stage.
     if stage_id in MIXDOWN_STAGES:
-        _run_script(mixdown_script, stage_id)
+        run_step(mixdown_module_name, ctx)
 
     # 1) Análisis previo
-    _run_script(analysis_script, stage_id)
+    run_step(analysis_module_name, ctx)
 
     # 2) Procesamiento principal de la etapa
-    _run_script(stage_script, stage_id)
+    run_step(stage_module_name, ctx)
 
     # 3) Análisis posterior
-    _run_script(analysis_script, stage_id)
+    run_step(analysis_module_name, ctx)
 
     # 4) Validación de métricas (check_metrics_limits.py)
-    ret = _run_script(check_script, stage_id)
-    success = (ret == 0)
-
-
+    try:
+        ret = run_step(check_metrics_module_name, ctx)
+        # check_metrics_limits refactored to return bool.
+        # Strict check for True to avoid False == 0 pitfall if mixed types were possible,
+        # but here we expect boolean from the process function.
+        if ret is True:
+            success = True
+        else:
+            success = False
+    except Exception:
+        success = False
 
     resultado = "éxito" if success else "fracaso"
     print(f"Resultado {stage_id}: {resultado}")
@@ -271,18 +257,25 @@ def run_stage(stage_id: str) -> None:
     # Para el resto de stages (no master), el mixdown se hace al final
     # para dejar preparado full_song.wav de este contrato.
     if stage_id not in MIXDOWN_STAGES:
-        _run_script(mixdown_script, stage_id)
+        run_step(mixdown_module_name, ctx)
 
     # Copiar stems a la carpeta del siguiente contrato de la secuencia
-    next_contract_id = _get_next_contract_id(base_dir, stage_id)
     if next_contract_id is not None:
-        _run_script(copy_script, stage_id, next_contract_id)
+        run_step(copy_module_name, ctx)
 
     # Limpiar stems del stage actual (conserva full_song.wav)
-    _run_script(cleanup_stems_script, stage_id)
+    run_step(cleanup_module_name, ctx)
 
-    # Asegurar que el analisis existe
-    _ensure_analysis_file(stage_id, analysis_script)
+    # Ensure analysis file exists is now implicit since we run analysis step.
+    # But the original code had a retry mechanism `_ensure_analysis_file`.
+    # With direct calls, if analysis fails, it likely raised an exception or printed error.
+    # We can add a check here if needed, but if the process call succeeded, the file should be there.
+    # Let's verify existence just in case.
+    temp_dir = _get_job_temp_root(create=True) / stage_id
+    analysis_path = temp_dir / f"analysis_{stage_id}.json"
+    if not analysis_path.exists():
+         print(f"[stage] analysis_{stage_id}.json no encontrado, reintentando analisis...")
+         run_step(analysis_module_name, ctx)
 
     duration_sec = time.perf_counter() - stage_start
     _record_stage_timing(stage_id, duration_sec)
@@ -292,5 +285,10 @@ if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("Uso: python stage.py <STAGE_ID>")
     else:
-        run_stage(sys.argv[1])
+        # Hack to make sure backend/src is in sys.path
+        # When running from stage.py, we need parent folder
+        BASE_DIR = Path(__file__).resolve().parent.parent
+        if str(BASE_DIR) not in sys.path:
+            sys.path.insert(0, str(BASE_DIR))
 
+        run_stage(sys.argv[1])

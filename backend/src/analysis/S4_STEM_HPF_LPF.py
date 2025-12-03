@@ -13,6 +13,8 @@ SRC_DIR = THIS_DIR.parent  # .../src
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
+from stages.pipeline_context import PipelineContext
+
 import json  # noqa: E402
 import numpy as np  # noqa: E402
 import soundfile as sf  # noqa: E402
@@ -178,18 +180,15 @@ def _analyze_stem(
     }
 
 
-def main() -> None:
+def process(context: PipelineContext) -> None:
     """
     Análisis para el contrato S4_STEM_HPF_LPF.
 
     Uso desde stage.py:
         python S4_STEM_HPF_LPF.py S4_STEM_HPF_LPF
     """
-    if len(sys.argv) < 2:
-        print("Uso: python S4_STEM_HPF_LPF.py <CONTRACT_ID>")
-        sys.exit(1)
 
-    contract_id = sys.argv[1]  # "S4_STEM_HPF_LPF"
+    contract_id = context.contract_id  # "S4_STEM_HPF_LPF"
 
     # 1) Cargar contrato
     contract = load_contract(contract_id)
@@ -251,4 +250,14 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) < 2:
+        print(f"Uso: python {Path(__file__).name} <CONTRACT_ID>")
+        sys.exit(1)
+
+    from dataclasses import dataclass
+    @dataclass
+    class _MockContext:
+        contract_id: str
+        next_contract_id: str | None = None
+
+    process(_MockContext(contract_id=sys.argv[1]))

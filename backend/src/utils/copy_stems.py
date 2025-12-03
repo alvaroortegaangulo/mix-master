@@ -15,16 +15,18 @@ if str(SRC_DIR) not in sys.argv:
     if str(SRC_DIR) not in _sys.path:
         _sys.path.insert(0, str(SRC_DIR))
 
+from stages.pipeline_context import PipelineContext
+
 from utils.analysis_utils import get_temp_dir  # noqa: E402
 
 
-def main() -> None:
-    if len(sys.argv) < 3:
-        print("Uso: python copy_stems.py <SRC_STAGE_ID> <DST_STAGE_ID>")
-        sys.exit(1)
+def process(context: PipelineContext) -> None:
+    src_stage_id = context.contract_id
+    dst_stage_id = context.next_contract_id
 
-    src_stage_id = sys.argv[1]
-    dst_stage_id = sys.argv[2]
+    if not dst_stage_id:
+        # Nothing to copy if there is no next stage
+        return
 
     # En modo single-job:
     #   src_dir = PROJECT_ROOT/temp/<SRC_STAGE_ID>
@@ -59,6 +61,20 @@ def main() -> None:
         shutil.copy2(config_src, dst_dir / "session_config.json")
 
     print(f"[copy_stems] Copiados {count} stems de {src_stage_id} a {dst_stage_id}")
+
+
+def main() -> None:
+    if len(sys.argv) < 3:
+        print("Uso: python copy_stems.py <SRC_STAGE_ID> <DST_STAGE_ID>")
+        sys.exit(1)
+
+    from dataclasses import dataclass
+    @dataclass
+    class _MockContext:
+        contract_id: str
+        next_contract_id: str | None = None
+
+    process(_MockContext(contract_id=sys.argv[1], next_contract_id=sys.argv[2]))
 
 
 if __name__ == "__main__":

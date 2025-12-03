@@ -14,15 +14,13 @@ SRC_DIR = THIS_DIR.parent                       # .../src
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
+from stages.pipeline_context import PipelineContext
+
 from utils.analysis_utils import get_temp_dir  # noqa: E402
 
 
-def main() -> None:
-    if len(sys.argv) < 2:
-        print("Uso: python mixdown_stems.py <STAGE_ID>")
-        sys.exit(1)
-
-    stage_id = sys.argv[1]
+def process(context: PipelineContext) -> None:
+    stage_id = context.contract_id
 
     # En modo single-job:
     #   stage_dir = PROJECT_ROOT/temp/<STAGE_ID>
@@ -130,6 +128,20 @@ def main() -> None:
             f.close()
 
     print(f"[mixdown_stems] Mixdown completado en: {out_path}")
+
+
+def main() -> None:
+    if len(sys.argv) < 2:
+        print("Uso: python mixdown_stems.py <STAGE_ID>")
+        sys.exit(1)
+
+    from dataclasses import dataclass
+    @dataclass
+    class _MockContext:
+        contract_id: str
+        next_contract_id: str | None = None
+
+    process(_MockContext(contract_id=sys.argv[1]))
 
 
 if __name__ == "__main__":

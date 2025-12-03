@@ -9,6 +9,17 @@ import os
 import numpy as np
 import soundfile as sf
 
+# Import for type checking or direct import if needed
+
+# Hack for standalone run or when context import fails?
+THIS_DIR = Path(__file__).resolve().parent
+SRC_DIR = THIS_DIR.parent
+if str(SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(SRC_DIR))
+
+from stages.pipeline_context import PipelineContext
+
+
 try:
     # Resample de buena calidad si SciPy está disponible
     from scipy.signal import resample_poly  # type: ignore
@@ -151,18 +162,14 @@ def _process_stem_worker(args: Tuple[Dict[str, Any], Dict[str, Any]]) -> None:
     process_stem(stem_info, metrics)
 
 
-def main() -> None:
+def process(context: PipelineContext) -> None:
     """
     Stage S0_SESSION_FORMAT:
       - Lee analysis_S0_SESSION_FORMAT.json.
       - Aplica conversiones de formato a cada stem (en paralelo).
       - Sobrescribe los stems en temp/<contract_id>/.
     """
-    if len(sys.argv) < 2:
-        print("Uso: python S0_SESSION_FORMAT.py <CONTRACT_ID>")
-        sys.exit(1)
-
-    contract_id = sys.argv[1]  # "S0_SESSION_FORMAT"
+    contract_id = context.contract_id
 
     # base_dir = .../src ; project_root = .../backend
     base_dir = Path(__file__).resolve().parent.parent
@@ -186,4 +193,15 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) < 2:
+        print("Uso: python S0_SESSION_FORMAT.py <CONTRACT_ID>")
+        sys.exit(1)
+
+    # Minimal context wrapper for standalone run
+    from dataclasses import dataclass
+    @dataclass
+    class _MockContext:
+        contract_id: str
+        next_contract_id: str | None = None
+
+    process(_MockContext(contract_id=sys.argv[1]))

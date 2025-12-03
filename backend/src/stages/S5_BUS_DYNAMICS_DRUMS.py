@@ -13,6 +13,8 @@ SRC_DIR = THIS_DIR.parent  # .../src
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
+from stages.pipeline_context import PipelineContext
+
 import json  # noqa: E402
 import numpy as np  # noqa: E402
 import soundfile as sf  # noqa: E402
@@ -120,7 +122,7 @@ def _load_drum_stem_worker(args: Tuple[str, str]) -> Tuple[str, str, np.ndarray 
         return fname, path_str, None, None, str(e)
 
 
-def main() -> None:
+def process(context: PipelineContext) -> None:
     """
     Stage S5_BUS_DYNAMICS_DRUMS:
 
@@ -132,11 +134,8 @@ def main() -> None:
       - Reescribe los stems de Drums procesados.
       - Guarda métricas de bus (pre/post crest, GR media/máx).
     """
-    if len(sys.argv) < 2:
-        print("Uso: python S5_BUS_DYNAMICS_DRUMS.py <CONTRACT_ID>")
-        sys.exit(1)
 
-    contract_id = sys.argv[1]  # "S5_BUS_DYNAMICS_DRUMS"
+    contract_id = context.contract_id  # "S5_BUS_DYNAMICS_DRUMS"
 
     analysis = load_analysis(contract_id)
 
@@ -345,4 +344,14 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) < 2:
+        print(f"Uso: python {Path(__file__).name} <CONTRACT_ID>")
+        sys.exit(1)
+
+    from dataclasses import dataclass
+    @dataclass
+    class _MockContext:
+        contract_id: str
+        next_contract_id: str | None = None
+
+    process(_MockContext(contract_id=sys.argv[1]))

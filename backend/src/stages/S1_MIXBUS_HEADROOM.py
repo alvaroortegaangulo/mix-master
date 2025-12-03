@@ -12,6 +12,8 @@ SRC_DIR = THIS_DIR.parent  # .../src
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
+from stages.pipeline_context import PipelineContext
+
 import json  # noqa: E402
 import os  # noqa: E402
 
@@ -207,7 +209,7 @@ def apply_global_gain_to_stems(stems: List[Dict[str, Any]], gain_db: float) -> N
         _apply_gain_worker(args)
 
 
-def main() -> None:
+def process(context: PipelineContext) -> None:
     """
     Stage S1_MIXBUS_HEADROOM:
       - Lee analysis_S1_MIXBUS_HEADROOM.json.
@@ -215,11 +217,8 @@ def main() -> None:
         rango de headroom y loudness de trabajo razonables.
       - Aplica esa ganancia a todos los stems y sobrescribe los archivos.
     """
-    if len(sys.argv) < 2:
-        print("Uso: python S1_MIXBUS_HEADROOM.py <CONTRACT_ID>")
-        sys.exit(1)
 
-    contract_id = sys.argv[1]  # "S1_MIXBUS_HEADROOM"
+    contract_id = context.contract_id  # "S1_MIXBUS_HEADROOM"
 
     analysis = load_analysis(contract_id)
     stems: List[Dict[str, Any]] = analysis.get("stems", []) or []
@@ -235,4 +234,14 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    if len(sys.argv) < 2:
+        print(f"Uso: python {Path(__file__).name} <CONTRACT_ID>")
+        sys.exit(1)
+
+    from dataclasses import dataclass
+    @dataclass
+    class _MockContext:
+        contract_id: str
+        next_contract_id: str | None = None
+
+    process(_MockContext(contract_id=sys.argv[1]))
