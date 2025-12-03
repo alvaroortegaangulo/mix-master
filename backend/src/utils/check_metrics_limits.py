@@ -15,6 +15,11 @@ if str(SRC_DIR) not in sys.path:
 from utils.profiles_utils import get_instrument_profile  # noqa: E402
 from utils.analysis_utils import get_temp_dir
 
+try:
+    from context import PipelineContext
+except ImportError:
+    PipelineContext = None # type: ignore
+
 def _load_analysis(contract_id: str) -> Dict[str, Any]:
     """
     Carga el JSON de análisis:
@@ -24,7 +29,20 @@ def _load_analysis(contract_id: str) -> Dict[str, Any]:
 
     if not analysis_path.exists():
         print(f"[check_metrics] ERROR: No se encuentra el análisis en {analysis_path}", file=sys.stderr)
-        sys.exit(1)
+        # We can't exit here if running inside process(), need to raise or return None
+        raise FileNotFoundError(f"No se encuentra el análisis en {analysis_path}")
+
+    with analysis_path.open("r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    return data
+
+def _load_analysis_with_context(context: PipelineContext) -> Dict[str, Any]:
+    temp_dir = context.get_stage_dir()
+    analysis_path = temp_dir / f"analysis_{context.stage_id}.json"
+
+    if not analysis_path.exists():
+         raise FileNotFoundError(f"No se encuentra el análisis en {analysis_path}")
 
     with analysis_path.open("r", encoding="utf-8") as f:
         data = json.load(f)
@@ -2397,25 +2415,25 @@ def _check_S11_REPORT_GENERATION(data: Dict[str, Any]) -> bool:
 
 
 
-# ----------------- DISPATCH GENERAL -----------------
+# ----------------- PROCESS ENTRY POINT -----------------
 
-
-def main() -> None:
+def process(context: PipelineContext, *args) -> bool:
     """
-    Uso esperado desde stage.py:
-        python utils/check_metrics_limits.py <CONTRACT_ID>
-
-    Devuelve exit code 0 si el contrato se considera cumplido, 1 si no.
+    Nuevo entry point para stage.py
     """
-    if len(sys.argv) < 2:
-        print("Uso: python check_metrics_limits.py <CONTRACT_ID>", file=sys.stderr)
-        sys.exit(1)
+    contract_id = args[0] if args else context.stage_id
 
-    contract_id = sys.argv[1]
+    # Try to load analysis using context (cleaner) or fallback to legacy
+    try:
+        analysis = _load_analysis_with_context(context)
+    except FileNotFoundError:
+        # Maybe it's not generated yet or path issue
+        try:
+             analysis = _load_analysis(contract_id)
+        except Exception:
+             print(f"[check_metrics] Fatal: Could not load analysis for {contract_id}")
+             return False
 
-    analysis = _load_analysis(contract_id)
-
-    # Dispatch por contrato
     if contract_id == "S0_SESSION_FORMAT":
         ok = _check_S0_SESSION_FORMAT(analysis)
     elif contract_id == "S1_STEM_DC_OFFSET":
@@ -2458,7 +2476,50 @@ def main() -> None:
         print(f"[check_metrics] No hay validación específica para {contract_id}, se considera éxito por defecto.")
         ok = True
 
-    sys.exit(0 if ok else 1)
+    return ok
+
+
+def main() -> None:
+    if len(sys.argv) < 2:
+        print("Uso: python check_metrics_limits.py <CONTRACT_ID>", file=sys.stderr)
+        sys.exit(1)
+
+    contract_id = sys.argv[1]
+
+    # Construct legacy context if needed, or just use old logic
+    # But since we have process(), we can try to use it if context is available.
+
+    if PipelineContext:
+        temp_dir = get_temp_dir(contract_id, create=False)
+        temp_root = temp_dir.parent
+        job_id = temp_root.name
+        ctx = PipelineContext(stage_id=contract_id, job_id=job_id, temp_root=temp_root)
+        success = process(ctx, contract_id)
+        sys.exit(0 if success else 1)
+    else:
+        # Fallback to pure legacy
+        analysis = _load_analysis(contract_id)
+        if contract_id == "S0_SESSION_FORMAT": ok = _check_S0_SESSION_FORMAT(analysis)
+        elif contract_id == "S1_STEM_DC_OFFSET": ok = _check_S1_STEM_DC_OFFSET(analysis)
+        elif contract_id == "S1_STEM_WORKING_LOUDNESS": ok = _check_S1_STEM_WORKING_LOUDNESS(analysis)
+        elif contract_id == "S1_VOX_TUNING": ok = _check_S1_VOX_TUNING(analysis)
+        elif contract_id == "S1_MIXBUS_HEADROOM": ok = _check_S1_MIXBUS_HEADROOM(analysis)
+        elif contract_id == "S2_GROUP_PHASE_DRUMS": ok = _check_S2_GROUP_PHASE_DRUMS(analysis)
+        elif contract_id == "S3_MIXBUS_HEADROOM": ok = _check_S3_MIXBUS_HEADROOM(analysis)
+        elif contract_id == "S3_LEADVOX_AUDIBILITY": ok = _check_S3_LEADVOX_AUDIBILITY(analysis)
+        elif contract_id == "S4_STEM_HPF_LPF": ok = _check_S4_STEM_HPF_LPF(analysis)
+        elif contract_id == "S4_STEM_RESONANCE_CONTROL": ok = _check_S4_STEM_RESONANCE_CONTROL(analysis)
+        elif contract_id == "S5_STEM_DYNAMICS_GENERIC": ok = _check_S5_STEM_DYNAMICS_GENERIC(analysis)
+        elif contract_id == "S5_LEADVOX_DYNAMICS": ok = _check_S5_LEADVOX_DYNAMICS(analysis)
+        elif contract_id == "S5_BUS_DYNAMICS_DRUMS": ok = _check_S5_BUS_DYNAMICS_DRUMS(analysis)
+        elif contract_id == "S6_BUS_REVERB_STYLE": ok = _check_S6_BUS_REVERB_STYLE(analysis)
+        elif contract_id == "S7_MIXBUS_TONAL_BALANCE": ok = _check_S7_MIXBUS_TONAL_BALANCE(analysis)
+        elif contract_id == "S8_MIXBUS_COLOR_GENERIC": ok = _check_S8_MIXBUS_COLOR_GENERIC(analysis)
+        elif contract_id == "S9_MASTER_GENERIC": ok = _check_S9_MASTER_GENERIC(analysis)
+        elif contract_id == "S10_MASTER_FINAL_LIMITS": ok = _check_S10_MASTER_FINAL_LIMITS(analysis)
+        elif contract_id == "S11_REPORT_GENERATION": ok = _check_S11_REPORT_GENERATION(analysis)
+        else: ok = True
+        sys.exit(0 if ok else 1)
 
 
 if __name__ == "__main__":
