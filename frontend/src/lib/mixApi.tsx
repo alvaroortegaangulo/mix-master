@@ -313,3 +313,13 @@ export async function fetchStyleProfiles(): Promise<StyleProfileDef[]> {
   if (!res.ok) throw new Error("Error fetching style profiles");
   return (await res.json()) as StyleProfileDef[];
 }
+
+export async function fetchJobReport(jobId: string): Promise<any> {
+    const baseUrl = getBackendBaseUrl();
+    const url = `${baseUrl}/files/${encodeURIComponent(jobId)}/S11_REPORT_GENERATION/report.json`;
+    const res = await fetch(url);
+    if (!res.ok) {
+        throw new Error(`Failed to fetch report: ${res.statusText}`);
+    }
+    return await res.json();
+}

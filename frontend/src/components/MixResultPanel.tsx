@@ -5,7 +5,8 @@ import { useEffect, useMemo, useState } from "react";
 import type { MixResult } from "../lib/mixApi";
 import { getBackendBaseUrl } from "../lib/mixApi";
 import { MixPipelinePanel } from "./MixPipelinePanel";
-import { FinalReportModal } from "./FinalReportModal";
+import { ReportViewer } from "./ReportViewer";
+import { fetchJobReport } from "../lib/mixApi";
 
 type Props = {
   result: MixResult;
@@ -523,148 +524,34 @@ export function MixResultPanel({
   result,
   enabledPipelineStageKeys,
 }: Props) {
-  const [selectedStageKey, setSelectedStageKey] = useState<StageKey | "">("");
-  const [csvRows, setCsvRows] = useState<StageRow[] | null>(null);
-  const [csvLoading, setCsvLoading] = useState(false);
-  const [csvError, setCsvError] = useState<string | null>(null);
-  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [showOriginal, setShowOriginal] = useState(false);
+  const [reportData, setReportData] = useState<any>(null);
+  const [reportLoading, setReportLoading] = useState(false);
 
   const { originalFullSongUrl, fullSongUrl, jobId, metrics } = result;
 
-  const selectedStage: StageOption | undefined = useMemo(
-    () => STAGE_OPTIONS.find((s) => s.key === selectedStageKey),
-    [selectedStageKey],
-  );
-
-  // Abre autom��ticamente el informe final cuando el pipeline termina
+  // Fetch Report Data
   useEffect(() => {
     if (!jobId) return;
-    setIsReportModalOpen(true);
+
+    async function loadReport() {
+        try {
+            setReportLoading(true);
+            const data = await fetchJobReport(jobId);
+            setReportData(data);
+        } catch (e) {
+            console.error("Failed to load report", e);
+        } finally {
+            setReportLoading(false);
+        }
+    }
+    loadReport();
   }, [jobId]);
 
-  // Carga del CSV cuando cambia la etapa seleccionada
-  useEffect(() => {
-    if (!selectedStage) {
-      setCsvRows(null);
-      setCsvError(null);
-      return;
-    }
-
-    const controller = new AbortController();
-    const base = getBackendBaseUrl();
-    const csvPath = selectedStage.getCsvPath();
-    const url = `${base}/files/${encodeURIComponent(jobId)}${csvPath}`;
-
-    async function loadCsv() {
-      try {
-        setCsvLoading(true);
-        setCsvError(null);
-        setCsvRows(null);
-
-        const res = await fetch(url, { signal: controller.signal });
-        if (!res.ok) {
-          throw new Error(
-            `No se pudo cargar el CSV (${res.status} ${res.statusText})`,
-          );
-        }
-
-        const text = await res.text();
-        const lines = text.split(/\r?\n/).filter((l) => l.trim().length > 0);
-        if (lines.length < 2) {
-          setCsvRows([]);
-          return;
-        }
-
-        const header = lines[0].split(",");
-        const rows: StageRow[] = lines.slice(1).map((line) => {
-          const cols = line.split(",");
-          const row: StageRow = {};
-          header.forEach((h, i) => {
-            row[h] = cols[i] ?? "";
-          });
-          return row;
-        });
-
-        setCsvRows(rows);
-      } catch (err: any) {
-        if (err?.name === "AbortError") return;
-        console.error("Error cargando CSV de etapa", err);
-        setCsvError(err?.message ?? "Error cargando datos de análisis.");
-      } finally {
-        setCsvLoading(false);
-      }
-    }
-
-    void loadCsv();
-    return () => controller.abort();
-  }, [selectedStage, jobId]);
-
-  // Resúmenes derivados del CSV en función de la etapa
-  const dcSummary = useMemo(
-    () =>
-      selectedStage?.key === "dc_offset" && csvRows
-        ? summarizeDcOffset(csvRows)
-        : null,
-    [selectedStage, csvRows],
-  );
-
-  const loudnessSummary = useMemo(
-    () =>
-      selectedStage?.key === "loudness" && csvRows
-        ? summarizeLoudness(csvRows)
-        : null,
-    [selectedStage, csvRows],
-  );
-
-  const spectralSummary = useMemo(
-    () =>
-      selectedStage?.key === "spectral_cleanup" && csvRows
-        ? summarizeSpectral(csvRows)
-        : null,
-    [selectedStage, csvRows],
-  );
-
-  const dynamicsSummary = useMemo(
-    () =>
-      selectedStage?.key === "dynamics" && csvRows
-        ? summarizeDynamics(csvRows)
-        : null,
-    [selectedStage, csvRows],
-  );
-
-  const keySummary = useMemo(
-    () =>
-      selectedStage?.key === "key_detection" && csvRows
-        ? summarizeKey(csvRows)
-        : null,
-    [selectedStage, csvRows],
-  );
-
-  const vocalSummary = useMemo(
-    () =>
-      selectedStage?.key === "vocal_tuning" && csvRows
-        ? summarizeVocal(csvRows)
-        : null,
-    [selectedStage, csvRows],
-  );
-
-  const masteringSummary = useMemo(
-    () =>
-      selectedStage?.key === "mastering" && csvRows
-        ? summarizeMastering(csvRows)
-        : null,
-    [selectedStage, csvRows],
-  );
-
-  // Cabeceras del CSV para mostrar tabla raw al final
-  const csvHeaders: string[] = useMemo(() => {
-    if (!csvRows || !csvRows.length) return [];
-    return Object.keys(csvRows[0]);
-  }, [csvRows]);
-
   return (
-    <section className="mt-6 rounded-3xl border border-emerald-500/40 bg-emerald-900/30 p-6 text-emerald-50 shadow-xl shadow-emerald-900/40">
+    <section className="mt-6 space-y-8">
+
+    <div className="rounded-3xl border border-emerald-500/40 bg-emerald-900/30 p-6 text-emerald-50 shadow-xl shadow-emerald-900/40">
       {/* Cabecera con players: original vs master */}
       <div className="space-y-2">
         <div>
@@ -690,28 +577,13 @@ export function MixResultPanel({
           {showOriginal ? "AI mix & mastering" : "Mix Original"}
         </button>
       </div>
-
-            {/* Panel Pipeline: solo stages elegidos */}
-      <MixPipelinePanel
-        result={result}
-        enabledPipelineStageKeys={enabledPipelineStageKeys}
-      />
-
-      <div className="mt-3 flex justify-end">
-        <button
-          type="button"
-          onClick={() => setIsReportModalOpen(true)}
-          className="inline-flex items-center gap-2 rounded-lg border border-emerald-500/50 bg-emerald-950/60 px-3 py-1.5 text-[11px] font-medium text-emerald-50 hover:border-emerald-300 hover:bg-emerald-900/70"
-        >
-          Ver Informe
-        </button>
       </div>
 
-      <FinalReportModal
-        jobId={jobId}
-        isOpen={isReportModalOpen}
-        onClose={() => setIsReportModalOpen(false)}
-      />
+      {/* Report Viewer */}
+      {reportLoading && <p className="text-center text-slate-400">Loading report...</p>}
+      {!reportLoading && reportData && (
+          <ReportViewer report={reportData} jobId={jobId} />
+      )}
 
 
 {/* Métricas principales (colapsadas) */}
