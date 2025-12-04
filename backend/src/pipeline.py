@@ -195,7 +195,7 @@ def run_pipeline(
 
     # Paso inicial "legacy"
     src_stage = "S0_MIX_ORIGINAL"
-    dst_stage = "S0_SESSION_FORMAT"
+    dst_stage = "S0_SEPARATE_STEMS"
 
     _run_copy_and_mixdown(src_stage, dst_stage)
     _run_contracts_global(enabled_stage_keys=enabled_stage_keys)
