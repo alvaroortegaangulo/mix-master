@@ -28,6 +28,10 @@ except ImportError:
         print("[stage] Warning: Could not import PipelineContext from context")
     PipelineContext = None
 
+from utils.logger import logger
+
+
+
 
 
 # Stages que trabajan en mixbus/master y necesitan full_song.wav
