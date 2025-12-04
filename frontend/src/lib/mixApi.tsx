@@ -1,4 +1,4 @@
-// frontend/src/lib/mixApi.ts
+// frontend/src/lib/mixApi.tsx
 
 export type MixMetrics = {
   final_peak_dbfs: number;
@@ -108,6 +108,7 @@ function normalizeUrl(pathOrUrl: string | undefined, baseUrl: string): string {
  * Mapea el JSON crudo que devuelve el backend (Celery) al JobStatus
  * que usa tu frontend (queued/running/done/error, camelCase, etc.).
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function mapBackendStatusToJobStatus(raw: any, baseUrl: string): JobStatus {
   const backendStatus = (raw.status ?? "pending") as string;
   const jobId: string = raw.jobId ?? raw.job_id ?? "";
@@ -314,6 +315,7 @@ export async function fetchStyleProfiles(): Promise<StyleProfileDef[]> {
   return (await res.json()) as StyleProfileDef[];
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function fetchJobReport(jobId: string): Promise<any> {
     const baseUrl = getBackendBaseUrl();
     const url = `${baseUrl}/files/${encodeURIComponent(jobId)}/S11_REPORT_GENERATION/report.json`;
