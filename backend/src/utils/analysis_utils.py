@@ -9,6 +9,7 @@ from typing import Dict, Any, Tuple, List, Optional
 
 import numpy as np
 import soundfile as sf
+import math
 
 # Límite global de segundos para análisis (se puede sobrescribir con MIX_ANALYSIS_MAX_SECONDS)
 # Solo se aplica en helpers de análisis; NO se toca el comportamiento global de soundfile.read
@@ -232,3 +233,26 @@ def compute_integrated_loudness_lufs(mono: np.ndarray, sr: int) -> float:
         return float("-inf")
 
     return float(20.0 * np.log10(rms) - 0.691)
+
+
+def sanitize_json_floats(obj: Any) -> Any:
+    """
+    Recursively replaces Infinity, -Infinity, and NaN with None
+    so that JSON serialization produces valid JSON (null) instead of invalid tokens.
+    """
+    if isinstance(obj, float):
+        if not math.isfinite(obj):
+            return None
+        return obj
+    elif isinstance(obj, (np.floating, np.integer)):
+        val = float(obj)
+        if not math.isfinite(val):
+            return None
+        return val
+    elif isinstance(obj, dict):
+        return {k: sanitize_json_floats(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [sanitize_json_floats(v) for v in obj]
+    elif isinstance(obj, tuple):
+        return tuple(sanitize_json_floats(v) for v in obj)
+    return obj

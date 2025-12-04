@@ -23,6 +23,7 @@ from utils.analysis_utils import (  # noqa: E402
     load_contract,
     get_temp_dir,
     sf_read_limited,
+    sanitize_json_floats
 )
 from utils.session_utils import load_session_config  # noqa: E402
 from utils.loudness_utils import compute_lufs_and_lra  # noqa: E402
@@ -395,6 +396,9 @@ def main() -> None:
             "report": report
         },
     }
+
+    # SANITIZE floats before dumping
+    session_state = sanitize_json_floats(session_state)
 
     output_path = temp_dir / f"analysis_{contract_id}.json"
     try:

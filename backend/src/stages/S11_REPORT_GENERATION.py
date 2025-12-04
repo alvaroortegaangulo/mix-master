@@ -5,7 +5,7 @@ from utils.logger import logger
 
 import sys
 from pathlib import Path
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 import json
 import shutil
 import traceback
@@ -16,7 +16,13 @@ SRC_DIR = THIS_DIR.parent  # .../src
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-from utils.analysis_utils import get_temp_dir
+# Try to import PipelineContext for typing, but it might fail if running standalone without proper path
+try:
+    from context import PipelineContext
+except ImportError:
+    PipelineContext = Any
+
+from utils.analysis_utils import get_temp_dir, sanitize_json_floats
 
 
 def _enrich_report_with_parameters_and_images(report: Dict[str, Any], temp_dir: Path) -> None:
@@ -127,23 +133,20 @@ def _enrich_report_with_parameters_and_images(report: Dict[str, Any], temp_dir: 
 
     pass
 
-
-def main() -> None:
+def process(context: PipelineContext, *args) -> bool:
     """
-    Stage S11_REPORT_GENERATION:
-
-      - Lee analysis_S11_REPORT_GENERATION.json.
-      - Enriquece el reporte con parámetros e imágenes.
-      - Guarda el JSON actualizado para el frontend.
-      - Imprime por pantalla un resumen legible.
+    Standard entry point for stage.py orchestrator.
     """
-    if len(sys.argv) < 2:
-        logger.logger.info("Uso: python S11_REPORT_GENERATION.py <CONTRACT_ID>")
-        sys.exit(1)
+    contract_id = context.stage_id
+    if not contract_id:
+        # Fallback to args if legacy
+        if args:
+            contract_id = args[0]
+        else:
+            logger.logger.error("[S11] process() called without contract_id in context or args")
+            return False
 
-    contract_id = sys.argv[1]  # "S11_REPORT_GENERATION"
-
-    temp_dir = get_temp_dir(contract_id, create=False)
+    temp_dir = context.get_stage_dir()
     analysis_path = temp_dir / f"analysis_{contract_id}.json"
 
     if not analysis_path.exists():
@@ -151,16 +154,18 @@ def main() -> None:
             f"[S11_REPORT_GENERATION] ERROR: no se encuentra {analysis_path}. "
             "Ejecuta primero el análisis de reporting."
         )
-        # Even if analysis is missing, we should try to generate a fallback report if possible?
-        # No, without analysis we don't have the structure.
-        return
+        # We allow continuation to try and generate a partial report
 
     try:
         with analysis_path.open("r", encoding="utf-8") as f:
             data = json.load(f)
     except Exception as e:
         logger.logger.error(f"[S11] Failed to load analysis JSON: {e}")
-        return
+        # If analysis is broken, we can't do much.
+        # But we MUST return True to avoid pipeline failure if possible, or False?
+        # User wants robust report.
+        # If analysis load fails, we can't enrich anything.
+        return False
 
     report = (
         data.get("session", {})
@@ -169,9 +174,7 @@ def main() -> None:
 
     if not report:
         logger.logger.info("[S11_REPORT_GENERATION] No se ha encontrado 'session.report' en el análisis.")
-        # We should create an empty report structure to avoid frontend failures?
         report = {"stages": [], "final_metrics": {}, "error": "Report data missing"}
-        # But we continue to try and save it.
 
     # --- ENRICH REPORT ---
     try:
@@ -179,6 +182,10 @@ def main() -> None:
     except Exception as e:
         logger.logger.error(f"[S11] Error enriching report: {e}")
         traceback.print_exc()
+
+    # SANITIZE floats before dumping to JSON
+    report = sanitize_json_floats(report)
+    data["session"]["report"] = report
 
     # Save enriched report back to analysis json (or a separate report.json)
     # We'll save it to 'report.json' in the S11 folder for easier frontend access
@@ -189,17 +196,21 @@ def main() -> None:
         logger.logger.info(f"[S11] Saved final report.json to {report_json_path}")
     except Exception as e:
         logger.logger.error(f"[S11] Failed to save report.json: {e}")
-
+        return False
 
     # Also update the analysis json
-    data["session"]["report"] = report
     try:
         with analysis_path.open("w", encoding="utf-8") as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
     except Exception as e:
         logger.logger.error(f"[S11] Failed to update analysis JSON: {e}")
+        return False
+
+    _log_summary(report)
+    return True
 
 
+def _log_summary(report: Dict[str, Any]) -> None:
     logger.logger.info("\n==============================================")
     logger.logger.info("       RESUMEN DE PIPELINE DE MEZCLA/MASTER")
     logger.logger.info("==============================================")
@@ -270,6 +281,28 @@ def main() -> None:
 
     logger.logger.info("==============================================\n")
 
+
+def main() -> None:
+    """
+    Legacy entry point.
+    """
+    if len(sys.argv) < 2:
+        logger.logger.info("Uso: python S11_REPORT_GENERATION.py <CONTRACT_ID>")
+        sys.exit(1)
+
+    contract_id = sys.argv[1]  # "S11_REPORT_GENERATION"
+
+    # Minimal context mock for legacy execution
+    class MockContext:
+        def __init__(self, stage_id):
+            self.stage_id = stage_id
+        def get_stage_dir(self):
+            return get_temp_dir(self.stage_id, create=False)
+
+    ctx = MockContext(contract_id)
+    success = process(ctx)
+    if not success:
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()
