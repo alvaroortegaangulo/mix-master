@@ -138,12 +138,12 @@ export function UploadDropzone({
                 pointer-events-none
                 absolute -top-2 right-full z-20
                 hidden
-                w-52 translate-y-[-50%]
+                w-38 translate-y-[-50%]
                 rounded-md
                 border border-slate-800/80
                 bg-slate-950/95
                 px-2.5 py-1.5
-                text-[11px] text-slate-100
+                text-[7x] text-slate-100
                 shadow-lg
                 group-hover:block
               "
