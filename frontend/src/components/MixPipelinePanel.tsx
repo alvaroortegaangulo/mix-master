@@ -4,6 +4,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { MixResult } from "../lib/mixApi";
 import { getBackendBaseUrl } from "../lib/mixApi";
+import { WaveformPlayer } from "./WaveformPlayer";
 
 type Props = {
   result: MixResult;
@@ -17,14 +18,75 @@ type Props = {
 export type PipelineStage = {
   key: string;
   label: string;
-  description: string;
+  description: string; // stage group name (e.g. "Phase & Polarity Alignment")
   index: number;
   mediaSubdir: string | null;
   updatesCurrentDir: boolean;
   previewMixRelPath: string | null;
 };
 
-export function MixPipelinePanel({ result, enabledPipelineStageKeys }: Props) {
+/**
+ * Descriptive info per phase (stage group).
+ * Keyed by backend "description" (stage group name from contracts.json).
+ */
+const PIPELINE_PHASE_INFO: Record<
+  string,
+  { title: string; body: string }
+> = {
+  "Input & Metadata": {
+    title: "Input & Metadata",
+    body: "We prepare your session by organizing all uploaded files and normalizing formats, sample rates and basic metadata so the rest of the pipeline can work consistently.",
+  },
+  "Technical Preparation": {
+    title: "Technical Preparation",
+    body: "We fix basic technical issues on each stem: DC offset, working loudness and initial headroom to ensure a clean, reliable starting point for mixing.",
+  },
+  "Phase & Polarity Alignment": {
+    title: "Phase & Polarity Alignment",
+    body: "We analyze multi-mic groups (like drums) to align phase and correct polarity, avoiding cancellations and restoring impact and low-end clarity.",
+  },
+  "Static Mix & Routing": {
+    title: "Static Mix & Routing",
+    body: "We build a static balance and bus routing, placing faders and pan positions so that all elements are heard clearly before any heavy processing.",
+  },
+  "Spectral Cleanup": {
+    title: "Spectral Cleanup",
+    body: "We clean each stem using high-pass filters and gentle notch filters to remove rumble and harsh resonances, freeing up space in the mix.",
+  },
+  "Dynamics & Level Automation": {
+    title: "Dynamics & Level Automation",
+    body: "We control dynamics using compression, limiting and level automation, keeping performances expressive but preventing peaks from jumping out of the mix.",
+  },
+  "Space / Depth by Buses": {
+    title: "Space & Depth by Buses",
+    body: "We send instruments to dedicated reverb and ambience buses, placing them closer or farther in the soundstage to create a sense of depth and space.",
+  },
+  "Multiband EQ / Tonal Balance": {
+    title: "Multiband EQ & Tonal Balance",
+    body: "We fine-tune the overall spectral balance so the mix feels natural and translates well across different playback systems.",
+  },
+  "Mix Bus Color": {
+    title: "Mix Bus Color",
+    body: "We add gentle saturation and bus processing to glue the mix together, enhancing warmth, punch and perceived loudness without destroying dynamics.",
+  },
+  Mastering: {
+    title: "Mastering",
+    body: "We bring the track up to its target loudness, adjust final EQ, stereo width and limiting so it is ready for release on streaming platforms.",
+  },
+  "Master Stereo QC": {
+    title: "Master Stereo QC",
+    body: "We run final quality checks (true peak, loudness, stereo image and balance) to ensure the master meets the technical targets.",
+  },
+  Reporting: {
+    title: "Reporting",
+    body: "We generate a technical report and export the final master so you can review what was done at each stage of the pipeline.",
+  },
+};
+
+export function MixPipelinePanel({
+  result,
+  enabledPipelineStageKeys,
+}: Props) {
   const { fullSongUrl, jobId } = result;
 
   const [stages, setStages] = useState<PipelineStage[]>([]);
@@ -50,7 +112,7 @@ export function MixPipelinePanel({ result, enabledPipelineStageKeys }: Props) {
         }
         const data = (await res.json()) as PipelineStage[];
 
-        // Keep backend order just in case
+        // Keep backend order
         const sorted = [...data].sort((a, b) => a.index - b.index);
 
         // If we have enabled stages for THIS job, filter to those only.
@@ -63,10 +125,8 @@ export function MixPipelinePanel({ result, enabledPipelineStageKeys }: Props) {
 
         // Adjust active stage
         if (!activeKey && filtered.length > 0) {
-          // if no active stage yet, select the last one (usually mastering)
           setActiveKey(filtered[filtered.length - 1].key);
         } else if (activeKey) {
-          // If the active one no longer exists (disabled), fall back to the last one
           const stillExists = filtered.some((s) => s.key === activeKey);
           if (!stillExists && filtered.length > 0) {
             setActiveKey(filtered[filtered.length - 1].key);
@@ -83,7 +143,8 @@ export function MixPipelinePanel({ result, enabledPipelineStageKeys }: Props) {
 
     void loadStages();
     return () => controller.abort();
-  }, [activeKey, enabledPipelineStageKeys]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [enabledPipelineStageKeys]);
 
   const activeStage = useMemo(() => {
     if (!stages.length) return null;
@@ -111,9 +172,19 @@ export function MixPipelinePanel({ result, enabledPipelineStageKeys }: Props) {
       )}${candidate.previewMixRelPath}`;
     }
 
-    // Fallback: if no preview exists, use the final master
     return fullSongUrl;
   }, [stages, activeStage, fullSongUrl, jobId]);
+
+  const phaseInfo = useMemo(() => {
+    if (!activeStage) return null;
+    const key = activeStage.description;
+    return (
+      PIPELINE_PHASE_INFO[key] ?? {
+        title: activeStage.description || "Pipeline stage",
+        body: "This stage applies incremental processing to refine the mix.",
+      }
+    );
+  }, [activeStage]);
 
   return (
     <section className="mt-6 rounded-2xl border border-emerald-500/40 bg-emerald-900/30 p-4 text-emerald-50 shadow-inner shadow-emerald-900/40">
@@ -124,14 +195,15 @@ export function MixPipelinePanel({ result, enabledPipelineStageKeys }: Props) {
               Pipeline
             </h3>
             <p className="mt-1 text-xs text-emerald-200/90">
-              Explore how the mix evolves at each stage by listening to the cumulative result.
+              Explore how the mix evolves at each phase by listening to the
+              cumulative result after every major processing block.
             </p>
           </div>
           <span
             aria-hidden="true"
             className="ml-2 text-xs text-emerald-200 transition-transform duration-200 group-open:rotate-180"
           >
-            v
+            ▼
           </span>
         </summary>
 
@@ -148,9 +220,9 @@ export function MixPipelinePanel({ result, enabledPipelineStageKeys }: Props) {
           </p>
         )}
 
-        {!loading && !error && stages.length > 0 && activeStage && (
+        {!loading && !error && stages.length > 0 && activeStage && phaseInfo && (
           <div className="mt-4">
-            {/* Stage index tabs (only stages enabled for this job) */}
+            {/* Tabs numéricos de stages */}
             <div className="flex flex-wrap gap-2">
               {stages.map((stage) => {
                 const isActive = stage.key === activeStage.key;
@@ -173,19 +245,27 @@ export function MixPipelinePanel({ result, enabledPipelineStageKeys }: Props) {
             </div>
 
             <div className="mt-4 rounded-xl bg-emerald-950/40 p-4">
+              {/* Título de la fase (antes subtítulo) */}
               <p className="text-sm font-semibold text-emerald-50">
-                {`Stage ${activeStage.index} - ${activeStage.label}`}
-              </p>
-              <p className="mt-2 text-xs text-emerald-200/90">
-                {activeStage.description}
+                {phaseInfo.title}
               </p>
 
+              {/* Texto descriptivo de lo que hace la fase */}
+              <p className="mt-2 text-xs text-emerald-200/90">
+                {phaseInfo.body}
+              </p>
+
+              {/* Info pequeña de contrato activo */}
+              <p className="mt-2 text-[11px] text-emerald-300/80">
+                Active contract:{" "}
+                <span className="font-mono text-emerald-200">
+                  {activeStage.key}
+                </span>
+              </p>
+
+              {/* Reproductor estilo waveform para la fase */}
               <div className="mt-4">
-                <audio
-                  controls
-                  src={processedUrl}
-                  className="mt-1 w-full rounded-lg bg-emerald-900/70"
-                />
+                <WaveformPlayer src={processedUrl} />
               </div>
             </div>
           </div>
