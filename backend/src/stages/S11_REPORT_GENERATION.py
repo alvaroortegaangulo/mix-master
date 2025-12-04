@@ -5,9 +5,10 @@ from utils.logger import logger
 
 import sys
 from pathlib import Path
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 import json
 import shutil
+import traceback
 
 # --- hack sys.path para ejecutar como script suelto desde stage.py ---
 THIS_DIR = Path(__file__).resolve().parent
@@ -15,7 +16,13 @@ SRC_DIR = THIS_DIR.parent  # .../src
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-from utils.analysis_utils import get_temp_dir
+# Try to import PipelineContext for typing, but it might fail if running standalone without proper path
+try:
+    from context import PipelineContext
+except ImportError:
+    PipelineContext = Any
+
+from utils.analysis_utils import get_temp_dir, sanitize_json_floats
 
 
 def _enrich_report_with_parameters_and_images(report: Dict[str, Any], temp_dir: Path) -> None:
@@ -46,6 +53,7 @@ def _enrich_report_with_parameters_and_images(report: Dict[str, Any], temp_dir: 
             # Try contract_id directly
             stage_dir = job_root / contract_id
             if not stage_dir.exists():
+                logger.logger.warning(f"[S11] Stage dir not found for {contract_id}: {stage_dir}")
                 continue
 
         # 2. Extract Parameters
@@ -62,8 +70,8 @@ def _enrich_report_with_parameters_and_images(report: Dict[str, Any], temp_dir: 
                     gains = m.get("eq_gains_db", {})
                     if gains:
                         params["EQ Gains (dB)"] = {k: f"{v:+.2f}" for k, v in gains.items() if abs(v) > 0.1}
-                except:
-                    pass
+                except Exception as e:
+                     logger.logger.warning(f"[S11] Failed to read metrics for S7: {e}")
 
         elif "S8_MIXBUS_COLOR_GENERIC" in contract_id:
             metrics_path = stage_dir / "color_metrics_S8_MIXBUS_COLOR_GENERIC.json"
@@ -74,8 +82,8 @@ def _enrich_report_with_parameters_and_images(report: Dict[str, Any], temp_dir: 
                     params["Saturation Drive (dB)"] = f"{m.get('drive_db_used', 0):.2f}"
                     params["True Peak Trim (dB)"] = f"{m.get('trim_db_applied', 0):.2f}"
                     params["THD (%)"] = f"{m.get('thd_percent', 0):.2f}"
-                except:
-                    pass
+                except Exception as e:
+                     logger.logger.warning(f"[S11] Failed to read metrics for S8: {e}")
 
         elif "S9_MASTER_GENERIC" in contract_id:
             metrics_path = stage_dir / "master_metrics_S9_MASTER_GENERIC.json"
@@ -88,8 +96,8 @@ def _enrich_report_with_parameters_and_images(report: Dict[str, Any], temp_dir: 
                     params["Pre Gain (dB)"] = f"{post_lim.get('pre_gain_db', 0):.2f}"
                     params["Limiter GR (dB)"] = f"{post_lim.get('limiter_gr_db', 0):.2f}"
                     params["Stereo Width Factor"] = f"{post_final.get('width_factor_applied', 1.0):.2f}"
-                except:
-                    pass
+                except Exception as e:
+                     logger.logger.warning(f"[S11] Failed to read metrics for S9: {e}")
 
         s["parameters"] = params
 
@@ -112,8 +120,9 @@ def _enrich_report_with_parameters_and_images(report: Dict[str, Any], temp_dir: 
                 try:
                     shutil.copy2(stage_path, dest_path)
                     final_name = unique_name
-                except Exception:
-                    pass
+                    # logger.logger.info(f"[S11] Copied image {img_name} for {contract_id}")
+                except Exception as e:
+                    logger.logger.error(f"[S11] Failed to copy image {stage_path}: {e}")
 
             if final_name:
                 # Determine type key
@@ -122,29 +131,22 @@ def _enrich_report_with_parameters_and_images(report: Dict[str, Any], temp_dir: 
 
         s["images"] = images
 
-    # Add general summary
-    # We can compare S0 input vs S10 output (using final metrics vs initial metrics if available)
-    # For now, just a placeholder text or constructed from available data
-    # User requested to remove specific text summary.
     pass
 
-
-def main() -> None:
+def process(context: PipelineContext, *args) -> bool:
     """
-    Stage S11_REPORT_GENERATION:
-
-      - Lee analysis_S11_REPORT_GENERATION.json.
-      - Enriquece el reporte con parámetros e imágenes.
-      - Guarda el JSON actualizado para el frontend.
-      - Imprime por pantalla un resumen legible.
+    Standard entry point for stage.py orchestrator.
     """
-    if len(sys.argv) < 2:
-        logger.logger.info("Uso: python S11_REPORT_GENERATION.py <CONTRACT_ID>")
-        sys.exit(1)
+    contract_id = context.stage_id
+    if not contract_id:
+        # Fallback to args if legacy
+        if args:
+            contract_id = args[0]
+        else:
+            logger.logger.error("[S11] process() called without contract_id in context or args")
+            return False
 
-    contract_id = sys.argv[1]  # "S11_REPORT_GENERATION"
-
-    temp_dir = get_temp_dir(contract_id, create=False)
+    temp_dir = context.get_stage_dir()
     analysis_path = temp_dir / f"analysis_{contract_id}.json"
 
     if not analysis_path.exists():
@@ -152,10 +154,18 @@ def main() -> None:
             f"[S11_REPORT_GENERATION] ERROR: no se encuentra {analysis_path}. "
             "Ejecuta primero el análisis de reporting."
         )
-        return
+        # We allow continuation to try and generate a partial report
 
-    with analysis_path.open("r", encoding="utf-8") as f:
-        data = json.load(f)
+    try:
+        with analysis_path.open("r", encoding="utf-8") as f:
+            data = json.load(f)
+    except Exception as e:
+        logger.logger.error(f"[S11] Failed to load analysis JSON: {e}")
+        # If analysis is broken, we can't do much.
+        # But we MUST return True to avoid pipeline failure if possible, or False?
+        # User wants robust report.
+        # If analysis load fails, we can't enrich anything.
+        return False
 
     report = (
         data.get("session", {})
@@ -164,23 +174,43 @@ def main() -> None:
 
     if not report:
         logger.logger.info("[S11_REPORT_GENERATION] No se ha encontrado 'session.report' en el análisis.")
-        return
+        report = {"stages": [], "final_metrics": {}, "error": "Report data missing"}
 
     # --- ENRICH REPORT ---
-    _enrich_report_with_parameters_and_images(report, temp_dir)
+    try:
+        _enrich_report_with_parameters_and_images(report, temp_dir)
+    except Exception as e:
+        logger.logger.error(f"[S11] Error enriching report: {e}")
+        traceback.print_exc()
+
+    # SANITIZE floats before dumping to JSON
+    report = sanitize_json_floats(report)
+    data["session"]["report"] = report
 
     # Save enriched report back to analysis json (or a separate report.json)
     # We'll save it to 'report.json' in the S11 folder for easier frontend access
     report_json_path = temp_dir / "report.json"
-    with report_json_path.open("w", encoding="utf-8") as f:
-        json.dump(report, f, indent=2, ensure_ascii=False)
+    try:
+        with report_json_path.open("w", encoding="utf-8") as f:
+            json.dump(report, f, indent=2, ensure_ascii=False)
+        logger.logger.info(f"[S11] Saved final report.json to {report_json_path}")
+    except Exception as e:
+        logger.logger.error(f"[S11] Failed to save report.json: {e}")
+        return False
 
     # Also update the analysis json
-    data["session"]["report"] = report
-    with analysis_path.open("w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
+    try:
+        with analysis_path.open("w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+    except Exception as e:
+        logger.logger.error(f"[S11] Failed to update analysis JSON: {e}")
+        return False
+
+    _log_summary(report)
+    return True
 
 
+def _log_summary(report: Dict[str, Any]) -> None:
     logger.logger.info("\n==============================================")
     logger.logger.info("       RESUMEN DE PIPELINE DE MEZCLA/MASTER")
     logger.logger.info("==============================================")
@@ -251,6 +281,28 @@ def main() -> None:
 
     logger.logger.info("==============================================\n")
 
+
+def main() -> None:
+    """
+    Legacy entry point.
+    """
+    if len(sys.argv) < 2:
+        logger.logger.info("Uso: python S11_REPORT_GENERATION.py <CONTRACT_ID>")
+        sys.exit(1)
+
+    contract_id = sys.argv[1]  # "S11_REPORT_GENERATION"
+
+    # Minimal context mock for legacy execution
+    class MockContext:
+        def __init__(self, stage_id):
+            self.stage_id = stage_id
+        def get_stage_dir(self):
+            return get_temp_dir(self.stage_id, create=False)
+
+    ctx = MockContext(contract_id)
+    success = process(ctx)
+    if not success:
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()
