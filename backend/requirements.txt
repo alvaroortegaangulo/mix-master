@@ -2,10 +2,13 @@
 numpy
 soundfile
 scipy
+matplotlib
+
 
 # Análisis de audio
 librosa
 pyloudnorm
+essentia
 
 # Procesado de efectos (EQ, compresor, etc.)
 pedalboard
@@ -30,5 +33,4 @@ redis
 # torchaudio
 
 
-pedalboard
-essentia
+
