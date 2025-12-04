@@ -98,59 +98,64 @@ export function WaveformPlayer({ src, className = "" }: WaveformPlayerProps) {
     setCurrentTime(newTime);
   };
 
-  const waveformBackground =
-    "repeating-linear-gradient(to right, rgba(255,255,255,0.85) 0px, rgba(255,255,255,0.85) 2px, transparent 2px, transparent 4px)";
-  const waveformPlayedBackground =
-    "repeating-linear-gradient(to right, rgb(249 115 22) 0px, rgb(249 115 22) 2px, transparent 2px, transparent 4px)";
+  // Estilos de barras tipo SoundCloud
+  const baseWaveform =
+    "repeating-linear-gradient(to right, rgba(248,250,252,0.92) 0px, rgba(248,250,252,0.92) 2px, transparent 2px, transparent 4px)";
+  const playedWaveform =
+    "repeating-linear-gradient(to right, rgb(249,115,22) 0px, rgb(249,115,22) 2px, transparent 2px, transparent 4px)";
 
   return (
     <div
-      className={`flex items-center gap-3 rounded-xl bg-black/60 px-3 py-2 text-[11px] text-slate-50 ${className}`}
+      className={`flex items-center gap-3 rounded-2xl bg-slate-950 px-3 py-2 text-[11px] text-slate-50 ${className}`}
     >
       {/* Botón Play/Pause */}
       <button
         type="button"
         onClick={togglePlay}
-        className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-400 text-black shadow hover:bg-emerald-300"
+        className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-400 text-black shadow hover:bg-emerald-300"
         aria-label={isPlaying ? "Pause" : "Play"}
       >
         {isPlaying ? (
           <span className="flex gap-0.5">
-            <span className="h-3 w-0.5 bg-black" />
-            <span className="h-3 w-0.5 bg-black" />
+            <span className="h-3.5 w-0.5 bg-black" />
+            <span className="h-3.5 w-0.5 bg-black" />
           </span>
         ) : (
-          <span className="ml-0.5 h-0 w-0 border-y-4 border-y-transparent border-l-[7px] border-l-black" />
+          <span className="ml-0.5 h-0 w-0 border-y-4 border-y-transparent border-l-[8px] border-l-black" />
         )}
       </button>
 
       {/* Waveform estilo SoundCloud */}
       <div
-        className="relative flex-1 cursor-pointer select-none"
+        className="relative flex-1 cursor-pointer select-none py-1"
         onClick={handleScrub}
       >
-        <div className="relative h-10 overflow-hidden rounded">
-          {/* Waveform sin reproducir */}
+        <div className="relative h-10 overflow-hidden rounded-md bg-black">
+          {/* barras no reproducidas */}
           <div
             className="absolute inset-0"
-            style={{ backgroundImage: waveformBackground }}
+            style={{ backgroundImage: baseWaveform }}
           />
-          {/* Waveform reproducido */}
-          <div className="absolute inset-y-0 left-0 overflow-hidden">
+          {/* barras reproducidas */}
+          <div
+            className="absolute inset-y-0 left-0 overflow-hidden"
+            style={{ width: `${(progress || 0) * 100}%` }}
+          >
             <div
               className="h-full"
-              style={{
-                width: `${(progress || 0) * 100}%`,
-                backgroundImage: waveformPlayedBackground,
-              }}
+              style={{ backgroundImage: playedWaveform }}
             />
           </div>
         </div>
 
-        {/* Tiempos a la izquierda / derecha */}
-        <div className="pointer-events-none absolute inset-0 flex items-start justify-between px-1 pt-0.5 text-[10px] font-medium text-slate-100">
-          <span>{formatTime(currentTime)}</span>
-          <span>{formatTime(duration)}</span>
+        {/* tiempos en cajitas negras a izquierda y derecha */}
+        <div className="pointer-events-none absolute inset-0 flex items-center justify-between px-1 text-[10px] font-semibold text-slate-100">
+          <span className="rounded-sm bg-black/90 px-1.5 py-0.5">
+            {formatTime(currentTime)}
+          </span>
+          <span className="rounded-sm bg-black/90 px-1.5 py-0.5">
+            {formatTime(duration)}
+          </span>
         </div>
       </div>
 
@@ -158,7 +163,7 @@ export function WaveformPlayer({ src, className = "" }: WaveformPlayerProps) {
       <a
         href={src}
         download
-        className="flex h-7 w-7 items-center justify-center rounded-full border border-slate-500/70 bg-slate-900/80 text-[14px] hover:bg-slate-800"
+        className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-500/70 bg-slate-900/90 text-[15px] hover:bg-slate-800"
         aria-label="Download audio"
       >
         ⬇
