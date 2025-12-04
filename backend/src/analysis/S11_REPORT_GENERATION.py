@@ -89,6 +89,7 @@ def _build_stage_report_entry(contract_id: str, contracts_data: Dict[str, Any]) 
     if not analysis_path.exists():
         # Check if it was executed but analysis file is missing?
         # If it's in pipeline_timings, it was executed.
+        logger.logger.info(f"[S11] Analysis file not found for {contract_id} at {analysis_path}")
         return entry
 
     try:
@@ -190,7 +191,10 @@ def _load_pipeline_timings(contract_id: str) -> Dict[str, Any]:
     job_root = temp_dir.parent
     timings_path = job_root / TIMINGS_FILENAME
 
+    logger.logger.info(f"[S11] Checking timings at: {timings_path}")
+
     if not timings_path.exists():
+        logger.logger.info("[S11] Timings file not found.")
         return {"stages": [], "total_duration_sec": None}
 
     try:
@@ -240,6 +244,7 @@ def main() -> None:
         sys.exit(1)
 
     contract_id = sys.argv[1]  # "S11_REPORT_GENERATION"
+    logger.logger.info(f"[S11] Starting report generation for {contract_id}")
 
     # 1) Cargar contrato
     contract = load_contract(contract_id)
@@ -254,6 +259,8 @@ def main() -> None:
 
     # Load contracts data for descriptions and ordering
     contracts_data = _load_contracts_data()
+    if not contracts_data:
+        logger.logger.error("[S11] Failed to load contracts data.")
 
     # Load timings to see what actually ran
     pipeline_timings = _load_pipeline_timings(contract_id)
@@ -263,11 +270,11 @@ def main() -> None:
             if s.get("contract_id"):
                 executed_contracts.add(s["contract_id"])
 
-    # If timings are empty (maybe S11 run manually?), fall back to full list
-    # But for report, we preferably only show what ran or what is available.
+    logger.logger.info(f"[S11] Executed contracts according to timings: {list(executed_contracts)}")
 
     # Get master list
     all_contracts = _get_ordered_contract_ids(contracts_data)
+    logger.logger.info(f"[S11] Total available contracts from definition: {len(all_contracts)}")
 
     # Filter: Only include contracts that EITHER are in timings OR have analysis file existing.
     # This prevents showing "missing_analysis" for skipped stages.
@@ -278,8 +285,17 @@ def main() -> None:
         c_temp = get_temp_dir(cid, create=False)
         c_ana = c_temp / f"analysis_{cid}.json"
 
-        if cid in executed_contracts or c_ana.exists():
+        is_executed = cid in executed_contracts
+        is_analyzed = c_ana.exists()
+
+        if is_executed or is_analyzed:
             stages_to_report.append(cid)
+        else:
+            # Verbose logging only if we suspect issues
+            # logger.logger.info(f"[S11] Skipping {cid} (not executed, no analysis)")
+            pass
+
+    logger.logger.info(f"[S11] Stages selected for report: {stages_to_report}")
 
     # 3) Construir report.stages
     stages_report: List[Dict[str, Any]] = [
@@ -309,6 +325,8 @@ def main() -> None:
             final_diff_lr = float(post.get("channel_loudness_diff_db", float("nan")))
         except Exception as e:
             logger.logger.info(f"[S11_REPORT_GENERATION] Aviso: no se pudo leer {qc_path}: {e}")
+    else:
+        logger.logger.info(f"[S11] QC Metrics file not found at {qc_path}")
 
     # 5) Leer audio final (master) para crest & histograma
     #    Preferimos el full_song de S11; si no existe o falla, usamos el de S10.
@@ -322,6 +340,7 @@ def main() -> None:
         "level_histogram_db": {"bin_edges_db": [], "counts": []},
     }
 
+    found_audio = False
     for p in audio_paths:
         if not p.exists():
             continue
@@ -337,7 +356,11 @@ def main() -> None:
             "crest_factor_db": result["crest_factor_db"],
             "level_histogram_db": result["level_histogram_db"],
         }
+        found_audio = True
         break
+
+    if not found_audio:
+        logger.logger.warning("[S11] Could not find any valid full_song.wav to analyze for crest factor.")
 
     final_metrics: Dict[str, Any] = {
         "true_peak_dbtp": final_tp,
@@ -349,6 +372,7 @@ def main() -> None:
         "level_histogram_db": crest_and_hist.get("level_histogram_db"),
     }
 
+    # Reload pipeline timings in case they changed (unlikely in this flow)
     pipeline_timings = _load_pipeline_timings(contract_id)
 
     report: Dict[str, Any] = {
@@ -373,8 +397,12 @@ def main() -> None:
     }
 
     output_path = temp_dir / f"analysis_{contract_id}.json"
-    with output_path.open("w", encoding="utf-8") as f:
-        json.dump(session_state, f, indent=2, ensure_ascii=False)
+    try:
+        with output_path.open("w", encoding="utf-8") as f:
+            json.dump(session_state, f, indent=2, ensure_ascii=False)
+        logger.logger.info(f"[S11] Saved analysis report to {output_path}")
+    except Exception as e:
+        logger.logger.error(f"[S11] Failed to save analysis report: {e}")
 
     # logger.logger.debug(f"[S11_REPORT_GENERATION] Analysis complete. JSON: {output_path}")
 
