@@ -113,10 +113,8 @@ def _enrich_report_with_parameters_and_images(report: Dict[str, Any], temp_dir: 
     # Add general summary
     # We can compare S0 input vs S10 output (using final metrics vs initial metrics if available)
     # For now, just a placeholder text or constructed from available data
-    report["general_summary"] = "Processing completed. "
-    if report.get("final_metrics"):
-        lufs = report["final_metrics"].get("lufs_integrated")
-        report["general_summary"] += f"Final Integrated Loudness: {lufs:.2f} LUFS. "
+    # User requested to remove specific text summary.
+    pass
 
 
 def main() -> None:
