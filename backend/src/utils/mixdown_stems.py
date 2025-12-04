@@ -1,12 +1,6 @@
-from utils.logger import logger
-# C:\mix-master\backend\src\utils\mixdown_stems.py
-
 from __future__ import annotations
-from utils.logger import logger
-
 import sys
 from pathlib import Path
-
 import numpy as np
 import soundfile as sf
 
@@ -16,7 +10,9 @@ SRC_DIR = THIS_DIR.parent                       # .../src
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
+from utils.logger import logger
 from utils.analysis_utils import get_temp_dir  # noqa: E402
+
 try:
     from context import PipelineContext
 except ImportError:
@@ -154,9 +150,6 @@ def main() -> None:
         process(ctx)
     else:
         # Fallback si Context no existe (raro)
-        # Copiamos la logica de process pero con get_temp_dir
-        # ... (aquí iría el código legacy si quisiéramos ser puristas,
-        # pero es mejor asumir que process funciona con el contexto creado arriba)
         pass
 
 if __name__ == "__main__":

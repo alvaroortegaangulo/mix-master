@@ -1,9 +1,4 @@
-from utils.logger import logger
-# C:\mix-master\backend\src\utils\copy_stems.py
-
 from __future__ import annotations
-from utils.logger import logger
-
 import sys
 import shutil
 from pathlib import Path
@@ -17,7 +12,9 @@ if str(SRC_DIR) not in sys.argv:
     if str(SRC_DIR) not in _sys.path:
         _sys.path.insert(0, str(SRC_DIR))
 
+from utils.logger import logger
 from utils.analysis_utils import get_temp_dir  # noqa: E402
+
 try:
     from context import PipelineContext
 except ImportError:
