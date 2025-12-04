@@ -30,55 +30,44 @@ from utils.color_utils import compute_true_peak_dbfs  # noqa: E402
 
 
 PIPELINE_VERSION = "v1.0.0"
-
-# Orden lógico del pipeline (contract_ids principales)
-PIPELINE_CONTRACT_IDS: List[str] = [
-    "S0_SESSION_FORMAT",
-    "S1_STEM_DC_OFFSET",
-    "S1_STEM_WORKING_LOUDNESS",
-    "S1_KEY_DETECTION",
-    "S1_VOX_TUNING",
-    "S2_GROUP_PHASE_DRUMS",
-    "S3_MIXBUS_HEADROOM",
-    "S3_LEADVOX_AUDIBILITY",
-    "S4_STEM_HPF_LPF",
-    "S4_STEM_RESONANCE_CONTROL",
-    "S5_STEM_DYNAMICS_GENERIC",
-    "S5_LEADVOX_DYNAMICS",
-    "S5_BUS_DYNAMICS_DRUMS",
-    "S6_BUS_REVERB_STYLE",
-    "S7_MIXBUS_TONAL_BALANCE",
-    "S8_MIXBUS_COLOR_GENERIC",
-    "S9_MASTER_GENERIC",
-    "S10_MASTER_FINAL_LIMITS",
-]
-
 TIMINGS_FILENAME = "pipeline_timings.json"
 
-# Pequeña descripción humana por etapa
-STAGE_SUMMARY: Dict[str, str] = {
-    "S0_SESSION_FORMAT": "Normalización de formato de sesión (samplerate, bit depth, headroom, asignación de buses).",
-    "S1_STEM_DC_OFFSET": "Corrección de DC offset por stem.",
-    "S1_STEM_WORKING_LOUDNESS": "Normalización de loudness de trabajo por stem según perfil de instrumento.",
-    "S1_KEY_DETECTION": "Detección de tonalidad / escala global para la sesión.",
-    "S1_VOX_TUNING": "Afinación de voces según escala detectada, respetando límites de pitch y fuerza de afinación.",
-    "S2_GROUP_PHASE_DRUMS": "Alineación de fase y polaridad en el grupo de baterías/percusión.",
-    "S3_MIXBUS_HEADROOM": "Ajuste de headroom global del mixbus (peak y LUFS de trabajo).",
-    "S3_LEADVOX_AUDIBILITY": "Ajuste de nivel estático de la voz principal respecto a la mezcla.",
-    "S4_STEM_HPF_LPF": "Aplicación de filtros HPF/LPF por stem según perfil de instrumento.",
-    "S4_STEM_RESONANCE_CONTROL": "Control de resonancias por stem mediante cortes estrechos limitados.",
-    "S5_STEM_DYNAMICS_GENERIC": "Compresión/puerta genérica por stem para controlar rango dinámico.",
-    "S5_LEADVOX_DYNAMICS": "Dinámica específica de voz principal (compresión principal y automatización suave).",
-    "S5_BUS_DYNAMICS_DRUMS": "Compresión de bus para el grupo de baterías (pegada y glue).",
-    "S6_BUS_REVERB_STYLE": "Asignación de reverbs / espacio según estilo y familia de buses.",
-    "S7_MIXBUS_TONAL_BALANCE": "EQ de tono global por bandas para ajustar el balance tonal al estilo.",
-    "S8_MIXBUS_COLOR_GENERIC": "Coloración de mixbus (saturación suave y glue).",
-    "S9_MASTER_GENERIC": "Mastering (nivel final de loudness, ceiling, ancho M/S moderado).",
-    "S10_MASTER_FINAL_LIMITS": "QC final del master (TP, LUFS, L/R, correlación) con micro-ajustes únicamente.",
-}
+def _load_contracts_data() -> Dict[str, Any]:
+    """
+    Load contracts.json from backend/src/struct/contracts.json
+    Replicated logic from pipeline.py to avoid complex imports.
+    """
+    try:
+        struct_dir = SRC_DIR / "struct"
+        contracts_path = struct_dir / "contracts.json"
+        with contracts_path.open("r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception as e:
+        logger.logger.warning(f"[S11] Failed to load contracts.json: {e}")
+        return {}
+
+def _get_ordered_contract_ids(contracts: Dict[str, Any]) -> List[str]:
+    ordered: List[str] = []
+    for stage_data in contracts.get("stages", {}).values():
+        for c in stage_data.get("contracts", []) or []:
+            cid = c.get("id")
+            if cid and cid != "S11_REPORT_GENERATION": # Exclude itself
+                ordered.append(cid)
+    return ordered
+
+def _get_stage_description(contracts: Dict[str, Any], contract_id: str) -> str:
+    # Try to find description in contracts.json (using stage name or constructing it)
+    # We can search for the contract
+    for stage_data in contracts.get("stages", {}).values():
+        for c in stage_data.get("contracts", []) or []:
+            if c.get("id") == contract_id:
+                # Use stage group name + contract specific if available?
+                # Or just use the group name
+                return stage_data.get("name", contract_id)
+    return contract_id
 
 
-def _build_stage_report_entry(contract_id: str) -> Dict[str, Any]:
+def _build_stage_report_entry(contract_id: str, contracts_data: Dict[str, Any]) -> Dict[str, Any]:
     """
     Construye una entrada de reporte para un contract_id concreto,
     usando analysis_<contract_id>.json si existe.
@@ -86,19 +75,28 @@ def _build_stage_report_entry(contract_id: str) -> Dict[str, Any]:
     temp_dir = get_temp_dir(contract_id, create=False)
     analysis_path = temp_dir / f"analysis_{contract_id}.json"
 
+    # Get description from contracts data or fallback
+    desc = _get_stage_description(contracts_data, contract_id)
+
     entry: Dict[str, Any] = {
         "contract_id": contract_id,
         "stage_id": None,
-        "name": STAGE_SUMMARY.get(contract_id, ""),
+        "name": desc,
         "status": "missing_analysis",
         "key_metrics": {},
     }
 
     if not analysis_path.exists():
+        # Check if it was executed but analysis file is missing?
+        # If it's in pipeline_timings, it was executed.
         return entry
 
-    with analysis_path.open("r", encoding="utf-8") as f:
-        data = json.load(f)
+    try:
+        with analysis_path.open("r", encoding="utf-8") as f:
+            data = json.load(f)
+    except Exception as e:
+        logger.logger.warning(f"[S11] Failed to read analysis for {contract_id}: {e}")
+        return entry
 
     entry["stage_id"] = data.get("stage_id")
     entry["status"] = "analyzed"
@@ -254,9 +252,38 @@ def main() -> None:
     cfg = load_session_config(contract_id)
     style_preset = cfg["style_preset"]
 
-    # 3) Construir report.stages recorriendo los contract_ids del pipeline (en serie)
+    # Load contracts data for descriptions and ordering
+    contracts_data = _load_contracts_data()
+
+    # Load timings to see what actually ran
+    pipeline_timings = _load_pipeline_timings(contract_id)
+    executed_contracts = set()
+    if pipeline_timings.get("stages"):
+        for s in pipeline_timings["stages"]:
+            if s.get("contract_id"):
+                executed_contracts.add(s["contract_id"])
+
+    # If timings are empty (maybe S11 run manually?), fall back to full list
+    # But for report, we preferably only show what ran or what is available.
+
+    # Get master list
+    all_contracts = _get_ordered_contract_ids(contracts_data)
+
+    # Filter: Only include contracts that EITHER are in timings OR have analysis file existing.
+    # This prevents showing "missing_analysis" for skipped stages.
+
+    stages_to_report = []
+    for cid in all_contracts:
+        # Check existence
+        c_temp = get_temp_dir(cid, create=False)
+        c_ana = c_temp / f"analysis_{cid}.json"
+
+        if cid in executed_contracts or c_ana.exists():
+            stages_to_report.append(cid)
+
+    # 3) Construir report.stages
     stages_report: List[Dict[str, Any]] = [
-        _build_stage_report_entry(cid) for cid in PIPELINE_CONTRACT_IDS
+        _build_stage_report_entry(cid, contracts_data) for cid in stages_to_report
     ]
 
     # 4) Métricas finales desde QC de S10 + audio final para crest / hist

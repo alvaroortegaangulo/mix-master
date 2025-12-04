@@ -95,18 +95,30 @@ def _enrich_report_with_parameters_and_images(report: Dict[str, Any], temp_dir: 
 
         # 3. Find Images
         # Look for waveform_comparison.png and spectrogram_comparison.png
+        # Priority: Check if already in temp_dir (pushed by stage.py), else check stage_dir and copy.
         images = {}
         for img_name in ["waveform_comparison.png", "spectrogram_comparison.png"]:
-            img_path = stage_dir / img_name
-            if img_path.exists():
-                # Copy to S11 folder with unique name
-                new_name = f"{contract_id}_{img_name}"
-                dest_path = temp_dir / new_name
-                shutil.copy2(img_path, dest_path)
+            unique_name = f"{contract_id}_{img_name}"
+            pre_copied_path = temp_dir / unique_name
+            stage_path = stage_dir / img_name
 
+            final_name = None
+
+            if pre_copied_path.exists():
+                final_name = unique_name
+            elif stage_path.exists():
+                # Copy to S11 folder with unique name
+                dest_path = temp_dir / unique_name
+                try:
+                    shutil.copy2(stage_path, dest_path)
+                    final_name = unique_name
+                except Exception:
+                    pass
+
+            if final_name:
                 # Determine type key
                 key = "waveform" if "waveform" in img_name else "spectrogram"
-                images[key] = new_name
+                images[key] = final_name
 
         s["images"] = images
 
