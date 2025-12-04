@@ -148,6 +148,8 @@ export function UploadDropzone({
                 group-hover:block
               "
             >
+
+              <p>
                 Select{" "}
                 <span className="font-semibold text-amber-200">song</span> to
                 upload a single song file or{" "}
