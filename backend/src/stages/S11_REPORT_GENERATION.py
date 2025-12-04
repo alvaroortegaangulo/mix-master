@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Dict, Any, List
 import json
 import shutil
+import traceback
 
 # --- hack sys.path para ejecutar como script suelto desde stage.py ---
 THIS_DIR = Path(__file__).resolve().parent
@@ -46,6 +47,7 @@ def _enrich_report_with_parameters_and_images(report: Dict[str, Any], temp_dir: 
             # Try contract_id directly
             stage_dir = job_root / contract_id
             if not stage_dir.exists():
+                logger.logger.warning(f"[S11] Stage dir not found for {contract_id}: {stage_dir}")
                 continue
 
         # 2. Extract Parameters
@@ -62,8 +64,8 @@ def _enrich_report_with_parameters_and_images(report: Dict[str, Any], temp_dir: 
                     gains = m.get("eq_gains_db", {})
                     if gains:
                         params["EQ Gains (dB)"] = {k: f"{v:+.2f}" for k, v in gains.items() if abs(v) > 0.1}
-                except:
-                    pass
+                except Exception as e:
+                     logger.logger.warning(f"[S11] Failed to read metrics for S7: {e}")
 
         elif "S8_MIXBUS_COLOR_GENERIC" in contract_id:
             metrics_path = stage_dir / "color_metrics_S8_MIXBUS_COLOR_GENERIC.json"
@@ -74,8 +76,8 @@ def _enrich_report_with_parameters_and_images(report: Dict[str, Any], temp_dir: 
                     params["Saturation Drive (dB)"] = f"{m.get('drive_db_used', 0):.2f}"
                     params["True Peak Trim (dB)"] = f"{m.get('trim_db_applied', 0):.2f}"
                     params["THD (%)"] = f"{m.get('thd_percent', 0):.2f}"
-                except:
-                    pass
+                except Exception as e:
+                     logger.logger.warning(f"[S11] Failed to read metrics for S8: {e}")
 
         elif "S9_MASTER_GENERIC" in contract_id:
             metrics_path = stage_dir / "master_metrics_S9_MASTER_GENERIC.json"
@@ -88,8 +90,8 @@ def _enrich_report_with_parameters_and_images(report: Dict[str, Any], temp_dir: 
                     params["Pre Gain (dB)"] = f"{post_lim.get('pre_gain_db', 0):.2f}"
                     params["Limiter GR (dB)"] = f"{post_lim.get('limiter_gr_db', 0):.2f}"
                     params["Stereo Width Factor"] = f"{post_final.get('width_factor_applied', 1.0):.2f}"
-                except:
-                    pass
+                except Exception as e:
+                     logger.logger.warning(f"[S11] Failed to read metrics for S9: {e}")
 
         s["parameters"] = params
 
@@ -112,8 +114,9 @@ def _enrich_report_with_parameters_and_images(report: Dict[str, Any], temp_dir: 
                 try:
                     shutil.copy2(stage_path, dest_path)
                     final_name = unique_name
-                except Exception:
-                    pass
+                    # logger.logger.info(f"[S11] Copied image {img_name} for {contract_id}")
+                except Exception as e:
+                    logger.logger.error(f"[S11] Failed to copy image {stage_path}: {e}")
 
             if final_name:
                 # Determine type key
@@ -122,10 +125,6 @@ def _enrich_report_with_parameters_and_images(report: Dict[str, Any], temp_dir: 
 
         s["images"] = images
 
-    # Add general summary
-    # We can compare S0 input vs S10 output (using final metrics vs initial metrics if available)
-    # For now, just a placeholder text or constructed from available data
-    # User requested to remove specific text summary.
     pass
 
 
@@ -152,10 +151,16 @@ def main() -> None:
             f"[S11_REPORT_GENERATION] ERROR: no se encuentra {analysis_path}. "
             "Ejecuta primero el análisis de reporting."
         )
+        # Even if analysis is missing, we should try to generate a fallback report if possible?
+        # No, without analysis we don't have the structure.
         return
 
-    with analysis_path.open("r", encoding="utf-8") as f:
-        data = json.load(f)
+    try:
+        with analysis_path.open("r", encoding="utf-8") as f:
+            data = json.load(f)
+    except Exception as e:
+        logger.logger.error(f"[S11] Failed to load analysis JSON: {e}")
+        return
 
     report = (
         data.get("session", {})
@@ -164,21 +169,35 @@ def main() -> None:
 
     if not report:
         logger.logger.info("[S11_REPORT_GENERATION] No se ha encontrado 'session.report' en el análisis.")
-        return
+        # We should create an empty report structure to avoid frontend failures?
+        report = {"stages": [], "final_metrics": {}, "error": "Report data missing"}
+        # But we continue to try and save it.
 
     # --- ENRICH REPORT ---
-    _enrich_report_with_parameters_and_images(report, temp_dir)
+    try:
+        _enrich_report_with_parameters_and_images(report, temp_dir)
+    except Exception as e:
+        logger.logger.error(f"[S11] Error enriching report: {e}")
+        traceback.print_exc()
 
     # Save enriched report back to analysis json (or a separate report.json)
     # We'll save it to 'report.json' in the S11 folder for easier frontend access
     report_json_path = temp_dir / "report.json"
-    with report_json_path.open("w", encoding="utf-8") as f:
-        json.dump(report, f, indent=2, ensure_ascii=False)
+    try:
+        with report_json_path.open("w", encoding="utf-8") as f:
+            json.dump(report, f, indent=2, ensure_ascii=False)
+        logger.logger.info(f"[S11] Saved final report.json to {report_json_path}")
+    except Exception as e:
+        logger.logger.error(f"[S11] Failed to save report.json: {e}")
+
 
     # Also update the analysis json
     data["session"]["report"] = report
-    with analysis_path.open("w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
+    try:
+        with analysis_path.open("w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+    except Exception as e:
+        logger.logger.error(f"[S11] Failed to update analysis JSON: {e}")
 
 
     logger.logger.info("\n==============================================")
