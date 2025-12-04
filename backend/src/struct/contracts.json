@@ -6,6 +6,15 @@
       "name": "Input & Metadata",
       "contracts": [
         {
+          "id": "S0_SEPARATE_STEMS",
+          "stage_id": "S0_INPUT",
+          "instrument_id": "*",
+          "style_id": "*",
+          "target_scope": "session",
+          "metrics": {},
+          "limits": {}
+        },
+        {
           "id": "S0_SESSION_FORMAT",
           "stage_id": "S0_INPUT",
           "instrument_id": "*",

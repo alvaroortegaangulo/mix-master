@@ -46,6 +46,7 @@ app.mount(
 # Helpers
 # -------------------------------------------------------------------
 
+
 def _create_job_dirs() -> tuple[str, Path, Path]:
     """
     Crea la estructura de carpetas para un job nuevo.
@@ -126,7 +127,6 @@ def _build_pipeline_stages() -> list[dict[str, Any]]:
     return result
 
 
-
 def _write_initial_job_status(job_id: str, temp_root: Path) -> None:
     """
     Crea un job_status.json inicial en estado 'pending', para que el frontend
@@ -171,18 +171,34 @@ def _load_job_status_from_fs(job_id: str) -> Optional[Dict[str, Any]]:
         )
         return None
 
+
 PROFILES_PATH = SRC_DIR / "struct" / "profiles.json"
+
 
 def _load_profiles() -> Dict[str, Any]:
     if not PROFILES_PATH.exists():
         raise RuntimeError(f"No se encuentra {PROFILES_PATH}")
     with PROFILES_PATH.open("r", encoding="utf-8") as f:
         return json.load(f)
-    
+
+
+def _parse_bool_flag(value: Optional[str]) -> bool:
+    """
+    Convierte un string de formulario ('true', 'false', '1', '0', etc.)
+    a bool. Si viene None, devuelve False.
+    """
+    if value is None:
+        return False
+    if isinstance(value, bool):
+        return value
+    v = str(value).strip().lower()
+    return v in ("1", "true", "yes", "on")
+
 
 # -------------------------------------------------------------------
 # Endpoints
 # -------------------------------------------------------------------
+
 
 @app.post("/mix")
 async def mix_tracks(
@@ -190,16 +206,42 @@ async def mix_tracks(
     stages_json: Optional[str] = Form(None),
     stem_profiles_json: Optional[str] = Form(None),
     space_depth_bus_styles_json: Optional[str] = Form(None),
+    upload_mode: str = Form("song"),  # <-- NUEVO: "song" o "stems"
 ):
     job_id, media_dir, temp_root = _create_job_dirs()
     logger.info(
-        "Nuevo job de mezcla: job_id=%s, n_files=%d", job_id, len(files)
+        "Nuevo job de mezcla: job_id=%s, n_files=%d, upload_mode=%s",
+        job_id,
+        len(files),
+        upload_mode,
     )
 
     # -----------------------------
     # 1) job_status inicial (pending)
     # -----------------------------
     _write_initial_job_status(job_id, temp_root)
+
+    # -----------------------------
+    # 1b) Persistir modo de subida (song/stems) para S0_SEPARATE_STEMS
+    # -----------------------------
+    raw_mode = (upload_mode or "song").strip().lower()
+    is_stems_upload = raw_mode in {"stems", "upload_stems", "stems_true", "true", "1"}
+
+    normalized_mode = "stems" if is_stems_upload else "song"
+
+    job_root = temp_root
+    work_dir = job_root / "work"
+    work_dir.mkdir(parents=True, exist_ok=True)
+    upload_info_path = work_dir / "upload_mode.json"
+
+    upload_info = {
+        "upload_mode": normalized_mode,
+        "stems": is_stems_upload,
+    }
+    upload_info_path.write_text(
+        json.dumps(upload_info, indent=2, ensure_ascii=False),
+        encoding="utf-8",
+    )
 
     # -----------------------------
     # 2) Parsear perfiles de stems
@@ -231,7 +273,6 @@ async def mix_tracks(
         try:
             parsed = json.loads(space_depth_bus_styles_json)
             if isinstance(parsed, dict):
-                job_root = temp_root
                 sd_path = job_root / "work" / "space_depth_bus_styles.json"
                 sd_path.parent.mkdir(parents=True, exist_ok=True)
                 sd_path.write_text(
@@ -255,7 +296,6 @@ async def mix_tracks(
 
     # Persistir mapping a disco (para stages posteriores, depuración, etc.)
     if raw_profiles:
-        job_root = temp_root
         profiles_path = job_root / "work" / "stem_profiles.json"
         profiles_path.parent.mkdir(parents=True, exist_ok=True)
         profiles_path.write_text(
@@ -280,8 +320,6 @@ async def mix_tracks(
     # -----------------------------
     # 5) Lanzar tarea Celery
     # -----------------------------
-    # IMPORTANTE: usamos task_id = job_id para que frontend y worker
-    # hablen del mismo identificador.
     run_full_pipeline_task.apply_async(
         args=[
             job_id,
@@ -357,6 +395,7 @@ def get_instrument_profiles() -> List[Dict[str, Any]]:
             }
         )
     return result
+
 
 @app.get("/profiles/styles")
 def get_style_profiles() -> List[Dict[str, Any]]:
