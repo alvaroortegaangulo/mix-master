@@ -133,8 +133,21 @@ export function UploadDropzone({
             </button>
 
             {/* Tooltip */}
-            <div className="pointer-events-none absolute -top-2 right-full z-20 hidden w-64 translate-y-[-50%] rounded-lg border border-slate-800/80 bg-slate-950/95 px-3 py-2 text-xs text-slate-100 shadow-xl group-hover:block">
-              <p>
+            <div
+              className="
+                pointer-events-none
+                absolute -top-2 right-full z-20
+                hidden
+                w-52 translate-y-[-50%]
+                rounded-md
+                border border-slate-800/80
+                bg-slate-950/95
+                px-2.5 py-1.5
+                text-[11px] text-slate-100
+                shadow-lg
+                group-hover:block
+              "
+            >
                 Select{" "}
                 <span className="font-semibold text-amber-200">song</span> to
                 upload a single song file or{" "}
