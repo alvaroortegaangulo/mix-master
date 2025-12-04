@@ -277,9 +277,9 @@ def run_pipeline_for_job(
     # ------------------------------------------------------------------
     # 2) Copiar stems a S0_SESSION_FORMAT
     # ------------------------------------------------------------------
-    logger.info("[pipeline] Copiando stems S0_MIX_ORIGINAL -> S0_SESSION_FORMAT...")
+    logger.info("[pipeline] Copiando stems S0_MIX_ORIGINAL -> S0_SEPARATE_STEMS...")
     subprocess.run(
-        [sys.executable, str(copy_script), "S0_MIX_ORIGINAL", "S0_SESSION_FORMAT"],
+        [sys.executable, str(copy_script), "S0_MIX_ORIGINAL", "S0_SEPARATE_STEMS"],
         check=False,
     )
 
