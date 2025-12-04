@@ -653,14 +653,7 @@ useEffect(() => {
           <div className="lg:col-start-2 flex justify-center">
             <div className="w-full max-w-3xl">
               <section className="rounded-2xl border border-slate-800/80 bg-slate-900/70 p-8 shadow-xl">
-                <div className="text-center mb-8">
-                  <h1 className="text-3xl font-bold text-slate-50 mb-2">
-                    Upload Your Stems
-                  </h1>
-                  <p className="text-slate-400">
-                    Drag and drop your audio files to begin the magic.
-                  </p>
-                </div>
+                
 
                 <UploadDropzone
                   onFilesSelected={handleFilesSelected}
