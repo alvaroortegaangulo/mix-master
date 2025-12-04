@@ -27,17 +27,17 @@ class PipelineLogger:
             handler.setFormatter(logging.Formatter("%(message)s"))
             self.logger.addHandler(handler)
 
-    def print_header(self, title: str):
+    def print_header(self, title: str, color: str = CYAN):
         border = "=" * 60
         # Print an empty line separately to ensure prefix applies cleanly if needed
         self.logger.info("")
-        self.logger.info(f"{CYAN}{BOLD}{border}{RESET}")
-        self.logger.info(f"{CYAN}{BOLD}{title.center(60)}{RESET}")
-        self.logger.info(f"{CYAN}{BOLD}{border}{RESET}")
+        self.logger.info(f"{color}{BOLD}{border}{RESET}")
+        self.logger.info(f"{color}{BOLD}{title.center(60)}{RESET}")
+        self.logger.info(f"{color}{BOLD}{border}{RESET}")
 
-    def print_section(self, title: str):
+    def print_section(self, title: str, color: str = BLUE):
         self.logger.info("")
-        self.logger.info(f"{BLUE}{BOLD}>> {title}{RESET}")
+        self.logger.info(f"{color}{BOLD}>> {title}{RESET}")
 
     def print_metric(self, name: str, value: Any, target: Any = None, status: str = "INFO", details: str = ""):
         """
@@ -81,7 +81,11 @@ class PipelineLogger:
         Compares two dictionaries (flat or nested) and prints differences.
         Focuses on 'session' metrics usually found in analysis JSONs.
         """
-        self.print_section(title)
+        # Blank line before section and CYAN color as requested
+        self.logger.info("")
+        self.print_section(title, color=CYAN)
+
+        # --- SESSION COMPARISON ---
 
         # Flatten simple keys for session
         pre_sess = pre.get("session", {})
@@ -92,73 +96,127 @@ class PipelineLogger:
         # Filter for numeric metrics but show ALL of them as requested
         interesting_keys = sorted([k for k in keys if isinstance(pre_sess.get(k), (int, float)) or isinstance(post_sess.get(k), (int, float))])
 
-        if not interesting_keys:
+        if interesting_keys:
+            self.logger.info(f"{BOLD}{'Metric':<40} | {'Before':<15} | {'After':<15} | {'Diff':<10}{RESET}")
+            self.logger.info("-" * 90)
+
+            for k in interesting_keys:
+                v1 = pre_sess.get(k)
+                v2 = post_sess.get(k)
+
+                if v1 is None and v2 is None:
+                    continue
+
+                v1_str = f"{v1:.2f}" if isinstance(v1, (int, float)) else str(v1)
+                v2_str = f"{v2:.2f}" if isinstance(v2, (int, float)) else str(v2)
+
+                diff_str = "-"
+                row_color = RESET
+
+                if isinstance(v1, (int, float)) and isinstance(v2, (int, float)):
+                    diff = v2 - v1
+                    if abs(diff) < 0.001:
+                        diff_str = "="
+                    else:
+                        diff_str = f"{diff:+.2f}"
+                        row_color = YELLOW
+
+                row = f"{row_color}{k:<40} | {v1_str:<15} | {v2_str:<15} | {diff_str:<10}{RESET}"
+                self.logger.info(row)
+        else:
             self.logger.info("No numeric session metrics found to compare.")
-            return
 
-        # Header for table
-        self.logger.info(f"{BOLD}{'Metric':<40} | {'Before':<15} | {'After':<15} | {'Diff':<10}{RESET}")
-        self.logger.info("-" * 90)
+        # --- STEMS COMPARISON (Per Stem Tables) ---
 
-        for k in interesting_keys:
-            v1 = pre_sess.get(k)
-            v2 = post_sess.get(k)
-
-            # Skip if both None
-            if v1 is None and v2 is None:
-                continue
-
-            # Format values
-            v1_str = f"{v1:.2f}" if isinstance(v1, (int, float)) else str(v1)
-            v2_str = f"{v2:.2f}" if isinstance(v2, (int, float)) else str(v2)
-
-            diff_str = "-"
-            row_color = RESET
-
-            if isinstance(v1, (int, float)) and isinstance(v2, (int, float)):
-                diff = v2 - v1
-                if abs(diff) < 0.001:
-                    diff_str = "="
-                else:
-                    diff_str = f"{diff:+.2f}"
-                    row_color = YELLOW # Highlight changed rows
-
-            # Print row
-            row = f"{row_color}{k:<40} | {v1_str:<15} | {v2_str:<15} | {diff_str:<10}{RESET}"
-            self.logger.info(row)
-
-        # Also check Stems if manageable
-        # Stems comparison is tricky because it's a list. We assume same order or match by name.
         pre_stems = {s.get("file_name", "unknown"): s for s in pre.get("stems", [])}
         post_stems = {s.get("file_name", "unknown"): s for s in post.get("stems", [])}
 
-        common_stems = set(pre_stems.keys()) & set(post_stems.keys())
+        common_stems = sorted(list(set(pre_stems.keys()) & set(post_stems.keys())))
 
         if common_stems:
-            self.logger.info("-" * 90)
-            self.logger.info(f"{BOLD}Stem Differences (Significant Only){RESET}")
+            self.logger.info("") # Spacing
+            self.logger.info(f"{CYAN}{BOLD}>> Per-Stem Comparison{RESET}")
 
-            for name in sorted(common_stems):
-                s1 = pre_stems[name]
-                s2 = post_stems[name]
+            for stem_name in common_stems:
+                s1 = pre_stems[stem_name]
+                s2 = post_stems[stem_name]
 
-                # Compare specific metrics like LUFS, Peak, RMS
-                metrics_to_check = ["integrated_lufs", "true_peak_dbfs", "total_rms_db"]
-                diffs = []
-                for m in metrics_to_check:
-                    val1 = s1.get(m)
-                    val2 = s2.get(m)
-                    if isinstance(val1, (int, float)) and isinstance(val2, (int, float)):
-                        if abs(val1 - val2) > 0.05: # Threshold for showing diff
-                             diffs.append(f"{m}: {val1:.2f} -> {val2:.2f}")
+                # Find all numeric metrics in the stem data
+                stem_keys = set(s1.keys()) | set(s2.keys())
+                stem_metrics = sorted([k for k in stem_keys if isinstance(s1.get(k), (int, float)) or isinstance(s2.get(k), (int, float))])
 
-                if diffs:
-                    self.logger.info(f"{name:<30} | " + " || ".join(diffs))
+                if not stem_metrics:
+                    continue
+
+                self.logger.info("")
+                self.logger.info(f"{BOLD}Stem: {stem_name}{RESET}")
+                self.logger.info("-" * 90)
+                self.logger.info(f"{BOLD}{'Metric':<40} | {'Before':<15} | {'After':<15} | {'Diff':<10}{RESET}")
+                self.logger.info("-" * 90)
+
+                for k in stem_metrics:
+                    v1 = s1.get(k)
+                    v2 = s2.get(k)
+
+                    if v1 is None and v2 is None:
+                        continue
+
+                    v1_str = f"{v1:.2f}" if isinstance(v1, (int, float)) else str(v1)
+                    v2_str = f"{v2:.2f}" if isinstance(v2, (int, float)) else str(v2)
+
+                    diff_str = "-"
+                    row_color = RESET
+
+                    if isinstance(v1, (int, float)) and isinstance(v2, (int, float)):
+                        diff = v2 - v1
+                        if abs(diff) < 0.001:
+                            diff_str = "="
+                        else:
+                            diff_str = f"{diff:+.2f}"
+                            row_color = YELLOW
+
+                    row = f"{row_color}{k:<40} | {v1_str:<15} | {v2_str:<15} | {diff_str:<10}{RESET}"
+                    self.logger.info(row)
+
 
     def log_stage_result(self, stage_id: str, success: bool):
         color = GREEN if success else RED
         res = "SUCCESS" if success else "FAILURE"
-        self.print_header(f"Stage {stage_id} Completed: {color}{res}{RESET}")
+        # Color the whole block/text
+        self.print_header(f"Stage {stage_id} Completed: {res}", color=color)
+
+    # Method to filter verbose logs
+    def info(self, msg: str, *args, **kwargs):
+        # Silence logs starting with [S...] or specific tags unless they are warnings/errors (handled separately usually)
+        # But here we only override info.
+
+        # Tags to silence:
+        # [S...], [mixdown_stems], [cleanup], [pipeline]
+
+        if msg.startswith("["):
+            # Check for stage prefix like [S1_...] or [mixdown_stems]
+            # We want to keep [✔], [✘], [⚠], [ℹ] which might be in msg if passed directly (though print_metric handles that via self.logger.info)
+            # print_metric constructs the string with colors, so it might not start cleanly with "[" if colors are there.
+            # But here msg is the raw string passed to logger.info elsewhere.
+
+            # Simple heuristic: if it looks like a stage tag or verbose tag
+            # Tags to suppress explicitly mentioned by user
+            if any(msg.startswith(tag) for tag in ["[mixdown_stems]", "[cleanup]", "[pipeline]", "[copy_stems]"]):
+                return
+
+            # Suppress [S...] tags BUT we need to be careful not to suppress useful info if it's the only info.
+            # User said: "Los logs del procesamiento del stage, es decir, todos los que ahora mismo empiezan por [S2_GROUP_PHASE_DRUMS]..."
+            # This implies the internal progress logs.
+            # We must NOT suppress the Analysis Comparison or Metrics Limits Check, but those don't start with [Tag].
+            if msg.startswith("[S") and "]" in msg:
+                 # Check if it is a stage tag e.g. [S0_SESSION_FORMAT]
+                 tag_end = msg.find("]")
+                 tag = msg[1:tag_end]
+                 # If tag starts with S and followed by digit (S0, S1, S10)
+                 if len(tag) > 1 and tag[0] == 'S' and tag[1].isdigit():
+                     return
+
+        self.logger.info(msg, *args, **kwargs)
 
 # Global instance
 logger = PipelineLogger()

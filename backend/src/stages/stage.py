@@ -303,7 +303,7 @@ def run_stage(stage_id: str, context: Optional[PipelineContext] = None) -> None:
     copy_script = base_dir / "utils" / "copy_stems.py"
     cleanup_stems_script = base_dir / "utils" / "cleanup_stage_stems.py"
 
-    logger.print_header(f"Running stage: {stage_id}")
+    logger.print_header(f"Running stage: {stage_id}", color="\033[34m")
     stage_start = time.perf_counter()
 
     # Pre-Mixdown (Legacy args: stage_id)
@@ -326,7 +326,8 @@ def run_stage(stage_id: str, context: Optional[PipelineContext] = None) -> None:
         logger.print_comparison(pre_analysis, post_analysis)
 
     # 4) Validación (Legacy args: stage_id)
-    logger.print_section("Metrics Limits Check")
+    logger.logger.info("") # Blank line
+    logger.print_section("Metrics Limits Check", color="\033[36m")
     ret = _run_script(check_script, context, stage_id)
     success = (ret == 0)
 
