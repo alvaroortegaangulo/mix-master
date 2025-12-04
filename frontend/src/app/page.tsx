@@ -604,7 +604,7 @@ useEffect(() => {
       (jobStatus.status === "queued" || jobStatus.status === "running"));
 
 
-
+      
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
       {/* Top bar */}
@@ -803,7 +803,6 @@ useEffect(() => {
                     {error}
                   </p>
                 )}
-              </section>
 
                 <div className="mt-8 flex justify-center">
                   <button
@@ -857,8 +856,8 @@ useEffect(() => {
                   enabledPipelineStageKeys={selectedStageKeys}
                 />
               )}
-            </div>
-          </div>
+              </section>
+
 
           {/* Columna derecha: panel de perfiles centrado */}
           <div className="lg:col-start-3">
