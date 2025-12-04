@@ -38,7 +38,8 @@ def _enrich_report_with_parameters_and_images(report: Dict[str, Any], temp_dir: 
 
         job_root = temp_dir.parent
         # Contracts.json map contract_id to stage_id, but here 's' has 'stage_id' field too
-        stage_id_folder = s.get("stage_id", contract_id)
+        # If 'stage_id' is None or missing, fall back to contract_id
+        stage_id_folder = s.get("stage_id") or contract_id
         stage_dir = job_root / stage_id_folder
 
         if not stage_dir.exists():
