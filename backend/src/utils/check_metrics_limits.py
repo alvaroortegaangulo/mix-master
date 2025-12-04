@@ -2095,7 +2095,7 @@ def process(context: PipelineContext, *args) -> bool:
     elif contract_id == "S11_REPORT_GENERATION":
         ok = _check_S11_REPORT_GENERATION(analysis)
     else:
-        logger.print_header(f"Validation skipped for {contract_id}")
+        # logger.print_header(f"Validation skipped for {contract_id}")
         ok = True
 
     return ok
