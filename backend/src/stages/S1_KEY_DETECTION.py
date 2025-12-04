@@ -1,6 +1,7 @@
 # C:\mix-master\backend\src\stages\S1_KEY_DETECTION.py
 
 from __future__ import annotations
+from utils.logger import logger
 
 import sys
 from pathlib import Path
@@ -54,7 +55,7 @@ def main() -> None:
       - No modifica stems (passthrough), para integrarse con stage.py (copy_stems + mixdown_stems).
     """
     if len(sys.argv) < 2:
-        print("Uso: python S1_KEY_DETECTION.py <CONTRACT_ID>")
+        logger.logger.info("Uso: python S1_KEY_DETECTION.py <CONTRACT_ID>")
         sys.exit(1)
 
     contract_id = sys.argv[1]  # "S1_KEY_DETECTION"
@@ -70,25 +71,25 @@ def main() -> None:
     confidence = session.get("key_detection_confidence")
     scale_pcs = session.get("scale_pitch_classes")
 
-    print("[S1_KEY_DETECTION] Resumen de análisis:")
-    print(f"  - Tonalidad global: {key_name} (modo={key_mode}, root_pc={key_root_pc})")
-    print(f"  - Confianza: {confidence}")
-    print(f"  - Escala (pitch classes, C=0): {scale_pcs}")
-    print(f"  - Número de stems analizados: {len(stems)}")
-    print("  - Stems:")
+    logger.logger.info("[S1_KEY_DETECTION] Resumen de análisis:")
+    logger.logger.info(f"  - Tonalidad global: {key_name} (modo={key_mode}, root_pc={key_root_pc})")
+    logger.logger.info(f"  - Confianza: {confidence}")
+    logger.logger.info(f"  - Escala (pitch classes, C=0): {scale_pcs}")
+    logger.logger.info(f"  - Número de stems analizados: {len(stems)}")
+    logger.logger.info("  - Stems:")
 
     if stems:
         for line in map(_format_stem_summary, stems):
-            print(line)
+            logger.logger.info(line)
     else:
-        print("      (ningún stem detectado en el análisis)")
+        logger.logger.info("      (ningún stem detectado en el análisis)")
 
     # No tocamos audio. stage.py hará:
     #   - re-análisis
     #   - check_metrics_limits (sin check específico -> éxito por defecto)
     #   - copy_stems + mixdown_stems para el siguiente contrato.
 
-    print("[S1_KEY_DETECTION] Stage completado (passthrough).")
+    logger.logger.info("[S1_KEY_DETECTION] Stage completado (passthrough).")
 
 
 if __name__ == "__main__":

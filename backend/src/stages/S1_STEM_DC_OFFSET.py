@@ -1,3 +1,4 @@
+from utils.logger import logger
 import sys
 from pathlib import Path
 from typing import Dict, Any, List, Tuple
@@ -100,7 +101,7 @@ def main() -> None:
       - Sobrescribe los stems in-place en temp/<contract_id>/ (en paralelo).
     """
     if len(sys.argv) < 2:
-        print("Uso: python S1_STEM_DC_OFFSET.py <CONTRACT_ID>")
+        logger.logger.info("Uso: python S1_STEM_DC_OFFSET.py <CONTRACT_ID>")
         sys.exit(1)
 
     contract_id = sys.argv[1]  # "S1_STEM_DC_OFFSET"
@@ -117,7 +118,7 @@ def main() -> None:
         for args in args_list:
             _process_stem_worker(args)
 
-    print(f"[S1_STEM_DC_OFFSET] Corrección de DC offset completada para {len(stems)} stems.")
+    logger.logger.info(f"[S1_STEM_DC_OFFSET] Corrección de DC offset completada para {len(stems)} stems.")
 
 
 if __name__ == "__main__":

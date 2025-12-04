@@ -1,6 +1,7 @@
 # C:\mix-master\backend\src\analysis\S4_STEM_HPF_LPF.py
 
 from __future__ import annotations
+from utils.logger import logger
 
 import sys
 from pathlib import Path
@@ -150,7 +151,7 @@ def _analyze_stem(
     try:
         y, sr = sf_read_limited(stem_path, always_2d=False)
     except Exception as e:
-        print(f"[S4_STEM_HPF_LPF] Aviso: no se puede leer '{fname}': {e}. Se omiten métricas espectrales.")
+        logger.logger.info(f"[S4_STEM_HPF_LPF] Aviso: no se puede leer '{fname}': {e}. Se omiten métricas espectrales.")
         return {
             "file_name": fname,
             "file_path": str(stem_path),
@@ -186,7 +187,7 @@ def main() -> None:
         python S4_STEM_HPF_LPF.py S4_STEM_HPF_LPF
     """
     if len(sys.argv) < 2:
-        print("Uso: python S4_STEM_HPF_LPF.py <CONTRACT_ID>")
+        logger.logger.info("Uso: python S4_STEM_HPF_LPF.py <CONTRACT_ID>")
         sys.exit(1)
 
     contract_id = sys.argv[1]  # "S4_STEM_HPF_LPF"
@@ -244,7 +245,7 @@ def main() -> None:
     with output_path.open("w", encoding="utf-8") as f:
         json.dump(session_state, f, indent=2, ensure_ascii=False)
 
-    print(
+    logger.logger.info(
         f"[S4_STEM_HPF_LPF] Análisis completado para {len(stems_analysis)} stems. "
         f"JSON: {output_path}"
     )

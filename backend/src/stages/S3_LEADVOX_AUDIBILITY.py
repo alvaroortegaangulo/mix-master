@@ -1,6 +1,7 @@
 # C:\mix-master\backend\src\stages\S3_LEADVOX_AUDIBILITY.py
 
 from __future__ import annotations
+from utils.logger import logger
 
 import sys
 from pathlib import Path
@@ -97,7 +98,7 @@ def _compute_lead_gain_db(
     if abs(gain_db) < 0.1:
         gain_db = 0.0
 
-    print(
+    logger.logger.info(
         f"[S3_LEADVOX_AUDIBILITY] offset_mean={offset_mean:.2f} dB, "
         f"target_offset={target_offset:.2f} dB, desired_gain={desired_gain:.2f} dB, "
         f"gain_db_clamped={gain_db:.2f} dB (max_total={max_total_gain:.2f} dB)."
@@ -142,7 +143,7 @@ def _apply_gain_to_lead_worker(
     data_out = data * gain_lin
     sf.write(path, data_out, sr)
 
-    print(f"[S3_LEADVOX_AUDIBILITY] {fname}: aplicado gain {20.0 * np.log10(gain_lin):.2f} dB.")
+    logger.logger.info(f"[S3_LEADVOX_AUDIBILITY] {fname}: aplicado gain {20.0 * np.log10(gain_lin):.2f} dB.")
 
     return True
 
@@ -156,7 +157,7 @@ def main() -> None:
       - Aplica ese gain a los stems marcados como is_lead_vocal = True,
     """
     if len(sys.argv) < 2:
-        print("Uso: python S3_LEADVOX_AUDIBILITY.py <CONTRACT_ID>")
+        logger.logger.info("Uso: python S3_LEADVOX_AUDIBILITY.py <CONTRACT_ID>")
         sys.exit(1)
 
     contract_id = sys.argv[1]  # "S3_LEADVOX_AUDIBILITY"
@@ -171,7 +172,7 @@ def main() -> None:
     gain_db = _compute_lead_gain_db(session, metrics, limits)
 
     if abs(gain_db) < 1e-6:
-        print("[S3_LEADVOX_AUDIBILITY] Lead vocal ya dentro de rango (o sin datos); no se aplica gain.")
+        logger.logger.info("[S3_LEADVOX_AUDIBILITY] Lead vocal ya dentro de rango (o sin datos); no se aplica gain.")
         return
 
     gain_lin = float(10.0 ** (gain_db / 20.0))
@@ -184,7 +185,7 @@ def main() -> None:
     ]
 
     if not lead_stems:
-        print("[S3_LEADVOX_AUDIBILITY] No se han encontrado stems marcados como lead vocal.")
+        logger.logger.info("[S3_LEADVOX_AUDIBILITY] No se han encontrado stems marcados como lead vocal.")
         return
 
     args_list: List[Tuple[str, Dict[str, Any], float]] = [
@@ -197,7 +198,7 @@ def main() -> None:
 
     processed = sum(1 for r in results if r)
 
-    print(
+    logger.logger.info(
         f"[S3_LEADVOX_AUDIBILITY] Aplicado gain global de {gain_db:.2f} dB "
         f"a {processed} stems de lead vocal."
     )

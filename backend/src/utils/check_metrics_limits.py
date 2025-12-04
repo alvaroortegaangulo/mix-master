@@ -20,6 +20,8 @@ try:
 except ImportError:
     PipelineContext = None # type: ignore
 
+from utils.logger import logger
+
 def _load_analysis(contract_id: str) -> Dict[str, Any]:
     """
     Carga el JSON de análisis:
@@ -28,7 +30,7 @@ def _load_analysis(contract_id: str) -> Dict[str, Any]:
     analysis_path = temp_dir / f"analysis_{contract_id}.json"
 
     if not analysis_path.exists():
-        print(f"[check_metrics] ERROR: No se encuentra el análisis en {analysis_path}", file=sys.stderr)
+        logger.logger.error(f"[check_metrics] ERROR: No se encuentra el análisis en {analysis_path}")
         # We can't exit here if running inside process(), need to raise or return None
         raise FileNotFoundError(f"No se encuentra el análisis en {analysis_path}")
 
@@ -77,30 +79,37 @@ def _check_S0_SESSION_FORMAT(analysis: Dict[str, Any]) -> bool:
     # 1) Samplerate unificado
     if target_sr is not None:
         if not samplerates_present or len(samplerates_present) != 1:
-            print("[S0_SESSION_FORMAT] samplerates_present no unificado:", samplerates_present, file=sys.stderr)
+            logger.print_metric("Samplerates Present", samplerates_present, target=target_sr, status="FAIL", details="No unificado")
             ok = False
         elif samplerates_present[0] != target_sr:
-            print(f"[S0_SESSION_FORMAT] samplerate esperado {target_sr}, obtenido {samplerates_present[0]}",
-                  file=sys.stderr)
+            logger.print_metric("Samplerate", samplerates_present[0], target=target_sr, status="FAIL")
             ok = False
+        else:
+            logger.print_metric("Samplerate", samplerates_present[0], target=target_sr, status="PASS")
 
     # 2) Máximo pico de sesión
     if max_peak_target is not None:
         if session_max_peak > max_peak_target + 1e-3:
-            print(f"[S0_SESSION_FORMAT] session_max_peak_dbfs={session_max_peak} > target={max_peak_target}",
-                  file=sys.stderr)
+            logger.print_metric("Session Max Peak", session_max_peak, target=max_peak_target, status="FAIL")
             ok = False
+        else:
+            logger.print_metric("Session Max Peak", session_max_peak, target=max_peak_target, status="PASS")
 
     # 3) Bit depth por stem
     if target_bit is not None:
+        bad_stems = []
         for stem in stems:
             bd = stem.get("bit_depth_file")
             if bd is None:
                 continue
             if bd != target_bit:
-                print(f"[S0_SESSION_FORMAT] bit_depth_file={bd} != target={target_bit} en {stem.get('file_name')}",
-                      file=sys.stderr)
+                bad_stems.append(f"{stem.get('file_name')} ({bd})")
                 ok = False
+
+        if bad_stems:
+             logger.print_metric("Bit Depth Check", "Mixed/Incorrect", target=target_bit, status="FAIL", details=", ".join(bad_stems))
+        else:
+             logger.print_metric("Bit Depth Check", "Uniform", target=target_bit, status="PASS")
 
     return ok
 
@@ -124,21 +133,16 @@ def _check_S1_STEM_DC_OFFSET(analysis: Dict[str, Any]) -> bool:
     if dc_target is not None and max_dc_measured is not None:
         # Ambos suelen ser negativos; cuanto más negativo, mejor.
         if max_dc_measured > dc_target + 1e-3:
-            print(
-                f"[S1_STEM_DC_OFFSET] max_dc_offset_db_measured={max_dc_measured} > target={dc_target}",
-                file=sys.stderr,
-            )
+            logger.print_metric("Max DC Offset", max_dc_measured, target=dc_target, status="FAIL")
             ok = False
+        else:
+            logger.print_metric("Max DC Offset", max_dc_measured, target=dc_target, status="PASS")
 
     # Opcional: log informativo sobre picos, pero sin fallar el stage
     peak_target = session.get("true_peak_max_dbtp_target")
     max_peak_measured = session.get("max_peak_dbfs_measured")
     if peak_target is not None and max_peak_measured is not None:
-        print(
-            f"[S1_STEM_DC_OFFSET] INFO: true_peak_max_dbtp_target={peak_target}, "
-            f"max_peak_dbfs_measured={max_peak_measured} (no se valida en esta etapa)",
-            file=sys.stderr,
-        )
+        logger.print_metric("Max Peak (Info)", max_peak_measured, target=peak_target, status="INFO", details="Not validated in this stage")
 
     return ok
 
@@ -188,40 +192,22 @@ def _check_S1_STEM_WORKING_LOUDNESS(analysis: Dict[str, Any]) -> bool:
             lower_bound = target_min - lufs_tolerance_db
 
             if lufs > upper_bound:
-                print(
-                    f"[S1_STEM_WORKING_LOUDNESS] {stem_name}: "
-                    f"LUFS={lufs:.2f} por ENCIMA de rango [{target_min}, {target_max}]±{lufs_tolerance_db}",
-                    file=sys.stderr,
-                )
+                logger.print_metric(f"{stem_name} LUFS", lufs, target=f"[{target_min}, {target_max}]", status="FAIL", details=f"Over max limit (+{lufs_tolerance_db} tol)")
                 ok = False
             elif lufs < lower_bound:
-                print(
-                    f"[S1_STEM_WORKING_LOUDNESS] {stem_name}: "
-                    f"LUFS={lufs:.2f} por DEBAJO de rango [{target_min}, {target_max}]±{lufs_tolerance_db} (solo aviso)",
-                    file=sys.stderr,
-                )
+                logger.print_metric(f"{stem_name} LUFS", lufs, target=f"[{target_min}, {target_max}]", status="WARN", details=f"Below min limit (-{lufs_tolerance_db} tol)")
 
         # 1.b) True peak solo como info por ahora
         if stem_peak is not None:
             peak = float(stem_peak)
             if peak > true_peak_target + peak_tolerance_db:
-                print(
-                    f"[S1_STEM_WORKING_LOUDNESS] AVISO {stem_name}: "
-                    f"true_peak_dbfs={peak:.2f} > target={true_peak_target} (+{peak_tolerance_db} margen) "
-                    f"(no se usa como criterio de fallo en esta etapa)",
-                    file=sys.stderr,
-                )
+                logger.print_metric(f"{stem_name} Peak (Info)", peak, target=true_peak_target, status="WARN", details="Above target (Info only)")
 
     # 2) Mix preliminar (solo info, validación dura se hará en etapa de headroom/mixbus)
     if mixbus_peak_measured is not None:
         mix_peak = float(mixbus_peak_measured)
         if mix_peak > mixbus_peak_target + peak_tolerance_db:
-            print(
-                f"[S1_STEM_WORKING_LOUDNESS] AVISO mixbus_peak_dbfs_measured={mix_peak:.2f} "
-                f"> target={mixbus_peak_target} (+{peak_tolerance_db} margen) "
-                f"(no se usa como criterio de fallo en esta etapa)",
-                file=sys.stderr,
-            )
+            logger.print_metric("Mixbus Peak (Info)", mix_peak, target=mixbus_peak_target, status="WARN", details="Above target (Info only)")
 
     return ok
 
@@ -277,21 +263,14 @@ def _check_S1_VOX_TUNING(data: Dict[str, Any]) -> bool:
             continue
 
         if max_dev > target_dev + MARGIN_CENTS:
-            print(
-                f"[S1_VOX_TUNING] {name}: desviación máxima {max_dev:.2f} cents "
-                f"> target {target_dev:.2f} (+{MARGIN_CENTS:.1f} margen)."
-            )
+            logger.print_metric(f"{name} Pitch Dev", max_dev, target=target_dev, status="FAIL", details=f"Margin: +{MARGIN_CENTS}")
             ok = False
+        else:
+             logger.print_metric(f"{name} Pitch Dev", max_dev, target=target_dev, status="PASS")
 
     if vocal_count == 0:
-        print("[S1_VOX_TUNING] No se han detectado stems vocales; se considera éxito.")
+        logger.print_metric("Vocal Tuning Check", "No vocals", status="PASS")
         return True
-
-    if ok:
-        print(
-            f"[S1_VOX_TUNING] Todas las voces cumplen: "
-            f"desvío máximo <= {target_dev:.1f}c (+{MARGIN_CENTS:.1f} margen)."
-        )
 
     return ok
 
@@ -465,32 +444,24 @@ def _check_S2_GROUP_PHASE_DRUMS(data: Dict[str, Any]) -> bool:
                 corr = None
 
         if corr is not None and corr < (correlation_min - corr_margin):
-            print(
-                f"[S2_GROUP_PHASE_DRUMS] {name}: correlación 100–500 Hz={corr:.3f} "
-                f"< min {correlation_min:.3f} (margen {corr_margin:.2f})."
-            )
+            logger.print_metric(f"{name} Correlation", corr, target=f">= {correlation_min}", status="FAIL", details=f"Margin: {corr_margin}")
             ok = False
+        else:
+            logger.print_metric(f"{name} Correlation", corr, target=f">= {correlation_min}", status="PASS")
 
         # Lag residual
         try:
             lag_ms = float(lag_ms)
         except (TypeError, ValueError):
-            print(f"[S2_GROUP_PHASE_DRUMS] {name}: lag_ms inválido={lag_ms!r}.")
+            logger.print_metric(f"{name} Lag", lag_ms, status="FAIL", details="Invalid value")
             ok = False
             continue
 
         if abs(lag_ms) > (residual_max_lag_ms + 0.02):
-            print(
-                f"[S2_GROUP_PHASE_DRUMS] {name}: lag residual {lag_ms:.3f} ms "
-                f"> {residual_max_lag_ms:.2f} ms (+0.02 margen)."
-            )
+            logger.print_metric(f"{name} Lag", lag_ms, target=f"<= {residual_max_lag_ms}ms", status="FAIL", details="Residual Lag too high")
             ok = False
-
-    if ok:
-        print(
-            f"[S2_GROUP_PHASE_DRUMS] Fase/polaridad OK para todos los stems de {target_family}: "
-            f"correlación >= {correlation_min:.2f} y |lag| <= {residual_max_lag_ms:.2f} ms."
-        )
+        else:
+            logger.print_metric(f"{name} Lag", lag_ms, target=f"<= {residual_max_lag_ms}ms", status="PASS")
 
     return ok
 
@@ -544,38 +515,26 @@ def _check_S3_MIXBUS_HEADROOM(data: Dict[str, Any]) -> bool:
 
     # 1) HARD: no pasarnos de pico ni de LUFS máximo
     if peak_meas > peak_max + MARGIN_DB:
-        print(
-            f"[S3_MIXBUS_HEADROOM] peak={peak_meas:.2f} dBFS > peak_max {peak_max:.2f} (+{MARGIN_DB:.1f})."
-        )
+        logger.print_metric("Mix Peak Check", peak_meas, target=f"<= {peak_max}", status="FAIL", details=f"Margin: {MARGIN_DB}")
         ok = False
+    else:
+        logger.print_metric("Mix Peak Check", peak_meas, target=f"<= {peak_max}", status="PASS")
 
     if lufs_meas > lufs_max + MARGIN_DB:
-        print(
-            f"[S3_MIXBUS_HEADROOM] LUFS={lufs_meas:.2f} > lufs_max {lufs_max:.2f} (+{MARGIN_DB:.1f})."
-        )
+        logger.print_metric("Mix LUFS Check", lufs_meas, target=f"<= {lufs_max}", status="FAIL", details=f"Margin: {MARGIN_DB}")
         ok = False
-
-    # 2) SOFT: LUFS mínimo
-    if lufs_meas < lufs_min - MARGIN_DB:
-        # Si además tenemos margen de pico por arriba, es que el stage podría haber subido más y no lo hizo
-        if peak_meas < peak_max - MARGIN_DB:
-            print(
-                f"[S3_MIXBUS_HEADROOM] LUFS={lufs_meas:.2f} por debajo de {lufs_min:.2f} (-{MARGIN_DB:.1f}), "
-                f"y peak={peak_meas:.2f} aún lejos de peak_max={peak_max:.2f}. Fracaso."
-            )
-            ok = False
+    else:
+        # 2) SOFT: LUFS mínimo
+        if lufs_meas < lufs_min - MARGIN_DB:
+            # Si además tenemos margen de pico por arriba, es que el stage podría haber subido más y no lo hizo
+            if peak_meas < peak_max - MARGIN_DB:
+                logger.print_metric("Mix LUFS Check", lufs_meas, target=f">= {lufs_min}", status="FAIL", details="Below min and headroom available")
+                ok = False
+            else:
+                # Peak ya pegado al techo: aceptamos como OK, lo arreglarán stages posteriores
+                logger.print_metric("Mix LUFS Check", lufs_meas, target=f">= {lufs_min}", status="WARN", details="Below min but Peak limited (OK)")
         else:
-            # Peak ya pegado al techo: aceptamos como OK, lo arreglarán stages posteriores
-            print(
-                f"[S3_MIXBUS_HEADROOM] LUFS={lufs_meas:.2f} por debajo de {lufs_min:.2f} (-{MARGIN_DB:.1f}), "
-                f"pero peak={peak_meas:.2f} está en el límite. Se acepta como válido (se subirá en mastering)."
-            )
-
-    if ok:
-        print(
-            f"[S3_MIXBUS_HEADROOM] OK: peak={peak_meas:.2f} dBFS, LUFS={lufs_meas:.2f} "
-            f"(dentro de límites duros)."
-        )
+             logger.print_metric("Mix LUFS Check", lufs_meas, target=f"[{lufs_min}, {lufs_max}]", status="PASS")
 
     return ok
 
@@ -620,16 +579,10 @@ def _check_S3_LEADVOX_AUDIBILITY(data: Dict[str, Any]) -> bool:
     ok = True
 
     if not (offset_min - MARGIN_DB <= offset_mean <= offset_max + MARGIN_DB):
-        print(
-            f"[S3_LEADVOX_AUDIBILITY] offset_mean={offset_mean:.2f} dB fuera de rango "
-            f"[{offset_min:.2f}, {offset_max:.2f}] ±{MARGIN_DB:.1f}."
-        )
+        logger.print_metric("Lead Vox Offset", offset_mean, target=f"[{offset_min}, {offset_max}]", status="FAIL", details=f"Margin: {MARGIN_DB}")
         ok = False
     else:
-        print(
-            f"[S3_LEADVOX_AUDIBILITY] OK: offset_mean={offset_mean:.2f} dB "
-            f"dentro de [{offset_min:.2f}, {offset_max:.2f}] ±{MARGIN_DB:.1f}."
-        )
+        logger.print_metric("Lead Vox Offset", offset_mean, target=f"[{offset_min}, {offset_max}]", status="PASS")
 
     return ok
 
@@ -686,50 +639,37 @@ def _check_S4_STEM_HPF_LPF(data: Dict[str, Any]) -> bool:
 
         # low_rel_db
         if low_rel_db is None:
-            print(f"[S4_STEM_HPF_LPF] {name}: sin métrica low_rel_db; fracaso.")
+            logger.print_metric(f"{name} Low Rel", "Missing", status="FAIL")
             ok = False
         else:
             try:
                 low_rel_db = float(low_rel_db)
             except (TypeError, ValueError):
-                print(f"[S4_STEM_HPF_LPF] {name}: low_rel_db inválido={low_rel_db!r}; fracaso.")
+                logger.print_metric(f"{name} Low Rel", low_rel_db, status="FAIL", details="Invalid")
                 ok = False
             else:
                 if low_rel_db > LOW_REL_MAX_DB:
-                    print(
-                        f"[S4_STEM_HPF_LPF] {name}: energía subgrave sólo {low_rel_db:.1f} dB "
-                        f"por debajo del total (umbral {LOW_REL_MAX_DB:.1f} dB)."
-                    )
+                    logger.print_metric(f"{name} Low Rel", low_rel_db, target=f"<= {LOW_REL_MAX_DB}", status="FAIL")
                     ok = False
 
         # high_rel_db
         if high_rel_db is None:
-            print(f"[S4_STEM_HPF_LPF] {name}: sin métrica high_rel_db; fracaso.")
+            logger.print_metric(f"{name} High Rel", "Missing", status="FAIL")
             ok = False
         else:
             try:
                 high_rel_db = float(high_rel_db)
             except (TypeError, ValueError):
-                print(f"[S4_STEM_HPF_LPF] {name}: high_rel_db inválido={high_rel_db!r}; fracaso.")
+                logger.print_metric(f"{name} High Rel", high_rel_db, status="FAIL", details="Invalid")
                 ok = False
             else:
                 if high_rel_db > HIGH_REL_MAX_DB:
-                    print(
-                        f"[S4_STEM_HPF_LPF] {name}: energía por encima del LPF sólo {high_rel_db:.1f} dB "
-                        f"por debajo del total (umbral {HIGH_REL_MAX_DB:.1f} dB)."
-                    )
-                    ok = False
+                     logger.print_metric(f"{name} High Rel", high_rel_db, target=f"<= {HIGH_REL_MAX_DB}", status="FAIL")
+                     ok = False
 
     if useful_stems == 0:
-        print(f"[S4_STEM_HPF_LPF] Todas las pistas tienen nivel muy bajo; se considera éxito.")
+        logger.print_metric("HPF/LPF Check", "No useful stems", status="PASS")
         return True
-
-    if ok:
-        print(
-            f"[S4_STEM_HPF_LPF] OK: sub-bajos e hiss extremo "
-            f"atenuados al menos {abs(LOW_REL_MAX_DB):.0f} dB por debajo del contenido principal "
-            f"en {useful_stems} pistas."
-        )
 
     return ok
 
@@ -782,10 +722,7 @@ def _check_S4_STEM_RESONANCE_CONTROL(data: Dict[str, Any]) -> bool:
 
     # Caso trivial: no hay resonancias detectadas
     if total_resonances_reported == 0:
-        print(
-            f"[{contract_id}] OK: no se han detectado resonancias "
-            f"por encima de {max_res_peak_db:.1f} dB sobre la media local."
-        )
+        logger.print_metric("Resonances Detected", 0, status="PASS")
         return True
 
     worst_diff = 0.0
@@ -802,10 +739,6 @@ def _check_S4_STEM_RESONANCE_CONTROL(data: Dict[str, Any]) -> bool:
             try:
                 diff = float(diff_raw)
             except (TypeError, ValueError):
-                print(
-                    f"[{contract_id}] {name}: "
-                    f"gain_above_local_db inválido={diff_raw!r}; se ignora en la validación."
-                )
                 continue
 
             counted_res += 1
@@ -818,11 +751,7 @@ def _check_S4_STEM_RESONANCE_CONTROL(data: Dict[str, Any]) -> bool:
                     freq_str = f"{float(freq):.0f} Hz"
                 except (TypeError, ValueError):
                     freq_str = str(freq)
-                print(
-                    f"[{contract_id}] {name}: resonancia extrema en {freq_str} "
-                    f"{diff:.1f} dB por encima de la media local "
-                    f"(límite duro {HARD_FAIL_DB:.1f} dB)."
-                )
+                logger.print_metric(f"{name} Resonance {freq_str}", diff, target=f"<= {HARD_FAIL_DB}", status="FAIL", details="Extreme resonance")
                 return False
 
     # A partir de aquí, siempre devolvemos éxito, pero con logging informativo
@@ -830,30 +759,11 @@ def _check_S4_STEM_RESONANCE_CONTROL(data: Dict[str, Any]) -> bool:
     extended_limit = soft_limit + RESIDUAL_TOL_DB
 
     if worst_diff <= soft_limit:
-        # Cumple holgadamente el objetivo del contrato
-        print(
-            f"[{contract_id}] OK: todas las resonancias residuales "
-            f"({counted_res} detectadas) están dentro de "
-            f"{soft_limit:.1f} dB sobre la media local."
-        )
+        logger.print_metric("Worst Resonance", worst_diff, target=f"<= {soft_limit}", status="PASS", details=f"{counted_res} detected")
     elif worst_diff <= extended_limit:
-        # Dentro de la tolerancia extendida: informativo pero no bloqueante
-        print(
-            f"[{contract_id}] AVISO: se han detectado {counted_res} resonancias "
-            f"residuales; worst_case={worst_diff:.1f} dB por encima de la media local. "
-            f"Objetivo del contrato={max_res_peak_db:.1f} dB (+{MARGIN_DB:.1f} dB margen), "
-            f"tolerancia extendida hasta {extended_limit:.1f} dB debido a límites de "
-            f"max_resonant_cuts_db / max_resonant_filters_per_band."
-        )
+        logger.print_metric("Worst Resonance", worst_diff, target=f"<= {soft_limit}", status="WARN", details=f"Within extended tol {extended_limit}")
     else:
-        # Valor muy alto pero por debajo del HARD_FAIL_DB: seguimos sin bloquear,
-        # pero dejamos un log más agresivo para revisar el material o el detector.
-        print(
-            f"[{contract_id}] AVISO FUERTE: worst_case={worst_diff:.1f} dB por encima de "
-            f"la media local (objetivo {max_res_peak_db:.1f} + margen {MARGIN_DB:.1f}). "
-            f"Se permite pasar esta etapa para no bloquear el pipeline, "
-            f"pero sería recomendable revisar a mano este material."
-        )
+        logger.print_metric("Worst Resonance", worst_diff, target=f"<= {soft_limit}", status="WARN", details="STRONG WARNING (High Residual)")
 
     return True
 
@@ -951,35 +861,19 @@ def _check_S5_STEM_DYNAMICS_GENERIC(data: Dict[str, Any]) -> bool:
             worst_peak = max_gr
 
         # Check HARD con margen
-        if avg_gr > max_avg_gr + MARGIN_AVG_DB or max_gr > max_peak_gr + MARGIN_PEAK_DB:
-            print(
-                f"[{contract_id}] {fname}: "
-                f"avg_GR={avg_gr:.2f} dB (límite {max_avg_gr:.2f} + {MARGIN_AVG_DB:.1f}), "
-                f"max_GR={max_gr:.2f} dB (límite {max_peak_gr:.2f} + {MARGIN_PEAK_DB:.1f})."
-            )
+        if avg_gr > max_avg_gr + MARGIN_AVG_DB:
+            logger.print_metric(f"{fname} Avg GR", avg_gr, target=f"<= {max_avg_gr}", status="FAIL", details=f"Margin: {MARGIN_AVG_DB}")
             ok = False
+        if max_gr > max_peak_gr + MARGIN_PEAK_DB:
+             logger.print_metric(f"{fname} Max GR", max_gr, target=f"<= {max_peak_gr}", status="FAIL", details=f"Margin: {MARGIN_PEAK_DB}")
+             ok = False
 
     if n == 0:
-        # No hemos podido validar ningún stem con datos numéricos; ser estrictos.
-        print(
-            f"[{contract_id}] No se han encontrado métricas numéricas válidas "
-            f"en {metrics_path}; fracaso."
-        )
+        logger.print_metric("Dynamics Check", "No valid metrics", status="FAIL")
         return False
 
     if ok:
-        print(
-            f"[{contract_id}] OK: {n} stems validados. "
-            f"worst_avg_GR={worst_avg:.2f} dB (límite {max_avg_gr:.2f} + {MARGIN_AVG_DB:.1f}), "
-            f"worst_max_GR={worst_peak:.2f} dB (límite {max_peak_gr:.2f} + {MARGIN_PEAK_DB:.1f})."
-        )
-    else:
-        print(
-            f"[{contract_id}] FRACASO: se han encontrado stems con reducción de ganancia "
-            f"por encima de los límites permitidos "
-            f"(max_avg={max_avg_gr:.2f} dB, max_peak={max_peak_gr:.2f} dB, "
-            f"márgenes avg={MARGIN_AVG_DB:.1f}, peak={MARGIN_PEAK_DB:.1f})."
-        )
+         logger.print_metric("Dynamics Check", f"Validated {n} stems", status="PASS", details=f"Worst Avg: {worst_avg:.2f}, Worst Peak: {worst_peak:.2f}")
 
     return ok
 
@@ -1082,78 +976,43 @@ def _check_S5_LEADVOX_DYNAMICS(data: Dict[str, Any]) -> bool:
 
         # 1) GR media no excede el contrato
         if avg_gr > max_avg_gr_contract + MARGIN_DB:
-            print(
-                f"[S5_LEADVOX_DYNAMICS] {fname}: GR media {avg_gr:.2f} dB "
-                f"> max {max_avg_gr_contract:.2f} dB (+{MARGIN_DB:.1f} margen)."
-            )
+            logger.print_metric(f"{fname} Avg GR", avg_gr, target=f"<= {max_avg_gr_contract}", status="FAIL", details=f"Margin: {MARGIN_DB}")
             ok = False
 
         # 2) Crest factor no queda por encima del máximo objetivo
         MIN_IMPROVE_DB = 0.5  # o 1.0 si quieres ser un poco más estricto
 
         if post_crest > crest_max_contract + MARGIN_CREST_UP:
-            # Si no hemos mejorado al menos MIN_IMPROVE_DB respecto al crest inicial,
-            # lo consideramos fallo duro. Si hemos mejorado algo, lo dejamos como warning.
             if pre_crest - post_crest < MIN_IMPROVE_DB:
-                print(
-                    f"[S5_LEADVOX_DYNAMICS] {fname}: crest post={post_crest:.2f} dB "
-                    f"sigue muy por encima del objetivo {crest_max_contract:.2f} dB y "
-                    f"apenas ha mejorado desde {pre_crest:.2f} dB."
-                )
+                logger.print_metric(f"{fname} Crest Post", post_crest, target=f"<= {crest_max_contract}", status="FAIL", details="Above max, little improvement")
                 ok = False
             else:
-                print(
-                    f"[S5_LEADVOX_DYNAMICS] {fname}: crest post={post_crest:.2f} dB "
-                    f"sigue por encima del objetivo {crest_max_contract:.2f} dB, "
-                    f"pero se ha reducido desde {pre_crest:.2f} dB; se acepta como éxito suave."
-                )
-
+                logger.print_metric(f"{fname} Crest Post", post_crest, target=f"<= {crest_max_contract}", status="WARN", details="Above max but improved")
 
         # 3) Crest factor no se reduce en exceso (no matar la expresividad)
         if pre_crest > 0.5:  # si el crest original es muy pequeño, no tiene sentido ratio
             crest_ratio = post_crest / pre_crest if pre_crest != 0.0 else 1.0
             if crest_ratio < CREST_MIN_RATIO:
-                print(
-                    f"[S5_LEADVOX_DYNAMICS] {fname}: crest factor reducido de "
-                    f"{pre_crest:.2f} dB a {post_crest:.2f} dB "
-                    f"(ratio={crest_ratio:.2f} < {CREST_MIN_RATIO:.2f})."
-                )
+                logger.print_metric(f"{fname} Crest Ratio", crest_ratio, target=f">= {CREST_MIN_RATIO}", status="FAIL", details="Over-compressed")
                 ok = False
 
         # 4) Automatización global (makeup) dentro de límites
         if abs(makeup_db) > max_auto_per_pass + MARGIN_AUTO:
-            print(
-                f"[S5_LEADVOX_DYNAMICS] {fname}: automatización global {makeup_db:.2f} dB "
-                f"> max {max_auto_per_pass:.2f} dB (+{MARGIN_AUTO:.1f})."
-            )
+            logger.print_metric(f"{fname} Makeup", makeup_db, target=f"<= {max_auto_per_pass}", status="FAIL", details=f"Margin: {MARGIN_AUTO}")
             ok = False
 
-        # 5) (Opcional, suave): si crest_pre ya estaba por debajo de crest_min,
-        #    no podemos exigir subirlo; pero si crest_pre estaba dentro de rango,
-        #    no deberíamos empujarlo claramente por debajo de crest_min.
+        # 5) Check for lower bound regression
         if pre_crest >= crest_min_contract:
             if post_crest < crest_min_contract - MARGIN_DB:
-                print(
-                    f"[S5_LEADVOX_DYNAMICS] {fname}: crest post={post_crest:.2f} dB "
-                    f"< target_min {crest_min_contract:.2f} dB - margen {MARGIN_DB:.1f}, "
-                    "aunque el crest inicial ya estaba en rango; revisa parámetros de compresión."
-                )
+                logger.print_metric(f"{fname} Crest Low", post_crest, target=f">= {crest_min_contract}", status="FAIL", details="Dropped below min")
                 ok = False
 
     if checked == 0:
-        print(
-            "[S5_LEADVOX_DYNAMICS] No se han encontrado registros válidos de stems lead; "
-            "se considera éxito suave."
-        )
+        logger.print_metric("Lead Vox Check", "No data", status="PASS")
         return True
 
     if ok:
-        print(
-            f"[S5_LEADVOX_DYNAMICS] OK en {checked} stems lead: "
-            f"GR_media <= {max_avg_gr_contract:.1f} dB (+{MARGIN_DB:.1f}), "
-            f"crest_post dentro de target y sin reducción excesiva, "
-            f"automatización |makeup| <= {max_auto_per_pass:.1f} dB (+{MARGIN_AUTO:.1f})."
-        )
+        logger.print_metric("Lead Vox Check", f"Checked {checked} stems", status="PASS")
 
     return ok
 
@@ -1247,45 +1106,27 @@ def _check_S5_BUS_DYNAMICS_DRUMS(data: Dict[str, Any]) -> bool:
 
     # 1) GR media limitada
     if avg_gr > max_avg_gr_contract + MARGIN_DB:
-        print(
-            f"[S5_BUS_DYNAMICS_DRUMS] GR media bus={avg_gr:.2f} dB "
-            f"> max {max_avg_gr_contract:.2f} dB (+{MARGIN_DB:.1f} margen)."
-        )
+        logger.print_metric("Bus Avg GR", avg_gr, target=f"<= {max_avg_gr_contract}", status="FAIL", details=f"Margin: {MARGIN_DB}")
         ok = False
 
     # 2) Crest factor final dentro de ventana objetivo
     if post_crest > crest_max_contract + MARGIN_CREST:
-        print(
-            f"[S5_BUS_DYNAMICS_DRUMS] Crest post bus={post_crest:.2f} dB "
-            f"> target_max {crest_max_contract:.2f} dB (+{MARGIN_CREST:.1f})."
-        )
+        logger.print_metric("Bus Crest Post", post_crest, target=f"<= {crest_max_contract}", status="FAIL", details=f"Margin: {MARGIN_CREST}")
         ok = False
 
     if post_crest < crest_min_contract - MARGIN_CREST:
-        print(
-            f"[S5_BUS_DYNAMICS_DRUMS] Crest post bus={post_crest:.2f} dB "
-            f"< target_min {crest_min_contract:.2f} dB (-{MARGIN_CREST:.1f})."
-        )
+        logger.print_metric("Bus Crest Post", post_crest, target=f">= {crest_min_contract}", status="FAIL", details=f"Margin: {MARGIN_CREST}")
         ok = False
 
     # 3) No matar el crest original más de un 40%
     if pre_crest is not None and pre_crest > 0.5:
         crest_ratio = post_crest / pre_crest if pre_crest != 0.0 else 1.0
         if crest_ratio < CREST_MIN_RATIO:
-            print(
-                f"[S5_BUS_DYNAMICS_DRUMS] Crest bus reducido de {pre_crest:.2f} dB "
-                f"a {post_crest:.2f} dB (ratio={crest_ratio:.2f} < {CREST_MIN_RATIO:.2f})."
-            )
+            logger.print_metric("Bus Crest Ratio", crest_ratio, target=f">= {CREST_MIN_RATIO}", status="FAIL", details="Over-compressed")
             ok = False
 
     if ok:
-        print(
-            f"[S5_BUS_DYNAMICS_DRUMS] OK: GR_media={avg_gr:.2f} dB <= "
-            f"{max_avg_gr_contract:.1f} dB (+{MARGIN_DB:.1f}), "
-            f"crest_post={post_crest:.2f} dB dentro de "
-            f"[{crest_min_contract:.1f}, {crest_max_contract:.1f}] ±{MARGIN_CREST:.1f}, "
-            f"sin reducción excesiva de crest vs pre ({pre_crest:.2f} dB)."
-        )
+        logger.print_metric("Bus Dynamics Check", "OK", status="PASS")
 
     return ok
 
@@ -1382,47 +1223,26 @@ def _check_S6_BUS_REVERB_STYLE(data: Dict[str, Any]) -> bool:
 
     # 1) Offset dentro de rango objetivo (10–20 dB por debajo, p.ej. [-24, -8] dB)
     if offset_now < target_min - MARGIN_OFFSET_DB:
-        print(
-            f"[S6_BUS_REVERB_STYLE] Offset reverb={offset_now:.2f} dB demasiado bajo "
-            f"(target_min={target_min:.2f} dB, margen={MARGIN_OFFSET_DB:.1f}). "
-            "La reverb podría estar demasiado enterrada."
-        )
+        logger.print_metric("Reverb Offset", offset_now, target=f">= {target_min}", status="FAIL", details="Too buried")
         ok = False
 
     if offset_now > target_max + MARGIN_OFFSET_DB:
-        print(
-            f"[S6_BUS_REVERB_STYLE] Offset reverb={offset_now:.2f} dB demasiado alto "
-            f"(target_max={target_max:.2f} dB, margen={MARGIN_OFFSET_DB:.1f}). "
-            "La reverb podría estar demasiado presente."
-        )
+        logger.print_metric("Reverb Offset", offset_now, target=f"<= {target_max}", status="FAIL", details="Too wet")
         ok = False
 
     # 2) Nivel global de reverb siempre por debajo del mix dry
     if rev_lufs >= dry_lufs:
-        print(
-            f"[S6_BUS_REVERB_STYLE] Reverb_LUFS={rev_lufs:.2f} dB >= dry_LUFS={dry_lufs:.2f} dB; "
-            "la reverb no debe superar el nivel del mix dry."
-        )
+        logger.print_metric("Reverb Level", rev_lufs, target=f"< {dry_lufs} (Dry)", status="FAIL", details="Reverb louder than Dry")
         ok = False
 
     # 3) Idempotencia: no subir/bajar más de max_send_change_db por pasada
     max_allowed_delta = max_send_change_recorded + MARGIN_DELTA_DB
     if abs(applied_delta) > max_allowed_delta:
-        print(
-            f"[S6_BUS_REVERB_STYLE] applied_offset_delta={applied_delta:.2f} dB "
-            f"> max_send_change={max_send_change_recorded:.2f} dB "
-            f"(+{MARGIN_DELTA_DB:.1f} margen)."
-        )
+        logger.print_metric("Offset Delta", applied_delta, target=f"<= {max_send_change_recorded}", status="FAIL")
         ok = False
 
     if ok:
-        print(
-            f"[S6_BUS_REVERB_STYLE] OK: offset={offset_now:.2f} dB dentro de "
-            f"[{target_min:.1f}, {target_max:.1f}] ±{MARGIN_OFFSET_DB:.1f}, "
-            f"reverb_LUFS={rev_lufs:.2f} dB < dry_LUFS={dry_lufs:.2f} dB, "
-            f"y |applied_delta|={abs(applied_delta):.2f} dB <= "
-            f"{max_send_change_recorded:.1f} dB (+{MARGIN_DELTA_DB:.1f})."
-        )
+        logger.print_metric("Reverb Check", "OK", status="PASS", details=f"Offset: {offset_now:.2f}")
 
     return ok
 
@@ -1512,21 +1332,12 @@ def _check_S7_MIXBUS_TONAL_BALANCE(data: Dict[str, Any]) -> bool:
 
         # 1.a) El RMS final no debe sacar la mezcla de tolerancia
         if post_error_rms > max_err_contract + MARGIN_ERR_DB:
-            print(
-                f"[S7_MIXBUS_TONAL_BALANCE] Mezcla estaba en tolerancia "
-                f"(pre={pre_error_rms:.2f} dB) y ha salido tras el Stage: "
-                f"post={post_error_rms:.2f} dB > max {max_err_contract:.2f} dB "
-                f"(+{MARGIN_ERR_DB:.1f} margen)."
-            )
+            logger.print_metric("Tonal RMS Post", post_error_rms, target=f"<= {max_err_contract}", status="FAIL", details="Regressed out of tolerance")
             ok = False
 
         # 1.b) No debe empeorar de forma clara
         if post_error_rms > pre_error_rms + MARGIN_IMPROVE_DB:
-            print(
-                f"[S7_MIXBUS_TONAL_BALANCE] Mezcla estaba en tolerancia y ha empeorado: "
-                f"pre={pre_error_rms:.2f} dB, post={post_error_rms:.2f} dB "
-                f"(+{MARGIN_IMPROVE_DB:.1f} margen)."
-            )
+            logger.print_metric("Tonal RMS Post", post_error_rms, target=f"<= {pre_error_rms}", status="FAIL", details="Got worse")
             ok = False
 
         # 1.c) Ganancias por banda muy pequeñas (idempotencia)
@@ -1536,20 +1347,13 @@ def _check_S7_MIXBUS_TONAL_BALANCE(data: Dict[str, Any]) -> bool:
             except (TypeError, ValueError):
                 continue
             if abs(g) > MARGIN_IDEMP_GAIN_DB + MARGIN_EQ_LIMIT_DB:
-                print(
-                    f"[S7_MIXBUS_TONAL_BALANCE] Banda {band_id}: ganancia={g:+.2f} dB "
-                    f"> {MARGIN_IDEMP_GAIN_DB:.1f} dB (idempotencia)."
-                )
+                logger.print_metric(f"{band_id} Gain", g, target=f"<= {MARGIN_IDEMP_GAIN_DB}", status="FAIL", details="Idempotency violation")
                 ok = False
 
     else:
         # Caso A: antes estaba fuera de tolerancia → se exige mejora mínima
         if post_error_rms > pre_error_rms - MARGIN_IMPROVE_DB:
-            print(
-                f"[S7_MIXBUS_TONAL_BALANCE] Mezcla fuera de tolerancia pero no mejora "
-                f"lo suficiente: pre={pre_error_rms:.2f} dB, post={post_error_rms:.2f} dB "
-                f"(se esperaba al menos {MARGIN_IMPROVE_DB:.1f} dB de reducción)."
-            )
+            logger.print_metric("Tonal RMS Improvement", post_error_rms, target=f"< {pre_error_rms}", status="FAIL", details="Not improved enough")
             ok = False
 
     # ------------------------------------------------------------------
@@ -1561,10 +1365,7 @@ def _check_S7_MIXBUS_TONAL_BALANCE(data: Dict[str, Any]) -> bool:
         except (TypeError, ValueError):
             continue
         if abs(g) > max_eq_change_contract + MARGIN_EQ_LIMIT_DB:
-            print(
-                f"[S7_MIXBUS_TONAL_BALANCE] Banda {band_id}: |EQ|={g:+.2f} dB "
-                f"> max {max_eq_change_contract:.2f} dB (+{MARGIN_EQ_LIMIT_DB:.1f})."
-            )
+            logger.print_metric(f"{band_id} Gain", g, target=f"<= {max_eq_change_contract}", status="FAIL", details=f"Margin: {MARGIN_EQ_LIMIT_DB}")
             ok = False
 
     # ------------------------------------------------------------------
@@ -1585,20 +1386,11 @@ def _check_S7_MIXBUS_TONAL_BALANCE(data: Dict[str, Any]) -> bool:
 
             err_band = post_v - tgt_v
             if abs(err_band) > max_err_contract + MARGIN_ERR_DB:
-                print(
-                    f"[S7_MIXBUS_TONAL_BALANCE] Banda {band_id}: error={err_band:+.2f} dB "
-                    f"> max {max_err_contract:.2f} dB (+{MARGIN_ERR_DB:.1f})."
-                )
+                logger.print_metric(f"{band_id} Error", err_band, target=f"<= {max_err_contract}", status="FAIL", details=f"Margin: {MARGIN_ERR_DB}")
                 ok = False
 
     if ok:
-        print(
-            f"[S7_MIXBUS_TONAL_BALANCE] OK: error_RMS pre={pre_error_rms:.2f} dB, "
-            f"post={post_error_rms:.2f} dB (umbral={max_err_contract:.2f} dB), "
-            f"ganancias por banda dentro de ±{max_eq_change_contract:.1f} dB "
-            f"(+{MARGIN_EQ_LIMIT_DB:.1f}) y comportamiento coherente con el estado "
-            f"inicial (idempotente si ya estaba en tolerancia, con mejora si no lo estaba)."
-        )
+        logger.print_metric("Tonal Balance Check", "OK", status="PASS", details=f"RMS Error: {post_error_rms:.2f}")
 
     return ok
 
@@ -1683,36 +1475,22 @@ def _check_S8_MIXBUS_COLOR_GENERIC(data: Dict[str, Any]) -> bool:
 
     # 1) True peak dentro de rango
     if post_tp < tp_min_contract - TP_MARGIN:
-        print(
-            f"[S8_MIXBUS_COLOR_GENERIC] true_peak post={post_tp:.2f} dBTP "
-            f"< min {tp_min_contract:.2f} dBTP (-{TP_MARGIN:.1f} margen). "
-            "La mezcla ha quedado demasiado baja tras color."
-        )
+        logger.print_metric("True Peak Post", post_tp, target=f"[{tp_min_contract}, {tp_max_contract}]", status="FAIL", details="Too low")
         ok = False
-
-    if post_tp > tp_max_contract + TP_MARGIN:
-        print(
-            f"[S8_MIXBUS_COLOR_GENERIC] true_peak post={post_tp:.2f} dBTP "
-            f"> max {tp_max_contract:.2f} dBTP (+{TP_MARGIN:.1f} margen). "
-            "La mezcla ha quedado demasiado alta tras color."
-        )
+    elif post_tp > tp_max_contract + TP_MARGIN:
+        logger.print_metric("True Peak Post", post_tp, target=f"[{tp_min_contract}, {tp_max_contract}]", status="FAIL", details="Too high")
         ok = False
+    else:
+        logger.print_metric("True Peak Post", post_tp, target=f"[{tp_min_contract}, {tp_max_contract}]", status="PASS")
 
     # 2) THD dentro del límite
     if thd_percent > max_thd_contract + THD_MARGIN:
-        print(
-            f"[S8_MIXBUS_COLOR_GENERIC] THD={thd_percent:.2f} % "
-            f"> max {max_thd_contract:.2f} % (+{THD_MARGIN:.1f} margen)."
-        )
+        logger.print_metric("THD", f"{thd_percent:.2f}%", target=f"<= {max_thd_contract}%", status="FAIL", details=f"Margin: {THD_MARGIN}")
         ok = False
 
     # 3) Drive de saturación dentro de límites por pase
     if abs(drive_used) > max_sat_per_pass_contract + DRIVE_MARGIN_DB:
-        print(
-            f"[S8_MIXBUS_COLOR_GENERIC] drive_db_used={drive_used:+.2f} dB "
-            f"> max_additional_saturation_per_pass={max_sat_per_pass_contract:.2f} dB "
-            f"(+{DRIVE_MARGIN_DB:.1f} margen)."
-        )
+        logger.print_metric("Drive Used", drive_used, target=f"<= {max_sat_per_pass_contract}", status="FAIL", details=f"Margin: {DRIVE_MARGIN_DB}")
         ok = False
 
     # 4) Idempotencia suave: si la true_peak pre ya estaba dentro del rango,
@@ -1723,40 +1501,21 @@ def _check_S8_MIXBUS_COLOR_GENERIC(data: Dict[str, Any]) -> bool:
     )
     if pre_in_range:
         if abs(drive_used) > IDEMP_SMALL_DB:
-            print(
-                f"[S8_MIXBUS_COLOR_GENERIC] Idempotencia: true_peak pre ya en rango "
-                f"({pre_tp:.2f} dBTP), pero drive_used={drive_used:+.2f} dB "
-                f"> {IDEMP_SMALL_DB:.1f} dB."
-            )
+            logger.print_metric("Drive Used (Idem)", drive_used, target=f"<= {IDEMP_SMALL_DB}", status="FAIL", details="Pre was OK")
             ok = False
         if abs(trim_applied) > IDEMP_SMALL_DB:
-            print(
-                f"[S8_MIXBUS_COLOR_GENERIC] Idempotencia: true_peak pre ya en rango "
-                f"({pre_tp:.2f} dBTP), pero trim_db_applied={trim_applied:+.2f} dB "
-                f"> {IDEMP_SMALL_DB:.1f} dB."
-            )
+            logger.print_metric("Trim Applied (Idem)", trim_applied, target=f"<= {IDEMP_SMALL_DB}", status="FAIL", details="Pre was OK")
             ok = False
 
-    # 5) Sanity check suave sobre el RMS (no apachurrar demasiado en un pase)
-    #    No es un requisito de contrato explícito, pero sirve como guard-rail.
+    # 5) Sanity check suave sobre el RMS
     if pre_rms != float("-inf") and post_rms != float("-inf"):
         delta_rms = post_rms - pre_rms
         if delta_rms < -RMS_CHANGE_MAX_DB:
-            print(
-                f"[S8_MIXBUS_COLOR_GENERIC] RMS ha caído {delta_rms:.2f} dB "
-                f"< -{RMS_CHANGE_MAX_DB:.1f} dB en un solo pase; coloración demasiado agresiva."
-            )
+            logger.print_metric("RMS Change", delta_rms, target=f">= -{RMS_CHANGE_MAX_DB}", status="FAIL", details="Aggressive drop")
             ok = False
 
     if ok:
-        print(
-            f"[S8_MIXBUS_COLOR_GENERIC] OK: true_peak pre={pre_tp:.2f} dBTP, "
-            f"post={post_tp:.2f} dBTP dentro de [{tp_min_contract:.1f}, {tp_max_contract:.1f}] "
-            f"±{TP_MARGIN:.1f}, THD={thd_percent:.2f} % <= {max_thd_contract:.2f} % "
-            f"(+{THD_MARGIN:.1f}), drive_used={drive_used:+.2f} dB "
-            f"<= {max_sat_per_pass_contract:.2f} dB (+{DRIVE_MARGIN_DB:.1f}), "
-            f"y cambios de nivel coherentes con una coloración suave."
-        )
+        logger.print_metric("Color Check", "OK", status="PASS", details=f"THD: {thd_percent:.2f}%")
 
     return ok
 
@@ -1873,15 +1632,12 @@ def _check_S9_MASTER_GENERIC(data: Dict[str, Any]) -> bool:
 
     # 1) True peak final <= target_ceiling + margen
     if post_tp > target_ceiling + CEIL_MARGIN:
-        print(
-            f"[S9_MASTER_GENERIC] true_peak post={post_tp:.2f} dBTP "
-            f"> ceiling {target_ceiling:.2f} dBTP (+{CEIL_MARGIN:.1f} margen)."
-        )
+        logger.print_metric("True Peak Post", post_tp, target=f"<= {target_ceiling}", status="FAIL", details=f"Margin: {CEIL_MARGIN}")
         ok = False
 
     # 2) LUFS final: rango ó mejora hacia el target
     if post_lufs == float("-inf"):
-        print("[S9_MASTER_GENERIC] LUFS post no válido (inf); fracaso.")
+        logger.print_metric("LUFS Post", "Invalid", status="FAIL")
         ok = False
     else:
         low_target = target_lufs - LUFS_TOL
@@ -1897,11 +1653,7 @@ def _check_S9_MASTER_GENERIC(data: Dict[str, Any]) -> bool:
         if pre_in_lufs_band:
             # La master ya estaba en rango → exigimos mantenerla en rango
             if not (low_with_margin <= post_lufs <= high_with_margin):
-                print(
-                    f"[S9_MASTER_GENERIC] LUFS post={post_lufs:.2f} fuera de "
-                    f"[{low_target:.2f}, {high_target:.2f}] "
-                    f"(±{LUFS_MARGIN:.1f} margen) pese a que el pre ya estaba en rango."
-                )
+                logger.print_metric("LUFS Post", post_lufs, target=f"[{low_target}, {high_target}]", status="FAIL", details="Regressed (Pre was OK)")
                 ok = False
         else:
             # Mezcla lejos del target → exigimos mejora clara hacia él
@@ -1911,22 +1663,12 @@ def _check_S9_MASTER_GENERIC(data: Dict[str, Any]) -> bool:
                 if target_lufs > pre_lufs:
                     # Queremos subir LUFS
                     if post_lufs < pre_lufs + IMPROVE_LU_MIN:
-                        print(
-                            f"[S9_MASTER_GENERIC] LUFS ha mejorado insuficientemente: "
-                            f"pre={pre_lufs:.2f}, post={post_lufs:.2f}, "
-                            f"target={target_lufs:.2f}, se esperaban al menos "
-                            f"{IMPROVE_LU_MIN:.1f} dB de acercamiento."
-                        )
+                        logger.print_metric("LUFS Improvement", post_lufs, target=f"> {pre_lufs + IMPROVE_LU_MIN}", status="FAIL", details="Not enough improvement")
                         ok = False
                 else:
                     # Queremos bajar LUFS
                     if post_lufs > pre_lufs - IMPROVE_LU_MIN:
-                        print(
-                            f"[S9_MASTER_GENERIC] LUFS ha mejorado insuficientemente: "
-                            f"pre={pre_lufs:.2f}, post={post_lufs:.2f}, "
-                            f"target={target_lufs:.2f}, se esperaban al menos "
-                            f"{IMPROVE_LU_MIN:.1f} dB de acercamiento."
-                        )
+                        logger.print_metric("LUFS Improvement", post_lufs, target=f"< {pre_lufs - IMPROVE_LU_MIN}", status="FAIL", details="Not enough improvement")
                         ok = False
             # No exigimos entrar aún en la banda objetivo cuando el pre está muy lejos.
 
@@ -1939,11 +1681,7 @@ def _check_S9_MASTER_GENERIC(data: Dict[str, Any]) -> bool:
 
         if pre_in_lra_band:
             if not (low_lra <= post_lra <= high_lra):
-                print(
-                    f"[S9_MASTER_GENERIC] LRA post={post_lra:.2f} fuera de "
-                    f"[{target_lra_min:.2f}, {target_lra_max:.2f}] "
-                    f"(±{LRA_MARGIN:.1f} margen) pese a que el pre ya estaba en rango."
-                )
+                logger.print_metric("LRA Post", post_lra, target=f"[{low_lra}, {high_lra}]", status="FAIL", details="Regressed (Pre was OK)")
                 ok = False
         else:
             IMPROVE_LRA_MIN = 1.0
@@ -1951,31 +1689,17 @@ def _check_S9_MASTER_GENERIC(data: Dict[str, Any]) -> bool:
             if pre_lra > high_lra:
                 # Demasiado dinámica → queremos reducir LRA
                 if post_lra > pre_lra - IMPROVE_LRA_MIN:
-                    print(
-                        f"[S9_MASTER_GENERIC] LRA no se ha reducido lo suficiente: "
-                        f"pre={pre_lra:.2f}, post={post_lra:.2f}, rango objetivo "
-                        f"[{target_lra_min:.2f}, {target_lra_max:.2f}] "
-                        f"(se esperaba al menos {IMPROVE_LRA_MIN:.1f} dB de reducción)."
-                    )
+                    logger.print_metric("LRA Improvement", post_lra, target=f"< {pre_lra - IMPROVE_LRA_MIN}", status="FAIL", details="Not enough reduction")
                     ok = False
             elif pre_lra < low_lra:
                 # Demasiado comprimida → queremos aumentar LRA
                 if post_lra < pre_lra + IMPROVE_LRA_MIN:
-                    print(
-                        f"[S9_MASTER_GENERIC] LRA no se ha incrementado lo suficiente: "
-                        f"pre={pre_lra:.2f}, post={post_lra:.2f}, rango objetivo "
-                        f"[{target_lra_min:.2f}, {target_lra_max:.2f}] "
-                        f"(se esperaba al menos {IMPROVE_LRA_MIN:.1f} dB de aumento)."
-                    )
+                    logger.print_metric("LRA Improvement", post_lra, target=f"> {pre_lra + IMPROVE_LRA_MIN}", status="FAIL", details="Not enough increase")
                     ok = False
 
     # 4) GR del limitador dentro del máximo permitido
     if limiter_gr_db > max_limiter_gr_contract + GR_MARGIN:
-        print(
-            f"[S9_MASTER_GENERIC] limiter_GR={limiter_gr_db:.2f} dB "
-            f"> max_limiter_gain_reduction_db={max_limiter_gr_contract:.2f} dB "
-            f"(+{GR_MARGIN:.1f} margen)."
-        )
+        logger.print_metric("Limiter GR", limiter_gr_db, target=f"<= {max_limiter_gr_contract}", status="FAIL", details=f"Margin: {GR_MARGIN}")
         ok = False
 
     # 5) Cambio de anchura estéreo dentro de límites por contrato
@@ -1983,19 +1707,12 @@ def _check_S9_MASTER_GENERIC(data: Dict[str, Any]) -> bool:
     width_delta_pct = abs(width_delta_factor) * 100.0
 
     if width_delta_pct > max_width_change_pct_contract + WIDTH_PCT_MARGIN:
-        print(
-            f"[S9_MASTER_GENERIC] Cambio de width={width_delta_pct:.2f}% "
-            f"> max_stereo_width_change_percent={max_width_change_pct_contract:.2f}% "
-            f"(+{WIDTH_PCT_MARGIN:.1f} margen)."
-        )
+        logger.print_metric("Width Change %", width_delta_pct, target=f"<= {max_width_change_pct_contract}", status="FAIL", details=f"Margin: {WIDTH_PCT_MARGIN}")
         ok = False
 
     # Además, el factor absoluto debe estar entre [0.9, 1.1] ± margen
     if width_factor_applied < 0.9 - WIDTH_FACTOR_MARGIN or width_factor_applied > 1.1 + WIDTH_FACTOR_MARGIN:
-        print(
-            f"[S9_MASTER_GENERIC] width_factor_applied={width_factor_applied:.3f} "
-            "fuera del rango [0.90, 1.10] con margen."
-        )
+        logger.print_metric("Width Factor", width_factor_applied, target="[0.9, 1.1]", status="FAIL")
         ok = False
 
     # 6) Idempotencia: si ya estábamos muy cerca del target y con TP <= ceiling,
@@ -2008,23 +1725,11 @@ def _check_S9_MASTER_GENERIC(data: Dict[str, Any]) -> bool:
 
     if pre_close_lufs and pre_tp_ok:
         if limiter_gr_db > IDEM_GR_MAX + IDEM_GR_MARGIN:
-            print(
-                f"[S9_MASTER_GENERIC] Idempotencia: pre ya cerca del target "
-                f"(LUFS={pre_lufs:.2f}, TP={pre_tp:.2f} dBTP), pero "
-                f"limiter_GR={limiter_gr_db:.2f} dB > {IDEM_GR_MAX:.1f} dB "
-                f"(+{IDEM_GR_MARGIN:.1f} margen)."
-            )
+            logger.print_metric("Limiter GR (Idem)", limiter_gr_db, target=f"<= {IDEM_GR_MAX}", status="FAIL", details="Pre was OK")
             ok = False
 
     if ok:
-        print(
-            f"[S9_MASTER_GENERIC] OK: TP_final={post_tp:.2f} dBTP <= {target_ceiling:.2f} dBTP "
-            f"(+{CEIL_MARGIN:.1f}), LUFS_final={post_lufs:.2f} moviéndose correctamente "
-            f"hacia target={target_lufs:.2f}, LRA_final={post_lra:.2f} coherente con el rango "
-            f"[{target_lra_min:.1f}, {target_lra_max:.1f}] (±{LRA_MARGIN:.1f}), "
-            f"limiter_GR={limiter_gr_db:.2f} dB <= {max_limiter_gr_contract:.2f} dB "
-            f"(+{GR_MARGIN:.1f}), y width_factor={width_factor_applied:.3f} dentro de límites."
-        )
+        logger.print_metric("Master Generic Check", "OK", status="PASS", details=f"LUFS: {post_lufs:.2f}, TP: {post_tp:.2f}")
 
     return ok
 
@@ -2127,15 +1832,12 @@ def _check_S10_MASTER_FINAL_LIMITS(data: Dict[str, Any]) -> bool:
 
     # 1) True peak final
     if post_tp > tp_max + TP_MARGIN:
-        print(
-            f"[S10_MASTER_FINAL_LIMITS] TP post={post_tp:.2f} dBTP "
-            f"> max {tp_max:.2f} dBTP (+{TP_MARGIN:.1f} margen)."
-        )
+        logger.print_metric("True Peak Post", post_tp, target=f"<= {tp_max}", status="FAIL", details=f"Margin: {TP_MARGIN}")
         ok = False
 
     # 2) LUFS final: rango si ya estaba en estilo, o neutral si estaba lejos
     if post_lufs == float("-inf"):
-        print("[S10_MASTER_FINAL_LIMITS] LUFS post no válido (inf); fracaso.")
+        logger.print_metric("LUFS Post", "Invalid", status="FAIL")
         ok = False
     else:
         lufs_low = target_lufs - style_lufs_tol - LUFS_MARGIN
@@ -2150,11 +1852,7 @@ def _check_S10_MASTER_FINAL_LIMITS(data: Dict[str, Any]) -> bool:
             # El master ya estaba razonablemente cerca del target →
             # exigimos mantenerlo dentro de la banda.
             if not (lufs_low <= post_lufs <= lufs_high):
-                print(
-                    f"[S10_MASTER_FINAL_LIMITS] LUFS post={post_lufs:.2f} fuera de "
-                    f"[{target_lufs - style_lufs_tol:.2f}, {target_lufs + style_lufs_tol:.2f}] "
-                    f"(±{LUFS_MARGIN:.1f} margen) pese a que el pre ya estaba en rango."
-                )
+                logger.print_metric("LUFS Post", post_lufs, target=f"[{lufs_low}, {lufs_high}]", status="FAIL", details="Regressed")
                 ok = False
         else:
             # Master lejos del target → S10 no corrige loudness,
@@ -2162,36 +1860,22 @@ def _check_S10_MASTER_FINAL_LIMITS(data: Dict[str, Any]) -> bool:
             if pre_lufs != float("-inf"):
                 delta_lufs_qc = post_lufs - pre_lufs
                 if abs(delta_lufs_qc) > QC_DELTA_LUFS_MAX:
-                    print(
-                        f"[S10_MASTER_FINAL_LIMITS] LUFS ha cambiado demasiado en QC: "
-                        f"pre={pre_lufs:.2f}, post={post_lufs:.2f} (Δ={delta_lufs_qc:+.2f} dB) "
-                        f"> {QC_DELTA_LUFS_MAX:.2f} dB permitidos."
-                    )
+                    logger.print_metric("LUFS Change QC", delta_lufs_qc, target=f"<= {QC_DELTA_LUFS_MAX}", status="FAIL", details="Too much change")
                     ok = False
 
     # 3) Diferencia de loudness L/R
     if post_diff_lr > max_ch_diff + CH_MARGIN:
-        print(
-            f"[S10_MASTER_FINAL_LIMITS] diff_LR post={post_diff_lr:.2f} dB "
-            f"> max {max_ch_diff:.2f} dB (+{CH_MARGIN:.1f} margen)."
-        )
+        logger.print_metric("L/R Diff", post_diff_lr, target=f"<= {max_ch_diff}", status="FAIL", details=f"Margin: {CH_MARGIN}")
         ok = False
 
     # 4) Correlación estéreo global
     if post_corr < corr_min - CORR_MARGIN:
-        print(
-            f"[S10_MASTER_FINAL_LIMITS] correlación post={post_corr:.3f} "
-            f"< min {corr_min:.3f} (-{CORR_MARGIN:.2f} margen)."
-        )
+        logger.print_metric("Correlation", post_corr, target=f">= {corr_min}", status="FAIL", details=f"Margin: {CORR_MARGIN}")
         ok = False
 
     # 5) Micro-ajuste de ceiling dentro de límites
     if abs(trim_db_applied) > max_output_ceiling_adjust_db + TRIM_MARGIN:
-        print(
-            f"[S10_MASTER_FINAL_LIMITS] trim_db_applied={trim_db_applied:.2f} dB "
-            f"> max_output_ceiling_adjust_db={max_output_ceiling_adjust_db:.2f} dB "
-            f"(+{TRIM_MARGIN:.2f} margen)."
-        )
+        logger.print_metric("Trim Applied", trim_db_applied, target=f"<= {max_output_ceiling_adjust_db}", status="FAIL", details=f"Margin: {TRIM_MARGIN}")
         ok = False
 
     # 6) Idempotencia fuerte:
@@ -2209,12 +1893,7 @@ def _check_S10_MASTER_FINAL_LIMITS(data: Dict[str, Any]) -> bool:
     if pre_all_ok:
         # Trim casi nulo
         if abs(trim_db_applied) > IDEM_TRIM_MAX + IDEM_MARGIN:
-            print(
-                f"[S10_MASTER_FINAL_LIMITS] Idempotencia: master pre ya cumplía "
-                "los criterios, pero trim_db_applied="
-                f"{trim_db_applied:.2f} dB > {IDEM_TRIM_MAX:.2f} dB "
-                f"(+{IDEM_MARGIN:.2f} margen)."
-            )
+            logger.print_metric("Trim (Idem)", trim_db_applied, target=f"<= {IDEM_TRIM_MAX}", status="FAIL", details="Pre was OK")
             ok = False
 
         # Cambios muy pequeños en LUFS, LRA y diff_LR
@@ -2223,36 +1902,19 @@ def _check_S10_MASTER_FINAL_LIMITS(data: Dict[str, Any]) -> bool:
         delta_diff = post_diff_lr - pre_diff_lr
 
         if abs(delta_lufs) > IDEM_DELTA_LUFS_MAX:
-            print(
-                f"[S10_MASTER_FINAL_LIMITS] Idempotencia: ΔLUFS={delta_lufs:+.2f} dB "
-                f"> {IDEM_DELTA_LUFS_MAX:.2f} dB."
-            )
-            ok = False
+             logger.print_metric("LUFS Change (Idem)", delta_lufs, target=f"<= {IDEM_DELTA_LUFS_MAX}", status="FAIL")
+             ok = False
 
         if abs(delta_lra) > IDEM_DELTA_LRA_MAX:
-            print(
-                f"[S10_MASTER_FINAL_LIMITS] Idempotencia: ΔLRA={delta_lra:+.2f} dB "
-                f"> {IDEM_DELTA_LRA_MAX:.2f} dB."
-            )
-            ok = False
+             logger.print_metric("LRA Change (Idem)", delta_lra, target=f"<= {IDEM_DELTA_LRA_MAX}", status="FAIL")
+             ok = False
 
         if abs(delta_diff) > IDEM_DELTA_DIFFLR_MAX:
-            print(
-                f"[S10_MASTER_FINAL_LIMITS] Idempotencia: Δdiff_LR={delta_diff:+.2f} dB "
-                f"> {IDEM_DELTA_DIFFLR_MAX:.2f} dB."
-            )
-            ok = False
+             logger.print_metric("DiffLR Change (Idem)", delta_diff, target=f"<= {IDEM_DELTA_DIFFLR_MAX}", status="FAIL")
+             ok = False
 
     if ok:
-        print(
-            f"[S10_MASTER_FINAL_LIMITS] OK: TP={post_tp:.2f} dBTP <= {tp_max:.2f} (+{TP_MARGIN:.1f}), "
-            f"LUFS={post_lufs:.2f} tratado de forma coherente con el target={target_lufs:.2f} "
-            f"(tol_estilo=±{style_lufs_tol:.1f} + {LUFS_MARGIN:.1f}), "
-            f"diff_LR={post_diff_lr:.2f} dB <= {max_ch_diff:.2f} (+{CH_MARGIN:.1f}), "
-            f"corr={post_corr:.3f} >= {corr_min:.3f} (-{CORR_MARGIN:.2f}), "
-            f"trim_db_applied={trim_db_applied:.2f} dB <= {max_output_ceiling_adjust_db:.2f} "
-            f"(+{TRIM_MARGIN:.2f})."
-        )
+        logger.print_metric("Final Limits Check", "OK", status="PASS", details=f"TP: {post_tp:.2f}, LUFS: {post_lufs:.2f}")
 
     return ok
 
@@ -2285,44 +1947,29 @@ def _check_S11_REPORT_GENERATION(data: Dict[str, Any]) -> bool:
     # 1) export_report_json debe ser true
     export_report_json = bool(metrics_from_contract.get("export_report_json", False))
     if not export_report_json:
-        print(
-            f"[{contract_id}] metrics.export_report_json != true; "
-            "el contrato exige exportar el reporte en JSON."
-        )
+        logger.print_metric("Export JSON Config", export_report_json, target="True", status="FAIL")
         ok = False
 
     # 2) allow_audio_changes debe ser false
     allow_audio_changes = bool(limits_from_contract.get("allow_audio_changes", True))
     if allow_audio_changes:
-        print(
-            f"[{contract_id}] limits.allow_audio_changes == true; "
-            "este stage de reporting no debe permitir cambios de audio."
-        )
+        logger.print_metric("Allow Changes", allow_audio_changes, target="False", status="FAIL")
         ok = False
 
     # 3) Estructura mínima del reporte
     report = session.get("report")
     if not isinstance(report, dict):
-        print(
-            f"[{contract_id}] session.report no existe o no es un objeto; "
-            "el reporte debe ir en el JSON de análisis de la fase de reporting."
-        )
+        logger.print_metric("Report Struct", "Invalid/Missing", status="FAIL")
         return False  # sin report no tiene sentido seguir
 
     stages_report = report.get("stages", [])
     if not isinstance(stages_report, list) or len(stages_report) == 0:
-        print(
-            f"[{contract_id}] report.stages vacío o inexistente; "
-            "debe listar las etapas y lo que se ha aplicado en cada una."
-        )
+        logger.print_metric("Report Stages", "Empty", status="FAIL")
         ok = False
 
     final_metrics = report.get("final_metrics", {})
     if not isinstance(final_metrics, dict) or not final_metrics:
-        print(
-            f"[{contract_id}] report.final_metrics vacío o inexistente; "
-            "debe contener las métricas finales del master."
-        )
+        logger.print_metric("Final Metrics", "Missing", status="FAIL")
         ok = False
 
     # Campos clave en final_metrics
@@ -2331,10 +1978,7 @@ def _check_S11_REPORT_GENERATION(data: Dict[str, Any]) -> bool:
     fm_lra = final_metrics.get("lra")
 
     if fm_tp is None or fm_lufs is None or fm_lra is None:
-        print(
-            f"[{contract_id}] final_metrics debe incluir true_peak_dbtp, "
-            "lufs_integrated y lra."
-        )
+        logger.print_metric("Metrics Data", "Incomplete", status="FAIL")
         ok = False
     else:
         try:
@@ -2342,10 +1986,7 @@ def _check_S11_REPORT_GENERATION(data: Dict[str, Any]) -> bool:
             fm_lufs = float(fm_lufs)
             fm_lra = float(fm_lra)
         except (TypeError, ValueError):
-            print(
-                f"[{contract_id}] final_metrics contiene valores no numéricos "
-                "en true_peak_dbtp / lufs_integrated / lra."
-            )
+            logger.print_metric("Metrics Data", "Invalid types", status="FAIL")
             ok = False
 
     # 4) Coherencia con el QC del master (S10_MASTER_FINAL_LIMITS)
@@ -2370,46 +2011,27 @@ def _check_S11_REPORT_GENERATION(data: Dict[str, Any]) -> bool:
 
             if fm_tp is not None and not np.isnan(qc_tp):
                 if abs(fm_tp - qc_tp) > TP_DIFF_MAX:
-                    print(
-                        f"[{contract_id}] true_peak_dbtp en reporte={fm_tp:.2f}, "
-                        f"pero en QC S10={qc_tp:.2f} (Δ>{TP_DIFF_MAX:.2f})."
-                    )
+                    logger.print_metric("Report vs QC (TP)", f"{fm_tp:.2f} vs {qc_tp:.2f}", target=f"Diff <= {TP_DIFF_MAX}", status="FAIL")
                     ok = False
 
             if fm_lufs is not None and not np.isnan(qc_lufs):
                 if abs(fm_lufs - qc_lufs) > LUFS_DIFF_MAX:
-                    print(
-                        f"[{contract_id}] lufs_integrated en reporte={fm_lufs:.2f}, "
-                        f"pero en QC S10={qc_lufs:.2f} (Δ>{LUFS_DIFF_MAX:.2f})."
-                    )
+                    logger.print_metric("Report vs QC (LUFS)", f"{fm_lufs:.2f} vs {qc_lufs:.2f}", target=f"Diff <= {LUFS_DIFF_MAX}", status="FAIL")
                     ok = False
 
             if fm_lra is not None and not np.isnan(qc_lra):
                 if abs(fm_lra - qc_lra) > LRA_DIFF_MAX:
-                    print(
-                        f"[{contract_id}] lra en reporte={fm_lra:.2f}, "
-                        f"pero en QC S10={qc_lra:.2f} (Δ>{LRA_DIFF_MAX:.2f})."
-                    )
+                    logger.print_metric("Report vs QC (LRA)", f"{fm_lra:.2f} vs {qc_lra:.2f}", target=f"Diff <= {LRA_DIFF_MAX}", status="FAIL")
                     ok = False
 
         except Exception as e:
-            print(
-                f"[{contract_id}] Aviso: no se pudo leer/interpretar "
-                f"{qc_path} para comparar QC del máster: {e}"
-            )
+            logger.logger.warning(f"[{contract_id}] Aviso: no se pudo leer/interpretar {qc_path} para comparar QC del máster: {e}")
             # no forzamos fallo por esto, solo avisamos
     else:
-        print(
-            f"[{contract_id}] Aviso: no existe {qc_path}; "
-            "no se puede verificar coherencia del reporte con el QC de S10."
-        )
+        logger.logger.warning(f"[{contract_id}] Aviso: no existe {qc_path}; no se puede verificar coherencia del reporte con el QC de S10.")
 
     if ok:
-        print(
-            f"[{contract_id}] OK: reporte JSON presente, sin cambios de audio "
-            "permitidos, lista de stages no vacía y métricas finales coherentes "
-            "con el QC del máster."
-        )
+        logger.print_metric("Report Check", "OK", status="PASS")
 
     return ok
 
@@ -2473,7 +2095,7 @@ def process(context: PipelineContext, *args) -> bool:
     elif contract_id == "S11_REPORT_GENERATION":
         ok = _check_S11_REPORT_GENERATION(analysis)
     else:
-        print(f"[check_metrics] No hay validación específica para {contract_id}, se considera éxito por defecto.")
+        logger.print_header(f"Validation skipped for {contract_id}")
         ok = True
 
     return ok
@@ -2481,7 +2103,7 @@ def process(context: PipelineContext, *args) -> bool:
 
 def main() -> None:
     if len(sys.argv) < 2:
-        print("Uso: python check_metrics_limits.py <CONTRACT_ID>", file=sys.stderr)
+        logger.logger.error("Uso: python check_metrics_limits.py <CONTRACT_ID>")
         sys.exit(1)
 
     contract_id = sys.argv[1]

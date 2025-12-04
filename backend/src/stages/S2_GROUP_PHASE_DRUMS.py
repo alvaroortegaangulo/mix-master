@@ -1,4 +1,5 @@
 from __future__ import annotations
+from utils.logger import logger
 
 import sys
 from pathlib import Path
@@ -119,7 +120,7 @@ def _process_stem_worker(
 
     sf.write(file_path, shifted, sr)
 
-    print(
+    logger.logger.info(
         f"[S2_GROUP_PHASE_DRUMS] {file_name}: "
         f"lag_inicial={lag_ms:.3f} ms, "
         f"shift_aplicado={shift_samples} samples ({shift_ms:.3f} ms aprox), "
@@ -138,7 +139,7 @@ def main() -> None:
       - Sobrescribe los archivos .wav correspondientes, procesando en serie.
     """
     if len(sys.argv) < 2:
-        print("Uso: python S2_GROUP_PHASE_DRUMS.py <CONTRACT_ID>")
+        logger.logger.info("Uso: python S2_GROUP_PHASE_DRUMS.py <CONTRACT_ID>")
         sys.exit(1)
 
     contract_id = sys.argv[1]  # "S2_GROUP_PHASE_DRUMS"
@@ -175,7 +176,7 @@ def main() -> None:
             if _process_stem_worker(args):
                 processed += 1
 
-    print(
+    logger.logger.info(
         f"[S2_GROUP_PHASE_DRUMS] Stage completado. "
         f"Referencia={reference_name}, stems procesados={processed}."
     )

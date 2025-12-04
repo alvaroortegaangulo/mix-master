@@ -1,6 +1,7 @@
 # C:\mix-master\backend\src\analysis\S9_MASTER_GENERIC.py
 
 from __future__ import annotations
+from utils.logger import logger
 
 import sys
 from pathlib import Path
@@ -75,7 +76,7 @@ def main() -> None:
         python analysis/S9_MASTER_GENERIC.py S9_MASTER_GENERIC
     """
     if len(sys.argv) < 2:
-        print("Uso: python S9_MASTER_GENERIC.py <CONTRACT_ID>")
+        logger.logger.info("Uso: python S9_MASTER_GENERIC.py <CONTRACT_ID>")
         sys.exit(1)
 
     contract_id = sys.argv[1]  # "S9_MASTER_GENERIC"
@@ -114,20 +115,20 @@ def main() -> None:
 
         if result["error"] is not None:
             # Error al leer/procesar
-            print(result["error"])
+            logger.logger.info(result["error"])
         else:
             sr_mix = result["sr_mix"]
             pre_true_peak_dbtp = result["pre_true_peak_dbtp"]
             pre_lufs_integrated = result["pre_lufs_integrated"]
             pre_lra = result["pre_lra"]
 
-            print(
+            logger.logger.info(
                 f"[S9_MASTER_GENERIC] full_song.wav analizado (sr={sr_mix}). "
                 f"true_peak={pre_true_peak_dbtp:.2f} dBTP, "
                 f"LUFS={pre_lufs_integrated:.2f}, LRA={pre_lra:.2f}."
             )
     else:
-        print(
+        logger.logger.info(
             f"[S9_MASTER_GENERIC] Aviso: no existe {full_song_path}, "
             "no se puede analizar el mastering."
         )
@@ -159,7 +160,7 @@ def main() -> None:
     with output_path.open("w", encoding="utf-8") as f:
         json.dump(session_state, f, indent=2, ensure_ascii=False)
 
-    print(
+    logger.logger.info(
         f"[S9_MASTER_GENERIC] Análisis completado. JSON: {output_path}"
     )
 

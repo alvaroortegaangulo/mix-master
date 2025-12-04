@@ -1,7 +1,4 @@
-# C:\mix-master\backend\src\utils\copy_stems.py
-
 from __future__ import annotations
-
 import sys
 import shutil
 from pathlib import Path
@@ -15,7 +12,9 @@ if str(SRC_DIR) not in sys.argv:
     if str(SRC_DIR) not in _sys.path:
         _sys.path.insert(0, str(SRC_DIR))
 
+from utils.logger import logger
 from utils.analysis_utils import get_temp_dir  # noqa: E402
+
 try:
     from context import PipelineContext
 except ImportError:
@@ -30,7 +29,7 @@ def process(context: PipelineContext, *args) -> bool:
     => args = (stage_id, next_contract_id)
     """
     if len(args) < 2:
-        print("[copy_stems] Error: Se requieren src_stage_id y dst_stage_id en args")
+        logger.logger.info("[copy_stems] Error: Se requieren src_stage_id y dst_stage_id en args")
         return False
 
     src_stage_id = args[0]
@@ -44,7 +43,7 @@ def process(context: PipelineContext, *args) -> bool:
         dst_dir.mkdir(parents=True, exist_ok=True)
 
     if not src_dir.exists():
-        print(
+        logger.logger.info(
             f"[copy_stems] Aviso: carpeta origen {src_dir} no existe; "
             f"no se copian stems de {src_stage_id} a {dst_stage_id}."
         )
@@ -63,13 +62,13 @@ def process(context: PipelineContext, *args) -> bool:
     if config_src.exists():
         shutil.copy2(config_src, dst_dir / "session_config.json")
 
-    print(f"[copy_stems] Copiados {count} stems de {src_stage_id} a {dst_stage_id}")
+    logger.logger.info(f"[copy_stems] Copiados {count} stems de {src_stage_id} a {dst_stage_id}")
     return True
 
 
 def main() -> None:
     if len(sys.argv) < 3:
-        print("Uso: python copy_stems.py <SRC_STAGE_ID> <DST_STAGE_ID>")
+        logger.logger.info("Uso: python copy_stems.py <SRC_STAGE_ID> <DST_STAGE_ID>")
         sys.exit(1)
 
     src_stage_id = sys.argv[1]

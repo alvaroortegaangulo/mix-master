@@ -1,4 +1,5 @@
 from __future__ import annotations
+from utils.logger import logger
 
 import sys
 import os
@@ -90,7 +91,7 @@ def _render_reverb_return_worker(
     try:
         y, sr = sf.read(stem_path, always_2d=False)
     except Exception as e:
-        print(f"[S6_BUS_REVERB_STYLE] Aviso: no se puede leer '{fname}' en worker: {e}.")
+        logger.logger.info(f"[S6_BUS_REVERB_STYLE] Aviso: no se puede leer '{fname}' en worker: {e}.")
         return None
 
     if not isinstance(y, np.ndarray):
@@ -99,7 +100,7 @@ def _render_reverb_return_worker(
         y = y.astype(np.float32)
 
     if y.size == 0:
-        print(f"[S6_BUS_REVERB_STYLE] {fname}: archivo vacío; se omite su reverb.")
+        logger.logger.info(f"[S6_BUS_REVERB_STYLE] {fname}: archivo vacío; se omite su reverb.")
         return None
 
     # Aseguramos forma (N, C)
@@ -122,7 +123,7 @@ def _render_reverb_return_worker(
     try:
         y_rev = board(y, sr)
     except Exception as e:
-        print(f"[S6_BUS_REVERB_STYLE] Error aplicando Reverb a '{fname}': {e}.")
+        logger.logger.info(f"[S6_BUS_REVERB_STYLE] Error aplicando Reverb a '{fname}': {e}.")
         return None
 
     if not isinstance(y_rev, np.ndarray):
@@ -189,7 +190,7 @@ def main() -> None:
       - Guarda métricas de espacio/profundidad para el futuro check.
     """
     if len(sys.argv) < 2:
-        print("Uso: python S6_BUS_REVERB_STYLE.py <CONTRACT_ID>")
+        logger.logger.info("Uso: python S6_BUS_REVERB_STYLE.py <CONTRACT_ID>")
         sys.exit(1)
 
     contract_id = sys.argv[1]  # "S6_BUS_REVERB_STYLE"
@@ -220,14 +221,14 @@ def main() -> None:
             # Recalcular por si acaso
             dry_lufs = _compute_rms_lufs_like(y_mix)
         except Exception as e:
-            print(
+            logger.logger.info(
                 f"[S6_BUS_REVERB_STYLE] Aviso: no se puede leer full_song.wav: {e}."
             )
 
     # Si no tenemos full_song, tomamos como referencia -18 dBFS (neutro)
     if dry_lufs == float("-inf"):
         dry_lufs = -18.0
-        print(
+        logger.logger.info(
             "[S6_BUS_REVERB_STYLE] No se ha podido medir el mix dry; "
             "se asume referencia -18 dBFS para offsets."
         )
@@ -286,7 +287,7 @@ def main() -> None:
             if global_sr is None:
                 global_sr = sr
             elif sr != global_sr:
-                print(
+                logger.logger.info(
                     f"[S6_BUS_REVERB_STYLE] Aviso: samplerate inconsistente en {fname} "
                     f"(sr={sr}, ref={global_sr}); se omite su reverb."
                 )
@@ -299,7 +300,7 @@ def main() -> None:
             # Escribimos el return generado
             sf.write(rev_path, y_rev, global_sr)
 
-            print(
+            logger.logger.info(
                 f"[S6_BUS_REVERB_STYLE] {fname}: rt60={rt60_s:.2f}s, "
                 f"base_send={base_send_db:.1f} dB, "
                 f"return -> {rev_name} (len={rev_len})."
@@ -319,7 +320,7 @@ def main() -> None:
                 max_return_len = rev_len
 
     if not all_returns or global_sr is None:
-        print(
+        logger.logger.info(
             "[S6_BUS_REVERB_STYLE] No se han generado returns de reverb; "
             "no se aplicará ajuste de offset."
         )
@@ -355,7 +356,7 @@ def main() -> None:
     current_reverb_lufs = _compute_rms_lufs_like(sum_ret)
     offset_now = current_reverb_lufs - dry_lufs
 
-    print(
+    logger.logger.info(
         f"[S6_BUS_REVERB_STYLE] Reverb sum actual: aprox_LUFS={current_reverb_lufs:.2f} dB, "
         f"offset_vs_dry={offset_now:.2f} dB."
     )
@@ -379,7 +380,7 @@ def main() -> None:
 
     if abs(delta_needed) <= MARGIN_IN_RANGE:
         delta_db = 0.0
-        print(
+        logger.logger.info(
             "[S6_BUS_REVERB_STYLE] Offset de reverb ya suficientemente cercano al objetivo; "
             "no se ajusta nivel global de returns."
         )
@@ -391,7 +392,7 @@ def main() -> None:
         )
 
         direction = "subiendo" if delta_db > 0.0 else "bajando"
-        print(
+        logger.logger.info(
             f"[S6_BUS_REVERB_STYLE] Ajustando returns globalmente {delta_db:.2f} dB "
             f"({direction}) hacia offset objetivo {target_offset:.2f} dB."
         )
@@ -435,7 +436,7 @@ def main() -> None:
             ensure_ascii=False,
         )
 
-    print(
+    logger.logger.info(
         f"[S6_BUS_REVERB_STYLE] Stage completado. Returns={len(returns_info)}, "
         f"reverb_LUFS={current_reverb_lufs:.2f} dB, offset_vs_dry={offset_now:.2f} dB. "
         f"Métricas: {metrics_path}"

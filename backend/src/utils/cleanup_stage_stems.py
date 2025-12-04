@@ -1,7 +1,4 @@
-# C:\mix-master\backend\src\utils\cleanup_stage_stems.py
-
 from __future__ import annotations
-
 import sys
 import shutil
 from pathlib import Path
@@ -15,7 +12,9 @@ if str(SRC_DIR) not in sys.argv:
     if str(SRC_DIR) not in _sys.path:
         _sys.path.insert(0, str(SRC_DIR))
 
+from utils.logger import logger
 from utils.analysis_utils import get_temp_dir  # noqa: E402
+
 try:
     from context import PipelineContext
 except ImportError:
@@ -31,7 +30,7 @@ def process(context: PipelineContext, *args) -> bool:
     stage_dir = context.get_stage_dir(stage_id)
 
     if not stage_dir.exists():
-        print(f"[cleanup] La carpeta de stage {stage_dir} no existe.")
+        logger.logger.info(f"[cleanup] La carpeta de stage {stage_dir} no existe.")
         return True
 
     # Definir qué conservar
@@ -61,13 +60,13 @@ def process(context: PipelineContext, *args) -> bool:
                     deleted_count += 1
                     size_freed += s
                 except Exception as e:
-                    print(f"[cleanup] Error borrando {item.name}: {e}")
+                    logger.logger.info(f"[cleanup] Error borrando {item.name}: {e}")
 
     mb_freed = size_freed / (1024 * 1024)
     if deleted_count > 0:
-        print(f"[cleanup] Borrados {deleted_count} archivos en {stage_id}, liberados {mb_freed:.2f} MB.")
+        logger.logger.info(f"[cleanup] Borrados {deleted_count} archivos en {stage_id}, liberados {mb_freed:.2f} MB.")
     else:
-        # print(f"[cleanup] Nada que borrar en {stage_id}.")
+        # logger.logger.info(f"[cleanup] Nada que borrar en {stage_id}.")
         pass
 
     return True
@@ -75,7 +74,7 @@ def process(context: PipelineContext, *args) -> bool:
 
 def main() -> None:
     if len(sys.argv) < 2:
-        print("Uso: python cleanup_stage_stems.py <STAGE_ID>")
+        logger.logger.info("Uso: python cleanup_stage_stems.py <STAGE_ID>")
         sys.exit(1)
 
     stage_id = sys.argv[1]

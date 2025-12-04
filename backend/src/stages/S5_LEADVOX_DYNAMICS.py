@@ -1,6 +1,7 @@
 # C:\mix-master\backend\src\stages\S5_LEADVOX_DYNAMICS.py
 
 from __future__ import annotations
+from utils.logger import logger
 
 import sys
 import os
@@ -134,7 +135,7 @@ def _compress_lead_stem_worker(
     try:
         data, sr = sf.read(path, always_2d=False)
     except Exception as e:
-        print(f"[S5_LEADVOX_DYNAMICS] {fname}: error al leer el archivo: {e}")
+        logger.logger.info(f"[S5_LEADVOX_DYNAMICS] {fname}: error al leer el archivo: {e}")
         return None
 
     if not isinstance(data, np.ndarray):
@@ -143,7 +144,7 @@ def _compress_lead_stem_worker(
         data = data.astype(np.float32)
 
     if data.size == 0:
-        print(f"[S5_LEADVOX_DYNAMICS] {fname}: archivo vacío; se omite.")
+        logger.logger.info(f"[S5_LEADVOX_DYNAMICS] {fname}: archivo vacío; se omite.")
         return None
 
     # Aplicar compresor
@@ -191,7 +192,7 @@ def main() -> None:
       - Guarda métricas de GR y crest factor antes/después.
     """
     if len(sys.argv) < 2:
-        print("Uso: python S5_LEADVOX_DYNAMICS.py <CONTRACT_ID>")
+        logger.logger.info("Uso: python S5_LEADVOX_DYNAMICS.py <CONTRACT_ID>")
         sys.exit(1)
 
     contract_id = sys.argv[1]  # "S5_LEADVOX_DYNAMICS"
@@ -244,7 +245,7 @@ def main() -> None:
             pre_peak_db = float(pre_peak_db)
             pre_crest_db = float(pre_crest_db)
         except (TypeError, ValueError):
-            print(
+            logger.logger.info(
                 f"[S5_LEADVOX_DYNAMICS] {fname}: métricas previas inválidas; "
                 f"se omite compresión."
             )
@@ -252,7 +253,7 @@ def main() -> None:
 
         # Si la pista es muy baja, no tiene sentido comprimir
         if pre_peak_db <= -60.0:
-            print(
+            logger.logger.info(
                 f"[S5_LEADVOX_DYNAMICS] {fname}: nivel muy bajo (peak={pre_peak_db:.1f} dBFS); "
                 f"no se aplica compresión."
             )
@@ -260,7 +261,7 @@ def main() -> None:
 
         # Si el crest ya está dentro de rango razonable, no tocamos
         if crest_min <= pre_crest_db <= crest_max:
-            print(
+            logger.logger.info(
                 f"[S5_LEADVOX_DYNAMICS] {fname}: crest={pre_crest_db:.2f} dB ya en rango "
                 f"[{crest_min:.1f}, {crest_max:.1f}] dB; no se aplica compresión."
             )
@@ -268,7 +269,7 @@ def main() -> None:
 
         # Si el crest es bajo (< min), no hacemos expansión
         if pre_crest_db < crest_min:
-            print(
+            logger.logger.info(
                 f"[S5_LEADVOX_DYNAMICS] {fname}: crest={pre_crest_db:.2f} dB < min "
                 f"{crest_min:.1f} dB; no se comprime (no expansión)."
             )
@@ -285,7 +286,7 @@ def main() -> None:
         )
 
         if threshold_db is None:
-            print(
+            logger.logger.info(
                 f"[S5_LEADVOX_DYNAMICS] {fname}: no se determina umbral de compresión; "
                 f"no se aplica compresión."
             )
@@ -324,7 +325,7 @@ def main() -> None:
             pre_crest_db = result["pre_crest_db"]
             post_crest_db = result["post_crest_db"]
 
-            print(
+            logger.logger.info(
                 f"[S5_LEADVOX_DYNAMICS] {fname}: threshold={threshold_db:.2f} dBFS, "
                 f"avg_GR={avg_gr_db:.2f} dB, max_GR={max_gr_db:.2f} dB, "
                 f"crest_pre={pre_crest_db:.2f} dB, crest_post={post_crest_db:.2f} dB."
@@ -335,7 +336,7 @@ def main() -> None:
             metrics_records.append(record)
             processed += 1
     else:
-        print(
+        logger.logger.info(
             "[S5_LEADVOX_DYNAMICS] No hay stems de lead que requieran compresión "
             "(o no hay stems válidos)."
         )
@@ -360,7 +361,7 @@ def main() -> None:
             ensure_ascii=False,
         )
 
-    print(
+    logger.logger.info(
         f"[S5_LEADVOX_DYNAMICS] Stage completado. Stems lead procesados={processed}. "
         f"Métricas guardadas en: {metrics_path}"
     )

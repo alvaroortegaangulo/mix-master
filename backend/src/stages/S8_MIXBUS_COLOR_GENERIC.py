@@ -1,6 +1,7 @@
 # C:\mix-master\backend\src\stages\S8_MIXBUS_COLOR_GENERIC.py
 
 from __future__ import annotations
+from utils.logger import logger
 
 import sys
 from pathlib import Path
@@ -125,7 +126,7 @@ def _process_mixbus_color_worker(
     pre_true_peak_dbtp = compute_true_peak_dbfs(y, oversample_factor=4)
     pre_rms_dbfs = compute_rms_dbfs(y)
 
-    print(
+    logger.logger.info(
         f"[S8_MIXBUS_COLOR_GENERIC] PRE: true_peak={pre_true_peak_dbtp:.2f} dBTP, "
         f"RMS={pre_rms_dbfs:.2f} dBFS."
     )
@@ -154,7 +155,7 @@ def _process_mixbus_color_worker(
     # Saturación con Pedalboard + control de THD
     # --------------------------------------------------------------
     if drive_db < 0.1:
-        print(
+        logger.logger.info(
             "[S8_MIXBUS_COLOR_GENERIC] Drive calculado < 0.1 dB; "
             "se considera no-op en cuanto a saturación."
         )
@@ -166,7 +167,7 @@ def _process_mixbus_color_worker(
 
         # Estimar THD incremental
         thd_pct = estimate_thd_percent(y, y_sat)
-        print(
+        logger.logger.info(
             f"[S8_MIXBUS_COLOR_GENERIC] THD estimada con drive={drive_db:.2f} dB: "
             f"{thd_pct:.2f} % (límite={max_thd_percent:.2f} %)."
         )
@@ -177,7 +178,7 @@ def _process_mixbus_color_worker(
             new_drive = float(drive_db * scale)
 
             if new_drive < 0.1:
-                print(
+                logger.logger.info(
                     "[S8_MIXBUS_COLOR_GENERIC] Para respetar THD el drive caería < 0.1 dB; "
                     "se deja sin saturar."
                 )
@@ -186,13 +187,13 @@ def _process_mixbus_color_worker(
                 thd_pct = 0.0
             else:
                 drive_db = new_drive
-                print(
+                logger.logger.info(
                     f"[S8_MIXBUS_COLOR_GENERIC] Ajustando drive a {drive_db:.2f} dB "
                     "para respetar THD."
                 )
                 y_sat = _apply_pedalboard_saturation(y, sr, drive_db=drive_db)
                 thd_pct = estimate_thd_percent(y, y_sat)
-                print(
+                logger.logger.info(
                     f"[S8_MIXBUS_COLOR_GENERIC] THD tras ajuste: {thd_pct:.2f} %."
                 )
 
@@ -226,14 +227,14 @@ def _process_mixbus_color_worker(
     if abs(trim_db) > 0.05:
         trim_lin = 10.0 ** (trim_db / 20.0)
         y_out = (y_sat * trim_lin).astype(np.float32)
-        print(
+        logger.logger.info(
             f"[S8_MIXBUS_COLOR_GENERIC] Aplicando trim de {trim_db:+.2f} dB "
             f"hacia true_peak objetivo ≈ {target_mid:.2f} dBTP."
         )
     else:
         trim_db = 0.0
         y_out = y_sat
-        print(
+        logger.logger.info(
             "[S8_MIXBUS_COLOR_GENERIC] True peak ya cercano al objetivo; "
             "no se aplica trim significativo."
         )
@@ -244,14 +245,14 @@ def _process_mixbus_color_worker(
     post_true_peak_dbtp = compute_true_peak_dbfs(y_out, oversample_factor=4)
     post_rms_dbfs = compute_rms_dbfs(y_out)
 
-    print(
+    logger.logger.info(
         f"[S8_MIXBUS_COLOR_GENERIC] POST: true_peak={post_true_peak_dbtp:.2f} dBTP, "
         f"RMS={post_rms_dbfs:.2f} dBFS, THD≈{thd_pct:.2f} %."
     )
 
     # Escribir mix procesado
     sf.write(full_song_path, y_out, sr)
-    print(
+    logger.logger.info(
         f"[S8_MIXBUS_COLOR_GENERIC] Mixbus coloreado reescrito en {full_song_path}."
     )
 
@@ -277,7 +278,7 @@ def main() -> None:
       - Se guardan métricas en color_metrics_S8_MIXBUS_COLOR_GENERIC.json.
     """
     if len(sys.argv) < 2:
-        print("Uso: python S8_MIXBUS_COLOR_GENERIC.py <CONTRACT_ID>")
+        logger.logger.info("Uso: python S8_MIXBUS_COLOR_GENERIC.py <CONTRACT_ID>")
         sys.exit(1)
 
     contract_id = sys.argv[1]  # "S8_MIXBUS_COLOR_GENERIC"
@@ -300,7 +301,7 @@ def main() -> None:
     full_song_path = temp_dir / "full_song.wav"
 
     if not full_song_path.exists():
-        print(
+        logger.logger.info(
             f"[S8_MIXBUS_COLOR_GENERIC] No existe {full_song_path}; "
             "no se aplica color de mixbus."
         )
@@ -340,7 +341,7 @@ def main() -> None:
             ensure_ascii=False,
         )
 
-    print(
+    logger.logger.info(
         f"[S8_MIXBUS_COLOR_GENERIC] Métricas de color guardadas en: {metrics_path}"
     )
 

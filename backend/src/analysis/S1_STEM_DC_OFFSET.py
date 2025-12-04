@@ -1,3 +1,4 @@
+from utils.logger import logger
 # C:\mix-master\backend\src\analysis\S1_STEM_DC_OFFSET.py
 
 import sys
@@ -57,7 +58,7 @@ def main() -> None:
         python analysis/S1_STEM_DC_OFFSET.py S1_STEM_DC_OFFSET
     """
     if len(sys.argv) < 2:
-        print("Uso: python S1_STEM_DC_OFFSET.py <CONTRACT_ID>")
+        logger.logger.info("Uso: python S1_STEM_DC_OFFSET.py <CONTRACT_ID>")
         sys.exit(1)
 
     contract_id = sys.argv[1]  # debería ser "S1_STEM_DC_OFFSET"
@@ -121,7 +122,7 @@ def main() -> None:
     with output_path.open("w", encoding="utf-8") as f:
         json.dump(session_state, f, indent=2, ensure_ascii=False)
 
-    print(f"[S1_STEM_DC_OFFSET] Análisis completado. JSON guardado en: {output_path}")
+    # logger.logger.debug("Analysis complete")
 
 
 if __name__ == "__main__":

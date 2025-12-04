@@ -1,6 +1,7 @@
 # C:\mix-master\backend\src\analysis\S8_MIXBUS_COLOR_GENERIC.py
 
 from __future__ import annotations
+from utils.logger import logger
 
 import sys
 from pathlib import Path
@@ -97,7 +98,7 @@ def main() -> None:
         python analysis/S8_MIXBUS_COLOR_GENERIC.py S8_MIXBUS_COLOR_GENERIC
     """
     if len(sys.argv) < 2:
-        print("Uso: python S8_MIXBUS_COLOR_GENERIC.py <CONTRACT_ID>")
+        logger.logger.info("Uso: python S8_MIXBUS_COLOR_GENERIC.py <CONTRACT_ID>")
         sys.exit(1)
 
     contract_id = sys.argv[1]  # "S8_MIXBUS_COLOR_GENERIC"
@@ -130,20 +131,20 @@ def main() -> None:
 
         if result['error'] is not None:
             # Error al leer/procesar
-            print(result['error'])
+            logger.logger.info(result['error'])
         else:
             sr_mix = result['sr_mix']
             pre_true_peak_dbtp = result['pre_true_peak_dbtp']
             pre_rms_dbfs = result['pre_rms_dbfs']
             noise_floor_dbfs = result['noise_floor_dbfs']
 
-            print(
+            logger.logger.info(
                 f"[S8_MIXBUS_COLOR_GENERIC] full_song.wav analizado (sr={sr_mix}). "
                 f"true_peak={pre_true_peak_dbtp:.2f} dBTP, RMS={pre_rms_dbfs:.2f} dBFS, "
                 f"noise_floor={noise_floor_dbfs:.2f} dBFS."
             )
     else:
-        print(
+        logger.logger.info(
             f"[S8_MIXBUS_COLOR_GENERIC] Aviso: no existe {full_song_path}, "
             "no se puede medir color del mixbus."
         )
@@ -170,7 +171,7 @@ def main() -> None:
     with output_path.open("w", encoding="utf-8") as f:
         json.dump(session_state, f, indent=2, ensure_ascii=False)
 
-    print(
+    logger.logger.info(
         f"[S8_MIXBUS_COLOR_GENERIC] Análisis completado. JSON: {output_path}"
     )
 
