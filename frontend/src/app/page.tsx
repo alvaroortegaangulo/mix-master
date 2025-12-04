@@ -798,7 +798,7 @@ useEffect(() => {
       )}
 
                 {error && (
-                  <p className="mt-4 text-center text-sm text-red-400">
+                  <p className="text-center text-sm text-red-400">
                     {error}
                   </p>
                 )}
@@ -806,7 +806,7 @@ useEffect(() => {
               </section>
 
               {isProcessing && (
-                <div className="mt-4 flex justify-center">
+                <div className="flex justify-center">
                   <img
                     src="/miner.gif"
                     alt="Processing your mix..."
