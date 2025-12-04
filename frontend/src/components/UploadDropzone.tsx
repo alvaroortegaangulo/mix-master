@@ -107,11 +107,6 @@ export function UploadDropzone({
           <p className="text-base font-semibold text-slate-50">
             {isSongUpload ? "Upload Your Song" : "Upload Your Stems"}
           </p>
-          <p className="text-xs text-slate-400">
-            {isSongUpload
-              ? "Sube tu mezcla estéreo final."
-              : "Sube los stems individuales de tu sesión."}
-          </p>
         </div>
 
         {/* Toggle Song / Stems */}
@@ -151,9 +146,12 @@ export function UploadDropzone({
         </div>
       </div>
 
-      {/* Icono */}
-      <div className="mb-3 flex h-14 w-14 items-center justify-center rounded-full border border-slate-600 bg-slate-900">
-        <span className="text-3xl leading-none">⬆️</span>
+      <div className="mt-4 flex justify-center">
+        <img
+          src="/upload.gif"
+          alt="Upload your mix..."
+          className="h-24 w-auto rounded-lg"
+        />
       </div>
 
       {/* Texto principal del dropzone, adaptado al modo */}
