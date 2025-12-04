@@ -598,6 +598,12 @@ useEffect(() => {
       ? stageUiInfo?.description || jobStatus.message || null
       : null;
 
+    const isProcessing =
+    loading ||
+    (jobStatus &&
+      (jobStatus.status === "queued" || jobStatus.status === "running"));
+
+
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
@@ -798,6 +804,52 @@ useEffect(() => {
                   </p>
                 )}
               </section>
+
+                <div className="mt-8 flex justify-center">
+                  <button
+                    type="button"
+                    onClick={handleGenerateMix}
+                    disabled={!hasFiles || loading}
+                    className={[
+                      "inline-flex items-center justify-center rounded-full px-6 py-2.5 text-sm font-semibold",
+                      "bg-teal-500 text-slate-950 shadow-md shadow-teal-500/30",
+                      "transition hover:bg-teal-400 hover:shadow-lg disabled:opacity-60 disabled:cursor-not-allowed",
+                    ].join(" ")}
+                  >
+                    {loading ? "Processing..." : "Generate AI Mix"}
+                  </button>
+                </div>
+
+                {progressHeader && (
+                  <p className="mt-4 text-center text-sm font-mono text-slate-300">
+                    {progressHeader}
+                    {progressSubtext && (
+                      <>
+                        <br />
+                        <span className="font-sans text-[11px] text-slate-400">
+                          {progressSubtext}
+                        </span>
+                      </>
+                    )}
+                  </p>
+                )}
+
+                {error && (
+                  <p className="mt-4 text-center text-sm text-red-400">
+                    {error}
+                  </p>
+                )}
+              </section>
+
+              {isProcessing && (
+                <div className="mt-4 flex justify-center">
+                  <img
+                    src="/miner.gif"
+                    alt="Processing your mix..."
+                    className="h-24 w-auto rounded-lg"
+                  />
+                </div>
+              )}
 
               {result && (
                 <MixResultPanel
