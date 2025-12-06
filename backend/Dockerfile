@@ -33,7 +33,7 @@ RUN pip install --no-cache-dir --upgrade pip && \
 COPY . .
 
 ENV APP_PROJECT_ROOT=/app \
-    PYTHONPATH=/app/src
+    PYTHONPATH=/app:/app/src
 
 # Directorios que la app necesita escribir (logs, temp, etc.)
 RUN mkdir -p /app/temp && chown -R app:app /app
