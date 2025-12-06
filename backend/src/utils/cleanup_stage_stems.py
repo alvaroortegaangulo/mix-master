@@ -51,6 +51,9 @@ def process(context: PipelineContext, *args) -> bool:
             # Conservar full_song.wav
             if item.name.lower() == "full_song.wav":
                 continue
+            # Conservar imágenes generadas para el reporte (waveform/spectrogram)
+            if item.suffix.lower() in [".png", ".jpg", ".jpeg"]:
+                continue
 
             # Borrar wavs (stems), aiffs, flacs, etc.
             if item.suffix.lower() in [".wav", ".aif", ".aiff", ".flac", ".mp3"]:

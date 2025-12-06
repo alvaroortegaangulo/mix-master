@@ -43,9 +43,23 @@ const ReportStageCard = ({
   jobId: string;
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const hasParameters = stage.parameters && Object.keys(stage.parameters).length > 0;
+  const hasImages = stage.images && Object.keys(stage.images).length > 0;
+  const hasKeyMetrics = stage.key_metrics && Object.keys(stage.key_metrics).length > 0;
 
   // Updated URL to point to the static file server path
   const getImageUrl = (imageName: string) => `/files/${jobId}/S11_REPORT_GENERATION/${imageName}`;
+  const renderMetricValue = (value: unknown) => {
+    if (value === null || value === undefined) return "N/A";
+    if (typeof value === "object") {
+      return (
+        <pre className="text-[10px] opacity-70 whitespace-pre-wrap break-words">
+          {JSON.stringify(value, null, 2)}
+        </pre>
+      );
+    }
+    return String(value);
+  };
 
   return (
     <div className="mb-3 overflow-hidden rounded-lg border border-emerald-900/50 bg-slate-900/40 backdrop-blur-sm transition-all hover:bg-slate-900/60">
@@ -73,7 +87,7 @@ const ReportStageCard = ({
         <div className="border-t border-emerald-500/10 bg-black/20 p-5">
 
           {/* Parameters Table */}
-          {stage.parameters && Object.keys(stage.parameters).length > 0 && (
+          {hasParameters && (
             <div className="mb-6">
               <h4 className="mb-2 text-[10px] font-bold uppercase tracking-widest text-emerald-500/70">
                 Modified Parameters
@@ -107,8 +121,39 @@ const ReportStageCard = ({
             </div>
           )}
 
+          {/* Key Metrics */}
+          {hasKeyMetrics && (
+            <div className="mb-6">
+              <h4 className="mb-2 text-[10px] font-bold uppercase tracking-widest text-emerald-500/70">
+                Key Metrics
+              </h4>
+              <div className="overflow-hidden rounded-md border border-emerald-500/20">
+                <table className="w-full text-left text-xs text-slate-300">
+                  <thead className="bg-emerald-950/30 text-[10px] font-semibold uppercase text-emerald-400/80">
+                    <tr>
+                      <th className="px-3 py-2">Metric</th>
+                      <th className="px-3 py-2">Value</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-emerald-500/10 bg-emerald-900/10">
+                    {Object.entries(stage.key_metrics || {}).map(([key, value]) => (
+                      <tr key={key}>
+                        <td className="px-3 py-1.5 font-medium text-slate-200">
+                          {key}
+                        </td>
+                        <td className="px-3 py-1.5 text-emerald-100 font-mono">
+                          {renderMetricValue(value)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
           {/* Images Grid */}
-          {stage.images && (Object.keys(stage.images).length > 0) && (
+          {hasImages && (
             <div>
               <h4 className="mb-2 text-[10px] font-bold uppercase tracking-widest text-emerald-500/70">
                 Signal Analysis (Before vs After)
@@ -133,6 +178,10 @@ const ReportStageCard = ({
               </div>
             </div>
           )}
+
+          {!hasParameters && !hasImages && !hasKeyMetrics && (
+            <p className="text-xs text-slate-500">No data captured for this stage yet.</p>
+          )}
         </div>
       )}
     </div>
@@ -142,14 +191,7 @@ const ReportStageCard = ({
 export const ReportViewer: React.FC<ReportViewerProps> = ({ report, jobId }) => {
   if (!report) return null;
 
-  // Filter stages that have meaningful data to show
-  const hasData = (stage: StageReport) => {
-    const hasParams = stage.parameters && Object.keys(stage.parameters).length > 0;
-    const hasImages = stage.images && Object.keys(stage.images).length > 0;
-    return hasParams || hasImages;
-  };
-
-  const processedStages = report.stages.filter(hasData);
+  const processedStages = report.stages || [];
 
   return (
     <div className="w-full space-y-6 p-1">
