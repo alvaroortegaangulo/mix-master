@@ -101,7 +101,7 @@ const ReportStageCard = ({
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-emerald-500/10 bg-emerald-900/10">
-                    {Object.entries(stage.parameters).map(([key, value]) => (
+                    {Object.entries(stage.parameters || {}).map(([key, value]) => (
                       <tr key={key}>
                         <td className="px-3 py-1.5 font-medium text-slate-200">
                           {key}
