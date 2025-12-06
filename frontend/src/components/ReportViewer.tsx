@@ -44,7 +44,8 @@ const ReportStageCard = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const hasParameters = stage.parameters && Object.keys(stage.parameters).length > 0;
-  const hasImages = stage.images && Object.keys(stage.images).length > 0;
+  const images = stage.images || {};
+  const hasImages = Object.keys(images).length > 0;
   const hasKeyMetrics = stage.key_metrics && Object.keys(stage.key_metrics).length > 0;
 
   // Updated URL to point to the static file server path
@@ -159,19 +160,19 @@ const ReportStageCard = ({
                 Signal Analysis (Before vs After)
               </h4>
               <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                  {stage.images.waveform && (
+                  {images.waveform && (
                       <div className="space-y-1">
                           <p className="text-[10px] text-center text-slate-400 uppercase tracking-wide">Waveform Comparison</p>
                           <div className="rounded border border-emerald-500/20 bg-black/40 p-1">
-                              <img src={getImageUrl(stage.images.waveform)} alt="Waveform" className="w-full h-auto object-cover opacity-90 hover:opacity-100 transition-opacity" />
+                              <img src={getImageUrl(images.waveform)} alt="Waveform" className="w-full h-auto object-cover opacity-90 hover:opacity-100 transition-opacity" />
                           </div>
                       </div>
                   )}
-                  {stage.images.spectrogram && (
+                  {images.spectrogram && (
                        <div className="space-y-1">
                           <p className="text-[10px] text-center text-slate-400 uppercase tracking-wide">Spectrogram Comparison</p>
                           <div className="rounded border border-emerald-500/20 bg-black/40 p-1">
-                              <img src={getImageUrl(stage.images.spectrogram)} alt="Spectrogram" className="w-full h-auto object-contain opacity-90 hover:opacity-100 transition-opacity" />
+                              <img src={getImageUrl(images.spectrogram)} alt="Spectrogram" className="w-full h-auto object-contain opacity-90 hover:opacity-100 transition-opacity" />
                           </div>
                       </div>
                   )}
