@@ -45,9 +45,12 @@ PROJECT_ROOT = Path(__file__).resolve().parent  # .../backend
 SRC_DIR = PROJECT_ROOT / "src"
 CONTRACTS_PATH = SRC_DIR / "struct" / "contracts.json"
 JOBS_ROOT = PROJECT_ROOT / "temp"
+MEDIA_ROOT = PROJECT_ROOT / "media"
 
 # Exponer /files/{jobId}/... -> backend/temp/{jobId}/...
 JOBS_ROOT.mkdir(parents=True, exist_ok=True)
+MEDIA_ROOT.mkdir(parents=True, exist_ok=True)
+
 app.mount(
     "/files",
     StaticFiles(directory=JOBS_ROOT, html=False),
@@ -60,30 +63,20 @@ app.mount(
 
 
 def _create_job_dirs() -> tuple[str, Path, Path]:
-    """
-    Crea la estructura de carpetas para un job nuevo.
-
-    Devuelve:
-      - job_id
-      - media_dir (donde se guardan los stems originales)
-      - temp_root (raíz temporal del job, p.ej. backend/temp/<job_id>)
-    """
     job_id = uuid.uuid4().hex
 
-    media_dir = PROJECT_ROOT / "media" / job_id
-    temp_root = PROJECT_ROOT / "temp" / job_id
+    media_dir = MEDIA_ROOT / job_id
+    temp_root = JOBS_ROOT / job_id
 
     media_dir.mkdir(parents=True, exist_ok=True)
     temp_root.mkdir(parents=True, exist_ok=True)
 
     logger.info(
         "[_create_job_dirs] job_id=%s media_dir=%s temp_root=%s",
-        job_id,
-        media_dir,
-        temp_root,
+        job_id, media_dir, temp_root
     )
-
     return job_id, media_dir, temp_root
+
 
 
 def _get_job_dirs(job_id: str) -> tuple[Path, Path]:
