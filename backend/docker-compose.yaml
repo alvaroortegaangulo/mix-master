@@ -37,7 +37,7 @@ services:
   # Ejemplo de worker (si lo tienes)
   worker:
     build: .
-    command: celery -A worker.app worker --concurrency=2 -l info
+    command: celery -A celery_app worker --loglevel=info --concurrency=2
     environment:
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/0
