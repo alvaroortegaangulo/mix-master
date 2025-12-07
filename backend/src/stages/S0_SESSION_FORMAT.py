@@ -6,33 +6,19 @@ import json
 import numpy as np
 
 try:
-    from scipy.signal import resample_poly  # type: ignore
+    from scipy.signal import resample_poly
 except ImportError:
     resample_poly = None
 
 try:
     from context import PipelineContext
 except ImportError:
-    PipelineContext = None # type: ignore
+    pass
 
 from utils.analysis_utils import get_temp_dir
 
 def load_analysis(context: PipelineContext, contract_id: str) -> Dict[str, Any]:
-    if context.temp_root:
-        temp_dir = context.temp_root / contract_id
-    else:
-        temp_dir = get_temp_dir(contract_id, create=False)
-
-    analysis_path = temp_dir / f"analysis_{contract_id}.json"
-
-    if not analysis_path.exists():
-        raise FileNotFoundError(f"No se encuentra el análisis en {analysis_path}")
-
-    with analysis_path.open("r", encoding="utf-8") as f:
-        data = json.load(f)
-
-    return data
-
+    return context.analysis_results.get(contract_id, {})
 
 def resample_audio(
     data: np.ndarray, sr: int, target_sr: int | None
@@ -94,13 +80,9 @@ def apply_peak_normalization(
 
 
 def process(context: PipelineContext, *args) -> bool:
-    """
-    IN-MEMORY processing for S0_SESSION_FORMAT
-    """
     contract_id = context.stage_id
-    try:
-        analysis = load_analysis(context, contract_id)
-    except FileNotFoundError:
+    analysis = load_analysis(context, contract_id)
+    if not analysis:
         logger.error(f"[S0_SESSION_FORMAT] Analysis not found for {contract_id}")
         return False
 
@@ -111,27 +93,22 @@ def process(context: PipelineContext, *args) -> bool:
     target_bit_depth = metrics.get("bit_depth_internal")
     max_peak_dbfs = metrics.get("max_peak_dbfs")
 
-    # Update global context sample rate if changed
     if target_sr is not None and target_sr != context.sample_rate:
         logger.info(f"[S0_SESSION_FORMAT] Updating global sample rate from {context.sample_rate} to {target_sr}")
         context.sample_rate = target_sr
 
     processed_count = 0
     for stem_info in stems_info:
-        file_name = Path(stem_info["file_path"]).name
-        if file_name not in context.audio_stems:
+        file_name = stem_info.get("file_name")
+        if not file_name or file_name not in context.audio_stems:
             continue
 
         data = context.audio_stems[file_name]
         sr = stem_info.get("samplerate_hz", context.sample_rate)
 
-        # 1. Resample
         data, new_sr = resample_audio(data, sr, target_sr)
-
-        # 2. Peak Norm
         data = apply_peak_normalization(data, max_peak_dbfs)
 
-        # Update memory
         context.audio_stems[file_name] = data
         processed_count += 1
 

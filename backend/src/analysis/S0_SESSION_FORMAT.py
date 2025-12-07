@@ -14,11 +14,10 @@ if str(SRC_DIR) not in sys.path:
 try:
     from context import PipelineContext
 except ImportError:
-    PipelineContext = None # type: ignore
+    pass
 
 from utils.analysis_utils import (
     load_contract,
-    get_temp_dir,
     compute_peak_dbfs,
 )
 from utils.session_utils import (
@@ -26,18 +25,13 @@ from utils.session_utils import (
     infer_bus_target,
 )
 
-
 def analyze_stem_memory(name: str, data: np.ndarray, sr: int, logical_path: str) -> Dict[str, Any]:
-    """
-    Analiza un stem en memoria.
-    """
     if data.ndim > 1:
         mono = np.mean(data, axis=1)
     else:
         mono = data
 
     duration_sec = len(mono) / float(sr) if len(mono) > 0 else 0.0
-
     peak_dbfs = compute_peak_dbfs(mono)
     peak_linear = float(np.max(np.abs(mono))) if mono.size > 0 else 0.0
 
@@ -58,15 +52,12 @@ def analyze_stem_memory(name: str, data: np.ndarray, sr: int, logical_path: str)
 
     channels = data.shape[1] if data.ndim > 1 else 1
 
-    # Internal bit depth is always float32 (32-bit float)
-    bit_depth_file = 32
-
     return {
         "file_name": name,
         "file_path": logical_path,
         "samplerate_hz": sr,
         "channels": channels,
-        "bit_depth_file": bit_depth_file,
+        "bit_depth_file": 32,
         "duration_sec": duration_sec,
         "peak_linear": peak_linear,
         "peak_dbfs": peak_dbfs,
@@ -78,21 +69,14 @@ def analyze_stem_memory(name: str, data: np.ndarray, sr: int, logical_path: str)
 
 
 def process(context: PipelineContext, *args) -> bool:
-    """
-    IN-MEMORY analysis for S0_SESSION_FORMAT
-    """
     contract_id = context.stage_id
     contract = load_contract(contract_id)
     metrics: Dict[str, Any] = contract.get("metrics", {})
     limits: Dict[str, Any] = contract.get("limits", {})
     stage_id: str | None = contract.get("stage_id")
 
-    # Load session config from memory (metadata in context)
-    # We added context.metadata["session_config"] in pipeline.py
     cfg = context.metadata.get("session_config")
-
     if not cfg:
-        # Fallback to loading from file if not in metadata (e.g. legacy or not propagated)
         try:
              cfg = load_session_config_memory(context, contract_id)
         except Exception as e:
@@ -101,15 +85,11 @@ def process(context: PipelineContext, *args) -> bool:
 
     style_preset = cfg.get("style_preset", "Unknown")
 
-    # instrument_by_file logic
-    # The config structure in metadata is:
-    # { "stems": [ {"file_name": "...", "instrument_profile": "..."}, ... ] }
-    # We need to build the map.
     instrument_by_file = {}
     if "stems" in cfg and isinstance(cfg["stems"], list):
         for s in cfg["stems"]:
              instrument_by_file[s.get("file_name")] = s.get("instrument_profile")
-    elif "instrument_by_file" in cfg: # Legacy direct map
+    elif "instrument_by_file" in cfg:
         instrument_by_file = cfg["instrument_by_file"]
 
 
@@ -117,10 +97,9 @@ def process(context: PipelineContext, *args) -> bool:
     session_max_peak_dbfs = float("-inf")
     samplerates_present = set()
 
-    # Analyze memory
     for name in sorted(context.audio_stems.keys()):
         data = context.audio_stems[name]
-        logical_path = str(context.get_stage_dir() / name)
+        logical_path = f"memory://{name}"
 
         stem_info = analyze_stem_memory(name, data, context.sample_rate, logical_path)
 
@@ -143,7 +122,6 @@ def process(context: PipelineContext, *args) -> bool:
         if peak_dbfs > session_max_peak_dbfs:
             session_max_peak_dbfs = peak_dbfs
 
-    # Build Session State
     buses: Dict[str, Dict[str, Any]] = {}
     for stem in stems_analysis:
         bus = stem["bus_target"]
@@ -171,17 +149,15 @@ def process(context: PipelineContext, *args) -> bool:
         "buses": list(buses.values()),
     }
 
-    # Save Analysis JSON
-    temp_dir = context.get_stage_dir()
-    temp_dir.mkdir(parents=True, exist_ok=True)
-    output_path = temp_dir / f"analysis_{contract_id}.json"
+    context.analysis_results[contract_id] = session_state
 
-    try:
-        with output_path.open("w", encoding="utf-8") as f:
-            json.dump(session_state, f, indent=2, ensure_ascii=False)
-    except Exception as e:
-        logger.error(f"[S0_SESSION_FORMAT] Failed to save analysis JSON: {e}")
-        return False
+    # Legacy file write for compatibility if needed (using transient temp)
+    temp_dir = context.get_stage_dir()
+    if temp_dir.exists():
+        try:
+            with (temp_dir / f"analysis_{contract_id}.json").open("w") as f:
+                json.dump(session_state, f, indent=2)
+        except: pass
 
     return True
 

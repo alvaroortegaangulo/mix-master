@@ -1,41 +1,52 @@
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional, Dict
+from typing import Optional, Dict, Any, List
 import numpy as np
+import tempfile
+import shutil
 
 @dataclass
 class PipelineContext:
     """
     Contexto de ejecución del pipeline.
     Reemplaza el uso de argumentos de línea de comandos y variables de entorno dispersas.
-    Ahora también mantiene el estado del audio en memoria para evitar I/O de disco.
+    Mantiene el estado del audio en memoria y resultados de análisis.
     """
     stage_id: str
     job_id: Optional[str] = None
-    temp_root: Optional[Path] = None
 
     # Audio Data Storage (In-Memory)
-    # Stems: { "stem_name.wav": np.ndarray (shape=(samples, channels), float32) }
     audio_stems: Dict[str, np.ndarray] = field(default_factory=dict)
-
-    # Mixdown (Full Song): np.ndarray (shape=(samples, channels), float32)
     audio_mixdown: Optional[np.ndarray] = None
-
-    # Global Sample Rate (assumed constant for the session)
     sample_rate: int = 44100
+    metadata: Dict[str, Any] = field(default_factory=dict)
 
-    # Metadata persistence (replacing session_config.json, etc if needed,
-    # though JSONs are small enough to keep on disk for now, but we can cache them here)
-    metadata: Dict[str, any] = field(default_factory=dict)
+    # In-memory storage for analysis results
+    analysis_results: Dict[str, Dict[str, Any]] = field(default_factory=dict)
+
+    # In-memory storage for stage timings
+    pipeline_timings: List[Dict[str, Any]] = field(default_factory=list)
+
+    # Final Report Data (S11)
+    report: Optional[Dict[str, Any]] = None
+
+    # Generated Artifacts (filename -> bytes)
+    generated_artifacts: Dict[str, bytes] = field(default_factory=dict)
+
+    _transient_temp: Optional[Path] = None
 
     def get_stage_dir(self, stage_id: Optional[str] = None) -> Path:
         """
-        Devuelve el directorio temporal para un stage.
-        Si stage_id es None, usa el del contexto actual.
+        Returns a transient temporary directory for legacy file operations (e.g. plotting).
         """
-        target_id = stage_id if stage_id else self.stage_id
-        if self.temp_root:
-            return self.temp_root / target_id
+        if self._transient_temp is None:
+             self._transient_temp = Path(tempfile.mkdtemp(prefix=f"mix_job_{self.job_id}_"))
 
-        # Fallback
-        raise ValueError("temp_root no está definido en PipelineContext")
+        target = self._transient_temp / (stage_id or self.stage_id)
+        target.mkdir(parents=True, exist_ok=True)
+        return target
+
+    def cleanup_transient(self):
+        if self._transient_temp and self._transient_temp.exists():
+            shutil.rmtree(self._transient_temp, ignore_errors=True)
+            self._transient_temp = None
