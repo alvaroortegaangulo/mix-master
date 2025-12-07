@@ -15,20 +15,24 @@ services:
 
   web:
     build: .
-    command: uvicorn server:app --host 0.0.0.0 --port 8000
+    # Hypercorn sirviendo FastAPI
+    command: >
+      hypercorn server:app
+        --bind 0.0.0.0:8000
+        --workers 2
+        --access-logfile -
+        --error-logfile -
+        --log-level info
     environment:
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/0
       MIX_TEMP_ROOT: /dev/shm/mix-master/temp
       MPLCONFIGDIR: /tmp/mplconfig
-      XDG_CACHE_HOME: /tmp/.cache        # para Fontconfig
+      XDG_CACHE_HOME: /tmp/.cache
     depends_on:
       redis:
         condition: service_healthy
-    # Si necesitas exponer el backend directamente:
-    ports:
-      - "8000:8000"
-    # Limitar superficie y permisos
+    # Ya no exponemos 8000 al host: solo Caddy ve este puerto
     read_only: true
     tmpfs:
       - /dev/shm/mix-master/temp:size=2g
@@ -44,15 +48,14 @@ services:
     networks:
       - app-net
 
-  # Ejemplo de worker (si lo tienes)
   worker:
     build: .
     command: celery -A celery_app worker --loglevel=info --concurrency=4
     environment:
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/0
-      MPLCONFIGDIR: /tmp/mplconfig
       MIX_TEMP_ROOT: /dev/shm/mix-master/temp
+      MPLCONFIGDIR: /tmp/mplconfig
       XDG_CACHE_HOME: /tmp/.cache
     depends_on:
       redis:
@@ -64,15 +67,13 @@ services:
       - ALL
     read_only: true
     tmpfs:
-      # Donde tú ya procesas audio (si lo usas):
       - /dev/shm/mix-master/temp:size=2g
-      # /tmp writable para tempfile + Matplotlib
       - /tmp
     volumes:
-      - web-temp:/app/temp     # comparte temp con web
-      - web-media:/app/media   # comparte media con web
+      - web-temp:/app/temp
+      - web-media:/app/media
     networks:
-      - app-net   # importante, ver siguiente punto
+      - app-net
 
   frontend:
     build:
@@ -81,22 +82,38 @@ services:
     command: npm run start -- -p 3000
     environment:
       NODE_ENV: production
-      # Mejor usar el nombre del servicio interno en lugar de IP pública:
-      NEXT_PUBLIC_BACKEND_URL: http://web:8000
+      # Si en el frontend usas NEXT_PUBLIC_BACKEND_URL,
+      # mejor configúralo en .env.production (no aquí) a:
+      # NEXT_PUBLIC_BACKEND_URL=https://api.music-mix-master.com
     depends_on:
       - web
-    # Mientras no tengas proxy, sigues exponiendo 3000. Idealmente luego lo pondrías tras nginx.
-    ports:
-      - "3000:3000"
-    # Endurecer contenedor
+    # No exponemos 3000 al host, lo sirve Caddy por HTTPS
     read_only: true
     tmpfs:
-      - /tmp   # Next.js puede necesitar /tmp para cosas menores
+      - /tmp
     security_opt:
       - no-new-privileges:true
     cap_drop:
       - ALL
     restart: unless-stopped
+    networks:
+      - app-net
+
+  caddy:
+    image: caddy:2.9
+    restart: unless-stopped
+    depends_on:
+      - web
+      - frontend
+    # Aquí es donde se expone todo al exterior, con HTTP/3
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
     networks:
       - app-net
 
@@ -106,3 +123,5 @@ networks:
 volumes:
   web-temp:
   web-media:
+  caddy_data:
+  caddy_config:

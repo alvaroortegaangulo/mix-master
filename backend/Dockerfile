@@ -8,13 +8,13 @@ ENV DEBIAN_FRONTEND=noninteractive \
     APP_PROJECT_ROOT=/app \
     PYTHONPATH=/app:/app/src
 
-# Directorio de trabajo
 WORKDIR /app
 
-# Dependencias del sistema (las que ya tenías)
+# Dependencias de sistema (audio + compilación de libs Python)
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-        libsndfile1 ffmpeg \
+        libsndfile1 \
+        ffmpeg \
         build-essential \
         libfftw3-dev \
         libavcodec-dev \
@@ -28,24 +28,32 @@ RUN apt-get update && \
 # Usuario no root
 RUN groupadd -r app && useradd -r -g app app
 
-# Dependencias de Python
+# Requisitos Python de tu proyecto
 COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
+    pip install --no-cache-dir -r requirements.txt && \
+    # Hypercorn ASGI server (HTTP/1 + HTTP/2, opcionalmente HTTP/3)
+    pip install --no-cache-dir hypercorn
 
 # Código de la aplicación
 COPY . .
 
-# Directorios que la app necesita escribir (logs, temp, media, caches, etc.)
-RUN mkdir -p /app/temp /app/media /tmp/mplconfig /tmp/.cache && \
-    chown -R app:app /app /tmp/mplconfig /tmp/.cache
+# Directorios donde la app escribe (volúmenes / tmpfs)
+RUN mkdir -p /app/temp /app/media /tmp/mplconfig /tmp/.cache /tmp/matplotlib && \
+    chown -R app:app /app /tmp/mplconfig /tmp/.cache /tmp/matplotlib
 
-# A partir de aquí, todo se ejecuta como usuario 'app'
 USER app
 
 EXPOSE 8000
 
-# Evita que Matplotlib intente construir la caché de fuentes en el arranque
+# Evitar que Matplotlib cree caché en sitios raros
 ENV MPLCONFIGDIR=/tmp/matplotlib
 
-CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "8000"]
+# Hypercorn en vez de uvicorn
+# - 2 workers (ajústalo a tus cores si quieres)
+CMD ["hypercorn", "server:app", \
+     "--bind", "0.0.0.0:8000", \
+     "--workers", "4", \
+     "--access-logfile", "-", \
+     "--error-logfile", "-", \
+     "--log-level", "info"]

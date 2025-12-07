@@ -30,7 +30,12 @@ app = FastAPI(title="Mix-Master API")
 # CORS (ajusta origins a tu frontend según necesites)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://161.97.131.133:3000"],
+    allow_origins=[
+        "https://music-mix-master.com",
+        "https://api.music-mix-master.com",
+        "http://localhost:3000",          # para desarrollo local
+        "http://127.0.0.1:3000",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -640,29 +645,29 @@ async def upload_file_for_job(
     job_id: str,
     file: UploadFile = File(...),
 ):
-    """
-    Sube un solo WAV asociado a un job existente.
-    Se puede llamar varias veces en paralelo desde el frontend.
-    """
     media_dir, temp_root = _get_job_dirs(job_id)
-    if not media_dir.exists() or not temp_root.exists():
-        raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
-
     media_dir.mkdir(parents=True, exist_ok=True)
 
     dest_path = media_dir / file.filename
-    contents = await file.read()
+    bytes_written = 0
+    chunk_size = 1024 * 1024  # 1 MiB
+
     with dest_path.open("wb") as out:
-        out.write(contents)
+        while True:
+            chunk = await file.read(chunk_size)
+            if not chunk:
+                break
+            out.write(chunk)
+            bytes_written += len(chunk)
 
     logger.info(
-        "[/mix/%s/upload-file] Archivo subido -> %s (%d bytes)",
+        "[/mix/%s/upload-file] Archivo subido -> %s (%d bytes) (streaming)",
         job_id,
         dest_path,
-        len(contents),
+        bytes_written,
     )
 
-    return {"ok": True, "filename": file.filename, "bytes": len(contents)}
+    return {"ok": True, "filename": file.filename, "bytes": bytes_written}
 
 
 @app.post("/mix/{job_id}/start")

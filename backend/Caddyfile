@@ -1,0 +1,24 @@
+{
+    # HTTP/3 está activado por defecto a partir de Caddy 2.6
+    # Simplemente necesitamos exponer también 443/udp en Docker.
+    # Opcional: forzar protocolos explícitos
+    # servers {
+    #     protocols h1 h2 h3
+    # }
+}
+
+# Frontend (Next.js)
+music-mix-master.com {
+    encode zstd gzip
+
+    # Proxy al contenedor frontend:3000
+    reverse_proxy frontend:3000
+}
+
+# Backend API (FastAPI + Hypercorn)
+api.music-mix-master.com {
+    encode zstd gzip
+
+    # Proxy al contenedor web:8000
+    reverse_proxy web:8000
+}
