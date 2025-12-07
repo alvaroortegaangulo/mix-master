@@ -9,6 +9,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Dict, Optional, Any
 
+import aiofiles
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -348,17 +349,24 @@ async def mix_tracks(
                 exc,
             )
 
-    # Guardar los ficheros (lectura completa en este flujo)
+    # Guardar los ficheros (usando aiofiles y streaming para evitar bloqueo)
     for f in files:
         dest_path = media_dir / f.filename
-        contents = await f.read()
-        with dest_path.open("wb") as out:
-            out.write(contents)
+        chunk_size = 1024 * 1024  # 1 MiB
+        bytes_written = 0
+        async with aiofiles.open(dest_path, "wb") as out:
+            while True:
+                chunk = await f.read(chunk_size)
+                if not chunk:
+                    break
+                await out.write(chunk)
+                bytes_written += len(chunk)
+
         logger.info(
             "[/mix] Archivo subido guardado para job_id=%s -> %s (%d bytes)",
             job_id,
             dest_path,
-            len(contents),
+            bytes_written,
         )
 
     if raw_profiles:
@@ -617,7 +625,7 @@ async def upload_file_for_job(
 ):
     """
     Recibe un archivo para un job existente.
-    SIN compresión. Copia en streaming para no petar memoria.
+    SIN compresión. Copia en streaming usando aiofiles para no bloquear el loop.
     """
     media_dir, temp_root = _get_job_dirs(job_id)
 
@@ -630,16 +638,16 @@ async def upload_file_for_job(
     bytes_written = 0
     chunk_size = 1024 * 1024  # 1 MiB
 
-    with dest_path.open("wb") as out:
+    async with aiofiles.open(dest_path, "wb") as out:
         while True:
             chunk = await file.read(chunk_size)
             if not chunk:
                 break
-            out.write(chunk)
+            await out.write(chunk)
             bytes_written += len(chunk)
 
     logger.info(
-        "[/mix/%s/upload-file] Archivo subido -> %s (%d bytes) (streaming)",
+        "[/mix/%s/upload-file] Archivo subido -> %s (%d bytes) (async streaming)",
         job_id,
         dest_path,
         bytes_written,
