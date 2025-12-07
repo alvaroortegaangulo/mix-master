@@ -44,13 +44,17 @@ def process_stem(
     Corrige el DC offset de un stem si supera el umbral del contrato.
 
     Estrategia minimalista:
-      - Usamos dc_offset_linear ya calculado en el análisis (mono promedio).
+      - Usamos dc_offset_linear ya calculado en el análisis (ahora por canal).
       - Si dc_offset_db > dc_offset_max_db_target (por ejemplo -40 dB > -60 dB),
         consideramos que hace falta corrección.
-      - Restamos dc_offset_linear a todas las muestras de todos los canales.
+      - Restamos dc_offset_linear a las muestras de los canales correspondientes.
     """
     file_path = Path(stem_info["file_path"])
-    dc_linear = float(stem_info.get("dc_offset_linear", 0.0))
+
+    # dc_offset_linear puede ser float (legacy) o lista (nuevo)
+    dc_linear_raw = stem_info.get("dc_offset_linear", 0.0)
+
+    # dc_db es el "peor caso" en dB
     dc_db = float(stem_info.get("dc_offset_db", -120.0))
 
     # Si no hay objetivo, corregimos siempre; si lo hay, solo si se excede
@@ -76,8 +80,28 @@ def process_stem(
     if data.size == 0:
         return
 
-    # Restar el offset (mismo valor en todos los canales; suficiente y estable)
-    data_corrected = data - dc_linear
+    # Preparar el vector de corrección
+    # data es (samples, channels)
+    n_channels = data.shape[1] if data.ndim > 1 else 1
+
+    correction_vector = np.zeros(n_channels, dtype=np.float32)
+
+    if isinstance(dc_linear_raw, list):
+        # Caso nuevo: lista de floats
+        # Si la lista tiene longitud diferente al audio real, hacemos lo mejor posible (truncar o pad)
+        # pero debería coincidir si el archivo es el mismo.
+        count = min(len(dc_linear_raw), n_channels)
+        for i in range(count):
+            correction_vector[i] = float(dc_linear_raw[i])
+        # Si hay más canales en el audio que en el análisis (raro), se quedan con 0 corrección.
+    else:
+        # Caso legacy: float
+        val = float(dc_linear_raw)
+        correction_vector[:] = val
+
+    # Restar el offset (broadcast automático de numpy si shape coincide en última dim)
+    # data: (N, C), correction_vector: (C,) -> resta columna a columna
+    data_corrected = data - correction_vector
 
     # Sobrescribir el archivo (manteniendo samplerate, formato por defecto)
     sf.write(file_path, data_corrected, sr)

@@ -19,7 +19,7 @@ import numpy as np  # Puede seguir siendo útil si las utils lo necesitan intern
 from utils.analysis_utils import (
     load_contract,
     get_temp_dir,
-    load_audio_mono,
+    sf_read_limited,
     compute_dc_offset,
     compute_peak_dbfs,
 )
@@ -35,17 +35,57 @@ def analyze_stem(stem_path: Path) -> Dict[str, Any]:
     Devuelve un dict con la misma estructura que antes, para mantener
     compatibilidad con el resto del pipeline.
     """
-    mono, sr = load_audio_mono(stem_path)
+    # Leer en stereo/multicanal siempre para detectar DC offset per channel
+    # y evitar cancelación de fase (bug fix).
+    data, sr = sf_read_limited(stem_path, always_2d=True)
 
-    dc_linear, dc_db = compute_dc_offset(mono)
-    peak_dbfs = compute_peak_dbfs(mono)
+    if not isinstance(data, np.ndarray):
+        data = np.array(data, dtype=np.float32)
+    else:
+        data = data.astype(np.float32)
+
+    # Calcular DC lineal por canal
+    # data es (samples, channels)
+    if data.size == 0:
+        dc_per_channel = []
+        peak_val = 0.0
+    else:
+        dc_per_channel = np.mean(data, axis=0).tolist()
+        peak_val = float(np.max(np.abs(data)))
+
+    # peak en dBFS
+    if peak_val > 0.0:
+        peak_dbfs = float(20.0 * np.log10(peak_val))
+    else:
+        peak_dbfs = float("-inf")
+
+    # Calcular dc_offset_db "peor caso" (el canal con mayor DC absoluto)
+    # y también dc_linear "peor caso" para la métrica escalar si se necesita (aunque retornaremos la lista)
+    if not dc_per_channel:
+        max_dc_abs = 0.0
+        dc_linear_worst = 0.0
+    else:
+        # Encontramos el canal con mayor offset absoluto
+        max_dc_abs = 0.0
+        dc_linear_worst = 0.0
+        for val in dc_per_channel:
+            if abs(val) > max_dc_abs:
+                max_dc_abs = abs(val)
+                dc_linear_worst = val
+
+    # Convertir max_dc_abs a dB
+    eps = 1e-12
+    if max_dc_abs < eps:
+        dc_db = -120.0
+    else:
+        dc_db = 20.0 * np.log10(max_dc_abs)
 
     return {
         "file_name": stem_path.name,
         "file_path": str(stem_path),
         "samplerate_hz": sr,
-        "dc_offset_linear": dc_linear,
-        "dc_offset_db": dc_db,
+        "dc_offset_linear": dc_per_channel, # Ahora es lista de floats
+        "dc_offset_db": dc_db,              # Peor caso en dB
         "peak_dbfs": peak_dbfs,
     }
 
