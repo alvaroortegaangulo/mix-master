@@ -30,10 +30,8 @@ export default function RootLayout({
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         {children}
 
-        {/* Google Analytics solo en prod y si hay ID */}
-        {gaId && process.env.NODE_ENV === "production" && (
-          <GoogleAnalytics gaId={gaId} />
-        )}
+        {/* Google Analytics: se inyecta solo si hay ID */}
+        {gaId && <GoogleAnalytics gaId={gaId} />}
       </body>
     </html>
   );
