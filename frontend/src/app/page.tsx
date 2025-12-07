@@ -2,6 +2,7 @@
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
+import { sendGAEvent } from "@next/third-parties/google";
 import {
   startMixJob,
   fetchJobStatus,
