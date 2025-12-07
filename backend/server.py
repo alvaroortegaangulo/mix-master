@@ -5,19 +5,20 @@ import logging
 import shutil
 import uuid
 import time
-import gzip
 from datetime import datetime
 from pathlib import Path
 from typing import List, Dict, Optional, Any
 
-from fastapi import FastAPI, UploadFile, File, Form
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi import HTTPException
 
 from tasks import run_full_pipeline_task
 
-# Configuración de logging con timestamps legibles
+# ---------------------------------------------------------
+# Logging
+# ---------------------------------------------------------
+
 if not logging.getLogger().handlers:
     logging.basicConfig(
         level=logging.INFO,
@@ -26,9 +27,12 @@ if not logging.getLogger().handlers:
 
 logger = logging.getLogger("mix_master.server")
 
+# ---------------------------------------------------------
+# App & CORS
+# ---------------------------------------------------------
+
 app = FastAPI(title="Mix-Master API")
 
-# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -42,28 +46,35 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# ---------------------------------------------------------
+# Paths
+# ---------------------------------------------------------
+
 PROJECT_ROOT = Path(__file__).resolve().parent  # .../backend
 SRC_DIR = PROJECT_ROOT / "src"
 CONTRACTS_PATH = SRC_DIR / "struct" / "contracts.json"
 JOBS_ROOT = PROJECT_ROOT / "temp"
 MEDIA_ROOT = PROJECT_ROOT / "media"
 
-# Exponer /files/{jobId}/... -> backend/temp/{jobId}/...
 JOBS_ROOT.mkdir(parents=True, exist_ok=True)
 MEDIA_ROOT.mkdir(parents=True, exist_ok=True)
 
+# Exponer /files/{jobId}/... -> backend/temp/{jobId}/...
 app.mount(
     "/files",
     StaticFiles(directory=JOBS_ROOT, html=False),
     name="files",
 )
 
-# -------------------------------------------------------------------
+# ---------------------------------------------------------
 # Helpers
-# -------------------------------------------------------------------
+# ---------------------------------------------------------
 
 
 def _create_job_dirs() -> tuple[str, Path, Path]:
+    """
+    Crea directorios media/ y temp/ para un job nuevo.
+    """
     job_id = uuid.uuid4().hex
 
     media_dir = MEDIA_ROOT / job_id
@@ -99,6 +110,10 @@ def _load_contracts() -> Dict[str, Any]:
 
 
 def _build_pipeline_stages() -> list[dict[str, Any]]:
+    """
+    Construye la definición de stages para el frontend a partir
+    de struct/contracts.json.
+    """
     contracts = _load_contracts()
     stages_cfg = contracts.get("stages", {}) or {}
 
@@ -138,6 +153,9 @@ def _build_pipeline_stages() -> list[dict[str, Any]]:
 
 
 def _write_initial_job_status(job_id: str, temp_root: Path) -> None:
+    """
+    Crea un job_status.json inicial en estado 'pending'.
+    """
     status = {
         "jobId": job_id,
         "job_id": job_id,
@@ -162,6 +180,9 @@ def _write_initial_job_status(job_id: str, temp_root: Path) -> None:
 
 
 def _load_job_status_from_fs(job_id: str) -> Optional[Dict[str, Any]]:
+    """
+    Lee temp/<job_id>/job_status.json si existe.
+    """
     status_path = JOBS_ROOT / job_id / "job_status.json"
     if not status_path.exists():
         logger.info(
@@ -209,9 +230,9 @@ def _parse_bool_flag(value: Optional[str]) -> bool:
     return v in ("1", "true", "yes", "on")
 
 
-# -------------------------------------------------------------------
+# ---------------------------------------------------------
 # Endpoints
-# -------------------------------------------------------------------
+# ---------------------------------------------------------
 
 
 @app.post("/mix")
@@ -223,8 +244,8 @@ async def mix_tracks(
     upload_mode: str = Form("song"),
 ):
     """
-    Endpoint "clásico": un solo POST con todos los WAV.
-    Se mantiene para compatibilidad y se usa cuando solo hay 1 fichero.
+    Endpoint clásico: un solo POST con todos los WAV.
+    Lo usamos sobre todo cuando solo hay 1 fichero.
     """
     request_start_ts = time.time()
     request_start_iso = datetime.utcnow().isoformat()
@@ -246,6 +267,7 @@ async def mix_tracks(
 
     _write_initial_job_status(job_id, temp_root)
 
+    # Modo de subida
     raw_mode = (upload_mode or "song").strip().lower()
     is_stems_upload = raw_mode in {
         "stems",
@@ -254,7 +276,6 @@ async def mix_tracks(
         "true",
         "1",
     }
-
     normalized_mode = "stems" if is_stems_upload else "song"
 
     job_root = temp_root
@@ -277,6 +298,7 @@ async def mix_tracks(
         is_stems_upload,
     )
 
+    # Perfiles de stems
     profiles_by_name: Dict[str, str] = {}
     raw_profiles: List[Dict[str, str]] = []
 
@@ -304,6 +326,7 @@ async def mix_tracks(
                 exc,
             )
 
+    # Space/depth styles
     if space_depth_bus_styles_json:
         try:
             parsed = json.loads(space_depth_bus_styles_json)
@@ -325,7 +348,7 @@ async def mix_tracks(
                 exc,
             )
 
-    # Guardar los stems en disco (sin compresión en este flujo)
+    # Guardar los ficheros (lectura completa en este flujo)
     for f in files:
         dest_path = media_dir / f.filename
         contents = await f.read()
@@ -351,6 +374,7 @@ async def mix_tracks(
             len(raw_profiles),
         )
 
+    # Stages habilitadas
     enabled_stage_keys: Optional[List[str]] = None
     if stages_json:
         try:
@@ -374,6 +398,7 @@ async def mix_tracks(
             job_id,
         )
 
+    # Encolar tarea Celery
     pre_enqueue_ts = time.time()
     logger.info(
         "[/mix] Preparación completada para job_id=%s en %.3fs. Encolando tarea Celery...",
@@ -414,9 +439,9 @@ async def mix_tracks(
     return {"jobId": job_id}
 
 
-# -------------------------------------------------------------------
-# Flujo multi-step para subidas paralelas
-# -------------------------------------------------------------------
+# ---------------------------------------------------------
+# Flujo multi-step (subidas paralelas, sin compresión)
+# ---------------------------------------------------------
 
 
 @app.post("/mix/init")
@@ -426,6 +451,12 @@ async def init_mix_job(
     space_depth_bus_styles_json: Optional[str] = Form(None),
     upload_mode: str = Form("song"),
 ):
+    """
+    Inicializa un job SIN subir todavía los WAV.
+    1) /mix/init
+    2) /mix/{job_id}/upload-file  (paralelo)
+    3) /mix/{job_id}/start
+    """
     request_start_ts = time.time()
     request_start_iso = datetime.utcnow().isoformat()
 
@@ -449,6 +480,7 @@ async def init_mix_job(
     work_dir = job_root / "work"
     work_dir.mkdir(parents=True, exist_ok=True)
 
+    # Modo de subida
     raw_mode = (upload_mode or "song").strip().lower()
     is_stems_upload = raw_mode in {
         "stems",
@@ -474,6 +506,7 @@ async def init_mix_job(
         is_stems_upload,
     )
 
+    # Perfiles de stems
     raw_profiles: List[Dict[str, str]] = []
     if stem_profiles_json:
         try:
@@ -510,6 +543,7 @@ async def init_mix_job(
             len(raw_profiles),
         )
 
+    # Space/depth styles
     if space_depth_bus_styles_json:
         try:
             parsed = json.loads(space_depth_bus_styles_json)
@@ -530,6 +564,7 @@ async def init_mix_job(
                 exc,
             )
 
+    # Stages habilitadas
     enabled_stage_keys: Optional[List[str]] = None
     if stages_json:
         try:
@@ -579,12 +614,10 @@ async def init_mix_job(
 async def upload_file_for_job(
     job_id: str,
     file: UploadFile = File(...),
-    compression: str = Form("none"),
-    original_name: Optional[str] = Form(None),
 ):
     """
     Recibe un archivo para un job existente.
-    Si compression == "gzip", descomprime antes de escribir el WAV final.
+    SIN compresión. Copia en streaming para no petar memoria.
     """
     media_dir, temp_root = _get_job_dirs(job_id)
 
@@ -593,59 +626,33 @@ async def upload_file_for_job(
 
     media_dir.mkdir(parents=True, exist_ok=True)
 
-    target_name = (original_name or file.filename).strip() or file.filename
-    dest_path = media_dir / target_name
-
+    dest_path = media_dir / file.filename
     bytes_written = 0
+    chunk_size = 1024 * 1024  # 1 MiB
 
-    if compression.lower() == "gzip":
-        # Leemos TODO el fichero comprimido y lo descomprimimos en memoria.
-        # Opción sencilla para probar; si más adelante quieres streaming,
-        # se puede cambiar a gzip.GzipFile + lectura por chunks.
-        compressed_bytes = await file.read()
-        try:
-            decompressed = gzip.decompress(compressed_bytes)
-        except Exception as exc:
-            logger.exception(
-                "[/mix/%s/upload-file] Error descomprimiendo gzip", job_id
-            )
-            raise HTTPException(
-                status_code=400,
-                detail="Invalid gzip data",
-            ) from exc
+    with dest_path.open("wb") as out:
+        while True:
+            chunk = await file.read(chunk_size)
+            if not chunk:
+                break
+            out.write(chunk)
+            bytes_written += len(chunk)
 
-        with dest_path.open("wb") as out:
-            out.write(decompressed)
-        bytes_written = len(decompressed)
-        logger.info(
-            "[/mix/%s/upload-file] Archivo gzip descomprimido -> %s (%d bytes)",
-            job_id,
-            dest_path,
-            bytes_written,
-        )
-    else:
-        # Copia en streaming sin descompresión
-        chunk_size = 1024 * 1024  # 1 MiB
-        with dest_path.open("wb") as out:
-            while True:
-                chunk = await file.read(chunk_size)
-                if not chunk:
-                    break
-                out.write(chunk)
-                bytes_written += len(chunk)
+    logger.info(
+        "[/mix/%s/upload-file] Archivo subido -> %s (%d bytes) (streaming)",
+        job_id,
+        dest_path,
+        bytes_written,
+    )
 
-        logger.info(
-            "[/mix/%s/upload-file] Archivo subido -> %s (%d bytes) (streaming)",
-            job_id,
-            dest_path,
-            bytes_written,
-        )
-
-    return {"ok": True, "filename": target_name, "bytes": bytes_written}
+    return {"ok": True, "filename": file.filename, "bytes": bytes_written}
 
 
 @app.post("/mix/{job_id}/start")
 async def start_mix_job_endpoint(job_id: str):
+    """
+    Lanza la tarea Celery para un job ya inicializado y con WAVs subidos.
+    """
     request_start_ts = time.time()
 
     media_dir, temp_root = _get_job_dirs(job_id)
@@ -655,6 +662,7 @@ async def start_mix_job_endpoint(job_id: str):
     job_root = temp_root
     work_dir = job_root / "work"
 
+    # Stages habilitadas
     enabled_stage_keys: Optional[List[str]] = None
     enabled_path = work_dir / "enabled_stages.json"
     if enabled_path.exists():
@@ -674,6 +682,7 @@ async def start_mix_job_endpoint(job_id: str):
                 exc,
             )
 
+    # Perfiles de stems
     profiles_by_name: Dict[str, str] = {}
     stem_profiles_path = work_dir / "stem_profiles.json"
     if stem_profiles_path.exists():
@@ -701,6 +710,7 @@ async def start_mix_job_endpoint(job_id: str):
                 exc,
             )
 
+    # Encolar tarea Celery
     try:
         result = run_full_pipeline_task.apply_async(
             args=[
@@ -764,6 +774,9 @@ def get_job_status(job_id: str) -> Dict[str, Any]:
 
 @app.post("/cleanup-temp")
 async def cleanup_temp():
+    """
+    Limpia el contenido de temp/ y media/ (no borra los directorios raíz).
+    """
     for sub in ("temp", "media"):
         dir_path = PROJECT_ROOT / sub
         try:
