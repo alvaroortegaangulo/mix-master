@@ -181,6 +181,8 @@ export function UploadDropzone({
           src="/upload.gif"
           alt="Upload your mix..."
           className="h-18 w-auto rounded-lg"
+          width={66}
+          height={72}
         />
       </div>
 
