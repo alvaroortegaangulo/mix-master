@@ -34,7 +34,6 @@ export type JobStatus = {
 
 export type MixResponse = MixResult;
 
-
 export type StemProfilePayload = {
   /** Nombre original del archivo tal y como llega en File.name, con extensión */
   name: string;
@@ -42,12 +41,10 @@ export type StemProfilePayload = {
   profile: string;
 };
 
-
 export type SpaceDepthBusStylesPayload = {
   /** Bus lógico -> estilo de depth (flamenco_rumba, urban_trap, rock, etc.) */
   [busKey: string]: string;
 };
-
 
 export type InstrumentProfileDef = {
   id: string;
@@ -61,7 +58,6 @@ export type StyleProfileDef = {
   label: string;
   has_reverb_profiles: boolean;
 };
-
 
 export function getBackendBaseUrl(): string {
   // 1) Si se ha configurado explícitamente, usamos esa URL (opcional)
@@ -202,7 +198,6 @@ function mapBackendStatusToJobStatus(raw: any, baseUrl: string): JobStatus {
   return base;
 }
 
-
 export async function cleanupTemp(): Promise<void> {
   const res = await fetch(`${getBackendBaseUrl()}/cleanup-temp`, {
     method: "POST",
@@ -213,48 +208,184 @@ export async function cleanupTemp(): Promise<void> {
   }
 }
 
+// -----------------------------------------------------------------------------
+// Helpers internos para subida paralela
+// -----------------------------------------------------------------------------
 
-// 1) Arrancar job (POST /mix)
+async function uploadSingleFileForJob(
+  baseUrl: string,
+  jobId: string,
+  file: File,
+): Promise<void> {
+  const fd = new FormData();
+  fd.append("file", file);
+
+  const res = await fetch(
+    `${baseUrl}/mix/${encodeURIComponent(jobId)}/upload-file`,
+    {
+      method: "POST",
+      body: fd,
+    },
+  );
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(
+      `Error uploading file "${file.name}": ${res.status} ${res.statusText} ${text}`,
+    );
+  }
+}
+
+/**
+ * Sube N ficheros en paralelo a un job existente, con límite de concurrencia.
+ */
+async function uploadFilesInParallelForJob(
+  baseUrl: string,
+  jobId: string,
+  files: File[],
+  concurrency = 10,
+): Promise<void> {
+  if (files.length === 0) return;
+
+  let index = 0;
+
+  async function worker() {
+    while (true) {
+      const currentIndex = index++;
+      if (currentIndex >= files.length) break;
+      const file = files[currentIndex];
+      await uploadSingleFileForJob(baseUrl, jobId, file);
+    }
+  }
+
+  const workersCount = Math.min(concurrency, files.length);
+  const workers = Array.from({ length: workersCount }, () => worker());
+  await Promise.all(workers);
+}
+
+// -----------------------------------------------------------------------------
+// 1) Arrancar job (POST /mix o flujo multi-step /mix/init + uploads paralelos)
+// -----------------------------------------------------------------------------
+
 export async function startMixJob(
   files: File[],
   enabledStageKeys?: string[],
   stemProfiles?: StemProfilePayload[],
   spaceDepthBusStyles?: SpaceDepthBusStylesPayload,
+  uploadMode: "song" | "stems" = "song",
 ): Promise<{ jobId: string }> {
-  const formData = new FormData();
-  files.forEach((f) => formData.append("files", f));
+  const baseUrl = getBackendBaseUrl();
+
+  // ---------------------------------------------------------------------------
+  // Caso sencillo: 0 o 1 archivo -> usamos el endpoint clásico /mix
+  // (un solo POST con todos los datos, mantiene compatibilidad total)
+  // ---------------------------------------------------------------------------
+  if (files.length <= 1) {
+    const formData = new FormData();
+    files.forEach((f) => formData.append("files", f));
+
+    if (enabledStageKeys && enabledStageKeys.length > 0) {
+      formData.append("stages_json", JSON.stringify(enabledStageKeys));
+    }
+
+    if (stemProfiles && stemProfiles.length > 0) {
+      formData.append("stem_profiles_json", JSON.stringify(stemProfiles));
+    }
+
+    if (
+      spaceDepthBusStyles &&
+      Object.keys(spaceDepthBusStyles).length > 0
+    ) {
+      formData.append(
+        "space_depth_bus_styles_json",
+        JSON.stringify(spaceDepthBusStyles),
+      );
+    }
+
+    formData.append("upload_mode", uploadMode);
+
+    const res = await fetch(`${baseUrl}/mix`, {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!res.ok) {
+      throw new Error(
+        `Error starting mix job: ${res.status} ${res.statusText}`,
+      );
+    }
+
+    const data = (await res.json()) as { jobId: string };
+    return { jobId: data.jobId };
+  }
+
+  // ---------------------------------------------------------------------------
+  // Caso multi-archivo (>1): flujo en 3 pasos
+  //   1) /mix/init  -> crea jobId, guarda config/perfiles
+  //   2) /mix/{jobId}/upload-file  (PARALELO) -> sube cada WAV
+  //   3) /mix/{jobId}/start -> lanza Celery
+  // ---------------------------------------------------------------------------
+
+  // 1) INIT
+  const initForm = new FormData();
 
   if (enabledStageKeys && enabledStageKeys.length > 0) {
-    formData.append("stages_json", JSON.stringify(enabledStageKeys));
+    initForm.append("stages_json", JSON.stringify(enabledStageKeys));
   }
 
   if (stemProfiles && stemProfiles.length > 0) {
-    formData.append("stem_profiles_json", JSON.stringify(stemProfiles));
+    initForm.append("stem_profiles_json", JSON.stringify(stemProfiles));
   }
 
   if (spaceDepthBusStyles && Object.keys(spaceDepthBusStyles).length > 0) {
-    formData.append(
+    initForm.append(
       "space_depth_bus_styles_json",
       JSON.stringify(spaceDepthBusStyles),
     );
   }
 
-  const baseUrl = getBackendBaseUrl();
-  const res = await fetch(`${baseUrl}/mix`, {
+  initForm.append("upload_mode", uploadMode);
+
+  const initRes = await fetch(`${baseUrl}/mix/init`, {
     method: "POST",
-    body: formData,
+    body: initForm,
   });
 
-  if (!res.ok) {
-    throw new Error(`Error starting mix job: ${res.status} ${res.statusText}`);
+  if (!initRes.ok) {
+    const text = await initRes.text().catch(() => "");
+    throw new Error(
+      `Error initializing mix job: ${initRes.status} ${initRes.statusText} ${text}`,
+    );
   }
 
-  const data = (await res.json()) as { jobId: string };
-  return { jobId: data.jobId };
+  const initData = (await initRes.json()) as { jobId: string };
+  const jobId = initData.jobId;
+
+  // 2) Uploads en paralelo (concurrencia 4 por defecto)
+  await uploadFilesInParallelForJob(baseUrl, jobId, files, 4);
+
+  // 3) Start: encolar tarea Celery para ese job
+  const startRes = await fetch(
+    `${baseUrl}/mix/${encodeURIComponent(jobId)}/start`,
+    {
+      method: "POST",
+    },
+  );
+
+  if (!startRes.ok) {
+    const text = await startRes.text().catch(() => "");
+    throw new Error(
+      `Error starting mix pipeline for job ${jobId}: ${startRes.status} ${startRes.statusText} ${text}`,
+    );
+  }
+
+  return { jobId };
 }
 
-
+// -----------------------------------------------------------------------------
 // 2) Consultar estado del job (GET /jobs/{jobId})
+// -----------------------------------------------------------------------------
+
 export async function fetchJobStatus(jobId: string): Promise<JobStatus> {
   const baseUrl = getBackendBaseUrl();
   const res = await fetch(`${baseUrl}/jobs/${encodeURIComponent(jobId)}`, {
@@ -270,10 +401,6 @@ export async function fetchJobStatus(jobId: string): Promise<JobStatus> {
   const raw = await res.json();
   return mapBackendStatusToJobStatus(raw, baseUrl);
 }
-
-
-
-
 
 export type PipelineStage = {
   key: string;
@@ -299,8 +426,6 @@ export async function fetchPipelineStages(): Promise<PipelineStage[]> {
   return data.sort((a, b) => a.index - b.index);
 }
 
-
-
 export async function fetchInstrumentProfiles(): Promise<InstrumentProfileDef[]> {
   const base = getBackendBaseUrl();
   const res = await fetch(`${base}/profiles/instruments`);
@@ -317,11 +442,13 @@ export async function fetchStyleProfiles(): Promise<StyleProfileDef[]> {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function fetchJobReport(jobId: string): Promise<any> {
-    const baseUrl = getBackendBaseUrl();
-    const url = `${baseUrl}/files/${encodeURIComponent(jobId)}/S11_REPORT_GENERATION/report.json`;
-    const res = await fetch(url);
-    if (!res.ok) {
-        throw new Error(`Failed to fetch report: ${res.statusText}`);
-    }
-    return await res.json();
+  const baseUrl = getBackendBaseUrl();
+  const url = `${baseUrl}/files/${encodeURIComponent(
+    jobId,
+  )}/S11_REPORT_GENERATION/report.json`;
+  const res = await fetch(url);
+  if (!res.ok) {
+    throw new Error(`Failed to fetch report: ${res.statusText}`);
+  }
+  return await res.json();
 }

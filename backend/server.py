@@ -36,7 +36,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-PROJECT_ROOT = Path(__file__).resolve().parent          # .../backend
+PROJECT_ROOT = Path(__file__).resolve().parent  # .../backend
 SRC_DIR = PROJECT_ROOT / "src"
 CONTRACTS_PATH = SRC_DIR / "struct" / "contracts.json"
 JOBS_ROOT = PROJECT_ROOT / "temp"
@@ -79,6 +79,16 @@ def _create_job_dirs() -> tuple[str, Path, Path]:
     )
 
     return job_id, media_dir, temp_root
+
+
+def _get_job_dirs(job_id: str) -> tuple[Path, Path]:
+    """
+    Dado un job_id existente, devuelve (media_dir, temp_root).
+    No crea nada; solo calcula las rutas.
+    """
+    media_dir = PROJECT_ROOT / "media" / job_id
+    temp_root = PROJECT_ROOT / "temp" / job_id
+    return media_dir, temp_root
 
 
 def _load_contracts() -> Dict[str, Any]:
@@ -128,10 +138,10 @@ def _build_pipeline_stages() -> list[dict[str, Any]]:
 
             result.append(
                 {
-                    "key": contract_id,        # lo que el frontend enviará como enabledStageKeys
-                    "label": contract_id,      # puedes refinarlo si quieres algo más bonito
-                    "description": group_name, # nombre del bloque (Technical Preparation, etc.)
-                    "index": idx,              # orden global
+                    "key": contract_id,  # lo que el frontend enviará como enabledStageKeys
+                    "label": contract_id,  # puedes refinarlo si quieres algo más bonito
+                    "description": group_name,  # nombre del bloque (Technical Preparation, etc.)
+                    "index": idx,  # orden global
                     "mediaSubdir": None,
                     "updatesCurrentDir": True,
                     "previewMixRelPath": preview_rel_path,
@@ -242,6 +252,10 @@ async def mix_tracks(
     space_depth_bus_styles_json: Optional[str] = Form(None),
     upload_mode: str = Form("song"),  # <-- "song" o "stems"
 ):
+    """
+    Endpoint "clásico": un solo POST con todos los WAV.
+    Se mantiene para compatibilidad y se usa cuando solo hay 1 fichero.
+    """
     request_start_ts = time.time()
     request_start_iso = datetime.utcnow().isoformat()
 
@@ -269,7 +283,13 @@ async def mix_tracks(
     # 1b) Persistir modo de subida (song/stems)
     # -----------------------------
     raw_mode = (upload_mode or "song").strip().lower()
-    is_stems_upload = raw_mode in {"stems", "upload_stems", "stems_true", "true", "1"}
+    is_stems_upload = raw_mode in {
+        "stems",
+        "upload_stems",
+        "stems_true",
+        "true",
+        "1",
+    }
 
     normalized_mode = "stems" if is_stems_upload else "song"
 
@@ -434,6 +454,305 @@ async def mix_tracks(
     after_enqueue_ts = time.time()
     logger.info(
         "[/mix] Celery: tarea encolada job_id=%s celery_id=%s state=%s. Latencia total desde HTTP=%.3fs",
+        job_id,
+        result.id,
+        result.state,
+        after_enqueue_ts - request_start_ts,
+    )
+
+    return {"jobId": job_id}
+
+
+# -------------------------------------------------------------------
+# Flujo multi-step para subidas paralelas
+# -------------------------------------------------------------------
+
+
+@app.post("/mix/init")
+async def init_mix_job(
+    stages_json: Optional[str] = Form(None),
+    stem_profiles_json: Optional[str] = Form(None),
+    space_depth_bus_styles_json: Optional[str] = Form(None),
+    upload_mode: str = Form("song"),
+):
+    """
+    Inicializa un job SIN subir todavía los WAV.
+    Se usa para subidas en paralelo:
+      1) /mix/init  -> crea jobId, guarda config/perfiles
+      2) /mix/{job_id}/upload-file (varias veces en paralelo)
+      3) /mix/{job_id}/start -> encola Celery
+    """
+    request_start_ts = time.time()
+    request_start_iso = datetime.utcnow().isoformat()
+
+    logger.info(
+        "[/mix/init] HTTP request recibido a %s (UTC). upload_mode=%s",
+        request_start_iso,
+        upload_mode,
+    )
+
+    job_id, media_dir, temp_root = _create_job_dirs()
+    logger.info(
+        "[/mix/init] Nuevo job creado. job_id=%s media_dir=%s temp_root=%s",
+        job_id,
+        media_dir,
+        temp_root,
+    )
+
+    _write_initial_job_status(job_id, temp_root)
+
+    job_root = temp_root
+    work_dir = job_root / "work"
+    work_dir.mkdir(parents=True, exist_ok=True)
+
+    # Modo de subida
+    raw_mode = (upload_mode or "song").strip().lower()
+    is_stems_upload = raw_mode in {
+        "stems",
+        "upload_stems",
+        "stems_true",
+        "true",
+        "1",
+    }
+    normalized_mode = "stems" if is_stems_upload else "song"
+    upload_info_path = work_dir / "upload_mode.json"
+    upload_info = {
+        "upload_mode": normalized_mode,
+        "stems": is_stems_upload,
+    }
+    upload_info_path.write_text(
+        json.dumps(upload_info, indent=2, ensure_ascii=False),
+        encoding="utf-8",
+    )
+    logger.info(
+        "[/mix/init] upload_mode.json escrito para job_id=%s: %s (stems=%s)",
+        job_id,
+        normalized_mode,
+        is_stems_upload,
+    )
+
+    # Perfiles de stems
+    raw_profiles: List[Dict[str, str]] = []
+    if stem_profiles_json:
+        try:
+            parsed = json.loads(stem_profiles_json)
+            if isinstance(parsed, list):
+                for item in parsed:
+                    if not isinstance(item, dict):
+                        continue
+                    name = str(item.get("name") or "").strip()
+                    profile = str(item.get("profile") or "").strip() or "auto"
+                    if name:
+                        raw_profiles.append({"name": name, "profile": profile})
+            logger.info(
+                "[/mix/init] Perfiles de stems parseados para job_id=%s: %d entradas",
+                job_id,
+                len(raw_profiles),
+            )
+        except Exception as exc:
+            logger.warning(
+                "[/mix/init] No se pudo parsear stem_profiles_json=%r: %s",
+                stem_profiles_json,
+                exc,
+            )
+
+    if raw_profiles:
+        profiles_path = work_dir / "stem_profiles.json"
+        profiles_path.write_text(
+            json.dumps(raw_profiles, indent=2, ensure_ascii=False),
+            encoding="utf-8",
+        )
+        logger.info(
+            "[/mix/init] stem_profiles.json escrito para job_id=%s con %d perfiles",
+            job_id,
+            len(raw_profiles),
+        )
+
+    # Space/depth styles
+    if space_depth_bus_styles_json:
+        try:
+            parsed = json.loads(space_depth_bus_styles_json)
+            if isinstance(parsed, dict):
+                sd_path = work_dir / "space_depth_bus_styles.json"
+                sd_path.write_text(
+                    json.dumps(parsed, indent=2, ensure_ascii=False),
+                    encoding="utf-8",
+                )
+                logger.info(
+                    "[/mix/init] space_depth_bus_styles.json escrito para job_id=%s",
+                    job_id,
+                )
+        except Exception as exc:
+            logger.warning(
+                "[/mix/init] No se pudo parsear space_depth_bus_styles_json=%r: %s",
+                space_depth_bus_styles_json,
+                exc,
+            )
+
+    # Stages habilitadas
+    enabled_stage_keys: Optional[List[str]] = None
+    if stages_json:
+        try:
+            parsed = json.loads(stages_json)
+            if isinstance(parsed, list):
+                enabled_stage_keys = [str(k) for k in parsed]
+            logger.info(
+                "[/mix/init] stages_json parseado para job_id=%s: %d stages habilitadas",
+                job_id,
+                len(enabled_stage_keys or []),
+            )
+        except Exception as exc:
+            logger.warning(
+                "[/mix/init] No se pudo parsear stages_json=%r: %s",
+                stages_json,
+                exc,
+            )
+    else:
+        logger.info(
+            "[/mix/init] No se recibió stages_json; se usarán las stages por defecto para job_id=%s",
+            job_id,
+        )
+
+    if enabled_stage_keys is not None:
+        enabled_path = work_dir / "enabled_stages.json"
+        enabled_path.write_text(
+            json.dumps(enabled_stage_keys, indent=2, ensure_ascii=False),
+            encoding="utf-8",
+        )
+        logger.info(
+            "[/mix/init] enabled_stages.json escrito para job_id=%s con %d entradas",
+            job_id,
+            len(enabled_stage_keys),
+        )
+
+    elapsed = time.time() - request_start_ts
+    logger.info(
+        "[/mix/init] Preparación completada para job_id=%s en %.3fs. Esperando uploads.",
+        job_id,
+        elapsed,
+    )
+
+    return {"jobId": job_id}
+
+
+@app.post("/mix/{job_id}/upload-file")
+async def upload_file_for_job(
+    job_id: str,
+    file: UploadFile = File(...),
+):
+    """
+    Sube un solo WAV asociado a un job existente.
+    Se puede llamar varias veces en paralelo desde el frontend.
+    """
+    media_dir, temp_root = _get_job_dirs(job_id)
+    if not media_dir.exists() or not temp_root.exists():
+        raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
+
+    media_dir.mkdir(parents=True, exist_ok=True)
+
+    dest_path = media_dir / file.filename
+    contents = await file.read()
+    with dest_path.open("wb") as out:
+        out.write(contents)
+
+    logger.info(
+        "[/mix/%s/upload-file] Archivo subido -> %s (%d bytes)",
+        job_id,
+        dest_path,
+        len(contents),
+    )
+
+    return {"ok": True, "filename": file.filename, "bytes": len(contents)}
+
+
+@app.post("/mix/{job_id}/start")
+async def start_mix_job(job_id: str):
+    """
+    Lanza la tarea Celery para un job ya inicializado y con WAVs subidos.
+    Lee configuración (stages, perfiles) desde los JSON en temp/<job_id>/work.
+    """
+    request_start_ts = time.time()
+
+    media_dir, temp_root = _get_job_dirs(job_id)
+    if not media_dir.exists() or not temp_root.exists():
+        raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
+
+    job_root = temp_root
+    work_dir = job_root / "work"
+
+    # Cargar enabled_stages si existen
+    enabled_stage_keys: Optional[List[str]] = None
+    enabled_path = work_dir / "enabled_stages.json"
+    if enabled_path.exists():
+        try:
+            parsed = json.loads(enabled_path.read_text(encoding="utf-8"))
+            if isinstance(parsed, list):
+                enabled_stage_keys = [str(k) for k in parsed]
+            logger.info(
+                "[/mix/%s/start] enabled_stages.json cargado con %d entradas",
+                job_id,
+                len(enabled_stage_keys or []),
+            )
+        except Exception as exc:
+            logger.warning(
+                "[/mix/%s/start] No se pudo leer enabled_stages.json: %s",
+                job_id,
+                exc,
+            )
+
+    # Cargar stem_profiles.json -> profiles_by_name
+    profiles_by_name: Dict[str, str] = {}
+    stem_profiles_path = work_dir / "stem_profiles.json"
+    if stem_profiles_path.exists():
+        try:
+            raw_profiles = json.loads(
+                stem_profiles_path.read_text(encoding="utf-8")
+            )
+            if isinstance(raw_profiles, list):
+                for item in raw_profiles:
+                    if not isinstance(item, dict):
+                        continue
+                    name = str(item.get("name") or "").strip()
+                    profile = str(item.get("profile") or "").strip() or "auto"
+                    if name:
+                        profiles_by_name[name] = profile
+            logger.info(
+                "[/mix/%s/start] stem_profiles.json cargado con %d perfiles",
+                job_id,
+                len(profiles_by_name),
+            )
+        except Exception as exc:
+            logger.warning(
+                "[/mix/%s/start] No se pudo leer stem_profiles.json: %s",
+                job_id,
+                exc,
+            )
+
+    # Encolar tarea Celery
+    try:
+        result = run_full_pipeline_task.apply_async(
+            args=[
+                job_id,
+                str(media_dir),
+                str(temp_root),
+                enabled_stage_keys,
+                profiles_by_name,
+            ],
+            task_id=job_id,
+        )
+    except Exception as exc:
+        logger.exception(
+            "[/mix/%s/start] Error en apply_async",
+            job_id,
+        )
+        raise HTTPException(
+            status_code=500,
+            detail="No se pudo encolar la tarea de mezcla",
+        ) from exc
+
+    after_enqueue_ts = time.time()
+    logger.info(
+        "[/mix/%s/start] Celery: tarea encolada celery_id=%s state=%s. Latencia total desde HTTP=%.3fs",
         job_id,
         result.id,
         result.state,
