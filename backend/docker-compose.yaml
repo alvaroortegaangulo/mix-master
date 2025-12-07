@@ -4,7 +4,12 @@ services:
   redis:
     image: redis:7-alpine
     restart: unless-stopped
-    command: ["redis-server", "--appendonly", "no"]
+    command: ["redis-server", "--appendonly", "no", "--bind", "0.0.0.0"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     networks:
       - app-net
 
@@ -18,7 +23,8 @@ services:
       MPLCONFIGDIR: /tmp/mplconfig
       XDG_CACHE_HOME: /tmp/.cache        # para Fontconfig
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
     # Si necesitas exponer el backend directamente:
     ports:
       - "8000:8000"
@@ -49,7 +55,8 @@ services:
       MIX_TEMP_ROOT: /dev/shm/mix-master/temp
       XDG_CACHE_HOME: /tmp/.cache
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true

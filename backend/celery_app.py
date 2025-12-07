@@ -52,12 +52,18 @@ celery_app.conf.update(
     # No quedarnos 30+ minutos reintentando si el broker no está listo.
     broker_connection_retry_on_startup=False,
 
+    # Heartbeat to detect lost connections (importante en entornos con desconexiones)
+    broker_heartbeat=10,
+
     # Ajustar reintentos de transporte (cuando pierde el broker en caliente)
     broker_transport_options={
         "max_retries": 5,
         "interval_start": 0,
         "interval_step": 2,
         "interval_max": 10,
+        # Timeouts para evitar hangs si la red/DNS fallan
+        "socket_timeout": 30,
+        "socket_connect_timeout": 30,
     },
 
     # Para que no acapare demasiadas tareas por proceso
