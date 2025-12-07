@@ -1,5 +1,3 @@
-# C:\mix-master\backend\src\stages\S1_KEY_DETECTION.py
-
 from __future__ import annotations
 from utils.logger import logger
 
@@ -7,60 +5,27 @@ import sys
 from pathlib import Path
 from typing import Dict, Any, List
 
-# --- hack sys.path para ejecutar como script suelto desde stage.py ---
+# --- hack sys.path ---
 THIS_DIR = Path(__file__).resolve().parent
-SRC_DIR = THIS_DIR.parent  # .../src
+SRC_DIR = THIS_DIR.parent
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-import json  # noqa: E402
-import os  # noqa: E402
+try:
+    from context import PipelineContext
+except ImportError:
+    pass
 
-from utils.analysis_utils import get_temp_dir
-
-
-def load_analysis(contract_id: str) -> Dict[str, Any]:
-    """
-    Carga el JSON de análisis generado por analysis\\S1_KEY_DETECTION.py.
-    """
-    temp_dir = get_temp_dir(contract_id, create=False)
-    analysis_path = temp_dir / f"analysis_{contract_id}.json"
-
-    if not analysis_path.exists():
-        raise FileNotFoundError(f"No se encuentra el análisis en {analysis_path}")
-
-    with analysis_path.open("r", encoding="utf-8") as f:
-        data = json.load(f)
-
-    return data
-
-
-# ---------------------------------------------------------------------
-# ---------------------------------------------------------------------
 def _format_stem_summary(stem: Dict[str, Any]) -> str:
-    """
-    Devuelve una línea de texto con el resumen de un stem,
-    pensada para imprimirse en el listado del stage.
-    """
     file_name = stem.get("file_name")
     inst_profile = stem.get("instrument_profile")
     return f"      * {file_name} [{inst_profile}]"
 
-
-def main() -> None:
-    """
-    Stage S1_KEY_DETECTION:
-      - Lee analysis_S1_KEY_DETECTION.json.
-      - Muestra por pantalla la tonalidad detectada.
-      - No modifica stems (passthrough), para integrarse con stage.py (copy_stems + mixdown_stems).
-    """
-    if len(sys.argv) < 2:
-        logger.logger.info("Uso: python S1_KEY_DETECTION.py <CONTRACT_ID>")
-        sys.exit(1)
-
-    contract_id = sys.argv[1]  # "S1_KEY_DETECTION"
-
-    analysis = load_analysis(contract_id)
+def process(context: PipelineContext, contract_id: str) -> bool:
+    analysis = context.analysis_results.get(contract_id)
+    if not analysis:
+        logger.logger.error(f"[S1_KEY_DETECTION] No analysis found for {contract_id}")
+        return False
 
     session: Dict[str, Any] = analysis.get("session", {})
     stems: List[Dict[str, Any]] = analysis.get("stems", [])
@@ -71,7 +36,7 @@ def main() -> None:
     confidence = session.get("key_detection_confidence")
     scale_pcs = session.get("scale_pitch_classes")
 
-    logger.logger.info("[S1_KEY_DETECTION] Resumen de análisis:")
+    logger.logger.info("[S1_KEY_DETECTION] Resumen de análisis (In-Memory):")
     logger.logger.info(f"  - Tonalidad global: {key_name} (modo={key_mode}, root_pc={key_root_pc})")
     logger.logger.info(f"  - Confianza: {confidence}")
     logger.logger.info(f"  - Escala (pitch classes, C=0): {scale_pcs}")
@@ -84,13 +49,5 @@ def main() -> None:
     else:
         logger.logger.info("      (ningún stem detectado en el análisis)")
 
-    # No tocamos audio. stage.py hará:
-    #   - re-análisis
-    #   - check_metrics_limits (sin check específico -> éxito por defecto)
-    #   - copy_stems + mixdown_stems para el siguiente contrato.
-
     logger.logger.info("[S1_KEY_DETECTION] Stage completado (passthrough).")
-
-
-if __name__ == "__main__":
-    main()
+    return True

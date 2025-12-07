@@ -40,6 +40,9 @@ def _load_analysis(contract_id: str) -> Dict[str, Any]:
     return data
 
 def _load_analysis_with_context(context: PipelineContext) -> Dict[str, Any]:
+    if context.stage_id in context.analysis_results:
+        return context.analysis_results[context.stage_id]
+
     temp_dir = context.get_stage_dir()
     analysis_path = temp_dir / f"analysis_{context.stage_id}.json"
 
