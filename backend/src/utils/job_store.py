@@ -68,3 +68,21 @@ class JobStore:
         except Exception as e:
             logger.error(f"Redis get_config error: {e}")
         return {}
+
+    def save_input_file(self, job_id: str, filename: str, data: bytes) -> None:
+        """Saves an input file (e.g. stem) to Redis."""
+        if not self.r: return
+        try:
+            self.r.hset(f"job:{job_id}:inputs", filename, data)
+            self.r.expire(f"job:{job_id}:inputs", 86400)
+        except Exception as e:
+            logger.error(f"Redis save_input_file error: {e}")
+
+    def get_input_files(self, job_id: str) -> Dict[bytes, bytes]:
+        """Returns a dict {filename_bytes: file_content_bytes}."""
+        if not self.r: return {}
+        try:
+            return self.r.hgetall(f"job:{job_id}:inputs")
+        except Exception as e:
+            logger.error(f"Redis get_input_files error: {e}")
+            return {}
