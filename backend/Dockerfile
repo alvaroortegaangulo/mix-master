@@ -45,4 +45,7 @@ USER app
 
 EXPOSE 8000
 
+# Evita que Matplotlib intente construir la caché de fuentes en el arranque
+ENV MPLCONFIGDIR=/tmp/matplotlib
+
 CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "8000"]
