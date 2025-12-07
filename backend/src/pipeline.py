@@ -11,6 +11,7 @@ from typing import Callable, Dict, Any, List, Optional
 from .stages.stage import run_stage, set_active_contract_sequence
 from .utils.analysis_utils import get_temp_dir
 from .context import PipelineContext
+from .utils.audio_memory import load_stems_into_memory, perform_mixdown_in_memory, save_memory_to_disk
 
 logger = logging.getLogger(__name__)
 
@@ -49,46 +50,12 @@ def _get_ordered_contract_ids(contracts: Dict[str, Any]) -> List[str]:
 
     return ordered
 
-
-# -------------------------------------------------------------------
-# Versión CLI "legacy": sin job_id explícito
-# -------------------------------------------------------------------
-
-def _run_copy_and_mixdown(src_stage: str, dst_stage: str) -> None:
-    """
-    Versión antigua/CLI: copia stems de temp/<src_stage> -> temp/<dst_stage>
-    y hace mixdown de temp/<src_stage> a full_song.wav.
-
-    Se deja por compatibilidad. No es job-aware.
-    """
-    base_dir = Path(__file__).resolve().parent      # .../src
-    utils_dir = base_dir / "utils"
-    copy_script = utils_dir / "copy_stems.py"
-    mixdown_script = utils_dir / "mixdown_stems.py"
-
-    # 1) Copiar stems src -> dst
-    subprocess.run(
-        [sys.executable, str(copy_script), src_stage, dst_stage],
-        check=False,
-    )
-
-    # 2) Mixdown de los stems en la carpeta origen
-    subprocess.run(
-        [sys.executable, str(mixdown_script), src_stage],
-        check=False,
-    )
-
-
-def _write_session_config(stage_dir: Path, profiles_by_name: Optional[Dict[str, str]]) -> None:
+def _write_session_config(stage_dir: Path, profiles_by_name: Optional[Dict[str, str]], context: PipelineContext) -> None:
     """
     Genera session_config.json en stage_dir con los instrument_profile
-    seleccionados en frontend. Se basa en los wav presentes en stage_dir.
+    seleccionados en frontend. Se basa en los stems en memoria.
     """
     def _load_profiles_from_work() -> Dict[str, str]:
-        """
-        Si el mapping no llega por argumento (p.ej. por cambios de API),
-        intentamos cargarlo del fichero persistido en work/stem_profiles.json.
-        """
         work_profiles = stage_dir.parent / "work" / "stem_profiles.json"
         if not work_profiles.exists():
             return {}
@@ -109,10 +76,6 @@ def _write_session_config(stage_dir: Path, profiles_by_name: Optional[Dict[str, 
         return mapping
 
     def _load_space_depth_bus_styles() -> Dict[str, str]:
-        """
-        Recupera estilos por bus seleccionados en frontend (Space/Depth)
-        si existen en work/space_depth_bus_styles.json.
-        """
         path = stage_dir.parent / "work" / "space_depth_bus_styles.json"
         if not path.exists():
             return {}
@@ -123,20 +86,15 @@ def _write_session_config(stage_dir: Path, profiles_by_name: Optional[Dict[str, 
             return {}
 
     try:
-        # Prioridad: mapping recibido -> fallback al persistido en work/
         profiles_map = dict(profiles_by_name or {})
         if not profiles_map:
             profiles_map = _load_profiles_from_work()
 
         space_depth_bus_styles = _load_space_depth_bus_styles()
 
-        wavs = [
-            p.name
-            for p in stage_dir.glob("*.wav")
-            if p.is_file() and p.name.lower() != "full_song.wav"
-        ]
+        # Iterate over memory keys
         stems = []
-        for name in sorted(wavs):
+        for name in sorted(context.audio_stems.keys()):
             prof = profiles_map.get(name, "auto")
             stems.append({"file_name": name, "instrument_profile": prof})
 
@@ -149,57 +107,12 @@ def _write_session_config(stage_dir: Path, profiles_by_name: Optional[Dict[str, 
         cfg_path = stage_dir / "session_config.json"
         cfg_path.parent.mkdir(parents=True, exist_ok=True)
         cfg_path.write_text(json.dumps(cfg, indent=2, ensure_ascii=False), encoding="utf-8")
+
+        # Also store in context metadata
+        context.metadata["session_config"] = cfg
+
     except Exception as exc:
         logger.warning("[pipeline] No se pudo escribir session_config en %s: %s", stage_dir, exc)
-
-
-def _run_contracts_global(enabled_stage_keys: Optional[List[str]] = None) -> None:
-    """
-    Versión global (sin job_id) basada en contracts.json.
-
-    Recorre los contratos definidos en struct/contracts.json y llama a run_stage.
-    Si enabled_stage_keys no es None, interpreta que contiene contract_ids
-    (S0_SESSION_FORMAT, S1_STEM_DC_OFFSET, etc.) y filtra en base a eso.
-    """
-    contracts = _load_contracts()
-    all_contract_ids = _get_ordered_contract_ids(contracts)
-
-    if enabled_stage_keys:
-        enabled_set = set(enabled_stage_keys)
-        contract_ids = [cid for cid in all_contract_ids if cid in enabled_set]
-    else:
-        contract_ids = all_contract_ids
-
-    # Propagamos la secuencia efectiva al módulo stage.py para que
-    # _get_next_contract_id pueda copiar siempre al siguiente contrato habilitado.
-    set_active_contract_sequence(contract_ids)
-
-    for contract_id in contract_ids:
-        run_stage(contract_id)
-
-
-def run_pipeline(
-    enabled_stage_keys: Optional[List[str]] = None,
-) -> None:
-    """
-    Versión CLI de toda la vida (no job-aware explícito):
-
-      - Asume que ya tienes stems en temp/S0_MIX_ORIGINAL.
-      - Copia S0_MIX_ORIGINAL -> S0_SESSION_FORMAT y hace mixdown.
-      - Ejecuta todos los contracts de struct/contracts.json (o filtrados).
-    """
-    logger.info(
-        "[pipeline] run_pipeline (modo CLI), enabled_stage_keys=%s",
-        enabled_stage_keys,
-    )
-
-    # Paso inicial "legacy"
-    src_stage = "S0_MIX_ORIGINAL"
-    dst_stage = "S0_SEPARATE_STEMS"
-
-    _run_copy_and_mixdown(src_stage, dst_stage)
-    _run_contracts_global(enabled_stage_keys=enabled_stage_keys)
-
 
 # -------------------------------------------------------------------
 # Versión job-aware para Celery: run_pipeline_for_job
@@ -215,20 +128,8 @@ def run_pipeline_for_job(
 ) -> None:
     """
     Pipeline para un job concreto (usado por Celery):
-
-      - Copia los stems subidos (media_dir) a S0_MIX_ORIGINAL del job.
-      - Hace mixdown de S0_MIX_ORIGINAL (full_song.wav original).
-      - Copia S0_MIX_ORIGINAL -> S0_SESSION_FORMAT.
-      - Recorre los contratos definidos en contracts.json en orden.
-      - Opcionalmente filtra por enabled_stage_keys (lista de contract_ids).
-      - Antes de ejecutar cada contrato llama a progress_cb(stage_index, total_stages, stage_key, message)
-        indicando el stage que está EN PROGRESO.
+    IN-MEMORY MODE
     """
-    base_dir = Path(__file__).resolve().parent      # .../src
-
-    utils_dir = base_dir / "utils"
-    copy_script = utils_dir / "copy_stems.py"
-    mixdown_script = utils_dir / "mixdown_stems.py"
 
     logger.info(
         "[pipeline] run_pipeline_for_job: job_id=%s media_dir=%s temp_root=%s enabled_stage_keys=%s",
@@ -238,60 +139,58 @@ def run_pipeline_for_job(
         enabled_stage_keys,
     )
 
-    # ------------------------------------------------------------------
-    # 0) Preparar S0_MIX_ORIGINAL para este job
-    # ------------------------------------------------------------------
-    # get_temp_dir usa MIX_JOB_ID para resolver temp/<job_id>/S0_MIX_ORIGINAL
-    s0_original_dir = get_temp_dir("S0_MIX_ORIGINAL", create=True)
-
-    # Limpiar cualquier resto previo dentro de S0_MIX_ORIGINAL
-    for p in s0_original_dir.glob("*"):
-        if p.is_file():
-            p.unlink()
-        elif p.is_dir():
-            shutil.rmtree(p, ignore_errors=True)
-
-    # Copiar stems desde media_dir a S0_MIX_ORIGINAL (solo WAV/AIF/FLAC)
-    audio_exts = {".wav", ".aif", ".aiff", ".flac"}
-    for src in media_dir.iterdir():
-        if not src.is_file():
-            continue
-        if src.suffix.lower() not in audio_exts:
-            continue
-        dst = s0_original_dir / src.name
-        shutil.copy2(src, dst)
-        logger.info("[pipeline] Copiado stem %s -> %s", src.name, dst)
-
-    # Persistir session_config con los perfiles seleccionados
-    _write_session_config(s0_original_dir, profiles_by_name)
-
-    # ------------------------------------------------------------------
-    # 1) Mixdown de S0_MIX_ORIGINAL (full_song.wav original)
-    # ------------------------------------------------------------------
-    logger.info("[pipeline] Mixdown de S0_MIX_ORIGINAL...")
-    subprocess.run(
-        [sys.executable, str(mixdown_script), "S0_MIX_ORIGINAL"],
-        check=False,
+    # Crear contexto único para todo el job con audio en memoria
+    context = PipelineContext(
+        stage_id="S0_MIX_ORIGINAL",
+        job_id=job_id,
+        temp_root=temp_root
     )
 
     # ------------------------------------------------------------------
-    # 2) Copiar stems a S0_SESSION_FORMAT
+    # 0) Cargar Stems en Memoria (S0_MIX_ORIGINAL equivalent)
     # ------------------------------------------------------------------
-    logger.info("[pipeline] Copiando stems S0_MIX_ORIGINAL -> S0_SEPARATE_STEMS...")
-    subprocess.run(
-        [sys.executable, str(copy_script), "S0_MIX_ORIGINAL", "S0_SEPARATE_STEMS"],
-        check=False,
-    )
+    logger.info("[pipeline] Loading stems into memory from media_dir...")
+    load_stems_into_memory(context, media_dir)
+
+    # We need to simulate the file structure for S0_MIX_ORIGINAL because frontend might expect it?
+    # Or just write session_config.
+    # The frontend downloads files from /files/job_id/stage_id/...
+    # If we want the frontend to work, we MUST write files to disk at some point?
+    # The user said "keep in memory to optimize processing".
+    # Typically, only the FINAL result needs to be on disk, or intermediate artifacts for debugging/reporting.
+    # The report viewer shows images and maybe audio previews.
+    # If the user wants previews for every stage, we have to write them.
+    # But writing WAVs is slow.
+    # Maybe we only write MP3s or nothing?
+    # Assuming we proceed with full in-memory, and only write JSONs/Images.
+
+    # However, legacy code writes session_config.
+    s0_original_dir = context.get_stage_dir("S0_MIX_ORIGINAL")
+    s0_original_dir.mkdir(parents=True, exist_ok=True)
+    _write_session_config(s0_original_dir, profiles_by_name, context)
 
     # ------------------------------------------------------------------
-    # 3) Construir lista de contratos desde contracts.json
+    # 1) Mixdown Inicial
+    # ------------------------------------------------------------------
+    logger.info("[pipeline] Mixdown inicial (in-memory)...")
+    perform_mixdown_in_memory(context)
+
+    # Save initial mixdown for preview?
+    # save_memory_to_disk(context, s0_original_dir, save_stems=False, save_mixdown=True)
+
+    # ------------------------------------------------------------------
+    # 2) "Copy" to S0_SEPARATE_STEMS
+    # ------------------------------------------------------------------
+    # In memory, this is just changing the stage_id reference in the loop.
+    # But we should ensure session_config is available if S0_SEPARATE_STEMS needs it.
+
+    # ------------------------------------------------------------------
+    # 3) Construir lista de contratos
     # ------------------------------------------------------------------
     contracts = _load_contracts()
     all_contract_ids = _get_ordered_contract_ids(contracts)
 
     if enabled_stage_keys:
-        # IMPORTANTE: aquí interpretamos enabled_stage_keys como lista de contract_ids,
-        # por ejemplo: ["S1_STEM_DC_OFFSET", "S1_STEM_WORKING_LOUDNESS", ...].
         enabled_set = set(enabled_stage_keys)
         contract_ids = [cid for cid in all_contract_ids if cid in enabled_set]
     else:
@@ -299,37 +198,20 @@ def run_pipeline_for_job(
 
     total_stages = len(contract_ids)
     if total_stages == 0:
-        logger.warning(
-            "[pipeline] No hay contratos a ejecutar (enabled_stage_keys=%s).",
-            enabled_stage_keys,
-        )
+        logger.warning("[pipeline] No hay contratos a ejecutar.")
         return
 
-    # Propagar la secuencia efectiva a stage.py para que las copias
-    # de stems vayan siempre al siguiente contrato HABILITADO y no a
-    # cualquier contrato del pipeline completo.
     set_active_contract_sequence(contract_ids)
 
-    # Callback inicial de progreso (antes de cualquier stage)
     if progress_cb is not None:
-        progress_cb(
-            0,
-            total_stages,
-            "initializing",
-            "Inicializando pipeline de mezcla...",
-        )
+        progress_cb(0, total_stages, "initializing", "Inicializando pipeline de mezcla...")
 
     # ------------------------------------------------------------------
     # 4) Ejecutar cada contrato en orden
     # ------------------------------------------------------------------
-    # Crear contexto único para todo el job
-    context = PipelineContext(
-        stage_id="", # Se actualizará en cada iteración
-        job_id=job_id,
-        temp_root=temp_root
-    )
-
     for idx, contract_id in enumerate(contract_ids, start=1):
+        context.stage_id = contract_id
+
         logger.info(
             "[pipeline] Ejecutando contrato %s (%d/%d)",
             contract_id,
@@ -337,8 +219,6 @@ def run_pipeline_for_job(
             total_stages,
         )
 
-        # Avisamos ANTES de ejecutar el stage para que el frontend
-        # muestre el stage que está EN PROGRESO.
         if progress_cb is not None:
             progress_cb(
                 idx,
@@ -347,10 +227,17 @@ def run_pipeline_for_job(
                 f"Running stage {contract_id}...",
             )
 
-        # Ejecuta análisis, stage y check con reintentos, copia al siguiente contrato, etc.
         run_stage(contract_id, context=context)
+
+    # Finally, maybe save the result of the last stage?
+    # The last stage is typically mastering.
+    # The user usually downloads the result from the last executed stage.
+    last_stage = contract_ids[-1]
+    last_stage_dir = context.get_stage_dir(last_stage)
+    logger.info(f"[pipeline] Saving final result to {last_stage_dir}...")
+    save_memory_to_disk(context, last_stage_dir, save_stems=True, save_mixdown=True)
 
 
 if __name__ == "__main__":
-    # CLI simple, sin job_id; útil si quieres probar el pipeline en local.
-    run_pipeline()
+    # CLI simple no longer supported without hydration
+    pass

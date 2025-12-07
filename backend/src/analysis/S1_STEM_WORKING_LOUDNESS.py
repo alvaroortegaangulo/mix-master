@@ -1,9 +1,9 @@
 from utils.logger import logger
-# C:\mix-master\backend\src\analysis\S1_STEM_WORKING_LOUDNESS.py
-
 import sys
 from pathlib import Path
 from typing import Dict, Any, List
+import json
+import numpy as np
 
 # --- hack para poder importar utils cuando se ejecuta como script ---
 THIS_DIR = Path(__file__).resolve().parent
@@ -11,151 +11,109 @@ SRC_DIR = THIS_DIR.parent  # .../src
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-import json  # noqa: E402
-import os  # noqa: E402
+try:
+    from context import PipelineContext
+except ImportError:
+    PipelineContext = None # type: ignore
 
-import numpy as np  # noqa: E402
-import soundfile as sf  # noqa: E402
-
-from utils.analysis_utils import (  # noqa: E402
+from utils.analysis_utils import (
     load_contract,
     get_temp_dir,
-    load_audio_mono,
     compute_peak_dbfs,
     compute_integrated_loudness_lufs,
-    sf_read_limited,
 )
-from utils.session_utils import (  # noqa: E402
-    load_session_config,
+from utils.session_utils import (
+    load_session_config_memory,
     infer_bus_target,
 )
 
 
-def analyze_stem(stem_path: Path) -> Dict[str, Any]:
-    """
-    Analiza loudness de trabajo por stem:
-      - LUFS integrado
-      - true peak aprox. en dBFS
-      - samplerate
-    """
-    mono, sr = load_audio_mono(stem_path)
+def analyze_stem_memory(name: str, data: np.ndarray, sr: int, logical_path: str) -> Dict[str, Any]:
+    if data.ndim > 1:
+        mono = np.mean(data, axis=1)
+    else:
+        mono = data
 
     integrated_lufs = compute_integrated_loudness_lufs(mono, sr)
     true_peak_dbfs = compute_peak_dbfs(mono)
 
     return {
-        "file_name": stem_path.name,
-        "file_path": str(stem_path),
+        "file_name": name,
+        "file_path": logical_path,
         "samplerate_hz": sr,
         "integrated_lufs": integrated_lufs,
         "true_peak_dbfs": true_peak_dbfs,
     }
 
 
-def compute_mixbus_peak_dbfs(stem_paths: List[Path]) -> float:
-    """
-    Calcula el pico del mix preliminar (suma unity de todos los stems).
-    Asume que todos los stems tienen mismo samplerate y nº de canales
-    (esto debería estar garantizado por S0_SESSION_FORMAT).
-    """
-    if not stem_paths:
+def compute_mixbus_peak_memory(context: PipelineContext) -> float:
+    # Use pre-calculated mixdown if available and valid?
+    # No, we want peak of sum of CURRENT stems.
+    # context.audio_mixdown might be stale if we modified stems?
+    # Actually, mixdown_stems.py runs before analysis in stage.py...
+    # Wait, stage.py runs mixdown -> pre-analysis -> stage -> post-analysis -> mixdown.
+    # So context.audio_mixdown SHOULD be up to date.
+
+    if context.audio_mixdown is None:
         return float("-inf")
 
-    data_list = []
-    sr_ref = None
-    ch_ref = None
-
-    for p in stem_paths:
-        data, sr = sf_read_limited(p, always_2d=True)  # (n_samples, n_channels)
-        data = data.astype(np.float32)
-
-        if sr_ref is None:
-            sr_ref = sr
-            ch_ref = data.shape[1]
-        # Para simplificar, asumimos que el resto coincide; si no, sería
-        # el momento de añadir checks o resample.
-
-        data_list.append(data)
-
-    max_len = max(d.shape[0] for d in data_list)
-    mix = np.zeros((max_len, ch_ref), dtype=np.float32)
-
-    for d in data_list:
-        n = d.shape[0]
-        mix[:n, :] += d
-
-    peak = float(np.max(np.abs(mix)))
+    peak = float(np.max(np.abs(context.audio_mixdown)))
     if peak <= 0.0:
         return float("-inf")
-
     return float(20.0 * np.log10(peak))
 
 
-def main() -> None:
+def process(context: PipelineContext, *args) -> bool:
     """
-    Análisis para el contrato S1_STEM_WORKING_LOUDNESS.
-
-    Uso esperado desde stage.py:
-        python analysis/S1_STEM_WORKING_LOUDNESS.py S1_STEM_WORKING_LOUDNESS
+    IN-MEMORY analysis for S1_STEM_WORKING_LOUDNESS
     """
-    if len(sys.argv) < 2:
-        logger.logger.info("Uso: python S1_STEM_WORKING_LOUDNESS.py <CONTRACT_ID>")
-        sys.exit(1)
-
-    contract_id = sys.argv[1]  # "S1_STEM_WORKING_LOUDNESS"
-
-    # 1) Cargar contrato y directorio temp/<contract_id>
+    contract_id = context.stage_id
     contract = load_contract(contract_id)
     metrics: Dict[str, Any] = contract.get("metrics", {})
     limits: Dict[str, Any] = contract.get("limits", {})
     stage_id: str | None = contract.get("stage_id")
 
-    temp_dir = get_temp_dir(contract_id, create=True)
+    # Load config
+    try:
+        cfg = load_session_config_memory(context, contract_id)
+    except Exception:
+        cfg = {"style_preset": "Unknown", "instrument_by_file": {}}
 
-    # 2) Cargar config de sesión (instrument_profile y style_preset)
-    cfg = load_session_config(contract_id)
-    style_preset = cfg["style_preset"]
-    instrument_by_file = cfg["instrument_by_file"]
+    style_preset = cfg.get("style_preset", "Unknown")
 
-    # 3) Analizar stems
-    stem_files: List[Path] = sorted(
-        p for p in temp_dir.glob("*.wav")
-        if p.name.lower() != "full_song.wav"
-    )
+    instrument_by_file = {}
+    if "stems" in cfg and isinstance(cfg["stems"], list):
+        for s in cfg["stems"]:
+             instrument_by_file[s.get("file_name")] = s.get("instrument_profile")
+    elif "instrument_by_file" in cfg:
+        instrument_by_file = cfg["instrument_by_file"]
 
     stems_analysis: List[Dict[str, Any]] = []
     lufs_values: List[float] = []
     true_peaks_values: List[float] = []
 
-    if stem_files:
-        results = [analyze_stem(p) for p in stem_files]
-    else:
-        results = []
+    for name in sorted(context.audio_stems.keys()):
+        data = context.audio_stems[name]
+        logical_path = str(context.get_stage_dir() / name)
 
-    for stem_info in results:
-        file_name = stem_info["file_name"]
-        requested_profile = instrument_by_file.get(file_name, "Other")
+        stem_info = analyze_stem_memory(name, data, context.sample_rate, logical_path)
 
+        requested_profile = instrument_by_file.get(name, "Other")
         if str(requested_profile).lower() == "auto":
-            resolved_profile = "Other"
+             resolved_profile = "Other"
         else:
-            resolved_profile = requested_profile
-
-        bus_target = infer_bus_target(resolved_profile)
+             resolved_profile = requested_profile
 
         stem_info["instrument_profile_requested"] = requested_profile
         stem_info["instrument_profile_resolved"] = resolved_profile
-        stem_info["bus_target"] = bus_target
+        stem_info["bus_target"] = infer_bus_target(resolved_profile)
 
         stems_analysis.append(stem_info)
-
         lufs_values.append(stem_info["integrated_lufs"])
         true_peaks_values.append(stem_info["true_peak_dbfs"])
 
-    # 4) Calcular pico del mix preliminar (suma unity)
-    mixbus_peak_dbfs_measured = compute_mixbus_peak_dbfs(stem_files)
+    mixbus_peak_dbfs_measured = compute_mixbus_peak_memory(context)
 
-    # 5) Construir estado de sesión con métricas agregadas
     if true_peaks_values:
         max_true_peak_dbfs = float(max(true_peaks_values))
     else:
@@ -168,28 +126,30 @@ def main() -> None:
         "metrics_from_contract": metrics,
         "limits_from_contract": limits,
         "session": {
-            # Targets típicos que el check podría validar:
-            # - true_peak_per_stem <= -3 dBTP
-            # - mixbus_peak <= -6 dBFS
             "true_peak_per_stem_target_max_dbtp": -3.0,
             "mixbus_peak_target_max_dbfs": -6.0,
-            # Medidas reales:
             "max_true_peak_dbfs_measured": max_true_peak_dbfs,
             "mixbus_peak_dbfs_measured": mixbus_peak_dbfs_measured,
         },
         "stems": stems_analysis,
     }
 
-    # 6) Guardar JSON de análisis
+    # Save Analysis JSON
+    temp_dir = context.get_stage_dir()
+    temp_dir.mkdir(parents=True, exist_ok=True)
     output_path = temp_dir / f"analysis_{contract_id}.json"
-    with output_path.open("w", encoding="utf-8") as f:
-        json.dump(session_state, f, indent=2, ensure_ascii=False)
 
-    logger.logger.info(
-        f"[S1_STEM_WORKING_LOUDNESS] Análisis completado. "
-        f"JSON guardado en: {output_path} (stems={len(stems_analysis)})"
-    )
+    try:
+        with output_path.open("w", encoding="utf-8") as f:
+            json.dump(session_state, f, indent=2, ensure_ascii=False)
+    except Exception as e:
+        logger.error(f"[S1_STEM_WORKING_LOUDNESS] Failed to save analysis JSON: {e}")
+        return False
 
+    return True
+
+def main() -> None:
+    pass
 
 if __name__ == "__main__":
     main()

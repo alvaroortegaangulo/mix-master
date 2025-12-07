@@ -1,11 +1,11 @@
-# C:\mix-master\backend\src\stages\S10_MASTER_FINAL_LIMITS.py
-
 from __future__ import annotations
 from utils.logger import logger
 
 import sys
 from pathlib import Path
 from typing import Dict, Any
+import json
+import numpy as np
 
 # --- hack sys.path para ejecutar como script suelto desde stage.py ---
 THIS_DIR = Path(__file__).resolve().parent
@@ -13,23 +13,25 @@ SRC_DIR = THIS_DIR.parent  # .../src
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-import json  # noqa: E402
-
-import numpy as np  # noqa: E402
-import soundfile as sf  # noqa: E402
-
 from utils.analysis_utils import get_temp_dir
-from utils.loudness_utils import compute_lufs_and_lra  # noqa: E402
-from utils.color_utils import compute_true_peak_dbfs  # noqa: E402
-from utils.mastering_profiles_utils import get_mastering_profile  # noqa: E402
+from utils.loudness_utils import compute_lufs_and_lra
+from utils.color_utils import compute_true_peak_dbfs
+from utils.mastering_profiles_utils import get_mastering_profile
+
+try:
+    from context import PipelineContext
+except ImportError:
+    PipelineContext = None # type: ignore
 
 
-def load_analysis(contract_id: str) -> Dict[str, Any]:
-    """
-    Carga el JSON de análisis generado por analysis\\S10_MASTER_FINAL_LIMITS.py.
-    """
-    temp_dir = get_temp_dir(contract_id, create=False)
-    analysis_path = temp_dir / f"analysis_{contract_id}.json"
+def load_analysis_with_context(context: PipelineContext) -> Dict[str, Any]:
+    stage_id = context.stage_id
+    if context.temp_root:
+        temp_dir = context.temp_root / stage_id
+    else:
+        temp_dir = get_temp_dir(stage_id, create=False)
+
+    analysis_path = temp_dir / f"analysis_{stage_id}.json"
 
     if not analysis_path.exists():
         raise FileNotFoundError(f"No se encuentra el análisis en {analysis_path}")
@@ -41,19 +43,10 @@ def load_analysis(contract_id: str) -> Dict[str, Any]:
 
 
 def _compute_channel_lufs_diff(y: np.ndarray, sr: int) -> Dict[str, float]:
-    """
-    Misma lógica que en el análisis, para recalcular tras micro-ajuste.
-    """
     arr = np.asarray(y, dtype=np.float32)
     if arr.ndim == 1:
         lufs_L, _ = compute_lufs_and_lra(arr, sr)
-        lufs_R = lufs_L
-        diff = 0.0
-        return {
-            "lufs_L": lufs_L,
-            "lufs_R": lufs_R,
-            "channel_loudness_diff_db": diff,
-        }
+        return {"lufs_L": lufs_L, "lufs_R": lufs_L, "channel_loudness_diff_db": 0.0}
 
     if arr.ndim == 2 and arr.shape[1] >= 2:
         L = arr[:, 0]
@@ -64,22 +57,9 @@ def _compute_channel_lufs_diff(y: np.ndarray, sr: int) -> Dict[str, float]:
             diff = 0.0
         else:
             diff = abs(lufs_L - lufs_R)
-        return {
-            "lufs_L": lufs_L,
-            "lufs_R": lufs_R,
-            "channel_loudness_diff_db": diff,
-        }
+        return {"lufs_L": lufs_L, "lufs_R": lufs_R, "channel_loudness_diff_db": diff}
 
-    L = arr[:, 0]
-    R = arr[:, 1]
-    lufs_L, _ = compute_lufs_and_lra(L, sr)
-    lufs_R, _ = compute_lufs_and_lra(R, sr)
-    diff = abs(lufs_L - lufs_R) if (lufs_L != float("-inf") and lufs_R != float("-inf")) else 0.0
-    return {
-        "lufs_L": lufs_L,
-        "lufs_R": lufs_R,
-        "channel_loudness_diff_db": diff,
-    }
+    return {"lufs_L": float("-inf"), "lufs_R": float("-inf"), "channel_loudness_diff_db": 0.0}
 
 
 def _compute_stereo_correlation(y: np.ndarray) -> float:
@@ -90,8 +70,7 @@ def _compute_stereo_correlation(y: np.ndarray) -> float:
         L = arr[:, 0].astype(np.float32)
         R = arr[:, 1].astype(np.float32)
     else:
-        L = arr[:, 0].astype(np.float32)
-        R = arr[:, 1].astype(np.float32)
+        return 0.0
 
     Lm = L - np.mean(L)
     Rm = R - np.mean(R)
@@ -102,34 +81,16 @@ def _compute_stereo_correlation(y: np.ndarray) -> float:
     return max(-1.0, min(1.0, corr))
 
 
-def _process_final_limits_worker(
-    full_song_path_str: str,
+def _process_final_limits_memory(
+    audio: np.ndarray,
+    sr: int,
     true_peak_max_dbtp: float,
     max_output_ceiling_adjust_db: float,
     target_lufs: float,
     style_lufs_tolerance: float,
-) -> Dict[str, Any]:
-    """
-    Worker que realiza todo el QC final:
+) -> tuple[np.ndarray, Dict[str, Any]]:
+    y = audio
 
-      - Lee full_song.wav.
-      - Calcula métricas pre (TP, LUFS, LRA, dif L/R, correlación, dentro de estilo).
-      - Si TP supera el máximo permitido, aplica un micro-trim global
-        limitado por max_output_ceiling_adjust_db.
-      - Recalcula métricas post.
-      - Sobrescribe full_song.wav con el resultado.
-      - Devuelve todas las métricas necesarias.
-    """
-    full_song_path = Path(full_song_path_str)
-
-    # Leer audio actual
-    y, sr = sf.read(full_song_path, always_2d=False)
-    if not isinstance(y, np.ndarray):
-        y = np.asarray(y, dtype=np.float32)
-    else:
-        y = y.astype(np.float32)
-
-    # Métricas pre-QC
     pre_true_peak = compute_true_peak_dbfs(y, oversample_factor=4)
     pre_lufs, pre_lra = compute_lufs_and_lra(y, sr)
     ch_info_pre = _compute_channel_lufs_diff(y, sr)
@@ -143,13 +104,6 @@ def _process_final_limits_worker(
         and abs(pre_lufs - target_lufs) <= style_lufs_tolerance
     )
 
-    logger.logger.info(
-        f"[S10_MASTER_FINAL_LIMITS] PRE-QC: TP={pre_true_peak:.2f} dBTP, "
-        f"LUFS={pre_lufs:.2f}, LRA={pre_lra:.2f}, "
-        f"diff_LR={pre_channel_diff:.2f} dB, corr={pre_corr:.3f}."
-    )
-
-    # 1) Micro-ajuste de ceiling (trim global) si TP > true_peak_max_dbtp
     trim_db = 0.0
     if pre_true_peak > true_peak_max_dbtp:
         needed_reduction = pre_true_peak - true_peak_max_dbtp
@@ -160,21 +114,11 @@ def _process_final_limits_worker(
     if trim_db > 0.0:
         gain_lin = 10.0 ** (-trim_db / 20.0)
         y_post = (y * gain_lin).astype(np.float32)
-        logger.logger.info(
-            f"[S10_MASTER_FINAL_LIMITS] Aplicando micro-trim de {trim_db:.2f} dB "
-            f"para acercar TP a {true_peak_max_dbtp:.2f} dBTP."
-        )
     else:
-        y_post = y.copy()
-        logger.logger.info(
-            "[S10_MASTER_FINAL_LIMITS] TP dentro de límites o ajuste < 0.01 dB; "
-            "no se aplica trim."
-        )
+        y_post = y
 
-    # Clamp final por seguridad
     y_post = np.clip(y_post, -1.0, 1.0).astype(np.float32)
 
-    # Métricas post-QC
     post_true_peak = compute_true_peak_dbfs(y_post, oversample_factor=4)
     post_lufs, post_lra = compute_lufs_and_lra(y_post, sr)
     ch_info_post = _compute_channel_lufs_diff(y_post, sr)
@@ -188,17 +132,7 @@ def _process_final_limits_worker(
         and abs(post_lufs - target_lufs) <= style_lufs_tolerance
     )
 
-    logger.logger.info(
-        f"[S10_MASTER_FINAL_LIMITS] POST-QC: TP={post_true_peak:.2f} dBTP, "
-        f"LUFS={post_lufs:.2f}, LRA={post_lra:.2f}, "
-        f"diff_LR={post_channel_diff:.2f} dB, corr={post_corr:.3f}."
-    )
-
-    # Escribir master QC final (sobrescribe full_song.wav)
-    sf.write(full_song_path, y_post, sr)
-    logger.logger.info(f"[S10_MASTER_FINAL_LIMITS] Master QC reescrito en {full_song_path}.")
-
-    return {
+    return y_post, {
         "pre_true_peak_dbtp": float(pre_true_peak),
         "pre_lufs_integrated": float(pre_lufs),
         "pre_lra": float(pre_lra),
@@ -219,22 +153,16 @@ def _process_final_limits_worker(
     }
 
 
-def main() -> None:
+def process(context: PipelineContext, *args) -> bool:
     """
-    Stage S10_MASTER_FINAL_LIMITS:
-
-      - Lee analysis_S10_MASTER_FINAL_LIMITS.json y full_song.wav.
-        un micro-trim global sobre el master.
-      - Recalcula métricas post-QC en el worker.
-      - Guarda qc_metrics_S10_MASTER_FINAL_LIMITS.json con métricas pre/post.
+    IN-MEMORY processing for S10_MASTER_FINAL_LIMITS
     """
-    if len(sys.argv) < 2:
-        logger.logger.info("Uso: python S10_MASTER_FINAL_LIMITS.py <CONTRACT_ID>")
-        sys.exit(1)
-
-    contract_id = sys.argv[1]  # "S10_MASTER_FINAL_LIMITS"
-
-    analysis = load_analysis(contract_id)
+    contract_id = context.stage_id
+    try:
+        analysis = load_analysis_with_context(context)
+    except FileNotFoundError:
+        logger.error(f"[S10_MASTER_FINAL_LIMITS] Analysis not found.")
+        return False
 
     metrics: Dict[str, Any] = analysis.get("metrics_from_contract", {}) or {}
     limits: Dict[str, Any] = analysis.get("limits_from_contract", {}) or {}
@@ -258,27 +186,26 @@ def main() -> None:
     )
     style_lufs_tolerance = float(session.get("style_lufs_tolerance", 0.5))
 
-    temp_dir = get_temp_dir(contract_id, create=False)
-    full_song_path = temp_dir / "full_song.wav"
+    if context.audio_mixdown is None:
+        logger.warning("[S10_MASTER_FINAL_LIMITS] No mixdown to process.")
+        return True
 
-    if not full_song_path.exists():
-        logger.logger.info(
-            f"[S10_MASTER_FINAL_LIMITS] No existe {full_song_path}; "
-            "no se puede aplicar QC de master."
-        )
-        return
-
-    # Procesar QC final en un proceso separado
-    result = _process_final_limits_worker(
-        str(full_song_path),
+    y_processed, result = _process_final_limits_memory(
+        context.audio_mixdown,
+        context.sample_rate,
         true_peak_max_dbtp,
         max_output_ceiling_adjust_db,
         target_lufs,
         style_lufs_tolerance,
     )
 
-    # Guardar métricas QC
+    context.audio_mixdown = y_processed
+
+    # Save metrics
+    temp_dir = context.get_stage_dir()
+    temp_dir.mkdir(parents=True, exist_ok=True)
     qc_path = temp_dir / "qc_metrics_S10_MASTER_FINAL_LIMITS.json"
+
     with qc_path.open("w", encoding="utf-8") as f:
         json.dump(
             {
@@ -324,10 +251,10 @@ def main() -> None:
             ensure_ascii=False,
         )
 
-    logger.logger.info(
-        f"[S10_MASTER_FINAL_LIMITS] Métricas QC guardadas en: {qc_path}"
-    )
+    return True
 
+def main() -> None:
+    pass
 
 if __name__ == "__main__":
     main()

@@ -1,30 +1,28 @@
 from utils.logger import logger
-# C:\mix-master\backend\src\stages\S0_SESSION_FORMAT.py
-
-import json
 import sys
 from pathlib import Path
-from typing import Dict, Any, Tuple
-import os
-
+from typing import Dict, Any, Tuple, Optional
+import json
 import numpy as np
-import soundfile as sf
 
 try:
-    # Resample de buena calidad si SciPy está disponible
     from scipy.signal import resample_poly  # type: ignore
 except ImportError:
     resample_poly = None
 
+try:
+    from context import PipelineContext
+except ImportError:
+    PipelineContext = None # type: ignore
+
 from utils.analysis_utils import get_temp_dir
 
-def load_analysis(project_root: Path, contract_id: str) -> Dict[str, Any]:
-    """
-    Carga el JSON de análisis generado por analysis\\S0_SESSION_FORMAT.py.
-    Ruta esperada:
-        <project_root>/temp/<contract_id>/analysis_<contract_id>.json
-    """
-    temp_dir = get_temp_dir(contract_id, create=False)
+def load_analysis(context: PipelineContext, contract_id: str) -> Dict[str, Any]:
+    if context.temp_root:
+        temp_dir = context.temp_root / contract_id
+    else:
+        temp_dir = get_temp_dir(contract_id, create=False)
+
     analysis_path = temp_dir / f"analysis_{contract_id}.json"
 
     if not analysis_path.exists():
@@ -39,11 +37,6 @@ def load_analysis(project_root: Path, contract_id: str) -> Dict[str, Any]:
 def resample_audio(
     data: np.ndarray, sr: int, target_sr: int | None
 ) -> Tuple[np.ndarray, int]:
-    """
-    Re-muestrea el audio a target_sr si es necesario.
-    Usa scipy.signal.resample_poly si está disponible; si no, hace un
-    fallback sencillo con interpolación lineal.
-    """
     if target_sr is None or target_sr == sr:
         return data, sr
 
@@ -57,18 +50,14 @@ def resample_audio(
     resampled_channels = []
 
     if resample_poly is not None:
-        # Resample de buena calidad
         import math
-
         g = math.gcd(sr, target_sr)
         up = target_sr // g
         down = sr // g
-
         for ch_data in data_ch:
             resampled = resample_poly(ch_data, up, down)
             resampled_channels.append(resampled.astype(np.float32))
     else:
-        # Fallback simple con interpolación lineal
         for ch_data in data_ch:
             n_samples = len(ch_data)
             n_target = int(round(n_samples * target_sr / sr))
@@ -88,10 +77,6 @@ def resample_audio(
 def apply_peak_normalization(
     data: np.ndarray, max_peak_dbfs: float | None
 ) -> np.ndarray:
-    """
-    Garantiza que el pico máximo no supera max_peak_dbfs.
-    No sube el nivel si el audio ya está por debajo; solo reduce si es necesario.
-    """
     if max_peak_dbfs is None:
         return data
 
@@ -108,83 +93,53 @@ def apply_peak_normalization(
     return data
 
 
-def process_stem(stem_info: Dict[str, Any], metrics: Dict[str, Any]) -> None:
+def process(context: PipelineContext, *args) -> bool:
     """
-    Aplica las conversiones de formato a un stem:
-      - samplerate_hz
-      - bit_depth_internal (float32)
-      - normalización de picos
-    Sobrescribe el archivo original.
+    IN-MEMORY processing for S0_SESSION_FORMAT
     """
-    file_path = Path(stem_info["file_path"])
+    contract_id = context.stage_id
+    try:
+        analysis = load_analysis(context, contract_id)
+    except FileNotFoundError:
+        logger.error(f"[S0_SESSION_FORMAT] Analysis not found for {contract_id}")
+        return False
+
+    metrics = analysis.get("metrics_from_contract", {})
+    stems_info = analysis.get("stems", [])
+
     target_sr = metrics.get("samplerate_hz")
     target_bit_depth = metrics.get("bit_depth_internal")
     max_peak_dbfs = metrics.get("max_peak_dbfs")
 
-    # 1) Leer audio
-    data, sr = sf.read(file_path, always_2d=False)
+    # Update global context sample rate if changed
+    if target_sr is not None and target_sr != context.sample_rate:
+        logger.info(f"[S0_SESSION_FORMAT] Updating global sample rate from {context.sample_rate} to {target_sr}")
+        context.sample_rate = target_sr
 
-    # 2) Convertir a float32 interno
-    if data.dtype != np.float32:
-        data = data.astype(np.float32)
+    processed_count = 0
+    for stem_info in stems_info:
+        file_name = Path(stem_info["file_path"]).name
+        if file_name not in context.audio_stems:
+            continue
 
-    # 3) Resample si es necesario
-    data, sr = resample_audio(data, sr, target_sr)
+        data = context.audio_stems[file_name]
+        sr = stem_info.get("samplerate_hz", context.sample_rate)
 
-    # 4) Normalización de picos según contrato
-    data = apply_peak_normalization(data, max_peak_dbfs)
+        # 1. Resample
+        data, new_sr = resample_audio(data, sr, target_sr)
 
-    # 5) Escribir de vuelta el archivo con formato consistente
-    #    Bit depth interno -> usamos FLOAT (32-bit float)
-    subtype = "FLOAT" if target_bit_depth == 32 else None
-    # soundfile seleccionará un subtype por defecto si subtype es None
-    sf.write(file_path, data, sr, subtype=subtype)
+        # 2. Peak Norm
+        data = apply_peak_normalization(data, max_peak_dbfs)
 
+        # Update memory
+        context.audio_stems[file_name] = data
+        processed_count += 1
 
-# -------------------------------------------------------------------
-# -------------------------------------------------------------------
-
-def _process_stem_worker(args: Tuple[Dict[str, Any], Dict[str, Any]]) -> None:
-    """
-    Wrapper para ejecutar process_stem en un proceso hijo.
-    """
-    stem_info, metrics = args
-    process_stem(stem_info, metrics)
-
+    logger.info(f"[S0_SESSION_FORMAT] Processed {processed_count} stems in memory.")
+    return True
 
 def main() -> None:
-    """
-    Stage S0_SESSION_FORMAT:
-      - Lee analysis_S0_SESSION_FORMAT.json.
-      - Aplica conversiones de formato a cada stem (en paralelo).
-      - Sobrescribe los stems en temp/<contract_id>/.
-    """
-    if len(sys.argv) < 2:
-        logger.logger.info("Uso: python S0_SESSION_FORMAT.py <CONTRACT_ID>")
-        sys.exit(1)
-
-    contract_id = sys.argv[1]  # "S0_SESSION_FORMAT"
-
-    # base_dir = .../src ; project_root = .../backend
-    base_dir = Path(__file__).resolve().parent.parent
-    project_root = base_dir.parent
-
-    analysis = load_analysis(project_root, contract_id)
-
-    metrics = analysis.get("metrics_from_contract", {})
-    stems = analysis.get("stems", [])
-
-    if not stems:
-        logger.logger.info("[S0_SESSION_FORMAT] No hay stems en el análisis; nada que procesar.")
-        return
-
-    # Procesar stems en serie
-    args_list = [(stem_info, metrics) for stem_info in stems]
-    for args in args_list:
-        _process_stem_worker(args)
-
-    logger.logger.info(f"[S0_SESSION_FORMAT] Conversión de formato completada para {len(stems)} stems.")
-
+    pass
 
 if __name__ == "__main__":
     main()

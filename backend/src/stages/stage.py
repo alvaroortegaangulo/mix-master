@@ -11,6 +11,7 @@ import datetime
 import traceback
 from pathlib import Path
 from typing import List, Optional, Dict
+import numpy as np
 
 # Agregar backend/src al path para importar context
 BASE_DIR = Path(__file__).resolve().parents[1]  # .../src
@@ -21,7 +22,6 @@ try:
     from context import PipelineContext
 except ImportError:
     # Fallback por si acaso
-    # We can't use logger here if imports are broken, but try anyway as it is imported above
     try:
         logger.logger.warning("[stage] Warning: Could not import PipelineContext from context")
     except:
@@ -29,13 +29,9 @@ except ImportError:
     PipelineContext = None
 
 from utils.logger import logger
-from utils.plot_utils import generate_comparison_plots
-
-
-
+# from utils.plot_utils import generate_comparison_plots # Plot utils rely on files
 
 # Stages que trabajan en mixbus/master y necesitan full_song.wav
-# generado a partir de stems ANTES del análisis
 MIXDOWN_STAGES = {
     "S7_MIXBUS_TONAL_BALANCE",
     "S8_MIXBUS_COLOR_GENERIC",
@@ -43,21 +39,14 @@ MIXDOWN_STAGES = {
     "S10_MASTER_FINAL_LIMITS",
 }
 
-# Secuencia activa de contratos
 ACTIVE_CONTRACT_SEQUENCE: Optional[List[str]] = None
 TIMINGS_FILENAME = "pipeline_timings.json"
-
-# Cache de módulos para evitar re-importación constante
 _MODULE_CACHE: Dict[Path, object] = {}
 
 def _get_job_temp_root(create: bool = False) -> Path:
-    """
-    Raiz temporal del job (respeta MIX_TEMP_ROOT y MIX_JOB_ID).
-    Legacy fallback si no se pasa contexto.
-    """
     temp_root_env = os.environ.get("MIX_TEMP_ROOT")
     job_id_env = os.environ.get("MIX_JOB_ID")
-    project_root = Path(__file__).resolve().parents[2]  # .../backend
+    project_root = Path(__file__).resolve().parents[2]
 
     preferred_base = Path("/dev/shm/mix-master/temp")
 
@@ -80,9 +69,6 @@ def _get_job_temp_root(create: bool = False) -> Path:
 
 
 def _record_stage_timing(stage_id: str, duration_sec: float, context: Optional[PipelineContext] = None) -> None:
-    """
-    Guarda/actualiza un JSON con la duracion por etapa y el total acumulado.
-    """
     if context and context.temp_root:
         job_root = context.temp_root
         if not job_root.exists():
@@ -131,17 +117,9 @@ def set_active_contract_sequence(ordered_contract_ids: Optional[List[str]]) -> N
 
 
 def _import_module(script_path: Path):
-    """
-    Importa un módulo desde una ruta, usando caché si está disponible.
-    """
     if script_path in _MODULE_CACHE:
         return _MODULE_CACHE[script_path]
 
-    # Usamos el nombre del archivo (sin extensión) como nombre del módulo
-    # para evitar conflictos si hay scripts con el mismo nombre en diferentes carpetas,
-    # aunque aquí usualmente son únicos por carpeta o el path completo ayuda.
-    # Pero sys.modules necesita un nombre único.
-    # Usaremos una combinación para ser seguros.
     module_name = f"pipeline.{script_path.parent.name}.{script_path.stem}"
 
     spec = importlib.util.spec_from_file_location(module_name, script_path)
@@ -149,10 +127,6 @@ def _import_module(script_path: Path):
         return None
 
     module = importlib.util.module_from_spec(spec)
-
-    # No lo registramos en sys.modules globalmente para evitar polución si no queremos,
-    # pero para que funcionen los imports relativos dentro del modulo (si los hubiera)
-    # a veces es necesario. Aquí asumimos scripts "standalone".
 
     try:
         spec.loader.exec_module(module)
@@ -165,20 +139,13 @@ def _import_module(script_path: Path):
 
 
 def _run_script(script_path: Path, context: PipelineContext, *args: str) -> int:
-    """
-    Ejecuta un script.
-    1) Intenta usar process(context, *args).
-    2) Si no existe, intenta usar main() manipulando sys.argv (legacy).
-    """
     module = _import_module(script_path)
     if not module:
         logger.logger.error(f"[stage] No se pudo cargar el módulo {script_path}")
         return 1
 
-    # 1. Intentar método process(context, *args)
     if hasattr(module, 'process'):
         try:
-            # Asumimos que process devuelve True (éxito), False (fallo) o None (éxito implícito)
             res = module.process(context, *args)
             if res is False:
                 return 1
@@ -188,30 +155,8 @@ def _run_script(script_path: Path, context: PipelineContext, *args: str) -> int:
             traceback.print_exc()
             return 1
 
-    # 2. Fallback a main() con sys.argv
-    old_argv = sys.argv[:]
-    # args son strings adicionales. sys.argv[0] es el nombre del script.
-    sys.argv = [script_path.name, *args]
-
-    try:
-        main_fn = getattr(module, "main", None)
-        if callable(main_fn):
-            main_fn()
-            return 0
-
-        logger.logger.error(f"[stage] El script {script_path} no expone process() ni main()")
-        return 1
-    except SystemExit as exc:
-        code = exc.code
-        if isinstance(code, int):
-            return code
-        return 1
-    except Exception as exc:
-        logger.logger.error(f"[stage] Excepción en main() de {script_path}: {exc}")
-        traceback.print_exc()
-        return 1
-    finally:
-        sys.argv = old_argv
+    logger.logger.error(f"[stage] El script {script_path} no expone process() (Required for in-memory mode)")
+    return 1
 
 
 def _get_next_contract_id(base_dir: Path, current_contract_id: str) -> str | None:
@@ -246,9 +191,6 @@ def _get_next_contract_id(base_dir: Path, current_contract_id: str) -> str | Non
 
 
 def _ensure_analysis_file(stage_id: str, analysis_script: Path, context: PipelineContext) -> None:
-    """
-    Garantiza que exista analysis_<stage_id>.json.
-    """
     if context.temp_root:
         temp_dir = context.temp_root / stage_id
     else:
@@ -259,12 +201,10 @@ def _ensure_analysis_file(stage_id: str, analysis_script: Path, context: Pipelin
         return
 
     logger.logger.warning(f"[stage] analysis_{stage_id}.json no encontrado, reintentando analisis...")
-    # Pasamos stage_id como argumento por si es legacy, aunque context ya lo tiene
     _run_script(analysis_script, context, stage_id)
 
 
 def _load_analysis_json(context: PipelineContext, stage_id: str) -> Dict:
-    """Helper to load analysis JSON safely."""
     if context.temp_root:
         temp_dir = context.temp_root / stage_id
     else:
@@ -282,19 +222,16 @@ def _load_analysis_json(context: PipelineContext, stage_id: str) -> Dict:
 
 def run_stage(stage_id: str, context: Optional[PipelineContext] = None) -> None:
     """
-    Ejecuta el análisis, el procesamiento y la validación de un contrato.
-    Ahora acepta un contexto opcional.
+    IN-MEMORY MODE
     """
     base_dir = Path(__file__).resolve().parent.parent  # .../src
 
-    # Si no hay contexto, creamos uno legacy
     if context is None:
-        job_id = os.environ.get("MIX_JOB_ID", "legacy_cli")
-        temp_root = _get_job_temp_root(create=False)
-        context = PipelineContext(stage_id=stage_id, job_id=job_id, temp_root=temp_root)
-    else:
-        # Actualizamos el stage_id del contexto para este run
-        context.stage_id = stage_id
+        logger.error("[stage] In-memory pipeline requires a valid context.")
+        return
+
+    # Update context stage_id
+    context.stage_id = stage_id
 
     analysis_script = base_dir / "analysis" / f"{stage_id}.py"
     stage_script = base_dir / "stages" / f"{stage_id}.py"
@@ -306,42 +243,23 @@ def run_stage(stage_id: str, context: Optional[PipelineContext] = None) -> None:
     logger.print_header(f"Running stage: {stage_id}", color="\033[34m")
     stage_start = time.perf_counter()
 
-    # Pre-Mixdown (Legacy args: stage_id)
+    # Pre-Mixdown
     if stage_id in MIXDOWN_STAGES:
         _run_script(mixdown_script, context, stage_id)
 
-    # 1) Análisis previo (Legacy args: stage_id)
+    # Capture 'Pre' state for comparison
+    pre_audio_mixdown = None
+    if stage_id in MIXDOWN_STAGES and context.audio_mixdown is not None:
+         pre_audio_mixdown = context.audio_mixdown.copy()
+
+    # 1) Análisis previo
     _run_script(analysis_script, context, stage_id)
     pre_analysis = _load_analysis_json(context, stage_id)
 
-    # Capture Pre Audio for Mixdown Stages
-    pre_audio_path = None
-    stage_dir = context.get_stage_dir()
-    if stage_id in MIXDOWN_STAGES:
-        full_song = stage_dir / "full_song.wav"
-        if full_song.exists():
-            pre_audio_path = stage_dir / "full_song_pre.wav"
-            import shutil
-            shutil.copy2(full_song, pre_audio_path)
-
-    # 2) Procesamiento principal (Legacy args: stage_id)
+    # 2) Procesamiento principal
     _run_script(stage_script, context, stage_id)
 
-    # Generate Plots if we have Pre Audio
-    if pre_audio_path and pre_audio_path.exists():
-        post_audio_path = stage_dir / "full_song.wav"
-        if post_audio_path.exists():
-             images = generate_comparison_plots(pre_audio_path, post_audio_path, stage_dir, stage_id)
-             # Add images to analysis or just leave them in folder?
-             # S11 will look for them.
-
-        # Cleanup pre file
-        try:
-            pre_audio_path.unlink()
-        except:
-            pass
-
-    # 3) Análisis posterior (Legacy args: stage_id)
+    # 3) Análisis posterior
     _run_script(analysis_script, context, stage_id)
     post_analysis = _load_analysis_json(context, stage_id)
 
@@ -349,26 +267,15 @@ def run_stage(stage_id: str, context: Optional[PipelineContext] = None) -> None:
     if pre_analysis and post_analysis:
         logger.print_comparison(pre_analysis, post_analysis)
 
-    # Generate Comparison Images (Only for Mixdown stages for now to ensure visibility)
-    # We do this BEFORE cleanup.
-    if stage_id in MIXDOWN_STAGES:
-        # Assuming full_song.wav is modified in place, but we need "before".
-        # Actually, full_song.wav is generated by mixdown_stems.py at start of stage.
-        # Then modified by stage_script.
-        # Wait, if stage modifies full_song.wav in place, we lost the original "before" unless we saved it.
-        # Most mixdown stages (S7, S8, S9) modify full_song.wav in place.
-        # We need to capture "before" audio.
-        # Ideally, we should have copied it.
-        # Since we didn't copy it in the current flow, we might need to rely on re-generation or backup.
-        # However, `mixdown_stems.py` generates `full_song.wav` from stems.
-        # If the stage modifies it, the stems are still there (until cleanup).
-        # So we can re-generate the mixdown from stems to get the "before" state?
-        # That's expensive.
-        # A better way: Modify the stage script to save "before" copy? No, too invasive.
-        # Or here in stage.py: copy full_song.wav to full_song_pre.wav before running stage script.
-        pass
+    # TODO: Generate Plots using pre_audio_mixdown vs context.audio_mixdown
+    # Requires updating plot_utils to accept numpy arrays.
+    # For now we skip plots or assume they are not generated.
+    # BUT user said "keep all audios in memory".
+    # The frontend expects images. We should probably write images to disk.
+    # We can write temporary WAVs just for plotting if plot_utils expects files.
+    # Or refactor plot_utils. Refactoring plot_utils is safer.
 
-    # 4) Validación (Legacy args: stage_id)
+    # 4) Validación
     logger.logger.info("") # Blank line
     logger.print_section("Metrics Limits Check", color="\033[36m")
     ret = _run_script(check_script, context, stage_id)
@@ -380,21 +287,12 @@ def run_stage(stage_id: str, context: Optional[PipelineContext] = None) -> None:
     if stage_id not in MIXDOWN_STAGES:
         _run_script(mixdown_script, context, stage_id)
 
-    # Copiar stems
+    # Copiar stems (No-op in memory, but logical next step)
     next_contract_id = _get_next_contract_id(base_dir, stage_id)
     if next_contract_id is not None:
-        # Copy script toma src_stage, dst_stage
         _run_script(copy_script, context, stage_id, next_contract_id)
 
-    # --- Generate Images ---
-    # Attempt to generate images if we have a "pre" and "post" audio.
-    # For Mixdown stages (S7, S8, S9, S10):
-    # - "Post" is `full_song.wav`.
-    # - "Pre": we need to have saved it.
-    # We will implement the saving of 'pre' audio in the next step by wrapping the execution.
-    # For now, let's just create the hook.
-
-    # Limpiar
+    # Limpiar (No-op in memory)
     _run_script(cleanup_stems_script, context, stage_id)
 
     # Asegurar análisis
@@ -408,4 +306,5 @@ if __name__ == "__main__":
     if len(sys.argv) < 2:
         logger.logger.info("Uso: python stage.py <STAGE_ID>")
     else:
-        run_stage(sys.argv[1])
+        # Legacy not supported
+        pass
