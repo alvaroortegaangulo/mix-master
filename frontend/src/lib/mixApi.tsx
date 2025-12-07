@@ -1,5 +1,7 @@
 // frontend/src/lib/mixApi.tsx
 
+import pako from "pako";
+
 export type MixMetrics = {
   final_peak_dbfs: number;
   final_rms_dbfs: number;
@@ -81,7 +83,6 @@ export function getBackendBaseUrl(): string {
   // Fallback para SSR/build
   return "http://127.0.0.1:8000";
 }
-
 
 function normalizeUrl(pathOrUrl: string | undefined, baseUrl: string): string {
   if (!pathOrUrl) return "";
@@ -201,6 +202,61 @@ export async function cleanupTemp(): Promise<void> {
 }
 
 // -----------------------------------------------------------------------------
+// Compresión de WAV/AIFF en el frontend (gzip)
+// -----------------------------------------------------------------------------
+
+type CompressionResult = {
+  blob: Blob;
+  originalName: string;
+  compression: "none" | "gzip";
+};
+
+/**
+ * Decide si merece la pena comprimir y, si sí, devuelve un Blob gzip.
+ * Ahora mismo comprimimos solo WAV/AIFF, que son PCM sin comprimir.
+ */
+async function compressFileIfUseful(file: File): Promise<CompressionResult> {
+  const lower = file.name.toLowerCase();
+  const isWavLike =
+    lower.endsWith(".wav") ||
+    lower.endsWith(".aiff") ||
+    lower.endsWith(".aif");
+
+  if (!isWavLike) {
+    // Para MP3/FLAC/OGG etc. no merece la pena recomprimir.
+    return {
+      blob: file,
+      originalName: file.name,
+      compression: "none",
+    };
+  }
+
+  const arrayBuffer = await file.arrayBuffer();
+  const uint8 = new Uint8Array(arrayBuffer);
+
+  // gzip con pako
+  const compressed = pako.gzip(uint8);
+  const compressedBlob = new Blob([compressed], {
+    type: "application/gzip",
+  });
+
+  // si por lo que sea no hemos ahorrado nada, mandamos el original
+  if (compressedBlob.size >= file.size) {
+    return {
+      blob: file,
+      originalName: file.name,
+      compression: "none",
+    };
+  }
+
+  return {
+    blob: compressedBlob,
+    originalName: file.name,
+    compression: "gzip",
+  };
+}
+
+// -----------------------------------------------------------------------------
 // Helpers internos para subida paralela
 // -----------------------------------------------------------------------------
 
@@ -209,8 +265,16 @@ async function uploadSingleFileForJob(
   jobId: string,
   file: File,
 ): Promise<void> {
+  const { blob, originalName, compression } = await compressFileIfUseful(file);
+
   const fd = new FormData();
-  fd.append("file", file);
+  // El nombre que verá el backend (si gzip, le añadimos .gz solo como info)
+  const filenameToSend =
+    compression === "gzip" ? `${originalName}.gz` : originalName;
+
+  fd.append("file", blob, filenameToSend);
+  fd.append("compression", compression);
+  fd.append("original_name", originalName);
 
   const res = await fetch(
     `${baseUrl}/mix/${encodeURIComponent(jobId)}/upload-file`,
@@ -268,10 +332,7 @@ export async function startMixJob(
 ): Promise<{ jobId: string }> {
   const baseUrl = getBackendBaseUrl();
 
-  // ---------------------------------------------------------------------------
-  // Caso sencillo: 0 o 1 archivo -> usamos el endpoint clásico /mix
-  // (un solo POST con todos los datos, mantiene compatibilidad total)
-  // ---------------------------------------------------------------------------
+  // Caso sencillo: 0 o 1 archivo -> /mix clásico (SIN compresión por ahora)
   if (files.length <= 1) {
     const formData = new FormData();
     files.forEach((f) => formData.append("files", f));
@@ -311,12 +372,10 @@ export async function startMixJob(
     return { jobId: data.jobId };
   }
 
-  // ---------------------------------------------------------------------------
-  // Caso multi-archivo (>1): flujo en 3 pasos
-  //   1) /mix/init  -> crea jobId, guarda config/perfiles
-  //   2) /mix/{jobId}/upload-file  (PARALELO) -> sube cada WAV
-  //   3) /mix/{jobId}/start -> lanza Celery
-  // ---------------------------------------------------------------------------
+  // Caso multi-archivo (>1): flujo en 3 pasos:
+  //   1) /mix/init
+  //   2) /mix/{jobId}/upload-file (PARALELO, con compresión)
+  //   3) /mix/{jobId}/start
 
   // 1) INIT
   const initForm = new FormData();
@@ -353,7 +412,7 @@ export async function startMixJob(
   const initData = (await initRes.json()) as { jobId: string };
   const jobId = initData.jobId;
 
-  // 2) Uploads en paralelo (concurrencia 4 por defecto)
+  // 2) Uploads en paralelo (con compresión gzip para WAV/AIFF)
   await uploadFilesInParallelForJob(baseUrl, jobId, files, 10);
 
   // 3) Start: encolar tarea Celery para ese job

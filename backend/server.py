@@ -5,6 +5,7 @@ import logging
 import shutil
 import uuid
 import time
+import gzip
 from datetime import datetime
 from pathlib import Path
 from typing import List, Dict, Optional, Any
@@ -27,13 +28,13 @@ logger = logging.getLogger("mix_master.server")
 
 app = FastAPI(title="Mix-Master API")
 
-# CORS (ajusta origins a tu frontend según necesites)
+# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "https://music-mix-master.com",
         "https://api.music-mix-master.com",
-        "http://localhost:3000",          # para desarrollo local
+        "http://localhost:3000",
         "http://127.0.0.1:3000",
     ],
     allow_credentials=True,
@@ -73,10 +74,11 @@ def _create_job_dirs() -> tuple[str, Path, Path]:
 
     logger.info(
         "[_create_job_dirs] job_id=%s media_dir=%s temp_root=%s",
-        job_id, media_dir, temp_root
+        job_id,
+        media_dir,
+        temp_root,
     )
     return job_id, media_dir, temp_root
-
 
 
 def _get_job_dirs(job_id: str) -> tuple[Path, Path]:
@@ -84,8 +86,8 @@ def _get_job_dirs(job_id: str) -> tuple[Path, Path]:
     Dado un job_id existente, devuelve (media_dir, temp_root).
     No crea nada; solo calcula las rutas.
     """
-    media_dir = PROJECT_ROOT / "media" / job_id
-    temp_root = PROJECT_ROOT / "temp" / job_id
+    media_dir = MEDIA_ROOT / job_id
+    temp_root = JOBS_ROOT / job_id
     return media_dir, temp_root
 
 
@@ -97,26 +99,12 @@ def _load_contracts() -> Dict[str, Any]:
 
 
 def _build_pipeline_stages() -> list[dict[str, Any]]:
-    """
-    Lee struct/contracts.json y construye la lista de PipelineStage
-    que espera el frontend, en términos de contract_id.
-
-    key            -> contract_id (p.ej. "S1_STEM_DC_OFFSET")
-    label          -> contract_id (o lo que quieras enseñar)
-    description    -> nombre del grupo (Technical Preparation, etc.)
-    index          -> orden global 1..N según contracts.json
-    mediaSubdir    -> None (de momento no lo usamos)
-    updatesCurrentDir -> True
-    previewMixRelPath -> ruta relativa al job_root donde está el full_song
-                         de ese contrato: "/<CONTRACT_ID>/full_song.wav"
-    """
     contracts = _load_contracts()
     stages_cfg = contracts.get("stages", {}) or {}
 
     result: list[dict[str, Any]] = []
     idx = 0
 
-    # Recorremos en el mismo orden que en contracts.json
     for stage_group_id, stage_group in stages_cfg.items():
         group_name = stage_group.get("name") or stage_group_id
         contracts_list = stage_group.get("contracts", []) or []
@@ -127,19 +115,14 @@ def _build_pipeline_stages() -> list[dict[str, Any]]:
                 continue
 
             idx += 1
-
-            # Asumimos que para cada contrato existe un bounce en:
-            #   temp/<job_id>/<CONTRACT_ID>/full_song.wav
-            # y lo exponemos como:
-            #   /files/<job_id>/<CONTRACT_ID>/full_song.wav
             preview_rel_path = f"/{contract_id}/full_song.wav"
 
             result.append(
                 {
-                    "key": contract_id,  # lo que el frontend enviará como enabledStageKeys
-                    "label": contract_id,  # puedes refinarlo si quieres algo más bonito
-                    "description": group_name,  # nombre del bloque (Technical Preparation, etc.)
-                    "index": idx,  # orden global
+                    "key": contract_id,
+                    "label": contract_id,
+                    "description": group_name,
+                    "index": idx,
                     "mediaSubdir": None,
                     "updatesCurrentDir": True,
                     "previewMixRelPath": preview_rel_path,
@@ -155,10 +138,6 @@ def _build_pipeline_stages() -> list[dict[str, Any]]:
 
 
 def _write_initial_job_status(job_id: str, temp_root: Path) -> None:
-    """
-    Crea un job_status.json inicial en estado 'pending', para que el frontend
-    pueda mostrar la cola incluso antes de que arranque el worker.
-    """
     status = {
         "jobId": job_id,
         "job_id": job_id,
@@ -183,9 +162,6 @@ def _write_initial_job_status(job_id: str, temp_root: Path) -> None:
 
 
 def _load_job_status_from_fs(job_id: str) -> Optional[Dict[str, Any]]:
-    """
-    Lee temp/<job_id>/job_status.json si existe.
-    """
     status_path = JOBS_ROOT / job_id / "job_status.json"
     if not status_path.exists():
         logger.info(
@@ -225,10 +201,6 @@ def _load_profiles() -> Dict[str, Any]:
 
 
 def _parse_bool_flag(value: Optional[str]) -> bool:
-    """
-    Convierte un string de formulario ('true', 'false', '1', '0', etc.)
-    a bool. Si viene None, devuelve False.
-    """
     if value is None:
         return False
     if isinstance(value, bool):
@@ -248,7 +220,7 @@ async def mix_tracks(
     stages_json: Optional[str] = Form(None),
     stem_profiles_json: Optional[str] = Form(None),
     space_depth_bus_styles_json: Optional[str] = Form(None),
-    upload_mode: str = Form("song"),  # <-- "song" o "stems"
+    upload_mode: str = Form("song"),
 ):
     """
     Endpoint "clásico": un solo POST con todos los WAV.
@@ -272,14 +244,8 @@ async def mix_tracks(
         temp_root,
     )
 
-    # -----------------------------
-    # 1) job_status inicial (pending)
-    # -----------------------------
     _write_initial_job_status(job_id, temp_root)
 
-    # -----------------------------
-    # 1b) Persistir modo de subida (song/stems)
-    # -----------------------------
     raw_mode = (upload_mode or "song").strip().lower()
     is_stems_upload = raw_mode in {
         "stems",
@@ -311,9 +277,6 @@ async def mix_tracks(
         is_stems_upload,
     )
 
-    # -----------------------------
-    # 2) Parsear perfiles de stems
-    # -----------------------------
     profiles_by_name: Dict[str, str] = {}
     raw_profiles: List[Dict[str, str]] = []
 
@@ -341,7 +304,6 @@ async def mix_tracks(
                 exc,
             )
 
-    # Persistir estilos de space/depth si vienen
     if space_depth_bus_styles_json:
         try:
             parsed = json.loads(space_depth_bus_styles_json)
@@ -363,9 +325,7 @@ async def mix_tracks(
                 exc,
             )
 
-    # -----------------------------
-    # 3) Guardar los stems en disco
-    # -----------------------------
+    # Guardar los stems en disco (sin compresión en este flujo)
     for f in files:
         dest_path = media_dir / f.filename
         contents = await f.read()
@@ -378,7 +338,6 @@ async def mix_tracks(
             len(contents),
         )
 
-    # Persistir mapping a disco (para stages posteriores, depuración, etc.)
     if raw_profiles:
         profiles_path = job_root / "work" / "stem_profiles.json"
         profiles_path.parent.mkdir(parents=True, exist_ok=True)
@@ -392,9 +351,6 @@ async def mix_tracks(
             len(raw_profiles),
         )
 
-    # -----------------------------
-    # 4) Parsear stages_json (lista de contract_id habilitados)
-    # -----------------------------
     enabled_stage_keys: Optional[List[str]] = None
     if stages_json:
         try:
@@ -418,9 +374,6 @@ async def mix_tracks(
             job_id,
         )
 
-    # -----------------------------
-    # 5) Lanzar tarea Celery
-    # -----------------------------
     pre_enqueue_ts = time.time()
     logger.info(
         "[/mix] Preparación completada para job_id=%s en %.3fs. Encolando tarea Celery...",
@@ -473,13 +426,6 @@ async def init_mix_job(
     space_depth_bus_styles_json: Optional[str] = Form(None),
     upload_mode: str = Form("song"),
 ):
-    """
-    Inicializa un job SIN subir todavía los WAV.
-    Se usa para subidas en paralelo:
-      1) /mix/init  -> crea jobId, guarda config/perfiles
-      2) /mix/{job_id}/upload-file (varias veces en paralelo)
-      3) /mix/{job_id}/start -> encola Celery
-    """
     request_start_ts = time.time()
     request_start_iso = datetime.utcnow().isoformat()
 
@@ -503,7 +449,6 @@ async def init_mix_job(
     work_dir = job_root / "work"
     work_dir.mkdir(parents=True, exist_ok=True)
 
-    # Modo de subida
     raw_mode = (upload_mode or "song").strip().lower()
     is_stems_upload = raw_mode in {
         "stems",
@@ -529,7 +474,6 @@ async def init_mix_job(
         is_stems_upload,
     )
 
-    # Perfiles de stems
     raw_profiles: List[Dict[str, str]] = []
     if stem_profiles_json:
         try:
@@ -566,7 +510,6 @@ async def init_mix_job(
             len(raw_profiles),
         )
 
-    # Space/depth styles
     if space_depth_bus_styles_json:
         try:
             parsed = json.loads(space_depth_bus_styles_json)
@@ -587,7 +530,6 @@ async def init_mix_job(
                 exc,
             )
 
-    # Stages habilitadas
     enabled_stage_keys: Optional[List[str]] = None
     if stages_json:
         try:
@@ -637,38 +579,73 @@ async def init_mix_job(
 async def upload_file_for_job(
     job_id: str,
     file: UploadFile = File(...),
+    compression: str = Form("none"),
+    original_name: Optional[str] = Form(None),
 ):
+    """
+    Recibe un archivo para un job existente.
+    Si compression == "gzip", descomprime antes de escribir el WAV final.
+    """
     media_dir, temp_root = _get_job_dirs(job_id)
+
+    if not temp_root.exists():
+        raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
+
     media_dir.mkdir(parents=True, exist_ok=True)
 
-    dest_path = media_dir / file.filename
+    target_name = (original_name or file.filename).strip() or file.filename
+    dest_path = media_dir / target_name
+
     bytes_written = 0
-    chunk_size = 1024 * 1024  # 1 MiB
 
-    with dest_path.open("wb") as out:
-        while True:
-            chunk = await file.read(chunk_size)
-            if not chunk:
-                break
-            out.write(chunk)
-            bytes_written += len(chunk)
+    if compression.lower() == "gzip":
+        # Leemos TODO el fichero comprimido y lo descomprimimos en memoria.
+        # Opción sencilla para probar; si más adelante quieres streaming,
+        # se puede cambiar a gzip.GzipFile + lectura por chunks.
+        compressed_bytes = await file.read()
+        try:
+            decompressed = gzip.decompress(compressed_bytes)
+        except Exception as exc:
+            logger.exception(
+                "[/mix/%s/upload-file] Error descomprimiendo gzip", job_id
+            )
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid gzip data",
+            ) from exc
 
-    logger.info(
-        "[/mix/%s/upload-file] Archivo subido -> %s (%d bytes) (streaming)",
-        job_id,
-        dest_path,
-        bytes_written,
-    )
+        with dest_path.open("wb") as out:
+            out.write(decompressed)
+        bytes_written = len(decompressed)
+        logger.info(
+            "[/mix/%s/upload-file] Archivo gzip descomprimido -> %s (%d bytes)",
+            job_id,
+            dest_path,
+            bytes_written,
+        )
+    else:
+        # Copia en streaming sin descompresión
+        chunk_size = 1024 * 1024  # 1 MiB
+        with dest_path.open("wb") as out:
+            while True:
+                chunk = await file.read(chunk_size)
+                if not chunk:
+                    break
+                out.write(chunk)
+                bytes_written += len(chunk)
 
-    return {"ok": True, "filename": file.filename, "bytes": bytes_written}
+        logger.info(
+            "[/mix/%s/upload-file] Archivo subido -> %s (%d bytes) (streaming)",
+            job_id,
+            dest_path,
+            bytes_written,
+        )
+
+    return {"ok": True, "filename": target_name, "bytes": bytes_written}
 
 
 @app.post("/mix/{job_id}/start")
-async def start_mix_job(job_id: str):
-    """
-    Lanza la tarea Celery para un job ya inicializado y con WAVs subidos.
-    Lee configuración (stages, perfiles) desde los JSON en temp/<job_id>/work.
-    """
+async def start_mix_job_endpoint(job_id: str):
     request_start_ts = time.time()
 
     media_dir, temp_root = _get_job_dirs(job_id)
@@ -678,7 +655,6 @@ async def start_mix_job(job_id: str):
     job_root = temp_root
     work_dir = job_root / "work"
 
-    # Cargar enabled_stages si existen
     enabled_stage_keys: Optional[List[str]] = None
     enabled_path = work_dir / "enabled_stages.json"
     if enabled_path.exists():
@@ -698,7 +674,6 @@ async def start_mix_job(job_id: str):
                 exc,
             )
 
-    # Cargar stem_profiles.json -> profiles_by_name
     profiles_by_name: Dict[str, str] = {}
     stem_profiles_path = work_dir / "stem_profiles.json"
     if stem_profiles_path.exists():
@@ -726,7 +701,6 @@ async def start_mix_job(job_id: str):
                 exc,
             )
 
-    # Encolar tarea Celery
     try:
         result = run_full_pipeline_task.apply_async(
             args=[
@@ -762,13 +736,8 @@ async def start_mix_job(job_id: str):
 
 @app.get("/jobs/{job_id}")
 def get_job_status(job_id: str) -> Dict[str, Any]:
-    """
-    Devuelve el estado del job para el frontend, LEYÉNDOLO DE DISCO
-    (temp/<job_id>/job_status.json), que es lo que va actualizando el worker.
-    """
     data = _load_job_status_from_fs(job_id)
     if data is None:
-        # Si no hay fichero, devolvemos un "pending" neutro
         logger.info(
             "[/jobs/%s] job_status.json no encontrado; devolviendo estado pending.",
             job_id,
@@ -795,14 +764,9 @@ def get_job_status(job_id: str) -> Dict[str, Any]:
 
 @app.post("/cleanup-temp")
 async def cleanup_temp():
-    """
-    Limpia el contenido de temp/ y media/, pero sin borrar los directorios raíz.
-    Es compatible con root filesystem read-only + volúmenes en /app/temp y /app/media.
-    """
     for sub in ("temp", "media"):
         dir_path = PROJECT_ROOT / sub
         try:
-            # Si no existe, la creamos (en tu caso, el volumen montado en /app/temp / /app/media)
             if not dir_path.exists():
                 dir_path.mkdir(parents=True, exist_ok=True)
                 logger.info(
@@ -811,7 +775,6 @@ async def cleanup_temp():
                 )
                 continue
 
-            # Si existe, limpiamos SOLO el contenido
             for entry in dir_path.iterdir():
                 full_path = dir_path / entry.name
                 if full_path.is_dir():
@@ -826,7 +789,6 @@ async def cleanup_temp():
                 dir_path,
             )
         except Exception as e:
-            # Log, pero NO rompemos el endpoint
             logger.error(
                 "Error limpiando %s: %s",
                 dir_path,
@@ -838,10 +800,6 @@ async def cleanup_temp():
 
 @app.get("/pipeline/stages")
 def get_pipeline_stages() -> list[dict[str, Any]]:
-    """
-    Devuelve la definición de etapas del pipeline en términos de contract_id,
-    para que el frontend pueda habilitar/deshabilitar contracts concretos.
-    """
     return _build_pipeline_stages()
 
 
