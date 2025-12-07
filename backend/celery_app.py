@@ -1,8 +1,7 @@
-# C:\mix-master\backend\celery_app.py
-
 from __future__ import annotations
 
 import os
+import logging
 from celery import Celery
 
 # ---------------------------------------------------------------------------
@@ -11,6 +10,21 @@ from celery import Celery
 
 BROKER_URL = os.getenv("CELERY_BROKER_URL", "redis://redis:6379/0")
 RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", BROKER_URL)
+
+# Configuración básica de logging (si el root logger no tiene handlers).
+if not logging.getLogger().handlers:
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    )
+
+logger = logging.getLogger("mix_master.celery_app")
+
+logger.info(
+    "Inicializando Celery. broker=%s backend=%s",
+    BROKER_URL,
+    RESULT_BACKEND,
+)
 
 celery_app = Celery(
     "mix_master",
@@ -36,7 +50,6 @@ celery_app.conf.update(
     task_track_started=True,
 
     # No quedarnos 30+ minutos reintentando si el broker no está listo.
-    # Si no puede conectar al arrancar, peta rápido y Docker lo reinicia.
     broker_connection_retry_on_startup=False,
 
     # Ajustar reintentos de transporte (cuando pierde el broker en caliente)
@@ -57,6 +70,7 @@ celery_app.conf.update(
 # ---------------------------------------------------------------------------
 # Registro de tasks
 # ---------------------------------------------------------------------------
-# Tus tareas están en tasks.py en la raíz del backend.
-# Esto equivale a include=["tasks"], pero es un poco más explícito y extensible.
+
 celery_app.autodiscover_tasks(["tasks"])
+
+logger.info("Celery configurado y tasks autodiscover ejecutado.")

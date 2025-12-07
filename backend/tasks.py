@@ -1,10 +1,9 @@
-# C:\mix-master\backend\tasks.py
-
 from __future__ import annotations
 
 import os
 import json
 import time
+import logging
 from pathlib import Path
 from typing import List, Dict, Optional, Any
 
@@ -12,9 +11,13 @@ from celery import states
 from celery_app import celery_app
 
 
+logger = logging.getLogger("mix_master.tasks")
+
+
 # -------------------------------------------------------------------
 # Helpers de imports perezosos (por si son pesados)
 # -------------------------------------------------------------------
+
 
 def _import_pipeline():
     """
@@ -42,6 +45,7 @@ def _import_analysis_utils():
 # Helpers de métricas finales
 # -------------------------------------------------------------------
 
+
 def _safe_compute_final_metrics(job_id: str) -> Dict[str, Any]:
     """
     Calcula un bloque mínimo de métricas finales para el frontend.
@@ -52,7 +56,6 @@ def _safe_compute_final_metrics(job_id: str) -> Dict[str, Any]:
 
     Devuelve un dict con la forma de MixMetrics.
     """
-    # Importamos aquí para que veas claramente en logs si hubiera coste.
     get_temp_dir, load_audio_mono, compute_peak_dbfs, compute_integrated_loudness_lufs = _import_analysis_utils()
 
     # Defaults neutros
@@ -82,14 +85,15 @@ def _safe_compute_final_metrics(job_id: str) -> Dict[str, Any]:
             final_peak_dbfs = compute_peak_dbfs(mono)
             final_rms_dbfs = compute_integrated_loudness_lufs(mono, sr)
         else:
-            print(
-                f"[tasks][{job_id}] No se ha encontrado máster final en {master_path}",
-                flush=True,
+            logger.warning(
+                "[%s] No se ha encontrado máster final en %s",
+                job_id,
+                master_path,
             )
-    except Exception as exc:
-        print(
-            f"[tasks][{job_id}] Error calculando métricas de máster final: {exc}",
-            flush=True,
+    except Exception:
+        logger.exception(
+            "[%s] Error calculando métricas de máster final",
+            job_id,
         )
 
     # -----------------------------
@@ -105,21 +109,31 @@ def _safe_compute_final_metrics(job_id: str) -> Dict[str, Any]:
             session = data.get("session", {}) or {}
             key_name = str(session.get("key_name") or "")
             key_mode = str(session.get("key_mode") or "")
-            key_strength = float(
-                session.get("key_detection_confidence", 0.0) or 0.0
-            )
+            key_strength = float(session.get("key_detection_confidence", 0.0) or 0.0)
         else:
-            print(
-                f"[tasks][{job_id}] No se ha encontrado analysis_{contract_id}.json",
-                flush=True,
+            logger.warning(
+                "[%s] No se ha encontrado analysis_%s.json",
+                job_id,
+                contract_id,
             )
-    except Exception as exc:
-        print(
-            f"[tasks][{job_id}] Error leyendo análisis de key detection: {exc}",
-            flush=True,
+    except Exception:
+        logger.exception(
+        "[%s] Error leyendo análisis de key detection",
+            job_id,
         )
 
     # (3) Tempo y shifts vocales: de momento neutros.
+
+    logger.info(
+        "[%s] Métricas finales: peak_dbfs=%.2f rms_dbfs=%.2f tempo_bpm=%.2f key=%s mode=%s key_strength=%.3f",
+        job_id,
+        final_peak_dbfs,
+        final_rms_dbfs,
+        tempo_bpm,
+        key_name,
+        key_mode,
+        key_strength,
+    )
 
     return {
         "final_peak_dbfs": final_peak_dbfs,
@@ -148,6 +162,12 @@ def _make_files_url(job_root: Path, job_id: str, path: Path | None) -> str:
     try:
         rel = path.relative_to(job_root)
     except ValueError:
+        logger.warning(
+            "[%s] _make_files_url: path %s no cuelga de job_root %s",
+            job_id,
+            path,
+            job_root,
+        )
         return ""
 
     return f"/files/{job_id}/{rel.as_posix()}"
@@ -169,15 +189,21 @@ def _locate_original_and_master_paths(job_id: str) -> tuple[Path | None, Path | 
         cand = s0_dir / "full_song.wav"
         if cand.exists():
             original_path = cand
-        else:
-            print(
-                f"[tasks][{job_id}] No se encuentra original full_song.wav en {cand}",
-                flush=True,
+            logger.info(
+                "[%s] Original mix localizado en %s",
+                job_id,
+                cand,
             )
-    except Exception as exc:
-        print(
-            f"[tasks][{job_id}] Error localizando original full_song.wav: {exc}",
-            flush=True,
+        else:
+            logger.warning(
+                "[%s] No se encuentra original full_song.wav en %s",
+                job_id,
+                cand,
+            )
+    except Exception:
+        logger.exception(
+            "[%s] Error localizando original full_song.wav",
+            job_id,
         )
 
     try:
@@ -185,15 +211,21 @@ def _locate_original_and_master_paths(job_id: str) -> tuple[Path | None, Path | 
         cand = s10_dir / "full_song.wav"
         if cand.exists():
             master_path = cand
-        else:
-            print(
-                f"[tasks][{job_id}] No se encuentra máster full_song.wav en {cand}",
-                flush=True,
+            logger.info(
+                "[%s] Máster localizado en %s",
+                job_id,
+                cand,
             )
-    except Exception as exc:
-        print(
-            f"[tasks][{job_id}] Error localizando máster full_song.wav: {exc}",
-            flush=True,
+        else:
+            logger.warning(
+                "[%s] No se encuentra máster full_song.wav en %s",
+                job_id,
+                cand,
+            )
+    except Exception:
+        logger.exception(
+            "[%s] Error localizando máster full_song.wav",
+            job_id,
         )
 
     return original_path, master_path
@@ -210,16 +242,24 @@ def _write_job_status(job_root: Path, status: Dict[str, Any]) -> None:
             json.dumps(status, indent=2, ensure_ascii=False),
             encoding="utf-8",
         )
-    except Exception as exc:
-        print(
-            f"[tasks][{status.get('jobId')}] No se pudo escribir job_status.json: {exc}",
-            flush=True,
+        job_id = status.get("jobId") or status.get("job_id")
+        logger.info(
+            "[%s] job_status.json actualizado: %s",
+            job_id,
+            status_path,
+        )
+    except Exception:
+        job_id = status.get("jobId") or status.get("job_id")
+        logger.exception(
+            "[%s] No se pudo escribir job_status.json",
+            job_id,
         )
 
 
 # -------------------------------------------------------------------
 # Tarea Celery
 # -------------------------------------------------------------------
+
 
 @celery_app.task(bind=True, name="run_full_pipeline_task")
 def run_full_pipeline_task(
@@ -234,10 +274,12 @@ def run_full_pipeline_task(
     Tarea Celery que ejecuta el pipeline completo para un job concreto.
     """
     start_ts = time.time()
-    print(
-        f"[tasks][{job_id}] >>> run_full_pipeline_task recibido en worker "
-        f"(media_dir={media_dir}, temp_root={temp_root})",
-        flush=True,
+    logger.info(
+        ">>> run_full_pipeline_task recibido en worker. job_id=%s celery_id=%s media_dir=%s temp_root=%s",
+        job_id,
+        getattr(self.request, "id", None),
+        media_dir,
+        temp_root,
     )
 
     # Import diferido del pipeline (por si el import es costoso)
@@ -311,17 +353,24 @@ def run_full_pipeline_task(
         }
         _write_job_status(job_root_path, status)
 
-        print(
-            f"[tasks][{job_id}] Progreso: {stage_index}/{total_stages} "
-            f"({progress_val:.1f}%) stage_key={stage_key}",
-            flush=True,
+        logger.info(
+            "[%s] Progreso: %d/%d (%.1f%%) stage_key=%s",
+            job_id,
+            stage_index,
+            total_stages,
+            progress_val,
+            stage_key,
         )
 
     # ---------------------------
     # 1) Ejecutar pipeline
     # ---------------------------
     try:
-        print(f"[tasks][{job_id}] Llamando a run_pipeline_for_job...", flush=True)
+        logger.info(
+            "[%s] Llamando a run_pipeline_for_job (enabled_stage_keys=%s)",
+            job_id,
+            enabled_stage_keys,
+        )
         t0 = time.time()
 
         run_pipeline_for_job(
@@ -334,14 +383,15 @@ def run_full_pipeline_task(
         )
 
         t1 = time.time()
-        print(
-            f"[tasks][{job_id}] run_pipeline_for_job terminado en {t1 - t0:.1f}s",
-            flush=True,
+        logger.info(
+            "[%s] run_pipeline_for_job terminado en %.1fs",
+            job_id,
+            t1 - t0,
         )
     except Exception as exc:
-        print(
-            f"[tasks][{job_id}] ERROR en run_pipeline_for_job: {exc}",
-            flush=True,
+        logger.exception(
+            "[%s] ERROR en run_pipeline_for_job",
+            job_id,
         )
         self.update_state(
             state=states.FAILURE,
@@ -372,7 +422,10 @@ def run_full_pipeline_task(
         _write_job_status(job_root_path, error_status)
         raise
 
-    print(f"[tasks][{job_id}] Pipeline finalizado correctamente.", flush=True)
+    logger.info(
+        "[%s] Pipeline finalizado correctamente.",
+        job_id,
+    )
 
     # ---------------------------
     # 2) Calcular métricas y URLs finales
@@ -407,9 +460,11 @@ def run_full_pipeline_task(
     _write_job_status(job_root_path, final_status)
 
     total_time = time.time() - start_ts
-    print(
-        f"[tasks][{job_id}] <<< run_full_pipeline_task COMPLETADO en {total_time:.1f}s",
-        flush=True,
+    logger.info(
+        "[%s] <<< run_full_pipeline_task COMPLETADO en %.1fs (job_root=%s)",
+        job_id,
+        total_time,
+        job_root_path,
     )
 
     return final_status

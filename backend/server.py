@@ -1,11 +1,11 @@
-# C:\mix-master\backend\server.py
-
 from __future__ import annotations
 
 import json
 import logging
 import shutil
 import uuid
+import time
+from datetime import datetime
 from pathlib import Path
 from typing import List, Dict, Optional, Any
 
@@ -16,8 +16,14 @@ from fastapi import HTTPException
 
 from tasks import run_full_pipeline_task
 
-logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
+# Configuración de logging con timestamps legibles
+if not logging.getLogger().handlers:
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    )
+
+logger = logging.getLogger("mix_master.server")
 
 app = FastAPI(title="Mix-Master API")
 
@@ -64,6 +70,13 @@ def _create_job_dirs() -> tuple[str, Path, Path]:
 
     media_dir.mkdir(parents=True, exist_ok=True)
     temp_root.mkdir(parents=True, exist_ok=True)
+
+    logger.info(
+        "[_create_job_dirs] job_id=%s media_dir=%s temp_root=%s",
+        job_id,
+        media_dir,
+        temp_root,
+    )
 
     return job_id, media_dir, temp_root
 
@@ -125,6 +138,11 @@ def _build_pipeline_stages() -> list[dict[str, Any]]:
                 }
             )
 
+    logger.info(
+        "[_build_pipeline_stages] Cargadas %d stages desde contracts.json",
+        len(result),
+    )
+
     return result
 
 
@@ -149,6 +167,11 @@ def _write_initial_job_status(job_id: str, temp_root: Path) -> None:
         json.dumps(status, indent=2, ensure_ascii=False),
         encoding="utf-8",
     )
+    logger.info(
+        "[_write_initial_job_status] job_status.json inicial escrito para job_id=%s en %s",
+        job_id,
+        status_path,
+    )
 
 
 def _load_job_status_from_fs(job_id: str) -> Optional[Dict[str, Any]]:
@@ -157,6 +180,10 @@ def _load_job_status_from_fs(job_id: str) -> Optional[Dict[str, Any]]:
     """
     status_path = JOBS_ROOT / job_id / "job_status.json"
     if not status_path.exists():
+        logger.info(
+            "[_load_job_status_from_fs] No existe job_status.json para job_id=%s",
+            job_id,
+        )
         return None
     try:
         with status_path.open("r", encoding="utf-8") as f:
@@ -165,10 +192,16 @@ def _load_job_status_from_fs(job_id: str) -> Optional[Dict[str, Any]]:
             data.setdefault("jobId", job_id)
             data.setdefault("job_id", job_id)
             return data
+        logger.warning(
+            "[_load_job_status_from_fs] job_status.json para job_id=%s no es un dict",
+            job_id,
+        )
         return None
     except Exception as exc:
         logger.warning(
-            "No se pudo leer job_status.json para job_id=%s: %s", job_id, exc
+            "No se pudo leer job_status.json para job_id=%s: %s",
+            job_id,
+            exc,
         )
         return None
 
@@ -207,14 +240,24 @@ async def mix_tracks(
     stages_json: Optional[str] = Form(None),
     stem_profiles_json: Optional[str] = Form(None),
     space_depth_bus_styles_json: Optional[str] = Form(None),
-    upload_mode: str = Form("song"),  # <-- NUEVO: "song" o "stems"
+    upload_mode: str = Form("song"),  # <-- "song" o "stems"
 ):
-    job_id, media_dir, temp_root = _create_job_dirs()
+    request_start_ts = time.time()
+    request_start_iso = datetime.utcnow().isoformat()
+
     logger.info(
-        "Nuevo job de mezcla: job_id=%s, n_files=%d, upload_mode=%s",
-        job_id,
+        "[/mix] HTTP request recibido a %s (UTC). n_files=%d upload_mode=%s",
+        request_start_iso,
         len(files),
         upload_mode,
+    )
+
+    job_id, media_dir, temp_root = _create_job_dirs()
+    logger.info(
+        "[/mix] Nuevo job de mezcla creado. job_id=%s media_dir=%s temp_root=%s",
+        job_id,
+        media_dir,
+        temp_root,
     )
 
     # -----------------------------
@@ -223,7 +266,7 @@ async def mix_tracks(
     _write_initial_job_status(job_id, temp_root)
 
     # -----------------------------
-    # 1b) Persistir modo de subida (song/stems) para S0_SEPARATE_STEMS
+    # 1b) Persistir modo de subida (song/stems)
     # -----------------------------
     raw_mode = (upload_mode or "song").strip().lower()
     is_stems_upload = raw_mode in {"stems", "upload_stems", "stems_true", "true", "1"}
@@ -242,6 +285,12 @@ async def mix_tracks(
     upload_info_path.write_text(
         json.dumps(upload_info, indent=2, ensure_ascii=False),
         encoding="utf-8",
+    )
+    logger.info(
+        "[/mix] upload_mode.json escrito para job_id=%s: %s (stems=%s)",
+        job_id,
+        normalized_mode,
+        is_stems_upload,
     )
 
     # -----------------------------
@@ -262,14 +311,19 @@ async def mix_tracks(
                     if name:
                         profiles_by_name[name] = profile
                         raw_profiles.append({"name": name, "profile": profile})
+            logger.info(
+                "[/mix] Perfiles de stems parseados para job_id=%s: %d entradas",
+                job_id,
+                len(raw_profiles),
+            )
         except Exception as exc:
             logger.warning(
-                "No se pudo parsear stem_profiles_json=%r: %s",
+                "[/mix] No se pudo parsear stem_profiles_json=%r: %s",
                 stem_profiles_json,
                 exc,
             )
 
-    # También podemos persistir estilos de space/depth si vienen
+    # Persistir estilos de space/depth si vienen
     if space_depth_bus_styles_json:
         try:
             parsed = json.loads(space_depth_bus_styles_json)
@@ -280,9 +334,13 @@ async def mix_tracks(
                     json.dumps(parsed, indent=2, ensure_ascii=False),
                     encoding="utf-8",
                 )
+                logger.info(
+                    "[/mix] space_depth_bus_styles.json escrito para job_id=%s",
+                    job_id,
+                )
         except Exception as exc:
             logger.warning(
-                "No se pudo parsear space_depth_bus_styles_json=%r: %s",
+                "[/mix] No se pudo parsear space_depth_bus_styles_json=%r: %s",
                 space_depth_bus_styles_json,
                 exc,
             )
@@ -292,8 +350,15 @@ async def mix_tracks(
     # -----------------------------
     for f in files:
         dest_path = media_dir / f.filename
+        contents = await f.read()
         with dest_path.open("wb") as out:
-            out.write(await f.read())
+            out.write(contents)
+        logger.info(
+            "[/mix] Archivo subido guardado para job_id=%s -> %s (%d bytes)",
+            job_id,
+            dest_path,
+            len(contents),
+        )
 
     # Persistir mapping a disco (para stages posteriores, depuración, etc.)
     if raw_profiles:
@@ -302,6 +367,11 @@ async def mix_tracks(
         profiles_path.write_text(
             json.dumps(raw_profiles, indent=2, ensure_ascii=False),
             encoding="utf-8",
+        )
+        logger.info(
+            "[/mix] stem_profiles.json escrito para job_id=%s con %d perfiles",
+            job_id,
+            len(raw_profiles),
         )
 
     # -----------------------------
@@ -313,30 +383,61 @@ async def mix_tracks(
             parsed = json.loads(stages_json)
             if isinstance(parsed, list):
                 enabled_stage_keys = [str(k) for k in parsed]
+            logger.info(
+                "[/mix] stages_json parseado para job_id=%s: %d stages habilitadas",
+                job_id,
+                len(enabled_stage_keys or []),
+            )
         except Exception as exc:
             logger.warning(
-                "No se pudo parsear stages_json=%r: %s", stages_json, exc
+                "[/mix] No se pudo parsear stages_json=%r: %s",
+                stages_json,
+                exc,
             )
+    else:
+        logger.info(
+            "[/mix] No se recibió stages_json; se usarán las stages por defecto para job_id=%s",
+            job_id,
+        )
 
     # -----------------------------
     # 5) Lanzar tarea Celery
     # -----------------------------
-    run_full_pipeline_task.apply_async(
-        args=[
-            job_id,
-            str(media_dir),
-            str(temp_root),
-            enabled_stage_keys,
-            profiles_by_name,
-        ],
-        task_id=job_id,
+    pre_enqueue_ts = time.time()
+    logger.info(
+        "[/mix] Preparación completada para job_id=%s en %.3fs. Encolando tarea Celery...",
+        job_id,
+        pre_enqueue_ts - request_start_ts,
     )
 
+    try:
+        result = run_full_pipeline_task.apply_async(
+            args=[
+                job_id,
+                str(media_dir),
+                str(temp_root),
+                enabled_stage_keys,
+                profiles_by_name,
+            ],
+            task_id=job_id,
+        )
+    except Exception as exc:
+        logger.exception(
+            "[/mix] Error en apply_async para job_id=%s",
+            job_id,
+        )
+        raise HTTPException(
+            status_code=500,
+            detail="No se pudo encolar la tarea de mezcla",
+        ) from exc
+
+    after_enqueue_ts = time.time()
     logger.info(
-        "Celery: tarea encolada job_id=%s, celery_id=%s, state=%s",
+        "[/mix] Celery: tarea encolada job_id=%s celery_id=%s state=%s. Latencia total desde HTTP=%.3fs",
         job_id,
         result.id,
         result.state,
+        after_enqueue_ts - request_start_ts,
     )
 
     return {"jobId": job_id}
@@ -351,6 +452,10 @@ def get_job_status(job_id: str) -> Dict[str, Any]:
     data = _load_job_status_from_fs(job_id)
     if data is None:
         # Si no hay fichero, devolvemos un "pending" neutro
+        logger.info(
+            "[/jobs/%s] job_status.json no encontrado; devolviendo estado pending.",
+            job_id,
+        )
         return {
             "jobId": job_id,
             "job_id": job_id,
@@ -361,6 +466,13 @@ def get_job_status(job_id: str) -> Dict[str, Any]:
             "message": "Job pending in queue",
             "progress": 0.0,
         }
+    logger.info(
+        "[/jobs/%s] Estado leído de job_status.json: status=%s stage_index=%s/%s",
+        job_id,
+        data.get("status"),
+        data.get("stage_index"),
+        data.get("total_stages"),
+    )
     return data
 
 
@@ -376,6 +488,10 @@ async def cleanup_temp():
             # Si no existe, la creamos (en tu caso, el volumen montado en /app/temp / /app/media)
             if not dir_path.exists():
                 dir_path.mkdir(parents=True, exist_ok=True)
+                logger.info(
+                    "[/cleanup-temp] Directorio %s no existía; creado.",
+                    dir_path,
+                )
                 continue
 
             # Si existe, limpiamos SOLO el contenido
@@ -388,9 +504,17 @@ async def cleanup_temp():
                         full_path.unlink()
                     except FileNotFoundError:
                         pass
+            logger.info(
+                "[/cleanup-temp] Limpiado contenido de %s",
+                dir_path,
+            )
         except Exception as e:
             # Log, pero NO rompemos el endpoint
-            logger.error(f"Error limpiando {dir_path}: {e}")
+            logger.error(
+                "Error limpiando %s: %s",
+                dir_path,
+                e,
+            )
 
     return {"status": "ok"}
 
