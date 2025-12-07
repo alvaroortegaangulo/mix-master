@@ -14,6 +14,7 @@ import aiofiles
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.concurrency import run_in_threadpool
 
 from tasks import run_full_pipeline_task
 from src.utils.job_store import JobStore
@@ -149,12 +150,8 @@ async def mix_tracks(
         except Exception: pass
 
     for f in files:
-        dest_path = media_dir / f.filename
-        async with aiofiles.open(dest_path, "wb") as out:
-            while True:
-                chunk = await f.read(1024 * 1024)
-                if not chunk: break
-                await out.write(chunk)
+        content = await f.read()
+        await run_in_threadpool(job_store.save_input_file, job_id, f.filename, content)
 
     try:
         run_full_pipeline_task.apply_async(
@@ -225,21 +222,10 @@ async def init_mix_job(
 
 @app.post("/mix/{job_id}/upload-file")
 async def upload_file_for_job(job_id: str, file: UploadFile = File(...)):
-    media_dir = _get_media_dir(job_id)
-    if not media_dir.exists():
-         # Re-create if missing or handle error
-         media_dir.mkdir(parents=True, exist_ok=True)
-
-    dest_path = media_dir / file.filename
-    bytes_written = 0
-    async with aiofiles.open(dest_path, "wb") as out:
-        while True:
-            chunk = await file.read(1024 * 1024)
-            if not chunk: break
-            await out.write(chunk)
-            bytes_written += len(chunk)
-
-    return {"ok": True, "filename": file.filename, "bytes": bytes_written}
+    # Read file into memory and save to Redis
+    content = await file.read()
+    await run_in_threadpool(job_store.save_input_file, job_id, file.filename, content)
+    return {"ok": True, "filename": file.filename, "bytes": len(content)}
 
 @app.post("/mix/{job_id}/start")
 async def start_mix_job_endpoint(job_id: str):

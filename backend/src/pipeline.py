@@ -7,7 +7,8 @@ from typing import Callable, Dict, Any, List, Optional
 
 from .stages.stage import run_stage, set_active_contract_sequence
 from .context import PipelineContext
-from .utils.audio_memory import load_stems_into_memory, perform_mixdown_in_memory, save_memory_to_disk
+from .utils.audio_memory import load_stems_from_job_store, perform_mixdown_in_memory, save_memory_to_disk
+from .utils.job_store import JobStore
 
 logger = logging.getLogger(__name__)
 
@@ -59,8 +60,9 @@ def run_pipeline_for_job(
     if metadata:
         context.metadata.update(metadata)
 
-    logger.info("[pipeline] Loading stems into memory from media_dir...")
-    load_stems_into_memory(context, media_dir)
+    logger.info("[pipeline] Loading stems into memory from JobStore (Redis)...")
+    job_store = JobStore()
+    load_stems_from_job_store(context, job_store)
 
     _generate_session_config(context)
 

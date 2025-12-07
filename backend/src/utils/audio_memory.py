@@ -1,9 +1,55 @@
+import io
 import numpy as np
 import soundfile as sf
 from pathlib import Path
 from typing import Dict, Tuple, Optional
 from context import PipelineContext
 from utils.logger import logger
+from utils.job_store import JobStore
+
+def load_stems_from_job_store(context: PipelineContext, job_store: JobStore) -> None:
+    """
+    Loads all audio files from Redis (JobStore) into context.audio_stems.
+    """
+    audio_exts = {".wav", ".aif", ".aiff", ".flac"}
+    loaded_count = 0
+
+    files_map = job_store.get_input_files(context.job_id)
+    # files_map keys are bytes (Redis) -> convert to str
+    # Sort for determinism
+    filenames = sorted([k.decode('utf-8') for k in files_map.keys()])
+
+    for fname in filenames:
+        if fname.lower() == "full_song.wav":
+            continue
+
+        # simple check extension
+        if Path(fname).suffix.lower() not in audio_exts:
+            continue
+
+        file_bytes = files_map[fname.encode('utf-8')]
+
+        try:
+            # Read from memory buffer
+            with io.BytesIO(file_bytes) as bio:
+                data, sr = sf.read(bio, always_2d=True, dtype='float32')
+
+            # Set global sample rate if not set or verify consistency
+            if loaded_count == 0:
+                context.sample_rate = sr
+            elif sr != context.sample_rate:
+                logger.warning(f"[audio_memory] Sample rate mismatch: {fname} is {sr}, expected {context.sample_rate}.")
+                # TODO: Resample if needed
+
+            context.audio_stems[fname] = data
+            loaded_count += 1
+            logger.info(f"[audio_memory] Loaded {fname} ({data.shape}) from Redis.")
+
+        except Exception as e:
+            logger.error(f"[audio_memory] Failed to load {fname} from Redis: {e}")
+
+    logger.info(f"[audio_memory] Loaded {loaded_count} stems from JobStore.")
+
 
 def load_stems_into_memory(context: PipelineContext, source_dir: Path) -> None:
     """
