@@ -4,22 +4,38 @@ from __future__ import annotations
 
 import os
 import json
-import logging
+import time
 from pathlib import Path
 from typing import List, Dict, Optional, Any
 
 from celery import states
 from celery_app import celery_app
 
-from src.pipeline import run_pipeline_for_job
-from src.utils.analysis_utils import (
-    get_temp_dir,
-    load_audio_mono,
-    compute_peak_dbfs,
-    compute_integrated_loudness_lufs,
-)
 
-logger = logging.getLogger(__name__)
+# -------------------------------------------------------------------
+# Helpers de imports perezosos (por si son pesados)
+# -------------------------------------------------------------------
+
+def _import_pipeline():
+    """
+    Import diferido para evitar cargar el pipeline en el arranque del worker,
+    por si el import es pesado.
+    """
+    from src.pipeline import run_pipeline_for_job
+    return run_pipeline_for_job
+
+
+def _import_analysis_utils():
+    """
+    Import diferido de funciones de análisis (matrices, audio, etc.).
+    """
+    from src.utils.analysis_utils import (
+        get_temp_dir,
+        load_audio_mono,
+        compute_peak_dbfs,
+        compute_integrated_loudness_lufs,
+    )
+    return get_temp_dir, load_audio_mono, compute_peak_dbfs, compute_integrated_loudness_lufs
 
 
 # -------------------------------------------------------------------
@@ -36,6 +52,9 @@ def _safe_compute_final_metrics(job_id: str) -> Dict[str, Any]:
 
     Devuelve un dict con la forma de MixMetrics.
     """
+    # Importamos aquí para que veas claramente en logs si hubiera coste.
+    get_temp_dir, load_audio_mono, compute_peak_dbfs, compute_integrated_loudness_lufs = _import_analysis_utils()
+
     # Defaults neutros
     final_peak_dbfs = 0.0
     final_rms_dbfs = 0.0
@@ -63,12 +82,14 @@ def _safe_compute_final_metrics(job_id: str) -> Dict[str, Any]:
             final_peak_dbfs = compute_peak_dbfs(mono)
             final_rms_dbfs = compute_integrated_loudness_lufs(mono, sr)
         else:
-            logger.warning(
-                "[tasks] No se ha encontrado máster final en %s", master_path
+            print(
+                f"[tasks][{job_id}] No se ha encontrado máster final en {master_path}",
+                flush=True,
             )
     except Exception as exc:
-        logger.warning(
-            "[tasks] Error calculando métricas de máster final: %s", exc
+        print(
+            f"[tasks][{job_id}] Error calculando métricas de máster final: {exc}",
+            flush=True,
         )
 
     # -----------------------------
@@ -88,16 +109,17 @@ def _safe_compute_final_metrics(job_id: str) -> Dict[str, Any]:
                 session.get("key_detection_confidence", 0.0) or 0.0
             )
         else:
-            logger.info(
-                "[tasks] No se ha encontrado analysis_%s.json para key detection",
-                contract_id,
+            print(
+                f"[tasks][{job_id}] No se ha encontrado analysis_{contract_id}.json",
+                flush=True,
             )
     except Exception as exc:
-        logger.warning(
-            "[tasks] Error leyendo análisis de key detection: %s", exc
+        print(
+            f"[tasks][{job_id}] Error leyendo análisis de key detection: {exc}",
+            flush=True,
         )
 
-    # (3) Tempo y shifts vocales: de momento neutros hasta que los midamos en el nuevo pipeline.
+    # (3) Tempo y shifts vocales: de momento neutros.
 
     return {
         "final_peak_dbfs": final_peak_dbfs,
@@ -124,14 +146,10 @@ def _make_files_url(job_root: Path, job_id: str, path: Path | None) -> str:
         return ""
 
     try:
-        # p.ej. "S10_MASTER_FINAL_LIMITS/full_song.wav"
         rel = path.relative_to(job_root)
     except ValueError:
-        # No cuelga de job_root
         return ""
 
-    # En server.py montas StaticFiles en /files apuntando a PROJECT_ROOT/temp
-    # de forma que: /files/<job_id>/... -> temp/<job_id>/...
     return f"/files/{job_id}/{rel.as_posix()}"
 
 
@@ -140,40 +158,42 @@ def _locate_original_and_master_paths(job_id: str) -> tuple[Path | None, Path | 
     Intenta localizar:
       - original_mix_path: full_song de S0_MIX_ORIGINAL
       - master_path: full_song de S10_MASTER_FINAL_LIMITS
-
-    Devolvemos (original_path or None, master_path or None).
     """
+    get_temp_dir, *_ = _import_analysis_utils()
+
     original_path: Path | None = None
     master_path: Path | None = None
 
     try:
-        # S0_MIX_ORIGINAL
         s0_dir = get_temp_dir("S0_MIX_ORIGINAL", create=False)
         cand = s0_dir / "full_song.wav"
         if cand.exists():
             original_path = cand
         else:
-            logger.info(
-                "[tasks] No se encuentra original full_song.wav en %s", cand
+            print(
+                f"[tasks][{job_id}] No se encuentra original full_song.wav en {cand}",
+                flush=True,
             )
     except Exception as exc:
-        logger.warning(
-            "[tasks] Error localizando original full_song.wav: %s", exc
+        print(
+            f"[tasks][{job_id}] Error localizando original full_song.wav: {exc}",
+            flush=True,
         )
 
     try:
-        # S10_MASTER_FINAL_LIMITS
         s10_dir = get_temp_dir("S10_MASTER_FINAL_LIMITS", create=False)
         cand = s10_dir / "full_song.wav"
         if cand.exists():
             master_path = cand
         else:
-            logger.info(
-                "[tasks] No se encuentra máster full_song.wav en %s", cand
+            print(
+                f"[tasks][{job_id}] No se encuentra máster full_song.wav en {cand}",
+                flush=True,
             )
     except Exception as exc:
-        logger.warning(
-            "[tasks] Error localizando máster full_song.wav: %s", exc
+        print(
+            f"[tasks][{job_id}] Error localizando máster full_song.wav: {exc}",
+            flush=True,
         )
 
     return original_path, master_path
@@ -191,7 +211,10 @@ def _write_job_status(job_root: Path, status: Dict[str, Any]) -> None:
             encoding="utf-8",
         )
     except Exception as exc:
-        logger.warning("[tasks] No se pudo escribir job_status.json: %s", exc)
+        print(
+            f"[tasks][{status.get('jobId')}] No se pudo escribir job_status.json: {exc}",
+            flush=True,
+        )
 
 
 # -------------------------------------------------------------------
@@ -209,22 +232,18 @@ def run_full_pipeline_task(
 ) -> Dict[str, Any]:
     """
     Tarea Celery que ejecuta el pipeline completo para un job concreto.
-
-    - job_id: identificador del job.
-    - media_dir: carpeta donde se han guardado los stems originales.
-    - temp_root: carpeta raíz temporal del job (p.ej. /app/temp/<job_id>).
-    - enabled_stage_keys: lista opcional de contract_ids a ejecutar.
-    - profiles_by_name: mapping opcional nombre_de_archivo -> perfil_de_stem.
     """
-
-    logger.info(
-        "Celery: iniciando run_full_pipeline_task job_id=%s media_dir=%s temp_root=%s",
-        job_id,
-        media_dir,
-        temp_root,
+    start_ts = time.time()
+    print(
+        f"[tasks][{job_id}] >>> run_full_pipeline_task recibido en worker "
+        f"(media_dir={media_dir}, temp_root={temp_root})",
+        flush=True,
     )
 
-    # Exportar info mínima a variables de entorno para los scripts de análisis/stages
+    # Import diferido del pipeline (por si el import es costoso)
+    run_pipeline_for_job = _import_pipeline()
+
+    # Exportar info mínima a variables de entorno para los scripts
     os.environ["MIX_JOB_ID"] = job_id
     os.environ["MIX_MEDIA_DIR"] = media_dir
     os.environ["MIX_TEMP_ROOT"] = temp_root
@@ -232,10 +251,8 @@ def run_full_pipeline_task(
     media_dir_path = Path(media_dir)
     temp_root_path = Path(temp_root)
 
-    # En este diseño, temp_root = /app/temp/<job_id>
     job_root_path = temp_root_path
 
-    # Estado de progreso que iremos actualizando en la callback
     progress_state: Dict[str, Any] = {
         "stage_index": 0,
         "total_stages": 0,
@@ -243,7 +260,6 @@ def run_full_pipeline_task(
         "message": "Inicializando pipeline...",
     }
 
-    # Estado inicial mínimo (por si el frontend pregunta antes de que arranque el pipeline)
     initial_status = {
         "jobId": job_id,
         "job_id": job_id,
@@ -256,20 +272,16 @@ def run_full_pipeline_task(
     }
     _write_job_status(job_root_path, initial_status)
 
-    # ----------------------------------------------------
-    # Callback de progreso: llamado desde run_pipeline_for_job
-    # ----------------------------------------------------
     def progress_cb(
         stage_index: int,
         total_stages: int,
         stage_key: str,
         message: str,
     ) -> None:
-        # Actualizar estado interno
         progress_state["stage_index"] = stage_index
         progress_state["total_stages"] = total_stages
         progress_state["stage_key"] = stage_key
-        progress_state["message"] = message  # genérico, el UI hará el formateo
+        progress_state["message"] = message
 
         if total_stages <= 0:
             progress_val = 0.0
@@ -285,10 +297,8 @@ def run_full_pipeline_task(
             "progress": progress_val,
         }
 
-        # Estado en Celery (opcional)
         self.update_state(state="PROGRESS", meta=meta)
 
-        # Estado persistido para el frontend (server.py -> /jobs/{job_id})
         status = {
             "jobId": job_id,
             "job_id": job_id,
@@ -301,10 +311,19 @@ def run_full_pipeline_task(
         }
         _write_job_status(job_root_path, status)
 
+        print(
+            f"[tasks][{job_id}] Progreso: {stage_index}/{total_stages} "
+            f"({progress_val:.1f}%) stage_key={stage_key}",
+            flush=True,
+        )
+
     # ---------------------------
     # 1) Ejecutar pipeline
     # ---------------------------
     try:
+        print(f"[tasks][{job_id}] Llamando a run_pipeline_for_job...", flush=True)
+        t0 = time.time()
+
         run_pipeline_for_job(
             job_id=job_id,
             media_dir=media_dir_path,
@@ -313,9 +332,17 @@ def run_full_pipeline_task(
             profiles_by_name=profiles_by_name,
             progress_cb=progress_cb,
         )
+
+        t1 = time.time()
+        print(
+            f"[tasks][{job_id}] run_pipeline_for_job terminado en {t1 - t0:.1f}s",
+            flush=True,
+        )
     except Exception as exc:
-        # Marcamos fallo en Celery con info básica
-        logger.exception("Error en run_pipeline_for_job(job_id=%s)", job_id)
+        print(
+            f"[tasks][{job_id}] ERROR en run_pipeline_for_job: {exc}",
+            flush=True,
+        )
         self.update_state(
             state=states.FAILURE,
             meta={
@@ -326,7 +353,6 @@ def run_full_pipeline_task(
             },
         )
 
-        # Y escribimos job_status.json con estado de error
         error_status = {
             "jobId": job_id,
             "job_id": job_id,
@@ -346,7 +372,7 @@ def run_full_pipeline_task(
         _write_job_status(job_root_path, error_status)
         raise
 
-    logger.info("Celery: pipeline finalizado correctamente job_id=%s", job_id)
+    print(f"[tasks][{job_id}] Pipeline finalizado correctamente.", flush=True)
 
     # ---------------------------
     # 2) Calcular métricas y URLs finales
@@ -357,43 +383,33 @@ def run_full_pipeline_task(
     original_url = _make_files_url(job_root_path, job_id, original_path)
     master_url = _make_files_url(job_root_path, job_id, master_path)
 
-    # ---------------------------
-    # 3) Resultado estructurado
-    # ---------------------------
     total_stages = int(progress_state.get("total_stages", 0))
     stage_index = int(progress_state.get("stage_index", total_stages))
 
     final_status = {
-        # Identificación básica
         "jobId": job_id,
         "job_id": job_id,
         "status": "success",
         "message": "Mix pipeline finished successfully.",
-
-        # Progreso
         "stage_index": stage_index,
         "total_stages": total_stages,
         "stage_key": "finished",
         "progress": 100.0,
-
-        # Info de rutas internas (útil para debug / filesystem)
-        "job_root": str(job_root_path),          # /app/temp/<job_id>
-        "input_media_dir": str(media_dir_path),  # /app/media/<job_id>
-        "temp_root": str(temp_root_path),        # igual que job_root en este diseño
-
-        # URLs relativas que el frontend convertirá en absolutas con getBackendBaseUrl
+        "job_root": str(job_root_path),
+        "input_media_dir": str(media_dir_path),
+        "temp_root": str(temp_root_path),
         "original_full_song_url": original_url,
         "full_song_url": master_url,
-
-        # Métricas finales con la forma de MixMetrics
         "metrics": metrics,
-
-        # Placeholder por si más adelante quieres propagar estilos de buses, etc.
         "bus_styles": {},
     }
 
-    # Guardar estado final en job_status.json
     _write_job_status(job_root_path, final_status)
 
-    # Devolvemos también el resultado a Celery (por si quieres inspeccionarlo vía backend)
+    total_time = time.time() - start_ts
+    print(
+        f"[tasks][{job_id}] <<< run_full_pipeline_task COMPLETADO en {total_time:.1f}s",
+        flush=True,
+    )
+
     return final_status
