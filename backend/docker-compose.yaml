@@ -79,6 +79,8 @@ services:
     build:
       context: ../frontend
       dockerfile: Dockerfile
+    args:
+      NEXT_PUBLIC_GA_MEASUREMENT_ID: ${NEXT_PUBLIC_GA_MEASUREMENT_ID}
     command: npm run start -- -p 3000
     environment:
       NODE_ENV: production
