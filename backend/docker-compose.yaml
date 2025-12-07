@@ -15,6 +15,7 @@ services:
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/0
       MIX_TEMP_ROOT: /dev/shm/mix-master/temp
+      MPLCONFIGDIR: /tmp/mplconfig
     depends_on:
       - redis
     # Si necesitas exponer el backend directamente:
@@ -23,7 +24,8 @@ services:
     # Limitar superficie y permisos
     read_only: true
     tmpfs:
-      - /dev/shm/mix-master/temp:size=1g
+      - /dev/shm/mix-master/temp:size=2g
+      - /tmp
     volumes:
       - web-temp:/app/temp
     security_opt:
@@ -42,20 +44,21 @@ services:
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/0
       MIX_TEMP_ROOT: /dev/shm/mix-master/temp
+      # Matplotlib usará este dir en lugar de ~/.config/matplotlib
+      MPLCONFIGDIR: /tmp/mplconfig
     depends_on:
       - redis
-    read_only: true
-    tmpfs:
-      - /dev/shm/mix-master/temp:size=1g
-    volumes:
-      - web-temp:/app/temp
+    restart: unless-stopped
     security_opt:
       - no-new-privileges:true
     cap_drop:
       - ALL
-    restart: unless-stopped
-    networks:
-      - app-net
+    read_only: true
+    tmpfs:
+      # Donde tú ya procesas audio (si lo usas):
+      - /dev/shm/mix-master/temp:size=2g
+      # /tmp writable para tempfile + Matplotlib
+      - /tmp
 
   frontend:
     build:
