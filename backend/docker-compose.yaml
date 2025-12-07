@@ -16,6 +16,7 @@ services:
       CELERY_RESULT_BACKEND: redis://redis:6379/0
       MIX_TEMP_ROOT: /dev/shm/mix-master/temp
       MPLCONFIGDIR: /tmp/mplconfig
+      XDG_CACHE_HOME: /tmp/.cache        # para Fontconfig
     depends_on:
       - redis
     # Si necesitas exponer el backend directamente:
@@ -43,9 +44,9 @@ services:
     environment:
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/0
-      MIX_TEMP_ROOT: /dev/shm/mix-master/temp
-      # Matplotlib usará este dir en lugar de ~/.config/matplotlib
       MPLCONFIGDIR: /tmp/mplconfig
+      MIX_TEMP_ROOT: /dev/shm/mix-master/temp
+      XDG_CACHE_HOME: /tmp/.cache
     depends_on:
       - redis
     restart: unless-stopped
@@ -59,6 +60,8 @@ services:
       - /dev/shm/mix-master/temp:size=2g
       # /tmp writable para tempfile + Matplotlib
       - /tmp
+    networks:
+      - app-net   # importante, ver siguiente punto
 
   frontend:
     build:
