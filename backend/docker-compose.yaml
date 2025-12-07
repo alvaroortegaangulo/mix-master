@@ -98,3 +98,4 @@ networks:
 
 volumes:
   web-temp:
+  web-media:

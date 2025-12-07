@@ -12,6 +12,7 @@ from typing import List, Dict, Optional, Any
 from fastapi import FastAPI, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi import HTTPException
 
 from tasks import run_full_pipeline_task
 
@@ -359,14 +360,30 @@ def get_job_status(job_id: str) -> Dict[str, Any]:
 @app.post("/cleanup-temp")
 async def cleanup_temp():
     """
-    Limpia carpetas temp/ y media/ completas.
-    El frontend lo llama al arrancar o al hacer reset.
+    Limpia el contenido de temp/ y media/, pero sin borrar los directorios raíz.
+    Es compatible con root filesystem read-only + volúmenes en /app/temp y /app/media.
     """
     for sub in ("temp", "media"):
         dir_path = PROJECT_ROOT / sub
-        if dir_path.exists():
-            shutil.rmtree(dir_path, ignore_errors=True)
-        dir_path.mkdir(parents=True, exist_ok=True)
+        try:
+            # Si no existe, la creamos (en tu caso, el volumen montado en /app/temp / /app/media)
+            if not dir_path.exists():
+                dir_path.mkdir(parents=True, exist_ok=True)
+                continue
+
+            # Si existe, limpiamos SOLO el contenido
+            for entry in dir_path.iterdir():
+                full_path = dir_path / entry.name
+                if full_path.is_dir():
+                    shutil.rmtree(full_path, ignore_errors=True)
+                else:
+                    try:
+                        full_path.unlink()
+                    except FileNotFoundError:
+                        pass
+        except Exception as e:
+            # Log, pero NO rompemos el endpoint
+            logger.error(f"Error limpiando {dir_path}: {e}")
 
     return {"status": "ok"}
 
