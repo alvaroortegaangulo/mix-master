@@ -11,10 +11,25 @@ import {
   type StemProfilePayload,
   cleanupTemp,  
 } from "../lib/mixApi";
+import dynamic from "next/dynamic";
 import { UploadDropzone } from "../components/UploadDropzone";
-import { MixResultPanel } from "../components/MixResultPanel";
-import { StemsProfilePanel } from "../components/StemsProfilePanel";
-import { SpaceDepthStylePanel, type SpaceBus } from "../components/SpaceDepthStylePanel";
+import { type SpaceBus } from "../components/SpaceDepthStylePanel";
+
+const MixResultPanel = dynamic(
+  () => import("../components/MixResultPanel").then((mod) => mod.MixResultPanel),
+  {
+    loading: () => <p className="text-center text-teal-400">Loading result...</p>,
+  }
+);
+const StemsProfilePanel = dynamic(
+  () => import("../components/StemsProfilePanel").then((mod) => mod.StemsProfilePanel)
+);
+const SpaceDepthStylePanel = dynamic(
+  () =>
+    import("../components/SpaceDepthStylePanel").then(
+      (mod) => mod.SpaceDepthStylePanel
+    )
+);
 
 type StemProfile = {
   id: string;
@@ -831,7 +846,7 @@ useEffect(() => {
         </div>
       </main>
 
-      <footer className="border-t border-slate-800/80 py-4 text-center text-xs text-slate-500">
+      <footer className="border-t border-slate-800/80 py-4 text-center text-xs text-slate-400">
         © 2025 Audio Alchemy. All Rights Reserved.
       </footer>
     </div>
