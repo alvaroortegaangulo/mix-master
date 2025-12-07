@@ -1,39 +1,42 @@
 # ============================
-# 1) Etapa: dependencias (build)
+# 1) Imagen base
 # ============================
-FROM node:20-alpine AS deps
+FROM node:20-alpine AS base
 
 ENV NEXT_TELEMETRY_DISABLED=1
-
 WORKDIR /app
+
+# ============================
+# 2) Etapa: dependencias (deps)
+# ============================
+FROM base AS deps
 
 # Copiamos definición de dependencias
 COPY package*.json ./
 
 # Instalamos deps de forma determinista
-# (npm ci requiere package-lock.json o npm-shrinkwrap.json)
 RUN npm ci
 
 # ============================
-# 2) Etapa: build de Next
+# 3) Etapa: build de Next
 # ============================
-FROM node:20-alpine AS builder
-
-ENV NEXT_TELEMETRY_DISABLED=1
-
-WORKDIR /app
+FROM base AS builder
 
 # Reutilizamos node_modules ya instalados
 COPY --from=deps /app/node_modules ./node_modules
+
+# Copiamos TODO el código del frontend (incluye src/, public/, next.config.*, etc.)
 COPY . .
+
+ENV NODE_ENV=production
 
 # Construimos la app (Next usará NODE_ENV=production internamente)
 RUN npm run build
 
 # ============================
-# 3) Etapa: runtime endurecida
+# 4) Etapa: runtime endurecida
 # ============================
-FROM node:20-alpine AS runner
+FROM base AS runner
 
 ENV NODE_ENV=production \
     NEXT_TELEMETRY_DISABLED=1
@@ -44,13 +47,13 @@ WORKDIR /app
 RUN addgroup -g 1001 nodejs \
     && adduser -D -u 1001 nextjs -G nodejs
 
-# Solo copiamos lo necesario para producción
+# Copiamos solo lo necesario para producción
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next ./.next
-COPY package*.json ./
+COPY --from=builder /app/package*.json ./
 
-# Solo dependencias de producción
-RUN npm ci --omit=dev && npm cache clean --force
+# Copiamos node_modules ya instalados (solo prod; si quieres, separa dev/prod)
+COPY --from=deps /app/node_modules ./node_modules
 
 # Permisos correctos
 RUN chown -R nextjs:nodejs /app
