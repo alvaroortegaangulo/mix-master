@@ -362,7 +362,7 @@ export async function startMixJob(
   const jobId = initData.jobId;
 
   // 2) Uploads en paralelo (concurrencia 4 por defecto)
-  await uploadFilesInParallelForJob(baseUrl, jobId, files, 4);
+  await uploadFilesInParallelForJob(baseUrl, jobId, files, 10);
 
   // 3) Start: encolar tarea Celery para ese job
   const startRes = await fetch(
