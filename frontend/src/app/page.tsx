@@ -818,7 +818,7 @@ useEffect(() => {
                   <img
                     src="/miner.gif"
                     alt="Processing your mix..."
-                    className="h-48 w-auto rounded-lg"
+                    className="h-24 w-auto rounded-lg"
                   />
                 </div>
               )}
