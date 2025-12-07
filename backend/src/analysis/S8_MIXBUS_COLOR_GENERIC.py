@@ -1,12 +1,11 @@
-# C:\mix-master\backend\src\analysis\S8_MIXBUS_COLOR_GENERIC.py
-
 from __future__ import annotations
 from utils.logger import logger
 
 import sys
 from pathlib import Path
 from typing import Dict, Any
-import os
+import json
+import numpy as np
 
 # --- hack para importar utils ---
 THIS_DIR = Path(__file__).resolve().parent
@@ -14,27 +13,23 @@ SRC_DIR = THIS_DIR.parent  # .../src
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-import json  # noqa: E402
-import numpy as np  # noqa: E402
-import soundfile as sf  # noqa: E402
-
-from utils.analysis_utils import (  # noqa: E402
+from utils.analysis_utils import (
     load_contract,
     get_temp_dir,
-    sf_read_limited,
 )
-from utils.session_utils import load_session_config  # noqa: E402
-from utils.color_utils import (  # noqa: E402
+from utils.session_utils import load_session_config_memory
+from utils.color_utils import (
     compute_rms_dbfs,
     compute_true_peak_dbfs,
 )
 
+try:
+    from context import PipelineContext
+except ImportError:
+    PipelineContext = None # type: ignore
+
 
 def _estimate_noise_floor_dbfs(y: np.ndarray) -> float:
-    """
-    Estima un noise floor aproximado como percentil bajo de niveles instantáneos.
-    Muy pragmático, sólo para tener una referencia de cambio de ruido.
-    """
     arr = np.asarray(y, dtype=np.float32)
     if arr.ndim > 1:
         arr = np.mean(arr, axis=1)
@@ -44,38 +39,22 @@ def _estimate_noise_floor_dbfs(y: np.ndarray) -> float:
 
     eps = 1e-9
     inst_db = 20.0 * np.log10(np.abs(arr) + eps)
-    # percentil 10 como aproximación de "cola baja"
     p10 = float(np.percentile(inst_db, 10.0))
     return p10
 
 
-def _analyze_mixbus_color(full_song_path: Path) -> Dict[str, Any]:
-    """
-
-    Lee full_song.wav y calcula:
-      - true peak
-      - RMS
-      - noise floor aproximado
-
-    Devuelve:
-      {
-        "sr_mix": int | None,
-        "pre_true_peak_dbtp": float,
-        "pre_rms_dbfs": float,
-        "noise_floor_dbfs": float,
-        "error": str | None,
-      }
-    """
-    try:
-        y, sr = sf_read_limited(full_song_path, always_2d=False)
-    except Exception as e:
+def _analyze_mixbus_color_memory(context: PipelineContext) -> Dict[str, Any]:
+    if context.audio_mixdown is None:
         return {
             "sr_mix": None,
             "pre_true_peak_dbtp": float("-inf"),
             "pre_rms_dbfs": float("-inf"),
             "noise_floor_dbfs": float("-inf"),
-            "error": f"[S8_MIXBUS_COLOR_GENERIC] Aviso: no se puede leer full_song.wav: {e}.",
+            "error": "[S8_MIXBUS_COLOR_GENERIC] No mixdown in memory.",
         }
+
+    y = context.audio_mixdown
+    sr = context.sample_rate
 
     pre_true_peak_dbtp = compute_true_peak_dbfs(y, oversample_factor=4)
     pre_rms_dbfs = compute_rms_dbfs(y)
@@ -90,20 +69,11 @@ def _analyze_mixbus_color(full_song_path: Path) -> Dict[str, Any]:
     }
 
 
-def main() -> None:
+def process(context: PipelineContext, *args) -> bool:
     """
-    Análisis para S8_MIXBUS_COLOR_GENERIC.
-
-    Uso desde stage.py:
-        python analysis/S8_MIXBUS_COLOR_GENERIC.py S8_MIXBUS_COLOR_GENERIC
+    IN-MEMORY analysis for S8_MIXBUS_COLOR_GENERIC
     """
-    if len(sys.argv) < 2:
-        logger.logger.info("Uso: python S8_MIXBUS_COLOR_GENERIC.py <CONTRACT_ID>")
-        sys.exit(1)
-
-    contract_id = sys.argv[1]  # "S8_MIXBUS_COLOR_GENERIC"
-
-    # 1) Cargar contrato
+    contract_id = context.stage_id
     contract = load_contract(contract_id)
     metrics: Dict[str, Any] = contract.get("metrics", {})
     limits: Dict[str, Any] = contract.get("limits", {})
@@ -114,39 +84,31 @@ def main() -> None:
     max_thd_percent = float(metrics.get("max_thd_percent", 3.0))
     max_sat_per_pass_db = float(limits.get("max_additional_saturation_per_pass", 1.0))
 
-    # 2) temp/<contract_id> y session_config
-    temp_dir = get_temp_dir(contract_id, create=True)
-    cfg = load_session_config(contract_id)
-    style_preset = cfg["style_preset"]
+    try:
+        cfg = load_session_config_memory(context, contract_id)
+    except Exception:
+        cfg = {"style_preset": "Unknown"}
 
-    # 3) Leer mixbus (full_song.wav)
-    full_song_path = temp_dir / "full_song.wav"
-    pre_true_peak_dbtp = float("-inf")
-    pre_rms_dbfs = float("-inf")
-    noise_floor_dbfs = float("-inf")
-    sr_mix: int | None = None
+    style_preset = cfg.get("style_preset", "Unknown")
 
-    if full_song_path.exists():
-        result = _analyze_mixbus_color(full_song_path)
+    result = _analyze_mixbus_color_memory(context)
 
-        if result['error'] is not None:
-            # Error al leer/procesar
-            logger.logger.info(result['error'])
-        else:
-            sr_mix = result['sr_mix']
-            pre_true_peak_dbtp = result['pre_true_peak_dbtp']
-            pre_rms_dbfs = result['pre_rms_dbfs']
-            noise_floor_dbfs = result['noise_floor_dbfs']
-
-            logger.logger.info(
-                f"[S8_MIXBUS_COLOR_GENERIC] full_song.wav analizado (sr={sr_mix}). "
-                f"true_peak={pre_true_peak_dbtp:.2f} dBTP, RMS={pre_rms_dbfs:.2f} dBFS, "
-                f"noise_floor={noise_floor_dbfs:.2f} dBFS."
-            )
+    if result['error'] is not None:
+        logger.info(result['error'])
+        sr_mix = None
+        pre_true_peak_dbtp = float("-inf")
+        pre_rms_dbfs = float("-inf")
+        noise_floor_dbfs = float("-inf")
     else:
-        logger.logger.info(
-            f"[S8_MIXBUS_COLOR_GENERIC] Aviso: no existe {full_song_path}, "
-            "no se puede medir color del mixbus."
+        sr_mix = result['sr_mix']
+        pre_true_peak_dbtp = result['pre_true_peak_dbtp']
+        pre_rms_dbfs = result['pre_rms_dbfs']
+        noise_floor_dbfs = result['noise_floor_dbfs']
+
+        logger.info(
+            f"[S8_MIXBUS_COLOR_GENERIC] In-memory analysis (sr={sr_mix}). "
+            f"true_peak={pre_true_peak_dbtp:.2f} dBTP, RMS={pre_rms_dbfs:.2f} dBFS, "
+            f"noise_floor={noise_floor_dbfs:.2f} dBFS."
         )
 
     session_state: Dict[str, Any] = {
@@ -167,14 +129,21 @@ def main() -> None:
         },
     }
 
+    temp_dir = context.get_stage_dir()
+    temp_dir.mkdir(parents=True, exist_ok=True)
     output_path = temp_dir / f"analysis_{contract_id}.json"
-    with output_path.open("w", encoding="utf-8") as f:
-        json.dump(session_state, f, indent=2, ensure_ascii=False)
 
-    logger.logger.info(
-        f"[S8_MIXBUS_COLOR_GENERIC] Análisis completado. JSON: {output_path}"
-    )
+    try:
+        with output_path.open("w", encoding="utf-8") as f:
+            json.dump(session_state, f, indent=2, ensure_ascii=False)
+    except Exception as e:
+        logger.error(f"[S8_MIXBUS_COLOR_GENERIC] Failed to save analysis JSON: {e}")
+        return False
 
+    return True
+
+def main() -> None:
+    pass
 
 if __name__ == "__main__":
     main()

@@ -1,88 +1,64 @@
-# C:\mix-master\backend\src\utils\session_utils.py
-
-from __future__ import annotations
-
-import json
-from pathlib import Path
 from typing import Dict, Any
+from pathlib import Path
+import json
+from context import PipelineContext
 
-from .analysis_utils import get_temp_dir
-
-
-def load_session_config(contract_id: str) -> Dict[str, Any]:
+def load_session_config(stage_id: str) -> Dict[str, Any]:
     """
-    Lee temp[/<MIX_JOB_ID>]/<contract_id>/session_config.json si existe.
-
-    Devuelve:
-      - style_preset: str
-      - instrument_by_file: dict[file_name -> instrument_profile]
-      - space_depth_bus_styles: dict[bus_key -> style_id]
-
-    Comportamiento:
-      - Modo CLI (single-job):
-          PROJECT_ROOT/temp/<contract_id>/session_config.json
-      - Modo multi-job (Celery, con MIX_JOB_ID/MIX_TEMP_ROOT):
-          PROJECT_ROOT/temp/<MIX_JOB_ID>/<contract_id>/session_config.json
-          o MIX_TEMP_ROOT/<contract_id>/session_config.json
+    Legacy file-based loader
     """
-    # No forzamos create=True: si no existe la carpeta, simplemente no hay config.
-    temp_dir: Path = get_temp_dir(contract_id, create=False)
+    from utils.analysis_utils import get_temp_dir
+    temp_dir = get_temp_dir(stage_id, create=False)
     config_path = temp_dir / "session_config.json"
+    if not config_path.exists():
+        # Fallback or empty
+        return {"style_preset": "Unknown", "instrument_by_file": {}}
 
-    style_preset = "Unknown"
-    instrument_by_file: Dict[str, str] = {}
-    space_depth_bus_styles: Dict[str, str] = {}
+    with config_path.open("r", encoding="utf-8") as f:
+        data = json.load(f)
 
-    if config_path.exists():
-        with config_path.open("r", encoding="utf-8") as f:
-            cfg = json.load(f)
+    # Flatten stems to instrument_by_file map
+    stems = data.get("stems", [])
+    instrument_by_file = {}
+    for s in stems:
+        instrument_by_file[s.get("file_name")] = s.get("instrument_profile")
 
-        style_preset = cfg.get("style_preset", "Unknown")
+    data["instrument_by_file"] = instrument_by_file
+    return data
 
-        raw_sd = cfg.get("space_depth_bus_styles")
-        if isinstance(raw_sd, dict):
-            space_depth_bus_styles = {
-                str(k): str(v) for k, v in raw_sd.items()
-            }
+def load_session_config_memory(context: PipelineContext, stage_id: str) -> Dict[str, Any]:
+    """
+    Tries to load session config from context metadata or falls back to disk.
+    """
+    if "session_config" in context.metadata:
+        data = context.metadata["session_config"]
+        # Flatten logic needed here too?
+        # Yes, analysis scripts expect 'instrument_by_file'
+        stems = data.get("stems", [])
+        instrument_by_file = {}
+        for s in stems:
+             instrument_by_file[s.get("file_name")] = s.get("instrument_profile")
+        data["instrument_by_file"] = instrument_by_file
+        return data
 
-        for stem in cfg.get("stems", []):
-            if not isinstance(stem, dict):
-                continue
-            fname = stem.get("file_name")
-            prof = stem.get("instrument_profile", "Other")
-            if fname:
-                instrument_by_file[str(fname)] = str(prof)
-
-    return {
-        "style_preset": style_preset,
-        "instrument_by_file": instrument_by_file,
-        "space_depth_bus_styles": space_depth_bus_styles,
-    }
-
+    return load_session_config(stage_id)
 
 def infer_bus_target(instrument_profile: str) -> str:
     """
-    Mapea instrument_profile a bus_target.
+    Simula la lógica de ruteo: Drums, Bass, Vocals, Instruments, Keys, FX...
     """
-    mapping = {
-        "Kick": "Bus_Drums",
-        "Snare": "Bus_Drums",
-        "Percussion": "Bus_Perc",
-        "Bass_Electric": "Bus_Bass",
-        "Bass_Synth_808": "Bus_Bass",
-        "Acoustic_Guitar": "Bus_Guitars",
-        "Electric_Guitar_Rhythm": "Bus_Guitars",
-        "Electric_Guitar_Lead": "Bus_Guitars",
-        "Keys_Piano": "Bus_Keys_Synths",
-        "Synth_Pads": "Bus_Keys_Synths",
-        "Synth_Lead_Arp": "Bus_Keys_Synths",
-        "Lead_Vocal_Melodic": "Bus_LeadVox",
-        "Lead_Vocal_Rap": "Bus_LeadVox",
-        "Backing_Vocals": "Bus_BGV",
-        "Vocal_Adlibs_Shouts": "Bus_BGV",
-        "Choir_Group": "Bus_BGV",
-        "FX_EarCandy": "Bus_FX",
-        "Ambience_Atmos": "Bus_Ambience",
-        "Other": "Bus_Other",
-    }
-    return mapping.get(instrument_profile, "Bus_Other")
+    prof = instrument_profile.lower()
+    if "kick" in prof or "snare" in prof or "hat" in prof or "tom" in prof or "cymbal" in prof or "drum" in prof or "overhead" in prof or "room" in prof:
+        return "Drums"
+    if "bass" in prof or "808" in prof:
+        return "Bass"
+    if "vocal" in prof or "vox" in prof or "lead" in prof or "bgv" in prof:
+        return "Vocals"
+    if "synth" in prof or "key" in prof or "piano" in prof or "pad" in prof:
+        return "Keys"
+    if "guitar" in prof or "gtr" in prof:
+        return "Guitars"
+    if "fx" in prof or "sweeps" in prof or "noise" in prof:
+        return "FX"
+
+    return "Instruments"

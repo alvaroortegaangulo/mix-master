@@ -1,7 +1,7 @@
 from utils.logger import logger
 import sys
 from pathlib import Path
-from typing import Dict, Any, List, Tuple
+from typing import Dict, Any, List, Tuple, Optional
 
 # Añadir .../src al sys.path para poder hacer "from utils ..."
 THIS_DIR = Path(__file__).resolve().parent
@@ -10,21 +10,25 @@ if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
 import json
-import os
-
 import numpy as np
-import soundfile as sf
 
-from utils.analysis_utils import get_temp_dir
+try:
+    from context import PipelineContext
+except ImportError:
+    PipelineContext = None # type: ignore
 
-
-def load_analysis(contract_id: str) -> Dict[str, Any]:
+def load_analysis(context: PipelineContext, contract_id: str) -> Dict[str, Any]:
     """
     Carga el JSON de análisis generado por analysis\\S1_STEM_DC_OFFSET.py.
-    Ruta esperada:
-        <PROJECT_ROOT>/temp/<contract_id>/analysis_<contract_id>.json
     """
-    temp_dir = get_temp_dir(contract_id, create=False)
+    # Analysis JSONs are still on disk for now
+    if context.temp_root:
+        temp_dir = context.temp_root / contract_id
+    else:
+        # Fallback
+        from utils.analysis_utils import get_temp_dir
+        temp_dir = get_temp_dir(contract_id, create=False)
+
     analysis_path = temp_dir / f"analysis_{contract_id}.json"
 
     if not analysis_path.exists():
@@ -36,114 +40,74 @@ def load_analysis(contract_id: str) -> Dict[str, Any]:
     return data
 
 
-def process_stem(
-    stem_info: Dict[str, Any],
-    dc_offset_max_db_target: float | None,
-) -> None:
-    """
-    Corrige el DC offset de un stem si supera el umbral del contrato.
-
-    Estrategia minimalista:
-      - Usamos dc_offset_linear ya calculado en el análisis (ahora por canal).
-      - Si dc_offset_db > dc_offset_max_db_target (por ejemplo -40 dB > -60 dB),
-        consideramos que hace falta corrección.
-      - Restamos dc_offset_linear a las muestras de los canales correspondientes.
-    """
-    file_path = Path(stem_info["file_path"])
-
-    # dc_offset_linear puede ser float (legacy) o lista (nuevo)
-    dc_linear_raw = stem_info.get("dc_offset_linear", 0.0)
-
-    # dc_db es el "peor caso" en dB
-    dc_db = float(stem_info.get("dc_offset_db", -120.0))
-
-    # Si no hay objetivo, corregimos siempre; si lo hay, solo si se excede
-    need_correction = False
-    if dc_offset_max_db_target is None:
-        need_correction = True
-    else:
-        # Ambos suelen ser negativos, p.ej. target -60 dB, medido -40 dB.
-        # Si el medido es "menos negativo" (más cercano a 0), es peor.
-        need_correction = dc_db > dc_offset_max_db_target
-
-    if not need_correction:
-        return
-
-    # Leer el audio completo en multicanal
-    data, sr = sf.read(file_path, always_2d=True)
-
-    if not isinstance(data, np.ndarray):
-        data = np.array(data, dtype=np.float32)
-    else:
-        data = data.astype(np.float32)
-
-    if data.size == 0:
-        return
-
-    # Preparar el vector de corrección
-    # data es (samples, channels)
-    n_channels = data.shape[1] if data.ndim > 1 else 1
-
-    correction_vector = np.zeros(n_channels, dtype=np.float32)
-
-    if isinstance(dc_linear_raw, list):
-        # Caso nuevo: lista de floats
-        # Si la lista tiene longitud diferente al audio real, hacemos lo mejor posible (truncar o pad)
-        # pero debería coincidir si el archivo es el mismo.
-        count = min(len(dc_linear_raw), n_channels)
-        for i in range(count):
-            correction_vector[i] = float(dc_linear_raw[i])
-        # Si hay más canales en el audio que en el análisis (raro), se quedan con 0 corrección.
-    else:
-        # Caso legacy: float
-        val = float(dc_linear_raw)
-        correction_vector[:] = val
-
-    # Restar el offset (broadcast automático de numpy si shape coincide en última dim)
-    # data: (N, C), correction_vector: (C,) -> resta columna a columna
-    data_corrected = data - correction_vector
-
-    # Sobrescribir el archivo (manteniendo samplerate, formato por defecto)
-    sf.write(file_path, data_corrected, sr)
-
-
-# -------------------------------------------------------------------
-# -------------------------------------------------------------------
-def _process_stem_worker(args: Tuple[Dict[str, Any], float | None]) -> None:
-    """
-    Wrapper para ejecutar process_stem en un proceso hijo.
-    """
-    stem_info, dc_offset_max_db_target = args
-    process_stem(stem_info, dc_offset_max_db_target)
-
-
-def main() -> None:
+def process(context: PipelineContext, *args) -> bool:
     """
     Stage S1_STEM_DC_OFFSET:
       - Lee analysis_S1_STEM_DC_OFFSET.json.
       - Corrige el DC offset de cada stem que incumple el contrato.
-      - Sobrescribe los stems in-place en temp/<contract_id>/ (en paralelo).
+      - Modifica los stems IN-MEMORY.
     """
-    if len(sys.argv) < 2:
-        logger.logger.info("Uso: python S1_STEM_DC_OFFSET.py <CONTRACT_ID>")
-        sys.exit(1)
+    contract_id = context.stage_id
 
-    contract_id = sys.argv[1]  # "S1_STEM_DC_OFFSET"
-
-    analysis: Dict[str, Any] = load_analysis(contract_id)
+    try:
+        analysis: Dict[str, Any] = load_analysis(context, contract_id)
+    except FileNotFoundError:
+        logger.error(f"[S1_STEM_DC_OFFSET] Analysis not found for {contract_id}")
+        return False
 
     metrics: Dict[str, Any] = analysis.get("metrics_from_contract", {})
-    stems: List[Dict[str, Any]] = analysis.get("stems", [])
+    stems_info: List[Dict[str, Any]] = analysis.get("stems", [])
 
     dc_offset_max_db_target = metrics.get("dc_offset_max_db")
 
-    if stems:
-        args_list = [(stem_info, dc_offset_max_db_target) for stem_info in stems]
-        for args in args_list:
-            _process_stem_worker(args)
+    processed_count = 0
+    for stem_info in stems_info:
+        file_name = Path(stem_info["file_path"]).name
 
-    logger.logger.info(f"[S1_STEM_DC_OFFSET] Corrección de DC offset completada para {len(stems)} stems.")
+        # Check if stem exists in memory
+        if file_name not in context.audio_stems:
+            logger.warning(f"[S1_STEM_DC_OFFSET] Stem {file_name} not found in memory.")
+            continue
 
+        # dc_offset_linear puede ser float (legacy) o lista (nuevo)
+        dc_linear_raw = stem_info.get("dc_offset_linear", 0.0)
+        dc_db = float(stem_info.get("dc_offset_db", -120.0))
+
+        # Check if correction needed
+        need_correction = False
+        if dc_offset_max_db_target is None:
+            need_correction = True
+        else:
+            need_correction = dc_db > dc_offset_max_db_target
+
+        if not need_correction:
+            continue
+
+        data = context.audio_stems[file_name] # (samples, channels)
+
+        n_channels = data.shape[1] if data.ndim > 1 else 1
+        correction_vector = np.zeros(n_channels, dtype=np.float32)
+
+        if isinstance(dc_linear_raw, list):
+            count = min(len(dc_linear_raw), n_channels)
+            for i in range(count):
+                correction_vector[i] = float(dc_linear_raw[i])
+        else:
+            val = float(dc_linear_raw)
+            correction_vector[:] = val
+
+        # Apply correction in-place
+        # data is mutable (numpy array)
+        data -= correction_vector
+        processed_count += 1
+
+    logger.info(f"[S1_STEM_DC_OFFSET] Corrección de DC offset completada para {processed_count} stems.")
+    return True
+
+def main() -> None:
+    # Legacy CLI not supported for in-memory only operations without hydration
+    logger.error("[S1_STEM_DC_OFFSET] Cannot run standalone in in-memory mode.")
+    sys.exit(1)
 
 if __name__ == "__main__":
     main()

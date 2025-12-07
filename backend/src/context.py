@@ -1,19 +1,32 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Dict
+import numpy as np
 
 @dataclass
 class PipelineContext:
     """
     Contexto de ejecución del pipeline.
     Reemplaza el uso de argumentos de línea de comandos y variables de entorno dispersas.
+    Ahora también mantiene el estado del audio en memoria para evitar I/O de disco.
     """
     stage_id: str
     job_id: Optional[str] = None
     temp_root: Optional[Path] = None
 
-    # Puedes agregar más campos si es necesario, como configuración global,
-    # logger configurado, etc.
+    # Audio Data Storage (In-Memory)
+    # Stems: { "stem_name.wav": np.ndarray (shape=(samples, channels), float32) }
+    audio_stems: Dict[str, np.ndarray] = field(default_factory=dict)
+
+    # Mixdown (Full Song): np.ndarray (shape=(samples, channels), float32)
+    audio_mixdown: Optional[np.ndarray] = None
+
+    # Global Sample Rate (assumed constant for the session)
+    sample_rate: int = 44100
+
+    # Metadata persistence (replacing session_config.json, etc if needed,
+    # though JSONs are small enough to keep on disk for now, but we can cache them here)
+    metadata: Dict[str, any] = field(default_factory=dict)
 
     def get_stage_dir(self, stage_id: Optional[str] = None) -> Path:
         """
@@ -24,8 +37,5 @@ class PipelineContext:
         if self.temp_root:
             return self.temp_root / target_id
 
-        # Fallback si no hay temp_root definido (comportamiento legacy o local)
-        # Esto debería coincidir con la lógica de _get_job_temp_root en stage.py
-        # o get_temp_dir en analysis_utils.py si se quiere mantener compatibilidad total,
-        # pero idealmente el temp_root debe venir seteado.
+        # Fallback
         raise ValueError("temp_root no está definido en PipelineContext")
