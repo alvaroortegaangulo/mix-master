@@ -29,6 +29,7 @@ services:
       - /tmp
     volumes:
       - web-temp:/app/temp
+      - web-media:/app/media
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -60,6 +61,9 @@ services:
       - /dev/shm/mix-master/temp:size=2g
       # /tmp writable para tempfile + Matplotlib
       - /tmp
+    volumes:
+      - web-temp:/app/temp     # comparte temp con web
+      - web-media:/app/media   # comparte media con web
     networks:
       - app-net   # importante, ver siguiente punto
 

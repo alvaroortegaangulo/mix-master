@@ -23,7 +23,7 @@ app = FastAPI(title="Mix-Master API")
 # CORS (ajusta origins a tu frontend según necesites)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://161.97.131.133:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
