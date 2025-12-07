@@ -332,6 +332,13 @@ async def mix_tracks(
         task_id=job_id,
     )
 
+    logger.info(
+        "Celery: tarea encolada job_id=%s, celery_id=%s, state=%s",
+        job_id,
+        result.id,
+        result.state,
+    )
+
     return {"jobId": job_id}
 
 
