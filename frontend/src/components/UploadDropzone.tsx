@@ -178,7 +178,7 @@ export function UploadDropzone({
 
       <div className="mt-4 flex justify-center">
         <img
-          src="/upload_icon.svg"
+          src="/upload.gif"
           alt="Upload your mix..."
           className="h-18 w-auto rounded-lg"
           width="72"
