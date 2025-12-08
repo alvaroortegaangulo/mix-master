@@ -13,15 +13,16 @@ services:
     networks:
       - app-net
 
-  # Imagen backend única para web y worker
   web:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: mix-master-backend:latest
-    # Aquí es donde metemos el .env DEL BACKEND
-    env_file:
-      - .env
+    build: .
+    # Hypercorn sirviendo FastAPI
+    command: >
+      hypercorn server:app
+        --bind 0.0.0.0:8000
+        --workers 2
+        --access-logfile -
+        --error-logfile -
+        --log-level info
     environment:
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/0
@@ -31,6 +32,7 @@ services:
     depends_on:
       redis:
         condition: service_healthy
+    # Ya no exponemos 8000 al host: solo Caddy ve este puerto
     read_only: true
     tmpfs:
       - /dev/shm/mix-master/temp:size=2g
@@ -47,7 +49,8 @@ services:
       - app-net
 
   worker:
-    image: mix-master-backend:latest  # reutiliza la misma imagen que web
+    build: .
+    command: celery -A celery_app worker --loglevel=info --concurrency=4
     env_file:
       - .env
     environment:
@@ -59,8 +62,6 @@ services:
     depends_on:
       redis:
         condition: service_healthy
-    # Worker Celery
-    command: celery -A celery_app worker --loglevel=info --concurrency=4
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true
@@ -85,9 +86,12 @@ services:
     command: npm run start -- -p 3000
     environment:
       NODE_ENV: production
-      # El resto de NEXT_PUBLIC_* mejor en ../frontend/.env.production
+      # Si en el frontend usas NEXT_PUBLIC_BACKEND_URL,
+      # mejor configúralo en .env.production (no aquí) a:
+      # NEXT_PUBLIC_BACKEND_URL=https://api.music-mix-master.com
     depends_on:
       - web
+    # No exponemos 3000 al host, lo sirve Caddy por HTTPS
     read_only: true
     tmpfs:
       - /tmp
@@ -105,6 +109,7 @@ services:
     depends_on:
       - web
       - frontend
+    # Aquí es donde se expone todo al exterior, con HTTP/3
     ports:
       - "80:80"
       - "443:443"
