@@ -11,8 +11,10 @@ ENV DEBIAN_FRONTEND=noninteractive \
 
 WORKDIR /app
 
-# Dependencias de sistema (audio + compilación)
-RUN apt-get update && \
+# Dependencias de sistema (audio + compilación) con caché APT
+RUN --mount=type=cache,target=/var/cache/apt \
+    --mount=type=cache,target=/var/lib/apt/lists \
+    apt-get update && \
     apt-get install -y --no-install-recommends \
         libsndfile1 \
         ffmpeg \
@@ -50,10 +52,10 @@ EXPOSE 8000
 # Evitar que Matplotlib cree caché en sitios raros
 ENV MPLCONFIGDIR=/tmp/matplotlib
 
-# Comando por defecto: Hypercorn con 2 workers (puedes subirlo si tu VPS lo aguanta)
+# Comando por defecto: Hypercorn con 2 workers
 CMD ["hypercorn", "server:app", \
      "--bind", "0.0.0.0:8000", \
-     "--workers", "2", \
+     "--workers", "4", \
      "--access-logfile", "-", \
      "--error-logfile", "-", \
      "--log-level", "info"]

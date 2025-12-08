@@ -14,8 +14,8 @@ FROM base AS deps
 # Copiamos definición de dependencias
 COPY package*.json ./
 
-# Instalamos deps de forma determinista
-RUN npm ci
+# Instalamos deps con caché de npm
+RUN --mount=type=cache,target=/root/.npm npm ci
 
 # ============================
 # 3) Etapa: build de Next
@@ -25,12 +25,16 @@ FROM base AS builder
 # Reutilizamos node_modules ya instalados
 COPY --from=deps /app/node_modules ./node_modules
 
-# Copiamos TODO el código del frontend (incluye src/, public/, next.config.*, etc.)
+# Copiamos TODO el código del frontend
 COPY . .
 
 ENV NODE_ENV=production
 
-# Construimos la app (Next usará NODE_ENV=production internamente)
+# Build arg para GA que llega desde docker-compose
+ARG NEXT_PUBLIC_GA_MEASUREMENT_ID
+ENV NEXT_PUBLIC_GA_MEASUREMENT_ID=$NEXT_PUBLIC_GA_MEASUREMENT_ID
+
+# Construimos la app
 RUN npm run build
 
 # ============================
@@ -52,7 +56,7 @@ COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/package*.json ./
 
-# Copiamos node_modules ya instalados (solo prod; si quieres, separa dev/prod)
+# Copiamos node_modules ya instalados
 COPY --from=deps /app/node_modules ./node_modules
 
 # Permisos correctos
