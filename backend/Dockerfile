@@ -1,5 +1,6 @@
 FROM python:3.10-slim
 
+# Config generales
 ENV DEBIAN_FRONTEND=noninteractive \
     PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -10,7 +11,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
 
 WORKDIR /app
 
-# Dependencias de sistema (audio + compilación de libs Python)
+# Dependencias de sistema (audio + compilación)
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         libsndfile1 \
@@ -28,17 +29,17 @@ RUN apt-get update && \
 # Usuario no root
 RUN groupadd -r app && useradd -r -g app app
 
-# Requisitos Python de tu proyecto
+# Dependencias Python
 COPY requirements.txt .
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt && \
-    # Hypercorn ASGI server (HTTP/1 + HTTP/2, opcionalmente HTTP/3)
-    pip install --no-cache-dir hypercorn
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install --upgrade pip && \
+    pip install -r requirements.txt && \
+    pip install hypercorn
 
 # Código de la aplicación
 COPY . .
 
-# Directorios donde la app escribe (volúmenes / tmpfs)
+# Directorios donde la app escribe (montados como volúmenes / tmpfs)
 RUN mkdir -p /app/temp /app/media /tmp/mplconfig /tmp/.cache /tmp/matplotlib && \
     chown -R app:app /app /tmp/mplconfig /tmp/.cache /tmp/matplotlib
 
@@ -49,11 +50,10 @@ EXPOSE 8000
 # Evitar que Matplotlib cree caché en sitios raros
 ENV MPLCONFIGDIR=/tmp/matplotlib
 
-# Hypercorn en vez de uvicorn
-# - 2 workers (ajústalo a tus cores si quieres)
+# Comando por defecto: Hypercorn con 2 workers (puedes subirlo si tu VPS lo aguanta)
 CMD ["hypercorn", "server:app", \
      "--bind", "0.0.0.0:8000", \
-     "--workers", "4", \
+     "--workers", "2", \
      "--access-logfile", "-", \
      "--error-logfile", "-", \
      "--log-level", "info"]
