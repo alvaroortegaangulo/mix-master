@@ -15,8 +15,20 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Audio Alchemy – AI Mix Master",
-  description: "Upload your tracks and get an AI-assisted professional mix.",
+  title: "Audio Alchemy: Professional AI Audio Mixing & Mastering Online",
+  description: "Transform your tracks with Audio Alchemy. Our AI-powered mixing and mastering service delivers professional studio-quality results from your multi-track stems in minutes.",
+  keywords: ["AI mixing", "AI mastering", "online audio mixing", "automated mixing service", "stem mastering", "Audio Alchemy"],
+  openGraph: {
+    title: "Audio Alchemy: Professional AI Audio Mixing & Mastering Online",
+    description: "Transform your tracks with Audio Alchemy. Our AI-powered mixing and mastering service delivers professional studio-quality results from your multi-track stems in minutes.",
+    type: "website",
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Audio Alchemy: Professional AI Audio Mixing & Mastering Online",
+    description: "Transform your tracks with Audio Alchemy. Our AI-powered mixing and mastering service delivers professional studio-quality results from your multi-track stems in minutes.",
+  },
 };
 
 export default function RootLayout({

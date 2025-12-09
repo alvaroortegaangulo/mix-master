@@ -625,18 +625,18 @@ useEffect(() => {
       {/* Top bar */}
 <header className="border-b border-slate-800/80">
   <div className="mx-auto flex h-16 max-w-5xl items-center px-4">
-    <div className="flex items-center gap-2">
-      <div className="h-7 w-7 rounded-full bg-teal-400/90 flex items-center justify-center text-slate-950 text-lg font-bold">
+    <h1 className="flex items-center gap-2 m-0">
+      <div className="h-7 w-7 rounded-full bg-teal-400/90 flex items-center justify-center text-slate-950 text-lg font-bold" aria-hidden="true">
         A
       </div>
       <button
         type="button"
         onClick={handleResetApp}
-        className="text-lg font-semibold tracking-tight bg-transparent border-none p-0 cursor-pointer"
+        className="text-lg font-semibold tracking-tight bg-transparent border-none p-0 cursor-pointer text-slate-100"
       >
         Audio Alchemy
       </button>
-    </div>
+    </h1>
   </div>
 </header>
 
@@ -654,6 +654,7 @@ useEffect(() => {
 
 {/* Columna izquierda (1ª columna en lg+): estilos Space / Depth por bus */}
 <div className="lg:col-start-1">
+  <h2 className="sr-only">Space & Depth Settings</h2>
   {stemProfiles.length > 0 &&
     visibleSpaceDepthBuses.length > 0 && (
       <div className="w-full max-w-xs mx-auto">
@@ -669,7 +670,7 @@ useEffect(() => {
           <div className="lg:col-start-2 flex justify-center">
             <div className="w-full max-w-3xl">
               <section className="rounded-2xl border border-slate-800/80 bg-slate-900/70 p-8 shadow-xl">
-                
+                <h2 className="sr-only">Upload & Mix Configuration</h2>
 
                 <UploadDropzone
                   onFilesSelected={handleFilesSelected}
@@ -835,6 +836,7 @@ useEffect(() => {
 
           {/* Columna derecha: panel de perfiles centrado */}
           <div className="lg:col-start-3">
+            <h2 className="sr-only">Stem Profiles</h2>
             {stemProfiles.length > 0 && (
               <div className="w-full max-w-xs mx-auto">
                 <StemsProfilePanel
