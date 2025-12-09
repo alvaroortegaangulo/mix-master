@@ -1,3 +1,5 @@
+# syntax=docker/dockerfile:1.6
+
 # ============================
 # 1) Imagen base
 # ============================
@@ -11,10 +13,10 @@ WORKDIR /app
 # ============================
 FROM base AS deps
 
-# Copiamos definición de dependencias
+# Copiamos definición de dependencias (solo esto para cache fino)
 COPY package*.json ./
 
-# Instalamos deps con caché de npm
+# Instalamos deps con caché de npm (BuildKit)
 RUN --mount=type=cache,target=/root/.npm npm ci
 
 # ============================

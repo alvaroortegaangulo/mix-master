@@ -14,7 +14,10 @@ services:
       - app-net
 
   web:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: mix-master-backend:latest   # imagen backend única
     # Hypercorn sirviendo FastAPI
     command: >
       hypercorn server:app
@@ -32,7 +35,6 @@ services:
     depends_on:
       redis:
         condition: service_healthy
-    # Ya no exponemos 8000 al host: solo Caddy ve este puerto
     read_only: true
     volumes:
       - web-temp:/app/temp
@@ -47,7 +49,7 @@ services:
       - app-net
 
   worker:
-    build: .
+    image: mix-master-backend:latest   # reutiliza la misma imagen
     command: celery -A celery_app worker --loglevel=info --concurrency=4
     env_file:
       - .env
@@ -82,12 +84,8 @@ services:
     command: npm run start -- -p 3000
     environment:
       NODE_ENV: production
-      # Si en el frontend usas NEXT_PUBLIC_BACKEND_URL,
-      # mejor configúralo en .env.production (no aquí) a:
-      # NEXT_PUBLIC_BACKEND_URL=https://api.music-mix-master.com
     depends_on:
       - web
-    # No exponemos 3000 al host, lo sirve Caddy por HTTPS
     read_only: true
     volumes:
       - frontend-tmp:/tmp
@@ -105,7 +103,6 @@ services:
     depends_on:
       - web
       - frontend
-    # Aquí es donde se expone todo al exterior, con HTTP/3
     ports:
       - "80:80"
       - "443:443"

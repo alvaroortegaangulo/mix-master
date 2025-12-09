@@ -1,3 +1,5 @@
+# syntax=docker/dockerfile:1.6
+
 FROM python:3.10-slim
 
 # Config generales
@@ -11,7 +13,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
 
 WORKDIR /app
 
-# Dependencias de sistema (audio + compilación) con caché APT
+# Dependencias de sistema (audio + compilación) con caché APT (BuildKit)
 RUN --mount=type=cache,target=/var/cache/apt \
     --mount=type=cache,target=/var/lib/apt/lists \
     apt-get update && \
@@ -32,6 +34,7 @@ RUN --mount=type=cache,target=/var/cache/apt \
 RUN groupadd -r app && useradd -r -g app app
 
 # Dependencias Python
+# Esta capa solo se invalida si cambia requirements.txt
 COPY requirements.txt .
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip install --upgrade pip && \
@@ -39,6 +42,7 @@ RUN --mount=type=cache,target=/root/.cache/pip \
     pip install hypercorn
 
 # Código de la aplicación
+# Esta capa solo se rehace si cambian los fuentes / config no ignorados por .dockerignore
 COPY . .
 
 # Directorios donde la app escribe (montados como volúmenes / tmpfs)
@@ -52,10 +56,11 @@ EXPOSE 8000
 # Evitar que Matplotlib cree caché en sitios raros
 ENV MPLCONFIGDIR=/tmp/matplotlib
 
-# Comando por defecto: Hypercorn con 2 workers
+# Comando por defecto: Hypercorn con 4 workers
 CMD ["hypercorn", "server:app", \
      "--bind", "0.0.0.0:8000", \
      "--workers", "4", \
      "--access-logfile", "-", \
      "--error-logfile", "-", \
      "--log-level", "info"]
+
