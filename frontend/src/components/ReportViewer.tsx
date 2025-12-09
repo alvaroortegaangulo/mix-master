@@ -1,6 +1,6 @@
 
-import React, { useState } from "react";
-import { getBackendBaseUrl } from "../lib/mixApi";
+import React, { useEffect, useState } from "react";
+import { getBackendBaseUrl, signFileUrl } from "../lib/mixApi";
 
 // --- Types ---
 interface StageParameter {
@@ -44,25 +44,54 @@ const ReportStageCard = ({
   jobId: string;
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [waveformUrl, setWaveformUrl] = useState("");
+  const [spectrogramUrl, setSpectrogramUrl] = useState("");
   const hasParameters = stage.parameters && Object.keys(stage.parameters).length > 0;
   const images = stage.images || {};
   const hasImages = Object.keys(images).length > 0;
   const hasKeyMetrics = stage.key_metrics && Object.keys(stage.key_metrics).length > 0;
 
-  const appendApiKey = (url: string): string => {
-    const key = process.env.NEXT_PUBLIC_MIXMASTER_API_KEY;
-    if (!key || !url) return url;
-    if (url.includes("api_key=")) return url;
-    const sep = url.includes("?") ? "&" : "?";
-    return `${url}${sep}${encodeURIComponent("api_key")}=${encodeURIComponent(key)}`;
-  };
-
-  // Usamos el backend base + api_key para evitar 401 al cargar imágenes del reporte
-  const getImageUrl = (imageName: string) => {
+  // Prepara URLs firmadas (o con api_key) para las imágenes del reporte
+  useEffect(() => {
+    let cancelled = false;
     const base = getBackendBaseUrl();
-    const rel = `/files/${jobId}/S11_REPORT_GENERATION/${imageName}`;
-    return appendApiKey(`${base}${rel}`);
-  };
+    const fallbackWithApiKey = (name: string): string => {
+      const rel = `/files/${jobId}/S11_REPORT_GENERATION/${name}`;
+      const key = process.env.NEXT_PUBLIC_MIXMASTER_API_KEY;
+      if (!key) return `${base}${rel}`;
+      const sep = rel.includes("?") ? "&" : "?";
+      return `${base}${rel}${sep}api_key=${encodeURIComponent(key)}`;
+    };
+
+    async function prepare() {
+      if (images.waveform) {
+        try {
+          const url = await signFileUrl(jobId, `S11_REPORT_GENERATION/${images.waveform}`);
+          if (!cancelled) setWaveformUrl(url);
+        } catch {
+          if (!cancelled) setWaveformUrl(fallbackWithApiKey(images.waveform));
+        }
+      } else {
+        setWaveformUrl("");
+      }
+
+      if (images.spectrogram) {
+        try {
+          const url = await signFileUrl(jobId, `S11_REPORT_GENERATION/${images.spectrogram}`);
+          if (!cancelled) setSpectrogramUrl(url);
+        } catch {
+          if (!cancelled) setSpectrogramUrl(fallbackWithApiKey(images.spectrogram));
+        }
+      } else {
+        setSpectrogramUrl("");
+      }
+    }
+
+    void prepare();
+    return () => {
+      cancelled = true;
+    };
+  }, [jobId, images.waveform, images.spectrogram]);
   const renderMetricValue = (value: unknown) => {
     if (value === null || value === undefined) return "N/A";
     if (typeof value === "object") {
@@ -177,7 +206,7 @@ const ReportStageCard = ({
                       <div className="space-y-1">
                           <p className="text-[10px] text-center text-slate-400 uppercase tracking-wide">Waveform Comparison</p>
                           <div className="rounded border border-emerald-500/20 bg-black/40 p-1">
-                              <img src={getImageUrl(images.waveform)} alt="Waveform" className="w-full h-auto object-cover opacity-90 hover:opacity-100 transition-opacity" />
+                              <img src={waveformUrl} alt="Waveform" className="w-full h-auto object-cover opacity-90 hover:opacity-100 transition-opacity" />
                           </div>
                       </div>
                   )}
@@ -185,7 +214,7 @@ const ReportStageCard = ({
                        <div className="space-y-1">
                           <p className="text-[10px] text-center text-slate-400 uppercase tracking-wide">Spectrogram Comparison</p>
                           <div className="rounded border border-emerald-500/20 bg-black/40 p-1">
-                              <img src={getImageUrl(images.spectrogram)} alt="Spectrogram" className="w-full h-auto object-contain opacity-90 hover:opacity-100 transition-opacity" />
+                              <img src={spectrogramUrl} alt="Spectrogram" className="w-full h-auto object-contain opacity-90 hover:opacity-100 transition-opacity" />
                           </div>
                       </div>
                   )}

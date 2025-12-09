@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { type MixResult, fetchJobReport } from "../lib/mixApi";
+import { type MixResult, fetchJobReport, signFileUrl } from "../lib/mixApi";
 import { MixPipelinePanel } from "./MixPipelinePanel";
 import { WaveformPlayer } from "./WaveformPlayer";
 import { ReportViewer } from "./ReportViewer";
@@ -26,35 +26,82 @@ export function MixResultPanel({
   const [isReportOpen, setIsReportOpen] = useState(false);
 
   const { originalFullSongUrl, fullSongUrl, jobId } = result;
+  const [signedOriginalUrl, setSignedOriginalUrl] = useState(originalFullSongUrl);
+  const [signedFullUrl, setSignedFullUrl] = useState(fullSongUrl);
 
-  // Fetch report automatically when component mounts or jobId changes
+  // Prepara URLs firmadas para reproducir (en caso de que lleguen sin firmar o con host interno)
   useEffect(() => {
-    if (!jobId) return;
+    let cancelled = false;
 
-    let active = true;
-    setLoadingReport(true);
+    async function prepareUrls() {
+      try {
+        const signUrl = async (rawUrl: string): Promise<string> => {
+          if (!rawUrl) return "";
+          try {
+            const parsed = new URL(rawUrl, window.location.href);
+            const hasSig = parsed.searchParams.has("sig") && parsed.searchParams.has("exp");
+            const path = parsed.pathname.startsWith(`/files/${jobId}/`)
+              ? parsed.pathname.slice(`/files/${jobId}/`.length)
+              : parsed.pathname.replace(/^\/files\//, "");
+            if (hasSig) {
+              // Ya viene firmada: solo devolvemos (normalizando host al actual)
+              const current = new URL(window.location.href);
+              parsed.protocol = current.protocol;
+              parsed.host = current.host;
+              return parsed.toString();
+            }
+            return await signFileUrl(jobId, path);
+          } catch (err) {
+            console.warn("Could not normalize URL, returning raw", err);
+            return rawUrl;
+          }
+        };
 
-    fetchJobReport(jobId)
-      .then((data) => {
-        if (active) {
-          setReport(data);
-          // Auto-open report when loaded
-          setIsReportOpen(true);
+        const [orig, full] = await Promise.all([
+          signUrl(originalFullSongUrl),
+          signUrl(fullSongUrl),
+        ]);
+
+        if (!cancelled) {
+          setSignedOriginalUrl(orig);
+          setSignedFullUrl(full);
         }
-      })
-      .catch((err) => {
-        console.error("Failed to load report", err);
-      })
-      .finally(() => {
-        if (active) setLoadingReport(false);
-      });
+      } catch (err) {
+        console.warn("Could not prepare playback URLs", err);
+        if (!cancelled) {
+          setSignedOriginalUrl(originalFullSongUrl);
+          setSignedFullUrl(fullSongUrl);
+        }
+      }
+    }
 
+    void prepareUrls();
     return () => {
-      active = false;
+      cancelled = true;
     };
-  }, [jobId]);
+  }, [jobId, originalFullSongUrl, fullSongUrl]);
 
-  const currentSrc = showOriginal ? originalFullSongUrl : fullSongUrl;
+  const currentSrc = showOriginal ? signedOriginalUrl : signedFullUrl;
+
+  // Cargar reporte (con reintento manual)
+  const loadReport = async () => {
+    if (!jobId) return;
+    setLoadingReport(true);
+    try {
+      const data = await fetchJobReport(jobId);
+      setReport(data);
+      setIsReportOpen(true);
+    } catch (err) {
+      console.error("Failed to load report", err);
+    } finally {
+      setLoadingReport(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadReport();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [jobId]);
 
   return (
     <section className="mt-6 rounded-3xl border border-emerald-500/40 bg-emerald-900/30 p-6 text-emerald-50 shadow-xl shadow-emerald-900/40">
@@ -86,7 +133,7 @@ export function MixResultPanel({
             type="button"
             onClick={() => setIsReportOpen(true)}
             className="inline-flex min-w-[200px] items-center justify-center rounded-full border border-emerald-500/50 bg-emerald-900/50 px-6 py-2 text-sm font-semibold text-emerald-100 shadow-md shadow-emerald-900/40 transition hover:bg-emerald-800 hover:text-white disabled:opacity-50"
-            disabled={loadingReport || !report}
+            disabled={loadingReport}
           >
             {loadingReport ? "Loading Report..." : "View Full Report"}
           </button>
@@ -134,6 +181,15 @@ export function MixResultPanel({
                {!loadingReport && !report && (
                  <div className="py-10 text-center text-slate-500">
                     Report data is not available.
+                    <div className="mt-3">
+                      <button
+                        type="button"
+                        onClick={loadReport}
+                        className="rounded-full border border-emerald-600 px-4 py-2 text-xs font-semibold text-emerald-100 hover:bg-emerald-800"
+                      >
+                        Retry loading report
+                      </button>
+                    </div>
                  </div>
                )}
             </div>
