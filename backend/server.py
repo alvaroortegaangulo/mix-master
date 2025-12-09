@@ -61,10 +61,12 @@ def _load_allowed_origins() -> list[str]:
         origins = [o.strip() for o in raw.split(",") if o.strip()]
         if origins:
             return origins
-    # Fallback a dominios de produccion
+    # Fallback a dominios de produccion + local
     return [
         "https://music-mix-master.com",
         "https://api.music-mix-master.com",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
     ]
 
 
@@ -1173,7 +1175,14 @@ async def get_job_file(
     sig = request.query_params.get("sig")
     exp = request.query_params.get("exp")
     rel_path = f"/files/{job_id}/{file_path}"
+
     if not _verify_signed_download(rel_path, sig, exp):
+        logger.warning(
+            "[_verify_signed_download] Fallo verificacion para %s (sig=%s exp=%s)",
+            rel_path,
+            sig,
+            exp,
+        )
         key = _extract_api_key(request, request.headers.get("X-API-Key"))
         _require_api_key(key)
 
