@@ -1,6 +1,13 @@
-"use client";
-
+import type { Metadata } from "next";
 import Link from "next/link";
+
+export const metadata: Metadata = {
+  title: "Cookie Policy",
+  description:
+    "Understand how Audio Alchemy uses cookies and similar technologies to improve your AI mixing and mastering experience.",
+  alternates: { canonical: "/cookie-policy" },
+  robots: { index: true, follow: true },
+};
 
 export default function CookiePolicyPage() {
   return (

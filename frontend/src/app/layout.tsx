@@ -14,13 +14,38 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const fallbackSiteUrl = "https://music-mix-master.com";
+const siteUrl = (() => {
+  const envUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+  if (!envUrl) return fallbackSiteUrl;
+  try {
+    return new URL(envUrl).origin;
+  } catch {
+    return fallbackSiteUrl;
+  }
+})();
+
 export const metadata: Metadata = {
-  title: "Audio Alchemy: Professional AI Audio Mixing & Mastering Online",
-  description: "Transform your tracks with Audio Alchemy. Our AI-powered mixing and mastering service delivers professional studio-quality results from your multi-track stems in minutes.",
+  metadataBase: new URL(siteUrl),
+  title: {
+    default: "Audio Alchemy: Professional AI Audio Mixing & Mastering Online",
+    template: "%s | Audio Alchemy",
+  },
+  description:
+    "Transform your tracks with Audio Alchemy. Our AI-powered mixing and mastering service delivers professional studio-quality results from your multi-track stems in minutes.",
   keywords: ["AI mixing", "AI mastering", "online audio mixing", "automated mixing service", "stem mastering", "Audio Alchemy"],
+  alternates: {
+    canonical: "/",
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
   openGraph: {
     title: "Audio Alchemy: Professional AI Audio Mixing & Mastering Online",
     description: "Transform your tracks with Audio Alchemy. Our AI-powered mixing and mastering service delivers professional studio-quality results from your multi-track stems in minutes.",
+    url: siteUrl,
+    siteName: "Audio Alchemy",
     type: "website",
     locale: "en_US",
   },

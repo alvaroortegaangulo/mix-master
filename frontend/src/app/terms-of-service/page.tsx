@@ -1,6 +1,13 @@
-"use client";
-
+import type { Metadata } from "next";
 import Link from "next/link";
+
+export const metadata: Metadata = {
+  title: "Terms of Service",
+  description:
+    "Review the Terms of Service for Audio Alchemy's AI mixing and mastering platform, including user responsibilities and limitations.",
+  alternates: { canonical: "/terms-of-service" },
+  robots: { index: true, follow: true },
+};
 
 export default function TermsOfServicePage() {
   return (

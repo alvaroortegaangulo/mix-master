@@ -1,6 +1,13 @@
-"use client";
-
+import type { Metadata } from "next";
 import Link from "next/link";
+
+export const metadata: Metadata = {
+  title: "Privacy Policy",
+  description:
+    "Read how Audio Alchemy collects, uses, and protects your data when using our AI audio mixing and mastering service.",
+  alternates: { canonical: "/privacy-policy" },
+  robots: { index: true, follow: true },
+};
 
 export default function PrivacyPolicyPage() {
   return (
