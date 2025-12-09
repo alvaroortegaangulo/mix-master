@@ -188,14 +188,6 @@ export function MixPipelinePanel({
       return `${url}${sep}api_key=${encodeURIComponent(key)}`;
     };
 
-    function appendApiKey(url: string): string {
-      const key = process.env.NEXT_PUBLIC_MIXMASTER_API_KEY;
-      if (!key || !url) return url;
-      if (url.includes("api_key=")) return url;
-      const sep = url.includes("?") ? "&" : "?";
-      return `${url}${sep}api_key=${encodeURIComponent(key)}`;
-    }
-
     async function buildPlaybackUrl() {
       if (!processedUrl) {
         if (!cancelled) setPlaybackUrl("");
