@@ -1235,8 +1235,11 @@ async def sign_job_file(
     _, temp_root = _get_job_dirs(job_id)
     target_path = (temp_root / file_path).resolve()
     _ensure_dest_inside(temp_root, target_path)
-    if not target_path.exists() or not target_path.is_file():
-        raise HTTPException(status_code=404, detail="File not found")
+
+    # [MODIFIED] No verificamos existencia del archivo para permitir firmar
+    # URLs de archivos que se están generando o que fallaron pero queremos intentar descargar.
+    # if not target_path.exists() or not target_path.is_file():
+    #     raise HTTPException(status_code=404, detail="File not found")
 
     exp_ts = int(time.time()) + expires_in
     rel_path = f"/files/{job_id}/{file_path}"

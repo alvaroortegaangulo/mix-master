@@ -107,19 +107,39 @@ function authHeaders(): HeadersInit {
 
 async function signFileUrl(jobId: string, filePath: string): Promise<string> {
   const baseUrl = getBackendBaseUrl();
+  // Request a longer expiration time to prevent 401 on long sessions
+  const expiresIn = 3600;
+
   const res = await fetch(`${baseUrl}/files/sign`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       ...authHeaders(),
     },
-    body: JSON.stringify({ jobId, filePath }),
+    body: JSON.stringify({ jobId, filePath, expires_in: expiresIn }),
   });
   if (!res.ok) {
     throw new Error(`Failed to sign URL: ${res.status} ${res.statusText}`);
   }
   const data = (await res.json()) as { url: string };
-  return data.url;
+
+  // [MODIFIED] Correct hostname in case backend returned internal container URL
+  try {
+    const signedUrlObj = new URL(data.url);
+    const currentBase = new URL(baseUrl);
+
+    // Only replace protocol/host/port if they differ, preserving path and query
+    if (signedUrlObj.host !== currentBase.host) {
+      signedUrlObj.protocol = currentBase.protocol;
+      signedUrlObj.host = currentBase.host;
+      signedUrlObj.port = currentBase.port;
+      return signedUrlObj.toString();
+    }
+    return data.url;
+  } catch (e) {
+    // If URL parsing fails, return original
+    return data.url;
+  }
 }
 
 /**
@@ -426,21 +446,31 @@ export async function fetchJobStatus(jobId: string): Promise<JobStatus> {
   const mapped = mapBackendStatusToJobStatus(raw, baseUrl);
 
   // Firmar URLs de media si existen
+  // [MODIFIED] Added error handling for signing to prevent crash if file not ready
   if (mapped.result?.fullSongUrl) {
-    const urlObj = new URL(mapped.result.fullSongUrl, baseUrl);
-    const prefix = `/files/${jobId}/`;
-    const filePath = urlObj.pathname.startsWith(prefix)
-      ? urlObj.pathname.slice(prefix.length)
-      : urlObj.pathname.replace(/^\/files\//, "");
-    mapped.result.fullSongUrl = await signFileUrl(jobId, filePath);
+    try {
+      const urlObj = new URL(mapped.result.fullSongUrl, baseUrl);
+      const prefix = `/files/${jobId}/`;
+      const filePath = urlObj.pathname.startsWith(prefix)
+        ? urlObj.pathname.slice(prefix.length)
+        : urlObj.pathname.replace(/^\/files\//, "");
+      mapped.result.fullSongUrl = await signFileUrl(jobId, filePath);
+    } catch (e) {
+      console.warn("Failed to sign fullSongUrl", e);
+      // Keep mapped.result.fullSongUrl as is (unsigned) so user might see 401 instead of crashing app
+    }
   }
   if (mapped.result?.originalFullSongUrl) {
-    const urlObj = new URL(mapped.result.originalFullSongUrl, baseUrl);
-    const prefix = `/files/${jobId}/`;
-    const filePath = urlObj.pathname.startsWith(prefix)
-      ? urlObj.pathname.slice(prefix.length)
-      : urlObj.pathname.replace(/^\/files\//, "");
-    mapped.result.originalFullSongUrl = await signFileUrl(jobId, filePath);
+    try {
+      const urlObj = new URL(mapped.result.originalFullSongUrl, baseUrl);
+      const prefix = `/files/${jobId}/`;
+      const filePath = urlObj.pathname.startsWith(prefix)
+        ? urlObj.pathname.slice(prefix.length)
+        : urlObj.pathname.replace(/^\/files\//, "");
+      mapped.result.originalFullSongUrl = await signFileUrl(jobId, filePath);
+    } catch (e) {
+      console.warn("Failed to sign originalFullSongUrl", e);
+    }
   }
 
   return mapped;
