@@ -193,7 +193,7 @@ export function UploadDropzone({
           : "Drag & drop stems here, or click to select files"}
       </p>
       <p className="text-xs text-slate-400 mb-2 text-center">
-        Supported formats: WAV, MP3, AIFF, FLAC
+        Supported formats: WAV
       </p>
 
       {filesCount > 0 && (
