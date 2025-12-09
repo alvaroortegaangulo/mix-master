@@ -428,12 +428,18 @@ export async function fetchJobStatus(jobId: string): Promise<JobStatus> {
   // Firmar URLs de media si existen
   if (mapped.result?.fullSongUrl) {
     const urlObj = new URL(mapped.result.fullSongUrl, baseUrl);
-    const filePath = urlObj.pathname.replace(/^\/files\//, "");
+    const prefix = `/files/${jobId}/`;
+    const filePath = urlObj.pathname.startsWith(prefix)
+      ? urlObj.pathname.slice(prefix.length)
+      : urlObj.pathname.replace(/^\/files\//, "");
     mapped.result.fullSongUrl = await signFileUrl(jobId, filePath);
   }
   if (mapped.result?.originalFullSongUrl) {
     const urlObj = new URL(mapped.result.originalFullSongUrl, baseUrl);
-    const filePath = urlObj.pathname.replace(/^\/files\//, "");
+    const prefix = `/files/${jobId}/`;
+    const filePath = urlObj.pathname.startsWith(prefix)
+      ? urlObj.pathname.slice(prefix.length)
+      : urlObj.pathname.replace(/^\/files\//, "");
     mapped.result.originalFullSongUrl = await signFileUrl(jobId, filePath);
   }
 

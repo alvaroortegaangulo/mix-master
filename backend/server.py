@@ -1198,7 +1198,11 @@ async def sign_job_file(
     """
     Devuelve una URL firmada temporalmente para un fichero de temp/<job_id>.
     """
-    file_path = str(payload.get("filePath") or payload.get("file_path") or "").strip()
+    raw_path = str(payload.get("filePath") or payload.get("file_path") or "").strip()
+    file_path = raw_path.lstrip("/")
+    prefix = f"{job_id}/"
+    if file_path.startswith(prefix):
+        file_path = file_path[len(prefix) :]
     if not file_path:
         raise HTTPException(status_code=400, detail="file_path requerido")
     expires_in = int(payload.get("expires_in") or 600)
