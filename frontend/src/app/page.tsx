@@ -35,7 +35,7 @@ const HOMEPAGE_DESCRIPTION =
 const NAV_LINKS = [
   { label: "How it works", href: "#how-it-works" },
   { label: "Examples", href: "#examples" },
-  { label: "Pricing", href: "#pricing" },
+  { label: "Pricing", href: "/pricing" },
   { label: "FAQ", href: "/faq" },
   { label: "Docs / Guide", href: "/docs" },
   { label: "Support", href: "/support" },
@@ -945,7 +945,6 @@ useEffect(() => {
 
       {/* Anchor targets for planned sections */}
       <div id="examples" className="h-px" aria-hidden="true" />
-      <div id="pricing" className="h-px" aria-hidden="true" />
       <div id="faq" className="h-px" aria-hidden="true" />
       <div id="docs" className="h-px" aria-hidden="true" />
       <div id="support" className="h-px" aria-hidden="true" />
