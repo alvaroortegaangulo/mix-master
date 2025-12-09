@@ -107,13 +107,13 @@ function authHeaders(): HeadersInit {
 
 async function signFileUrl(jobId: string, filePath: string): Promise<string> {
   const baseUrl = getBackendBaseUrl();
-  const res = await fetch(`${baseUrl}/files/${encodeURIComponent(jobId)}/sign`, {
+  const res = await fetch(`${baseUrl}/files/sign`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       ...authHeaders(),
     },
-    body: JSON.stringify({ filePath }),
+    body: JSON.stringify({ jobId, filePath }),
   });
   if (!res.ok) {
     throw new Error(`Failed to sign URL: ${res.status} ${res.statusText}`);

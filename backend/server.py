@@ -1223,6 +1223,23 @@ async def sign_job_file(
     return {"url": signed_url, "expires": exp_ts}
 
 
+@app.post("/files/sign")
+async def sign_job_file_generic(
+    payload: Dict[str, Any],
+    request: Request,
+    _: None = Depends(_guard_heavy_endpoint),
+):
+    """
+    Variante genérica: body {jobId, filePath, expires_in?}
+    """
+    job_id = str(payload.get("jobId") or payload.get("job_id") or "").strip()
+    file_path = str(payload.get("filePath") or payload.get("file_path") or "").strip()
+    if not job_id or not file_path:
+        raise HTTPException(status_code=400, detail="jobId y filePath requeridos")
+    # reutiliza la lógica del endpoint específico
+    return await sign_job_file(job_id, payload, request, None)
+
+
 @app.get("/pipeline/stages")
 def get_pipeline_stages() -> list[dict[str, Any]]:
     return _build_pipeline_stages()
