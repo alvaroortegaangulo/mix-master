@@ -4,9 +4,18 @@ services:
   redis:
     image: redis:7-alpine
     restart: unless-stopped
-    command: ["redis-server", "--appendonly", "no", "--bind", "0.0.0.0"]
+    command:
+      [
+        "redis-server",
+        "--appendonly",
+        "no",
+        "--bind",
+        "0.0.0.0",
+        "--requirepass",
+        "${REDIS_PASSWORD}",
+      ]
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "sh", "-c", "redis-cli -a \"$REDIS_PASSWORD\" ping"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -29,8 +38,9 @@ services:
         --error-logfile -
         --log-level info
     environment:
-      CELERY_BROKER_URL: redis://redis:6379/0
-      CELERY_RESULT_BACKEND: redis://redis:6379/0
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      CELERY_BROKER_URL: redis://default:${REDIS_PASSWORD}@redis:6379/0
+      CELERY_RESULT_BACKEND: redis://default:${REDIS_PASSWORD}@redis:6379/0
       MIX_TEMP_ROOT: /app/temp
       MPLCONFIGDIR: /tmp/mplconfig
       XDG_CACHE_HOME: /tmp/.cache
@@ -56,8 +66,9 @@ services:
     env_file:
       - .env
     environment:
-      CELERY_BROKER_URL: redis://redis:6379/0
-      CELERY_RESULT_BACKEND: redis://redis:6379/0
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      CELERY_BROKER_URL: redis://default:${REDIS_PASSWORD}@redis:6379/0
+      CELERY_RESULT_BACKEND: redis://default:${REDIS_PASSWORD}@redis:6379/0
       MIX_TEMP_ROOT: /app/temp
       MPLCONFIGDIR: /tmp/mplconfig
       XDG_CACHE_HOME: /tmp/.cache

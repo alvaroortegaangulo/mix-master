@@ -26,6 +26,7 @@ from fastapi import (
 )
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 
 from tasks import run_full_pipeline_task
 
@@ -45,16 +46,27 @@ logger = logging.getLogger("mix_master.server")
 # App & CORS
 # ---------------------------------------------------------
 
+
+def _load_allowed_origins() -> list[str]:
+    raw = os.environ.get("CORS_ALLOW_ORIGINS", "")
+    if raw:
+        origins = [o.strip() for o in raw.split(",") if o.strip()]
+        if origins:
+            return origins
+    # Fallback a dominios de produccion
+    return [
+        "https://music-mix-master.com",
+        "https://api.music-mix-master.com",
+    ]
+
+
 app = FastAPI(title="Mix-Master API")
+
+ALLOWED_CORS_ORIGINS = _load_allowed_origins()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://music-mix-master.com",
-        "https://api.music-mix-master.com",
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-    ],
+    allow_origins=ALLOWED_CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -78,13 +90,6 @@ API_TOKEN = os.environ.get("MIXMASTER_API_TOKEN")
 RATE_LIMIT_REQUESTS = int(os.environ.get("MIXMASTER_RATE_LIMIT_REQUESTS", "30"))
 RATE_LIMIT_WINDOW_SECONDS = float(
     os.environ.get("MIXMASTER_RATE_LIMIT_WINDOW_SECONDS", "60")
-)
-
-# Exponer /files/{jobId}/... -> backend/temp/{jobId}/...
-app.mount(
-    "/files",
-    StaticFiles(directory=JOBS_ROOT, html=False),
-    name="files",
 )
 
 # ---------------------------------------------------------
@@ -1001,7 +1006,7 @@ def get_job_status(job_id: str) -> Dict[str, Any]:
 
 
 @app.post("/cleanup-temp")
-async def cleanup_temp():
+async def cleanup_temp(_: None = Depends(_guard_heavy_endpoint)):
     """
     Limpia el contenido de temp/ y media/ (no borra los directorios raíz).
     """
@@ -1037,6 +1042,27 @@ async def cleanup_temp():
             )
 
     return {"status": "ok"}
+
+
+@app.get("/files/{job_id}/{file_path:path}")
+async def get_job_file(
+    job_id: str,
+    file_path: str,
+    _: None = Depends(_guard_heavy_endpoint),
+):
+    """
+    Devuelve un fichero de temp/<job_id> protegido por API key.
+    """
+    _, temp_root = _get_job_dirs(job_id)
+    if not temp_root.exists():
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    target_path = (temp_root / file_path).resolve()
+    _ensure_dest_inside(temp_root, target_path)
+    if not target_path.exists() or not target_path.is_file():
+        raise HTTPException(status_code=404, detail="File not found")
+
+    return FileResponse(target_path)
 
 
 @app.get("/pipeline/stages")
