@@ -37,7 +37,7 @@ const NAV_LINKS = [
   { label: "Examples", href: "#examples" },
   { label: "Pricing", href: "#pricing" },
   { label: "FAQ", href: "#faq" },
-  { label: "Docs / Guide", href: "#docs" },
+  { label: "Docs / Guide", href: "/docs" },
   { label: "Support", href: "#support" },
 ];
 
