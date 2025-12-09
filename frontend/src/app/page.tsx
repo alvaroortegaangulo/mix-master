@@ -32,24 +32,6 @@ const siteUrl = (() => {
 const HOMEPAGE_DESCRIPTION =
   "Transform your tracks with Audio Alchemy. Our AI-powered mixing and mastering service delivers professional studio-quality results from your multi-track stems in minutes.";
 
-const FAQ_ENTRIES = [
-  {
-    question: "What files should I upload for the best results?",
-    answer:
-      "Upload individual stems (WAV/AIFF) with a bit of headroom. We normalize samplerate/bit depth automatically, and you can map each stem to a bus profile before processing.",
-  },
-  {
-    question: "How long does an AI mix take?",
-    answer:
-      "Most jobs start within seconds and finish in a few minutes. You will see real-time status updates for each pipeline stage until the mix and master are ready.",
-  },
-  {
-    question: "Do you keep my audio files?",
-    answer:
-      "We keep uploads only while the job is processing and for a short time to let you download results. Temporary files are cleaned up regularly for privacy.",
-  },
-];
-
 const MixResultPanel = dynamic(
   () => import("../components/MixResultPanel").then((mod) => mod.MixResultPanel),
   {
@@ -324,22 +306,6 @@ export default function HomePage() {
       areaServed: "Worldwide",
     }),
     [siteUrl],
-  );
-
-  const faqJsonLd = useMemo(
-    () => ({
-      "@context": "https://schema.org",
-      "@type": "FAQPage",
-      mainEntity: FAQ_ENTRIES.map((item) => ({
-        "@type": "Question",
-        name: item.question,
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: item.answer,
-        },
-      })),
-    }),
-    [],
   );
 
   const STAGE_GROUP_LABELS: Record<string, string> = {
@@ -696,12 +662,6 @@ useEffect(() => {
         strategy="afterInteractive"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(serviceJsonLd) }}
       />
-      <Script
-        id="ld-faq"
-        type="application/ld+json"
-        strategy="afterInteractive"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
-      />
       {/* Top bar */}
 <header className="border-b border-slate-800/80">
   <div className="mx-auto flex h-16 max-w-5xl items-center px-4">
@@ -928,27 +888,6 @@ useEffect(() => {
           </div>
         </div>
       </main>
-
-      <div className="w-full max-w-5xl mx-auto px-4 pb-12">
-        <section className="rounded-2xl border border-slate-800/80 bg-slate-900/70 p-8 shadow-xl">
-          <h2 className="text-xl font-semibold text-teal-300">FAQ</h2>
-          <div className="mt-4 space-y-4">
-            {FAQ_ENTRIES.map((item) => (
-              <div
-                key={item.question}
-                className="rounded-xl border border-slate-800/60 bg-slate-950/60 p-4"
-              >
-                <p className="text-sm font-semibold text-slate-100">
-                  {item.question}
-                </p>
-                <p className="mt-1 text-sm text-slate-300">
-                  {item.answer}
-                </p>
-              </div>
-            ))}
-          </div>
-        </section>
-      </div>
 
       <footer className="border-t border-slate-800/80 py-4 text-center text-xs text-slate-400 flex flex-col gap-2 items-center justify-center">
         <p>© 2025 Audio Alchemy. All Rights Reserved.</p>
