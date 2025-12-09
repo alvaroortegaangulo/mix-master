@@ -39,7 +39,7 @@ const nextConfig: NextConfig = {
             key: "Content-Security-Policy",
             value: [
               "default-src 'self'",
-              "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com",
+              "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://cdn.cookie-script.com",
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: https://api.music-mix-master.com https://www.google-analytics.com https://www.googletagmanager.com",
               "font-src 'self'",
