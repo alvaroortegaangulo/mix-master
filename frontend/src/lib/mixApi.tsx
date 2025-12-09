@@ -91,6 +91,11 @@ function normalizeUrl(pathOrUrl: string | undefined, baseUrl: string): string {
   return `${baseUrl}${pathOrUrl}`;
 }
 
+function authHeaders(): HeadersInit {
+  const key = process.env.NEXT_PUBLIC_MIXMASTER_API_KEY;
+  return key ? { "X-API-Key": key } : {};
+}
+
 /**
  * Mapea el JSON crudo que devuelve el backend (Celery) al JobStatus
  * que usa tu frontend (queued/running/done/error, camelCase, etc.).
@@ -215,6 +220,7 @@ async function uploadSingleFileForJob(
     `${baseUrl}/mix/${encodeURIComponent(jobId)}/upload-file`,
     {
       method: "POST",
+      headers: authHeaders(),
       body: fd,
     },
   );
@@ -294,6 +300,7 @@ export async function startMixJob(
 
     const res = await fetch(`${baseUrl}/mix`, {
       method: "POST",
+      headers: authHeaders(),
       body: formData,
     });
 
@@ -334,6 +341,7 @@ export async function startMixJob(
 
   const initRes = await fetch(`${baseUrl}/mix/init`, {
     method: "POST",
+    headers: authHeaders(),
     body: initForm,
   });
 
@@ -355,6 +363,7 @@ export async function startMixJob(
     `${baseUrl}/mix/${encodeURIComponent(jobId)}/start`,
     {
       method: "POST",
+      headers: authHeaders(),
     },
   );
 

@@ -1,16 +1,29 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import logging
+import os
+import secrets
 import shutil
 import uuid
 import time
+from collections import deque
 from datetime import datetime
 from pathlib import Path
 from typing import List, Dict, Optional, Any
 
 import aiofiles
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException
+from fastapi import (
+    Depends,
+    FastAPI,
+    File,
+    Form,
+    Header,
+    HTTPException,
+    Request,
+    UploadFile,
+)
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
@@ -59,6 +72,13 @@ MEDIA_ROOT = PROJECT_ROOT / "media"
 
 JOBS_ROOT.mkdir(parents=True, exist_ok=True)
 MEDIA_ROOT.mkdir(parents=True, exist_ok=True)
+
+# Auth & rate limiting
+API_TOKEN = os.environ.get("MIXMASTER_API_TOKEN")
+RATE_LIMIT_REQUESTS = int(os.environ.get("MIXMASTER_RATE_LIMIT_REQUESTS", "30"))
+RATE_LIMIT_WINDOW_SECONDS = float(
+    os.environ.get("MIXMASTER_RATE_LIMIT_WINDOW_SECONDS", "60")
+)
 
 # Exponer /files/{jobId}/... -> backend/temp/{jobId}/...
 app.mount(
@@ -232,6 +252,164 @@ def _parse_bool_flag(value: Optional[str]) -> bool:
 
 
 # ---------------------------------------------------------
+# Auth / rate limiting helpers
+# ---------------------------------------------------------
+
+
+class SlidingWindowRateLimiter:
+    def __init__(self, max_requests: int, window_seconds: float):
+        self.max_requests = max_requests
+        self.window_seconds = window_seconds
+        self.hits: Dict[str, deque[float]] = {}
+        self.lock = asyncio.Lock()
+
+    async def hit(self, key: str) -> None:
+        now = time.time()
+        cutoff = now - self.window_seconds
+        async with self.lock:
+            bucket = self.hits.setdefault(key, deque())
+            while bucket and bucket[0] < cutoff:
+                bucket.popleft()
+            if len(bucket) >= self.max_requests:
+                raise HTTPException(
+                    status_code=429,
+                    detail="Too many requests, try again later",
+                )
+            bucket.append(now)
+
+
+rate_limiter = SlidingWindowRateLimiter(
+    max_requests=RATE_LIMIT_REQUESTS,
+    window_seconds=RATE_LIMIT_WINDOW_SECONDS,
+)
+
+
+def _require_api_key(api_key: Optional[str]) -> None:
+    if not API_TOKEN:
+        raise HTTPException(
+            status_code=503,
+            detail="Servicio no configurado: falta MIXMASTER_API_TOKEN",
+        )
+    if not api_key or not secrets.compare_digest(api_key, API_TOKEN):
+        raise HTTPException(
+            status_code=401,
+            detail="API key invalida",
+        )
+
+
+async def _guard_heavy_endpoint(
+    request: Request, api_key: Optional[str] = Header(None, alias="X-API-Key")
+) -> None:
+    _require_api_key(api_key)
+    limiter_key = api_key or (request.client.host if request.client else "unknown")
+    await rate_limiter.hit(limiter_key)
+
+
+# ---------------------------------------------------------
+# Upload helpers
+# ---------------------------------------------------------
+
+ALLOWED_UPLOAD_EXTENSIONS = {".wav", ".wave"}
+ALLOWED_UPLOAD_MIME_TYPES = {
+    "audio/wav",
+    "audio/x-wav",
+    "audio/wave",
+    "audio/vnd.wave",
+}
+MAX_UPLOAD_SIZE_BYTES = 512 * 1024 * 1024  # 512 MiB
+
+
+def _sanitize_filename(filename: str) -> str:
+    """
+    Limpia el nombre recibido del cliente para evitar path traversal y
+    caracteres raros. Solo conserva [A-Za-z0-9._-]; el resto -> "_".
+    """
+    base_name = Path(filename or "").name  # elimina rutas tipo ../../
+    cleaned = "".join(
+        ch if ch.isalnum() or ch in ("-", "_", ".") else "_" for ch in base_name
+    ).strip("._")
+    if not cleaned:
+        cleaned = f"upload_{uuid.uuid4().hex}"
+    return cleaned[:255]
+
+
+def _ensure_dest_inside(base_dir: Path, dest_path: Path) -> None:
+    """
+    Verifica que dest_path esta dentro de base_dir (sin traversal).
+    """
+    try:
+        dest_path.resolve().relative_to(base_dir.resolve())
+    except Exception:
+        raise HTTPException(
+            status_code=400,
+            detail="Nombre de archivo no permitido",
+        )
+
+
+def _validate_upload(upload: UploadFile, safe_name: str) -> None:
+    ext = Path(safe_name).suffix.lower()
+    if ext not in ALLOWED_UPLOAD_EXTENSIONS:
+        raise HTTPException(
+            status_code=400,
+            detail="Solo se permiten archivos WAV (.wav)",
+        )
+    content_type = (upload.content_type or "").lower()
+    if content_type and content_type not in ALLOWED_UPLOAD_MIME_TYPES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Tipo MIME no permitido ({content_type}); usa audio/wav",
+        )
+
+
+def _prepare_upload_destination(base_dir: Path, upload: UploadFile) -> tuple[Path, str]:
+    """
+    Devuelve (dest_path, safe_name) listo para escribir en base_dir.
+    """
+    safe_name = _sanitize_filename(upload.filename or "")
+    _validate_upload(upload, safe_name)
+    dest_path = base_dir / safe_name
+    _ensure_dest_inside(base_dir, dest_path)
+    if dest_path.exists():
+        raise HTTPException(
+            status_code=400,
+            detail="Ya existe un archivo con ese nombre en este job",
+        )
+    return dest_path, safe_name
+
+
+async def _stream_upload_file(upload: UploadFile, dest_path: Path) -> int:
+    """
+    Copia el UploadFile a dest_path validando el tamano maximo.
+    """
+    chunk_size = 1024 * 1024  # 1 MiB
+    bytes_written = 0
+    try:
+        async with aiofiles.open(dest_path, "wb") as out:
+            while True:
+                chunk = await upload.read(chunk_size)
+                if not chunk:
+                    break
+                new_size = bytes_written + len(chunk)
+                if new_size > MAX_UPLOAD_SIZE_BYTES:
+                    raise HTTPException(
+                        status_code=413,
+                        detail=(
+                            f"Archivo demasiado grande "
+                            f"(limite {MAX_UPLOAD_SIZE_BYTES // (1024 * 1024)} MiB)"
+                        ),
+                    )
+                await out.write(chunk)
+                bytes_written = new_size
+    except Exception:
+        try:
+            dest_path.unlink()
+        except FileNotFoundError:
+            pass
+        raise
+    return bytes_written
+
+
+# ---------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------
 
@@ -243,6 +421,7 @@ async def mix_tracks(
     stem_profiles_json: Optional[str] = Form(None),
     space_depth_bus_styles_json: Optional[str] = Form(None),
     upload_mode: str = Form("song"),
+    _: None = Depends(_guard_heavy_endpoint),
 ):
     """
     Endpoint clásico: un solo POST con todos los WAV.
@@ -351,16 +530,8 @@ async def mix_tracks(
 
     # Guardar los ficheros (usando aiofiles y streaming para evitar bloqueo)
     for f in files:
-        dest_path = media_dir / f.filename
-        chunk_size = 1024 * 1024  # 1 MiB
-        bytes_written = 0
-        async with aiofiles.open(dest_path, "wb") as out:
-            while True:
-                chunk = await f.read(chunk_size)
-                if not chunk:
-                    break
-                await out.write(chunk)
-                bytes_written += len(chunk)
+        dest_path, safe_name = _prepare_upload_destination(media_dir, f)
+        bytes_written = await _stream_upload_file(f, dest_path)
 
         logger.info(
             "[/mix] Archivo subido guardado para job_id=%s -> %s (%d bytes)",
@@ -458,6 +629,7 @@ async def init_mix_job(
     stem_profiles_json: Optional[str] = Form(None),
     space_depth_bus_styles_json: Optional[str] = Form(None),
     upload_mode: str = Form("song"),
+    _: None = Depends(_guard_heavy_endpoint),
 ):
     """
     Inicializa un job SIN subir todavía los WAV.
@@ -622,6 +794,7 @@ async def init_mix_job(
 async def upload_file_for_job(
     job_id: str,
     file: UploadFile = File(...),
+    _: None = Depends(_guard_heavy_endpoint),
 ):
     """
     Recibe un archivo para un job existente.
@@ -634,17 +807,8 @@ async def upload_file_for_job(
 
     media_dir.mkdir(parents=True, exist_ok=True)
 
-    dest_path = media_dir / file.filename
-    bytes_written = 0
-    chunk_size = 1024 * 1024  # 1 MiB
-
-    async with aiofiles.open(dest_path, "wb") as out:
-        while True:
-            chunk = await file.read(chunk_size)
-            if not chunk:
-                break
-            await out.write(chunk)
-            bytes_written += len(chunk)
+    dest_path, safe_name = _prepare_upload_destination(media_dir, file)
+    bytes_written = await _stream_upload_file(file, dest_path)
 
     logger.info(
         "[/mix/%s/upload-file] Archivo subido -> %s (%d bytes) (async streaming)",
@@ -653,11 +817,13 @@ async def upload_file_for_job(
         bytes_written,
     )
 
-    return {"ok": True, "filename": file.filename, "bytes": bytes_written}
+    return {"ok": True, "filename": safe_name, "bytes": bytes_written}
 
 
 @app.post("/mix/{job_id}/start")
-async def start_mix_job_endpoint(job_id: str):
+async def start_mix_job_endpoint(
+    job_id: str, _: None = Depends(_guard_heavy_endpoint)
+):
     """
     Lanza la tarea Celery para un job ya inicializado y con WAVs subidos.
     """
