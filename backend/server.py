@@ -2,8 +2,9 @@ from __future__ import annotations
 
 import asyncio
 import json
-import hmac
 import hashlib
+import hmac
+import mimetypes
 import logging
 import os
 import secrets
@@ -1185,7 +1186,10 @@ async def get_job_file(
     if not target_path.exists() or not target_path.is_file():
         raise HTTPException(status_code=404, detail="File not found")
 
-    return FileResponse(target_path)
+    media_type, _ = mimetypes.guess_type(target_path.name)
+    headers = {"Cross-Origin-Resource-Policy": "cross-origin"}
+
+    return FileResponse(target_path, media_type=media_type, headers=headers)
 
 
 @app.post("/files/{job_id}/sign")
