@@ -195,8 +195,19 @@ export function MixPipelinePanel({
       }
 
       try {
-        const base = getBackendBaseUrl();
-        const urlObj = new URL(processedUrl, base);
+        const backend = new URL(getBackendBaseUrl());
+        const urlObj = new URL(processedUrl, backend);
+
+        // Si ya viene firmada, solo normalizamos host a backend
+        const hasSig = urlObj.searchParams.has("sig") && urlObj.searchParams.has("exp");
+        if (hasSig) {
+          urlObj.protocol = backend.protocol;
+          urlObj.host = backend.host;
+          urlObj.port = backend.port;
+          if (!cancelled) setPlaybackUrl(urlObj.toString());
+          return;
+        }
+
         const prefix = `/files/${jobId}/`;
         const filePath = urlObj.pathname.startsWith(prefix)
           ? urlObj.pathname.slice(prefix.length)
@@ -209,7 +220,11 @@ export function MixPipelinePanel({
       } catch (err) {
         console.warn("Could not sign stage URL, falling back to api_key", err);
         if (!cancelled) {
-          setPlaybackUrl(appendApiKey(processedUrl));
+          const backend = getBackendBaseUrl();
+          const normalized = processedUrl.startsWith("http")
+            ? processedUrl
+            : `${backend}${processedUrl.startsWith("/") ? "" : "/"}${processedUrl}`;
+          setPlaybackUrl(appendApiKey(normalized));
         }
       }
     }
