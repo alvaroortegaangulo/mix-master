@@ -32,6 +32,15 @@ const siteUrl = (() => {
 const HOMEPAGE_DESCRIPTION =
   "Transform your tracks with Audio Alchemy. Our AI-powered mixing and mastering service delivers professional studio-quality results from your multi-track stems in minutes.";
 
+const NAV_LINKS = [
+  { label: "How it works", href: "#how-it-works" },
+  { label: "Examples", href: "#examples" },
+  { label: "Pricing", href: "#pricing" },
+  { label: "FAQ", href: "#faq" },
+  { label: "Docs / Guide", href: "#docs" },
+  { label: "Support", href: "#support" },
+];
+
 const MixResultPanel = dynamic(
   () => import("../components/MixResultPanel").then((mod) => mod.MixResultPanel),
   {
@@ -663,22 +672,62 @@ useEffect(() => {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(serviceJsonLd) }}
       />
       {/* Top bar */}
-<header className="border-b border-slate-800/80">
-  <div className="mx-auto flex h-16 max-w-5xl items-center px-4">
-    <h1 className="flex items-center gap-2 m-0">
-      <div className="h-7 w-7 rounded-full bg-teal-400/90 flex items-center justify-center text-slate-950 text-lg font-bold" aria-hidden="true">
-        A
-      </div>
-      <button
-        type="button"
-        onClick={handleResetApp}
-        className="text-lg font-semibold tracking-tight bg-transparent border-none p-0 cursor-pointer text-slate-100"
-      >
-        Audio Alchemy
-      </button>
-    </h1>
-  </div>
-</header>
+      <header className="border-b border-slate-800/80">
+        <div className="mx-auto flex h-16 max-w-5xl items-center gap-4 px-4">
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="h-7 w-7 rounded-full bg-teal-400/90 flex items-center justify-center text-slate-950 text-lg font-bold" aria-hidden="true">
+              A
+            </div>
+            <button
+              type="button"
+              onClick={handleResetApp}
+              className="text-lg font-semibold tracking-tight bg-transparent border-none p-0 cursor-pointer text-slate-100"
+            >
+              Audio Alchemy
+            </button>
+          </div>
+
+          <nav className="flex-1 hidden md:flex justify-center">
+            <div className="flex items-center gap-3 text-sm text-slate-200">
+              {NAV_LINKS.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="rounded-full px-3 py-1.5 hover:text-teal-300 hover:bg-teal-500/10 transition"
+                  prefetch={false}
+                >
+                  {item.label}
+                </Link>
+              ))}
+            </div>
+          </nav>
+
+          <nav className="flex-1 md:hidden">
+            <div className="flex items-center gap-3 overflow-x-auto whitespace-nowrap text-sm text-slate-200 py-2">
+              {NAV_LINKS.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="rounded-full px-3 py-1.5 hover:text-teal-300 hover:bg-teal-500/10 transition"
+                  prefetch={false}
+                >
+                  {item.label}
+                </Link>
+              ))}
+            </div>
+          </nav>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <Link
+              href="#upload"
+              className="rounded-full bg-teal-400 text-slate-950 px-3.5 py-2 text-sm font-semibold shadow-md shadow-teal-500/30 hover:bg-teal-300 transition"
+              prefetch={false}
+            >
+              Upload stems
+            </Link>
+          </div>
+        </div>
+      </header>
 
       {/* Layout: grid con 3 columnas a partir de lg.
           Centro más estrecho en portátiles, más ancho en pantallas grandes */}
@@ -709,14 +758,19 @@ useEffect(() => {
           {/* Columna central */}
           <div className="lg:col-start-2 flex justify-center">
             <div className="w-full max-w-3xl">
-              <section className="rounded-2xl border border-slate-800/80 bg-slate-900/70 p-8 shadow-xl">
+              <section
+                id="how-it-works"
+                className="rounded-2xl border border-slate-800/80 bg-slate-900/70 p-8 shadow-xl"
+              >
                 <h2 className="sr-only">Upload & Mix Configuration</h2>
 
-                <UploadDropzone
-                  onFilesSelected={handleFilesSelected}
-                  disabled={loading}
-                  filesCount={files.length}
-                />
+                <div id="upload">
+                  <UploadDropzone
+                    onFilesSelected={handleFilesSelected}
+                    disabled={loading}
+                    filesCount={files.length}
+                  />
+                </div>
 
                 {showStageSelector && availableStages.length > 0 && (
                   <section className="mt-6 rounded-2xl border border-amber-500/50 bg-amber-500/10 text-amber-50 shadow-lg">
@@ -888,6 +942,13 @@ useEffect(() => {
           </div>
         </div>
       </main>
+
+      {/* Anchor targets for planned sections */}
+      <div id="examples" className="h-px" aria-hidden="true" />
+      <div id="pricing" className="h-px" aria-hidden="true" />
+      <div id="faq" className="h-px" aria-hidden="true" />
+      <div id="docs" className="h-px" aria-hidden="true" />
+      <div id="support" className="h-px" aria-hidden="true" />
 
       <footer className="border-t border-slate-800/80 py-4 text-center text-xs text-slate-400 flex flex-col gap-2 items-center justify-center">
         <p>© 2025 Audio Alchemy. All Rights Reserved.</p>
