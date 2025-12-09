@@ -862,6 +862,12 @@ useEffect(() => {
           >
             Privacy Policy
           </Link>
+          <Link
+            href="/cookie-policy"
+            className="hover:text-teal-400 hover:underline transition-colors"
+          >
+            Cookie Policy
+          </Link>
         </div>
       </footer>
     </div>
