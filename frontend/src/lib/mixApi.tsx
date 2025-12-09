@@ -91,6 +91,15 @@ function normalizeUrl(pathOrUrl: string | undefined, baseUrl: string): string {
   return `${baseUrl}${pathOrUrl}`;
 }
 
+function appendApiKeyParam(url: string): string {
+  const key = process.env.NEXT_PUBLIC_MIXMASTER_API_KEY;
+  if (!key) return url;
+  if (!url) return url;
+  if (url.includes("api_key=")) return url;
+  const sep = url.includes("?") ? "&" : "?";
+  return `${url}${sep}api_key=${encodeURIComponent(key)}`;
+}
+
 function authHeaders(): HeadersInit {
   const key = process.env.NEXT_PUBLIC_MIXMASTER_API_KEY;
   return key ? { "X-API-Key": key } : {};
@@ -183,8 +192,10 @@ function mapBackendStatusToJobStatus(raw: any, baseUrl: string): JobStatus {
 
     const result: MixResult = {
       jobId,
-      originalFullSongUrl: normalizeUrl(raw.original_full_song_url, baseUrl),
-      fullSongUrl: normalizeUrl(raw.full_song_url, baseUrl),
+      originalFullSongUrl: appendApiKeyParam(
+        normalizeUrl(raw.original_full_song_url, baseUrl),
+      ),
+      fullSongUrl: appendApiKeyParam(normalizeUrl(raw.full_song_url, baseUrl)),
       metrics,
     };
 
@@ -439,9 +450,11 @@ export async function fetchStyleProfiles(): Promise<StyleProfileDef[]> {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function fetchJobReport(jobId: string): Promise<any> {
   const baseUrl = getBackendBaseUrl();
-  const url = `${baseUrl}/files/${encodeURIComponent(
-    jobId,
-  )}/S11_REPORT_GENERATION/report.json`;
+  const url = appendApiKeyParam(
+    `${baseUrl}/files/${encodeURIComponent(
+      jobId,
+    )}/S11_REPORT_GENERATION/report.json`,
+  );
   const res = await fetch(url);
   if (!res.ok) {
     throw new Error(`Failed to fetch report: ${res.statusText}`);

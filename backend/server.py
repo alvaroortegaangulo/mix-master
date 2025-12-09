@@ -459,6 +459,13 @@ def _prepare_upload_destination(base_dir: Path, upload: UploadFile) -> tuple[Pat
     return dest_path, safe_name
 
 
+def _is_wav_magic(chunk: bytes) -> bool:
+    """
+    Valida la cabecera RIFF/WAVE de un WAV. Espera al menos 12 bytes.
+    """
+    return len(chunk) >= 12 and chunk.startswith(b"RIFF") and chunk[8:12] == b"WAVE"
+
+
 def _get_media_dir_size(media_dir: Path) -> int:
     total = 0
     if media_dir.exists():
@@ -483,12 +490,20 @@ async def _stream_upload_file(
     """
     chunk_size = 1024 * 1024  # 1 MiB
     bytes_written = 0
+    first_chunk = True
     try:
         async with aiofiles.open(dest_path, "wb") as out:
             while True:
                 chunk = await upload.read(chunk_size)
                 if not chunk:
                     break
+                if first_chunk:
+                    if not _is_wav_magic(chunk):
+                        raise HTTPException(
+                            status_code=400,
+                            detail="Archivo no parece WAV (cabecera RIFF/WAVE invalida)",
+                        )
+                    first_chunk = False
                 new_size = bytes_written + len(chunk)
                 overall_size = already_written + new_size
                 if new_size > MAX_UPLOAD_SIZE_BYTES:
