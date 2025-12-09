@@ -1,26 +1,25 @@
 # Núcleo numérico / audio base
-numpy
-soundfile
-scipy
-matplotlib
-
+numpy==1.26.4
+soundfile==0.12.1
+scipy==1.12.0
+matplotlib==3.8.3
 
 # Análisis de audio
-librosa
-pyloudnorm
+librosa==0.10.1
+pyloudnorm==0.1.1
 essentia
 
 # Procesado de efectos (EQ, compresor, etc.)
-pedalboard
+pedalboard==0.8.6
 
 # Backend web (API de mezcla)
-fastapi
-uvicorn[standard]
-python-multipart   # necesario para UploadFile / multipart/form-data
+fastapi==0.109.2
+uvicorn[standard]==0.27.1
+python-multipart==0.0.9
 
 # Cola de tareas (procesamiento asíncrono)
-celery[redis]
-redis
+celery[redis]==5.3.6
+redis==5.0.1
 
 # --- Opcionales históricos / futuros (comentados) ---
 # psutil         # monitorización de memoria/CPU si lo quieres usar más adelante
@@ -32,6 +31,4 @@ redis
 # torchvision
 # torchaudio
 
-
-
-aiofiles
+aiofiles==23.2.1
