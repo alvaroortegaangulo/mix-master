@@ -315,11 +315,18 @@ def _require_api_key(api_key: Optional[str]) -> None:
         )
 
 
+def _extract_api_key(request: Request, header_api_key: Optional[str]) -> Optional[str]:
+    if header_api_key:
+        return header_api_key
+    return request.query_params.get("api_key")
+
+
 async def _guard_heavy_endpoint(
     request: Request, api_key: Optional[str] = Header(None, alias="X-API-Key")
 ) -> None:
-    _require_api_key(api_key)
-    limiter_key = api_key or (request.client.host if request.client else "unknown")
+    key = _extract_api_key(request, api_key)
+    _require_api_key(key)
+    limiter_key = key or (request.client.host if request.client else "unknown")
     await rate_limiter.hit(limiter_key)
 
 
