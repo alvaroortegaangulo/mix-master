@@ -290,7 +290,20 @@ def _require_api_key(api_key: Optional[str]) -> None:
             status_code=503,
             detail="Servicio no configurado: falta MIXMASTER_API_TOKEN",
         )
-    if not api_key or not secrets.compare_digest(api_key, API_TOKEN):
+    if not api_key:
+        raise HTTPException(
+            status_code=401,
+            detail="API key invalida",
+        )
+    try:
+        api_key_bytes = api_key.encode("utf-8")
+        token_bytes = API_TOKEN.encode("utf-8")
+    except Exception:
+        raise HTTPException(
+            status_code=401,
+            detail="API key invalida",
+        )
+    if not secrets.compare_digest(api_key_bytes, token_bytes):
         raise HTTPException(
             status_code=401,
             detail="API key invalida",
