@@ -1,6 +1,50 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+const fallbackSiteUrl = "https://music-mix-master.com";
+const siteUrl = (() => {
+  const envUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+  if (!envUrl) return fallbackSiteUrl;
+  try {
+    return new URL(envUrl).origin;
+  } catch {
+    return fallbackSiteUrl;
+  }
+})();
+const canonicalUrl = `${siteUrl}/terms-of-service`;
+
+const breadcrumbJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  itemListElement: [
+    {
+      "@type": "ListItem",
+      position: 1,
+      name: "Home",
+      item: siteUrl,
+    },
+    {
+      "@type": "ListItem",
+      position: 2,
+      name: "Terms of Service",
+      item: canonicalUrl,
+    },
+  ],
+};
+
+const webPageJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "WebPage",
+  name: "Terms of Service",
+  url: canonicalUrl,
+  isPartOf: {
+    "@type": "WebSite",
+    url: siteUrl,
+    name: "Audio Alchemy",
+  },
+  inLanguage: "en",
+};
+
 export const metadata: Metadata = {
   title: "Terms of Service",
   description:
@@ -12,6 +56,14 @@ export const metadata: Metadata = {
 export default function TermsOfServicePage() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(webPageJsonLd) }}
+      />
       <header className="border-b border-slate-800/80 sticky top-0 bg-slate-950/90 backdrop-blur z-10">
         <div className="mx-auto flex h-16 max-w-5xl items-center px-4 justify-between">
           <div className="flex items-center gap-2">

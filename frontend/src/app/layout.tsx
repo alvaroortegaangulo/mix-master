@@ -25,11 +25,41 @@ const siteUrl = (() => {
   }
 })();
 
+const siteName = "Audio Alchemy";
+
+const organizationJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  name: siteName,
+  url: siteUrl,
+  logo: `${siteUrl}/favicon.ico`,
+  contactPoint: [
+    {
+      "@type": "ContactPoint",
+      contactType: "legal",
+      email: "legal@audioalchemy.com",
+    },
+    {
+      "@type": "ContactPoint",
+      contactType: "privacy",
+      email: "privacy@audioalchemy.com",
+    },
+  ],
+};
+
+const websiteJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  name: siteName,
+  url: siteUrl,
+  inLanguage: "en",
+};
+
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: "Audio Alchemy: Professional AI Audio Mixing & Mastering Online",
-    template: "%s | Audio Alchemy",
+    default: `${siteName}: Professional AI Audio Mixing & Mastering Online`,
+    template: `%s | ${siteName}`,
   },
   description:
     "Transform your tracks with Audio Alchemy. Our AI-powered mixing and mastering service delivers professional studio-quality results from your multi-track stems in minutes.",
@@ -42,16 +72,16 @@ export const metadata: Metadata = {
     follow: true,
   },
   openGraph: {
-    title: "Audio Alchemy: Professional AI Audio Mixing & Mastering Online",
+    title: `${siteName}: Professional AI Audio Mixing & Mastering Online`,
     description: "Transform your tracks with Audio Alchemy. Our AI-powered mixing and mastering service delivers professional studio-quality results from your multi-track stems in minutes.",
     url: siteUrl,
-    siteName: "Audio Alchemy",
+    siteName,
     type: "website",
     locale: "en_US",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Audio Alchemy: Professional AI Audio Mixing & Mastering Online",
+    title: `${siteName}: Professional AI Audio Mixing & Mastering Online`,
     description: "Transform your tracks with Audio Alchemy. Our AI-powered mixing and mastering service delivers professional studio-quality results from your multi-track stems in minutes.",
   },
 };
@@ -66,6 +96,19 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+        <Script
+          id="ld-organization"
+          type="application/ld+json"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
+        />
+        <Script
+          id="ld-website"
+          type="application/ld+json"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }}
+        />
+
         {children}
 
         {/* Google Analytics: solo si hay ID */}
