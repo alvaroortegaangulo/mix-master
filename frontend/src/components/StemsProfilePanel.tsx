@@ -47,9 +47,9 @@ export function StemsProfilePanel({ stems, onChangeProfile }: Props) {
         Select stems profile
       </h3>
       <p className="mt-1 text-[11px] text-amber-200">
-        Etiqueta cada stem con su función en la mezcla. Más adelante usaremos
-        estos perfiles para enrutar buses (drums, bass, guitars, vocals, FX,
-        etc.).
+        Label each stem with its function in the mix. 
+        Later we will use these profiles to route buses 
+        (drums, bass, guitars, vocals, FX, etc.).
       </p>
 
       {/* SIN scroll interno: el alto se adapta a la lista */}

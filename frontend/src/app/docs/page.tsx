@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import Image from "next/image";
 
 export const metadata: Metadata = {
   title: "Documentation & Guide",
@@ -79,8 +80,13 @@ export default function DocsPage() {
               Start by dragging and dropping your audio files into the upload zone on the home page. We accept common audio formats like WAV, AIFF, and MP3. For best results, use high-quality WAV files (24-bit, 44.1kHz or higher).
             </p>
             <div className="my-6 p-4 border border-dashed border-slate-700 rounded-lg bg-slate-900/50 flex items-center justify-center text-slate-500 h-48">
-              {/* Screenshot Placeholder */}
-              <span className="italic">[Screenshot: Upload Dropzone with files]</span>
+              <Image
+                src="/upload_dropzone.png"
+                alt="Screenshot: Upload Dropzone with files"
+                width={832}          // ajusta según tu imagen
+                height={514}         // ajusta según tu imagen
+                className="max-h-full w-auto object-contain rounded-md"
+              />
             </div>
 
             <h3 className="text-xl font-medium text-teal-300 mt-8 mb-4">2. Configuring Stem Profiles</h3>
