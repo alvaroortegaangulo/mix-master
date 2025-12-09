@@ -52,27 +52,25 @@ _MODULE_CACHE: Dict[Path, object] = {}
 
 def _get_job_temp_root(create: bool = False) -> Path:
     """
-    Raiz temporal del job (respeta MIX_TEMP_ROOT y MIX_JOB_ID).
+    Raiz temporal del job en disco (respeta MIX_TEMP_ROOT y MIX_JOB_ID).
     Legacy fallback si no se pasa contexto.
     """
     temp_root_env = os.environ.get("MIX_TEMP_ROOT")
     job_id_env = os.environ.get("MIX_JOB_ID")
     project_root = Path(__file__).resolve().parents[2]  # .../backend
 
-    preferred_base = Path("/dev/shm/mix-master/temp")
+    base = Path(temp_root_env) if temp_root_env else project_root / "temp"
 
-    if temp_root_env:
-        base = Path(temp_root_env)
-    else:
-        base = preferred_base / job_id_env if job_id_env else preferred_base
+    if job_id_env and job_id_env not in base.parts:
+        base = base / job_id_env
 
     if create:
         try:
             base.mkdir(parents=True, exist_ok=True)
         except OSError:
-            fallback = (
-                project_root / "temp" / job_id_env if job_id_env else project_root / "temp"
-            )
+            fallback = project_root / "temp"
+            if job_id_env:
+                fallback = fallback / job_id_env
             fallback.mkdir(parents=True, exist_ok=True)
             base = fallback
 

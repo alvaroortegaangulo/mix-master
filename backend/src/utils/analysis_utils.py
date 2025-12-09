@@ -53,27 +53,25 @@ def load_contract(contract_id: str) -> Dict[str, Any]:
 
 def _get_job_temp_root(create: bool = False) -> Path:
     """
-    Devuelve la raíz temporal del job. Por defecto usa /dev/shm (RAM)
-    para minimizar I/O en disco; si no existe o falla, cae a backend/temp.
-    Se puede sobrescribir con MIX_TEMP_ROOT.
+    Devuelve la raíz temporal del job en disco.
+    Usa backend/temp como base por defecto; si MIX_TEMP_ROOT está definido se toma como base.
+    Si hay MIX_JOB_ID y la ruta base no lo incluye, se añade como subcarpeta.
     """
     temp_root_env = os.getenv("MIX_TEMP_ROOT")
     job_id_env = os.getenv("MIX_JOB_ID")
 
-    preferred_base = Path("/dev/shm/mix-master/temp")
+    base = Path(temp_root_env) if temp_root_env else (PROJECT_ROOT / "temp")
 
-    if temp_root_env:
-        # Si el usuario define MIX_TEMP_ROOT, lo usamos tal cual (sin añadir job_id de nuevo)
-        base = Path(temp_root_env)
-    else:
-        base = preferred_base / job_id_env if job_id_env else preferred_base
+    if job_id_env and job_id_env not in base.parts:
+        base = base / job_id_env
 
     if create:
         try:
             base.mkdir(parents=True, exist_ok=True)
         except OSError:
-            # fallback a backend/temp
-            fallback = (PROJECT_ROOT / "temp" / job_id_env) if job_id_env else (PROJECT_ROOT / "temp")
+            fallback = PROJECT_ROOT / "temp"
+            if job_id_env:
+                fallback = fallback / job_id_env
             fallback.mkdir(parents=True, exist_ok=True)
             base = fallback
 

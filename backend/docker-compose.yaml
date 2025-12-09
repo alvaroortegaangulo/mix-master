@@ -26,7 +26,7 @@ services:
     environment:
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/0
-      MIX_TEMP_ROOT: /dev/shm/mix-master/temp
+      MIX_TEMP_ROOT: /app/temp
       MPLCONFIGDIR: /tmp/mplconfig
       XDG_CACHE_HOME: /tmp/.cache
     depends_on:
@@ -34,12 +34,10 @@ services:
         condition: service_healthy
     # Ya no exponemos 8000 al host: solo Caddy ve este puerto
     read_only: true
-    tmpfs:
-      - /dev/shm/mix-master/temp:size=2g
-      - /tmp
     volumes:
       - web-temp:/app/temp
       - web-media:/app/media
+      - web-tmp:/tmp
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -56,7 +54,7 @@ services:
     environment:
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/0
-      MIX_TEMP_ROOT: /dev/shm/mix-master/temp
+      MIX_TEMP_ROOT: /app/temp
       MPLCONFIGDIR: /tmp/mplconfig
       XDG_CACHE_HOME: /tmp/.cache
     depends_on:
@@ -68,12 +66,10 @@ services:
     cap_drop:
       - ALL
     read_only: true
-    tmpfs:
-      - /dev/shm/mix-master/temp:size=2g
-      - /tmp
     volumes:
       - web-temp:/app/temp
       - web-media:/app/media
+      - worker-tmp:/tmp
     networks:
       - app-net
 
@@ -93,8 +89,8 @@ services:
       - web
     # No exponemos 3000 al host, lo sirve Caddy por HTTPS
     read_only: true
-    tmpfs:
-      - /tmp
+    volumes:
+      - frontend-tmp:/tmp
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -127,5 +123,8 @@ networks:
 volumes:
   web-temp:
   web-media:
+  web-tmp:
+  worker-tmp:
+  frontend-tmp:
   caddy_data:
   caddy_config:
