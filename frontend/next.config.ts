@@ -41,7 +41,7 @@ const nextConfig: NextConfig = {
               "default-src 'self'",
               "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com",
               "style-src 'self' 'unsafe-inline'",
-              "img-src 'self' data: https://www.google-analytics.com https://www.googletagmanager.com",
+              "img-src 'self' data: https://api.music-mix-master.com https://www.google-analytics.com https://www.googletagmanager.com",
               "font-src 'self'",
               "connect-src 'self' https://api.music-mix-master.com https://www.google-analytics.com https://www.googletagmanager.com",
               "media-src 'self' https://api.music-mix-master.com",
