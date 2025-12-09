@@ -197,6 +197,7 @@ function mapBackendStatusToJobStatus(raw: any, baseUrl: string): JobStatus {
 export async function cleanupTemp(): Promise<void> {
   const res = await fetch(`${getBackendBaseUrl()}/cleanup-temp`, {
     method: "POST",
+    headers: authHeaders(),
   });
 
   if (!res.ok) {
