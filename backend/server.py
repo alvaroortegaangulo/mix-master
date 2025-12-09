@@ -14,6 +14,10 @@ from pathlib import Path
 from typing import List, Dict, Optional, Any
 
 import aiofiles
+try:
+    import redis.asyncio as aioredis
+except Exception:  # pragma: no cover - fallback si no existe redis.asyncio
+    aioredis = None
 from fastapi import (
     Depends,
     FastAPI,
@@ -91,6 +95,10 @@ RATE_LIMIT_REQUESTS = int(os.environ.get("MIXMASTER_RATE_LIMIT_REQUESTS", "30"))
 RATE_LIMIT_WINDOW_SECONDS = float(
     os.environ.get("MIXMASTER_RATE_LIMIT_WINDOW_SECONDS", "60")
 )
+RATE_LIMIT_REDIS_URL = os.environ.get(
+    "RATE_LIMIT_REDIS_URL", os.environ.get("CELERY_BROKER_URL", "redis://redis:6379/0")
+)
+RATE_LIMIT_REDIS_PREFIX = os.environ.get("RATE_LIMIT_REDIS_PREFIX", "ratelimit:api:")
 
 # ---------------------------------------------------------
 # Helpers
@@ -261,6 +269,47 @@ def _parse_bool_flag(value: Optional[str]) -> bool:
 # ---------------------------------------------------------
 
 
+class RedisRateLimiter:
+    def __init__(self, redis_url: str, key_prefix: str, max_requests: int, window_seconds: float):
+        self.redis_url = redis_url
+        self.key_prefix = key_prefix
+        self.max_requests = max_requests
+        self.window_ms = int(window_seconds * 1000)
+        self.client = aioredis.from_url(redis_url, decode_responses=False) if aioredis else None
+        self._warned = False
+
+    async def hit(self, key: str) -> None:
+        if not self.client:
+            if not self._warned:
+                logger.warning(
+                    "Rate limiter usando memoria local (redis.asyncio no disponible); limites no globales."
+                )
+                self._warned = True
+            await _memory_rate_limiter.hit(key)
+            return
+
+        now_ms = int(time.time() * 1000)
+        bucket_key = f"{self.key_prefix}{key}"
+        member = f"{now_ms}-{uuid.uuid4().hex}"
+        try:
+            async with self.client.pipeline(transaction=True) as pipe:
+                pipe.zremrangebyscore(bucket_key, 0, now_ms - self.window_ms)
+                pipe.zadd(bucket_key, {member: now_ms})
+                pipe.zcard(bucket_key)
+                pipe.expire(bucket_key, int(RATE_LIMIT_WINDOW_SECONDS) + 10)
+                _, _, count, _ = await pipe.execute()
+            if count > self.max_requests:
+                raise HTTPException(
+                    status_code=429,
+                    detail="Too many requests, try again later",
+                )
+        except HTTPException:
+            raise
+        except Exception as exc:  # fallback ante errores de Redis
+            logger.warning("Rate limiter Redis fallo (%s); usando memoria local.", exc)
+            await _memory_rate_limiter.hit(key)
+
+
 class SlidingWindowRateLimiter:
     def __init__(self, max_requests: int, window_seconds: float):
         self.max_requests = max_requests
@@ -283,7 +332,14 @@ class SlidingWindowRateLimiter:
             bucket.append(now)
 
 
-rate_limiter = SlidingWindowRateLimiter(
+_memory_rate_limiter = SlidingWindowRateLimiter(
+    max_requests=RATE_LIMIT_REQUESTS,
+    window_seconds=RATE_LIMIT_WINDOW_SECONDS,
+)
+
+rate_limiter = RedisRateLimiter(
+    redis_url=RATE_LIMIT_REDIS_URL,
+    key_prefix=RATE_LIMIT_REDIS_PREFIX,
     max_requests=RATE_LIMIT_REQUESTS,
     window_seconds=RATE_LIMIT_WINDOW_SECONDS,
 )
@@ -1055,11 +1111,15 @@ async def cleanup_temp(_: None = Depends(_guard_heavy_endpoint)):
 async def get_job_file(
     job_id: str,
     file_path: str,
-    _: None = Depends(_guard_heavy_endpoint),
+    request: Request,
 ):
     """
     Devuelve un fichero de temp/<job_id> protegido por API key.
     """
+    # Permitir api_key por header o query string para clientes tipo <audio> que no pueden añadir headers.
+    key = _extract_api_key(request, request.headers.get("X-API-Key"))
+    _require_api_key(key)
+
     _, temp_root = _get_job_dirs(job_id)
     if not temp_root.exists():
         raise HTTPException(status_code=404, detail="Job not found")
