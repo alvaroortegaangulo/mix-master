@@ -11,6 +11,7 @@ import secrets
 import shutil
 import uuid
 import time
+import re
 from collections import deque
 from datetime import datetime
 from pathlib import Path
@@ -80,6 +81,57 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# ---------------------------------------------------------
+# WAF middleware (simple pattern blocker)
+# ---------------------------------------------------------
+
+_WAF_REGEXES = [
+    re.compile(r"(?i)union\s+select"),  # SQLi
+    re.compile(r"(?i)sleep\(\d+\)"),  # time-based SQLi
+    re.compile(r"(?i)or\s+1=1"),  # classic SQLi
+    re.compile(r"\.\./"),  # path traversal
+    re.compile(r"(?i)<script"),  # XSS tags
+    re.compile(r"(?i)javascript:"),  # JS URIs
+    re.compile(r"(?i)xss"),  # generic XSS token
+    re.compile(r"(?i)etc/passwd"),  # path traversal / probing
+]
+
+
+def _is_malicious_payload(val: str) -> bool:
+    for rx in _WAF_REGEXES:
+        if rx.search(val):
+            return True
+    return False
+
+
+@app.middleware("http")
+async def waf_middleware(request: Request, call_next):
+    """
+    Bloquea solicitudes con patrones comunes de ataque (SQLi/XSS/traversal).
+    """
+    try:
+        # Revisar path y query
+        raw_parts = [request.url.path, request.url.query]
+
+        # Revisar headers típicos donde pueden inyectar payloads
+        for header_name in ("user-agent", "referer", "x-forwarded-for"):
+            if header_name in request.headers:
+                raw_parts.append(request.headers.get(header_name, ""))
+
+        for raw in raw_parts:
+            if raw and _is_malicious_payload(raw):
+                logger.warning("WAF blocked request to %s due to pattern match", request.url)
+                return JSONResponse(
+                    status_code=403,
+                    content={"detail": "Request blocked by WAF"},
+                )
+    except Exception:
+        # Si el WAF falla, no bloqueamos la petición pero registramos
+        logger.exception("WAF middleware error processing request %s", request.url)
+
+    return await call_next(request)
 
 
 @app.exception_handler(Exception)
