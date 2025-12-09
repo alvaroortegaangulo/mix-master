@@ -415,6 +415,17 @@ def _verify_signed_download(path: str, sig: Optional[str], exp: Optional[str]) -
         return False
 
 
+def _build_signed_url(request: Request, job_id: str, relative_path: str, expires_in: int = 900) -> str:
+    clean_rel = relative_path.lstrip("/")
+    if not clean_rel:
+        return ""
+    exp_ts = int(time.time()) + expires_in
+    rel_path = f"/files/{job_id}/{clean_rel}"
+    sig = _sign_download_path(rel_path, exp_ts)
+    base_url = str(request.base_url).rstrip("/")
+    return f"{base_url}{rel_path}?exp={exp_ts}&sig={sig}"
+
+
 async def _guard_heavy_endpoint(
     request: Request, api_key: Optional[str] = Header(None, alias="X-API-Key")
 ) -> None:
@@ -1094,7 +1105,7 @@ async def start_mix_job_endpoint(
 
 
 @app.get("/jobs/{job_id}")
-def get_job_status(job_id: str) -> Dict[str, Any]:
+def get_job_status(job_id: str, request: Request) -> Dict[str, Any]:
     data = _load_job_status_from_fs(job_id)
     if data is None:
         logger.info(
@@ -1118,6 +1129,15 @@ def get_job_status(job_id: str) -> Dict[str, Any]:
         data.get("stage_index"),
         data.get("total_stages"),
     )
+
+    # Firmar URLs de media si están presentes
+    rel_full = data.get("full_song_url") or data.get("fullSongUrl")
+    if isinstance(rel_full, str) and rel_full:
+        data["full_song_url"] = _build_signed_url(request, job_id, rel_full)
+    rel_orig = data.get("original_full_song_url") or data.get("originalFullSongUrl")
+    if isinstance(rel_orig, str) and rel_orig:
+        data["original_full_song_url"] = _build_signed_url(request, job_id, rel_orig)
+
     return data
 
 
