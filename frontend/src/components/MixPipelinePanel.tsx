@@ -3,7 +3,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { MixResult } from "../lib/mixApi";
-import { getBackendBaseUrl, signFileUrl } from "../lib/mixApi";
+import { getBackendBaseUrl } from "../lib/mixApi";
 import { WaveformPlayer } from "./WaveformPlayer";
 
 type Props = {
@@ -188,7 +188,15 @@ export function MixPipelinePanel({
       return `${url}${sep}api_key=${encodeURIComponent(key)}`;
     };
 
-    async function signUrl() {
+    function appendApiKey(url: string): string {
+      const key = process.env.NEXT_PUBLIC_MIXMASTER_API_KEY;
+      if (!key || !url) return url;
+      if (url.includes("api_key=")) return url;
+      const sep = url.includes("?") ? "&" : "?";
+      return `${url}${sep}api_key=${encodeURIComponent(key)}`;
+    }
+
+    async function buildPlaybackUrl() {
       if (!processedUrl) {
         if (!cancelled) setPlaybackUrl("");
         return;
@@ -198,27 +206,18 @@ export function MixPipelinePanel({
         const backend = new URL(getBackendBaseUrl());
         const urlObj = new URL(processedUrl, backend);
 
-        // Si ya viene firmada, solo normalizamos host a backend
+        // Normalizar host siempre al backend
+        urlObj.protocol = backend.protocol;
+        urlObj.host = backend.host;
+        urlObj.port = backend.port;
+
+        // Si ya viene firmada (sig/exp), úsala tal cual
         const hasSig = urlObj.searchParams.has("sig") && urlObj.searchParams.has("exp");
-        if (hasSig) {
-          urlObj.protocol = backend.protocol;
-          urlObj.host = backend.host;
-          urlObj.port = backend.port;
-          if (!cancelled) setPlaybackUrl(urlObj.toString());
-          return;
-        }
+        const finalUrl = hasSig ? urlObj.toString() : appendApiKey(urlObj.toString());
 
-        const prefix = `/files/${jobId}/`;
-        const filePath = urlObj.pathname.startsWith(prefix)
-          ? urlObj.pathname.slice(prefix.length)
-          : urlObj.pathname.replace(/^\/files\//, "");
-
-        const signed = await signFileUrl(jobId, filePath);
-        if (!cancelled) {
-          setPlaybackUrl(signed);
-        }
+        if (!cancelled) setPlaybackUrl(finalUrl);
       } catch (err) {
-        console.warn("Could not sign stage URL, falling back to api_key", err);
+        console.warn("Could not prepare stage URL", err);
         if (!cancelled) {
           const backend = getBackendBaseUrl();
           const normalized = processedUrl.startsWith("http")
@@ -229,7 +228,7 @@ export function MixPipelinePanel({
       }
     }
 
-    void signUrl();
+    void buildPlaybackUrl();
     return () => {
       cancelled = true;
     };
