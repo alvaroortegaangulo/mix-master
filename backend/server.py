@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import asyncio
 import json
+import hmac
+import hashlib
 import logging
 import os
 import secrets
@@ -31,6 +33,7 @@ from fastapi import (
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
+from fastapi.responses import JSONResponse
 
 from tasks import run_full_pipeline_task
 
@@ -75,6 +78,18 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.exception_handler(Exception)
+async def _unhandled_exception_handler(request: Request, exc: Exception):
+    """
+    Captura excepciones no manejadas y evita filtrar trazas al cliente.
+    """
+    logger.exception("Unhandled exception en %s", request.url.path)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error"},
+    )
 
 # ---------------------------------------------------------
 # Paths
@@ -375,6 +390,28 @@ def _extract_api_key(request: Request, header_api_key: Optional[str]) -> Optiona
     if header_api_key:
         return header_api_key
     return request.query_params.get("api_key")
+
+
+def _sign_download_path(path: str, exp_ts: int) -> str:
+    msg = f"{path}|{exp_ts}".encode("utf-8")
+    key = (API_TOKEN or "").encode("utf-8")
+    return hmac.new(key, msg, hashlib.sha256).hexdigest()
+
+
+def _verify_signed_download(path: str, sig: Optional[str], exp: Optional[str]) -> bool:
+    if not API_TOKEN or not sig or not exp:
+        return False
+    try:
+        exp_ts = int(exp)
+    except (TypeError, ValueError):
+        return False
+    if exp_ts < int(time.time()):
+        return False
+    expected = _sign_download_path(path, exp_ts)
+    try:
+        return hmac.compare_digest(sig, expected)
+    except Exception:
+        return False
 
 
 async def _guard_heavy_endpoint(
@@ -1131,9 +1168,13 @@ async def get_job_file(
     """
     Devuelve un fichero de temp/<job_id> protegido por API key.
     """
-    # Permitir api_key por header o query string para clientes tipo <audio> que no pueden añadir headers.
-    key = _extract_api_key(request, request.headers.get("X-API-Key"))
-    _require_api_key(key)
+    # Permitir api_key por header/query o un enlace firmado (?sig=...&exp=...).
+    sig = request.query_params.get("sig")
+    exp = request.query_params.get("exp")
+    rel_path = f"/files/{job_id}/{file_path}"
+    if not _verify_signed_download(rel_path, sig, exp):
+        key = _extract_api_key(request, request.headers.get("X-API-Key"))
+        _require_api_key(key)
 
     _, temp_root = _get_job_dirs(job_id)
     if not temp_root.exists():
@@ -1145,6 +1186,37 @@ async def get_job_file(
         raise HTTPException(status_code=404, detail="File not found")
 
     return FileResponse(target_path)
+
+
+@app.post("/files/{job_id}/sign")
+async def sign_job_file(
+    job_id: str,
+    payload: Dict[str, Any],
+    request: Request,
+    _: None = Depends(_guard_heavy_endpoint),
+):
+    """
+    Devuelve una URL firmada temporalmente para un fichero de temp/<job_id>.
+    """
+    file_path = str(payload.get("filePath") or payload.get("file_path") or "").strip()
+    if not file_path:
+        raise HTTPException(status_code=400, detail="file_path requerido")
+    expires_in = int(payload.get("expires_in") or 600)
+    expires_in = max(60, min(expires_in, 3600))
+
+    _, temp_root = _get_job_dirs(job_id)
+    target_path = (temp_root / file_path).resolve()
+    _ensure_dest_inside(temp_root, target_path)
+    if not target_path.exists() or not target_path.is_file():
+        raise HTTPException(status_code=404, detail="File not found")
+
+    exp_ts = int(time.time()) + expires_in
+    rel_path = f"/files/{job_id}/{file_path}"
+    sig = _sign_download_path(rel_path, exp_ts)
+    base_url = str(request.base_url).rstrip("/")
+    signed_url = f"{base_url}{rel_path}?exp={exp_ts}&sig={sig}"
+
+    return {"url": signed_url, "expires": exp_ts}
 
 
 @app.get("/pipeline/stages")

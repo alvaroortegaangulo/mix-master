@@ -105,6 +105,23 @@ function authHeaders(): HeadersInit {
   return key ? { "X-API-Key": key } : {};
 }
 
+async function signFileUrl(jobId: string, filePath: string): Promise<string> {
+  const baseUrl = getBackendBaseUrl();
+  const res = await fetch(`${baseUrl}/files/${encodeURIComponent(jobId)}/sign`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeaders(),
+    },
+    body: JSON.stringify({ filePath }),
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to sign URL: ${res.status} ${res.statusText}`);
+  }
+  const data = (await res.json()) as { url: string };
+  return data.url;
+}
+
 /**
  * Mapea el JSON crudo que devuelve el backend (Celery) al JobStatus
  * que usa tu frontend (queued/running/done/error, camelCase, etc.).
@@ -406,7 +423,21 @@ export async function fetchJobStatus(jobId: string): Promise<JobStatus> {
   }
 
   const raw = await res.json();
-  return mapBackendStatusToJobStatus(raw, baseUrl);
+  const mapped = mapBackendStatusToJobStatus(raw, baseUrl);
+
+  // Firmar URLs de media si existen
+  if (mapped.result?.fullSongUrl) {
+    const urlObj = new URL(mapped.result.fullSongUrl, baseUrl);
+    const filePath = urlObj.pathname.replace(/^\/files\//, "");
+    mapped.result.fullSongUrl = await signFileUrl(jobId, filePath);
+  }
+  if (mapped.result?.originalFullSongUrl) {
+    const urlObj = new URL(mapped.result.originalFullSongUrl, baseUrl);
+    const filePath = urlObj.pathname.replace(/^\/files\//, "");
+    mapped.result.originalFullSongUrl = await signFileUrl(jobId, filePath);
+  }
+
+  return mapped;
 }
 
 export type PipelineStage = {
@@ -450,10 +481,9 @@ export async function fetchStyleProfiles(): Promise<StyleProfileDef[]> {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function fetchJobReport(jobId: string): Promise<any> {
   const baseUrl = getBackendBaseUrl();
-  const url = appendApiKeyParam(
-    `${baseUrl}/files/${encodeURIComponent(
-      jobId,
-    )}/S11_REPORT_GENERATION/report.json`,
+  const url = await signFileUrl(
+    jobId,
+    `S11_REPORT_GENERATION/report.json`,
   );
   const res = await fetch(url);
   if (!res.ok) {
