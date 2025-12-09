@@ -38,7 +38,7 @@ const NAV_LINKS = [
   { label: "Pricing", href: "#pricing" },
   { label: "FAQ", href: "/faq" },
   { label: "Docs / Guide", href: "/docs" },
-  { label: "Support", href: "#support" },
+  { label: "Support", href: "/support" },
 ];
 
 const MixResultPanel = dynamic(

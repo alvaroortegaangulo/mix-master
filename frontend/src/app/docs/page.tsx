@@ -79,7 +79,7 @@ export default function DocsPage() {
             <p className="text-slate-300">
               Start by dragging and dropping your audio files into the upload zone on the home page. We accept common audio formats like WAV, AIFF, and MP3. For best results, use high-quality WAV files (24-bit, 44.1kHz or higher).
             </p>
-            <div className="my-6 p-4 border border-dashed border-slate-700 rounded-lg bg-slate-900/50 flex items-center justify-center text-slate-500 h-48">
+            <div className="my-6 p-4 border border-dashed border-slate-700 rounded-lg bg-slate-900/50 flex items-center justify-center text-slate-500 h-120">
               <Image
                 src="/upload_dropzone.png"
                 alt="Screenshot: Upload Dropzone with files"
@@ -93,20 +93,43 @@ export default function DocsPage() {
             <p className="text-slate-300">
               Once uploaded, the system will attempt to automatically identify the instrument in each stem (e.g., "Kick", "Bass", "Vocals"). Review the <strong>Stem Profiles</strong> panel on the right. Correct any misidentified stems to ensure the AI applies the correct processing profile.
             </p>
-            <div className="my-6 p-4 border border-dashed border-slate-700 rounded-lg bg-slate-900/50 flex items-center justify-center text-slate-500 h-48">
-               {/* Screenshot Placeholder */}
-               <span className="italic">[Screenshot: Stem Profiles Panel]</span>
+            <div className="my-6 p-4 border border-dashed border-slate-700 rounded-lg bg-slate-900/50 flex items-center justify-center text-slate-500 h-120">
+              <Image
+                src="/stems_profile.png"
+                alt="Screenshot: Upload Dropzone with files"
+                width={358}          // ajusta según tu imagen
+                height={514}         // ajusta según tu imagen
+                className="max-h-full w-auto object-contain rounded-md"
+              />
             </div>
 
             <h3 className="text-xl font-medium text-teal-300 mt-8 mb-4">3. Selecting Pipeline Stages</h3>
             <p className="text-slate-300">
               The <strong>Pipeline Steps</strong> panel allows you to enable or disable specific parts of the processing chain. By default, all stages are enabled for a complete mix and master. You can customize this if you only need specific corrections (e.g., only "Technical Prep" or "Mastering").
             </p>
+            <div className="my-6 p-4 border border-dashed border-slate-700 rounded-lg bg-slate-900/50 flex items-center justify-center text-slate-500 h-120">
+              <Image
+                src="/pipeline_steps.png"
+                alt="Screenshot: Upload Dropzone with files"
+                width={736}          // ajusta según tu imagen
+                height={445}         // ajusta según tu imagen
+                className="max-h-full w-auto object-contain rounded-md"
+              />
+            </div>
 
             <h3 className="text-xl font-medium text-teal-300 mt-8 mb-4">4. Space & Depth Settings</h3>
             <p className="text-slate-300">
               Use the <strong>Space & Depth</strong> panel on the left to define the reverb style for different instrument groups (e.g., "Room" for Drums, "Plate" for Vocals). If left on "Auto", the AI will choose appropriate spaces based on the genre and instrumentation.
             </p>
+            <div className="my-6 p-4 border border-dashed border-slate-700 rounded-lg bg-slate-900/50 flex items-center justify-center text-slate-500 h-120">
+              <Image
+                src="/space_depth.png"
+                alt="Screenshot: Upload Dropzone with files"
+                width={355}          // ajusta según tu imagen
+                height={480}         // ajusta según tu imagen
+                className="max-h-full w-auto object-contain rounded-md"
+              />
+            </div>
 
             <h3 className="text-xl font-medium text-teal-300 mt-8 mb-4">5. Generate Mix</h3>
             <p className="text-slate-300">
@@ -141,6 +164,15 @@ export default function DocsPage() {
             <p className="text-slate-300 mb-8">
               The Audio Alchemy pipeline consists of 12 sequential stages (S0-S11). Each stage addresses a specific aspect of audio engineering.
             </p>
+            <div className="my-6 p-4 border border-dashed border-slate-700 rounded-lg bg-slate-900/50 flex items-center justify-center text-slate-500 h-120">
+              <Image
+                src="/processing.png"
+                alt="Screenshot: Upload Dropzone with files"
+                width={439}          // ajusta según tu imagen
+                height={268}         // ajusta según tu imagen
+                className="max-h-full w-auto object-contain rounded-md"
+              />
+            </div>
 
             <div id="s0-input" className="scroll-mt-28 mb-12">
               <h3 className="text-2xl font-semibold text-amber-400 mb-3">S0: Input & Metadata</h3>
@@ -292,6 +324,15 @@ export default function DocsPage() {
             <p className="text-slate-300 mb-4">
               You can download the final <strong>Mastered Audio</strong> (WAV). This is the production-ready file. You may also have access to the unmastered Mixbus file if needed for external mastering.
             </p>
+            <div className="my-6 p-4 border border-dashed border-slate-700 rounded-lg bg-slate-900/50 flex items-center justify-center text-slate-500 h-120">
+              <Image
+                src="/result.png"
+                alt="Screenshot: Upload Dropzone with files"
+                width={802}          // ajusta según tu imagen
+                height={616}         // ajusta según tu imagen
+                className="max-h-full w-auto object-contain rounded-md"
+              />
+            </div>
 
             <h3 className="text-xl font-medium text-teal-300 mt-6 mb-3">The Engineering Report</h3>
             <p className="text-slate-300 mb-4">
@@ -302,9 +343,14 @@ export default function DocsPage() {
               <li><strong>Detailed Metrics:</strong> Numeric data showing exactly what changed (e.g., "Gain reduced by 2.5dB", "EQ cut at 300Hz").</li>
               <li><strong>Before/After Comparisons:</strong> (Where available) Visual representations of the audio signal before and after processing.</li>
             </ul>
-             <div className="my-6 p-4 border border-dashed border-slate-700 rounded-lg bg-slate-900/50 flex items-center justify-center text-slate-500 h-48">
-               {/* Screenshot Placeholder */}
-               <span className="italic">[Screenshot: Report Viewer Modal]</span>
+            <div className="my-6 p-4 border border-dashed border-slate-700 rounded-lg bg-slate-900/50 flex items-center justify-center text-slate-500 h-120">
+              <Image
+                src="/report.png"
+                alt="Screenshot: Upload Dropzone with files"
+                width={918}          // ajusta según tu imagen
+                height={949}         // ajusta según tu imagen
+                className="max-h-full w-auto object-contain rounded-md"
+              />
             </div>
           </section>
 
