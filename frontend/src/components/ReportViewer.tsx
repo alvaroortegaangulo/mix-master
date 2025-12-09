@@ -1,5 +1,6 @@
 
 import React, { useState } from "react";
+import { getBackendBaseUrl } from "../lib/mixApi";
 
 // --- Types ---
 interface StageParameter {
@@ -48,8 +49,20 @@ const ReportStageCard = ({
   const hasImages = Object.keys(images).length > 0;
   const hasKeyMetrics = stage.key_metrics && Object.keys(stage.key_metrics).length > 0;
 
-  // Updated URL to point to the static file server path
-  const getImageUrl = (imageName: string) => `/files/${jobId}/S11_REPORT_GENERATION/${imageName}`;
+  const appendApiKey = (url: string): string => {
+    const key = process.env.NEXT_PUBLIC_MIXMASTER_API_KEY;
+    if (!key || !url) return url;
+    if (url.includes("api_key=")) return url;
+    const sep = url.includes("?") ? "&" : "?";
+    return `${url}${sep}${encodeURIComponent("api_key")}=${encodeURIComponent(key)}`;
+  };
+
+  // Usamos el backend base + api_key para evitar 401 al cargar imágenes del reporte
+  const getImageUrl = (imageName: string) => {
+    const base = getBackendBaseUrl();
+    const rel = `/files/${jobId}/S11_REPORT_GENERATION/${imageName}`;
+    return appendApiKey(`${base}${rel}`);
+  };
   const renderMetricValue = (value: unknown) => {
     if (value === null || value === undefined) return "N/A";
     if (typeof value === "object") {

@@ -14,6 +14,7 @@ import time
 from collections import deque
 from datetime import datetime
 from pathlib import Path
+from urllib.parse import urlparse
 from typing import List, Dict, Optional, Any
 
 import aiofiles
@@ -416,7 +417,29 @@ def _verify_signed_download(path: str, sig: Optional[str], exp: Optional[str]) -
 
 
 def _build_signed_url(request: Request, job_id: str, relative_path: str, expires_in: int = 900) -> str:
-    clean_rel = relative_path.lstrip("/")
+    """
+    Construye una URL firmada para /files/{job_id}/<path>.
+
+    Admite que `relative_path` venga ya con prefijo /files/<job_id>/ o incluso
+    como URL absoluta; normalizamos para evitar duplicar el segmento /files/.
+    Además descartamos query params anteriores (?exp=...&sig=...) antes de
+    volver a firmar.
+    """
+    parsed = urlparse(str(relative_path or ""))
+    path = parsed.path or ""
+
+    clean_rel = path.lstrip("/")
+
+    # Si ya viene con prefijo /files/<job_id>/..., lo retiramos para no
+    # duplicarlo al construir rel_path.
+    prefix_with_job = f"files/{job_id}/"
+    if clean_rel.startswith(prefix_with_job):
+        clean_rel = clean_rel[len(prefix_with_job) :]
+    elif clean_rel.startswith("files/"):
+        clean_rel = clean_rel[len("files/") :]
+    elif clean_rel.startswith(f"{job_id}/"):
+        clean_rel = clean_rel[len(f"{job_id}/") :]
+
     if not clean_rel:
         return ""
     exp_ts = int(time.time()) + expires_in

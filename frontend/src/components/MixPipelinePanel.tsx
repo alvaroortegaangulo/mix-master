@@ -3,7 +3,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { MixResult } from "../lib/mixApi";
-import { getBackendBaseUrl } from "../lib/mixApi";
+import { getBackendBaseUrl, signFileUrl } from "../lib/mixApi";
 import { WaveformPlayer } from "./WaveformPlayer";
 
 type Props = {
@@ -88,6 +88,7 @@ export function MixPipelinePanel({
   enabledPipelineStageKeys,
 }: Props) {
   const { fullSongUrl, jobId } = result;
+  const [playbackUrl, setPlaybackUrl] = useState(fullSongUrl);
 
   const [stages, setStages] = useState<PipelineStage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -151,7 +152,7 @@ export function MixPipelinePanel({
     return stages.find((s) => s.key === activeKey) ?? stages[stages.length - 1];
   }, [stages, activeKey]);
 
-  // URL of the processed audio for the active stage
+  // URL of the processed audio for the active stage (sin firmar)
   const processedUrl = useMemo(() => {
     if (!stages.length || !activeStage) return fullSongUrl;
 
@@ -174,6 +175,50 @@ export function MixPipelinePanel({
 
     return fullSongUrl;
   }, [stages, activeStage, fullSongUrl, jobId]);
+
+  // Firmar/preparar la URL a reproducir para evitar 401 (requiere api_key)
+  useEffect(() => {
+    let cancelled = false;
+
+    const appendApiKey = (url: string): string => {
+      const key = process.env.NEXT_PUBLIC_MIXMASTER_API_KEY;
+      if (!key || !url) return url;
+      if (url.includes("api_key=")) return url;
+      const sep = url.includes("?") ? "&" : "?";
+      return `${url}${sep}api_key=${encodeURIComponent(key)}`;
+    };
+
+    async function signUrl() {
+      if (!processedUrl) {
+        if (!cancelled) setPlaybackUrl("");
+        return;
+      }
+
+      try {
+        const base = getBackendBaseUrl();
+        const urlObj = new URL(processedUrl, base);
+        const prefix = `/files/${jobId}/`;
+        const filePath = urlObj.pathname.startsWith(prefix)
+          ? urlObj.pathname.slice(prefix.length)
+          : urlObj.pathname.replace(/^\/files\//, "");
+
+        const signed = await signFileUrl(jobId, filePath);
+        if (!cancelled) {
+          setPlaybackUrl(signed);
+        }
+      } catch (err) {
+        console.warn("Could not sign stage URL, falling back to api_key", err);
+        if (!cancelled) {
+          setPlaybackUrl(appendApiKey(processedUrl));
+        }
+      }
+    }
+
+    void signUrl();
+    return () => {
+      cancelled = true;
+    };
+  }, [processedUrl, jobId]);
 
   const phaseInfo = useMemo(() => {
     if (!activeStage) return null;
@@ -265,7 +310,7 @@ export function MixPipelinePanel({
 
               {/* Reproductor estilo waveform para la fase */}
               <div className="mt-4">
-                <WaveformPlayer src={processedUrl} />
+                <WaveformPlayer src={playbackUrl} />
               </div>
             </div>
           </div>

@@ -100,15 +100,43 @@ function appendApiKeyParam(url: string): string {
   return `${url}${sep}api_key=${encodeURIComponent(key)}`;
 }
 
+function normalizeFilePath(jobId: string, filePath: string): string {
+  let clean = (filePath || "").trim();
+
+  // Si viene como URL absoluta, extraemos solo el path
+  try {
+    const asUrl = new URL(clean, getBackendBaseUrl());
+    clean = asUrl.pathname;
+  } catch {
+    // noop: usamos la ruta tal cual
+  }
+
+  // Quitamos query/fragment previos (?exp=..., #...)
+  clean = clean.split(/[?#]/)[0];
+  clean = clean.replace(/^\/+/, "");
+
+  const prefixWithJob = `files/${jobId}/`;
+  if (clean.startsWith(prefixWithJob)) {
+    clean = clean.slice(prefixWithJob.length);
+  } else if (clean.startsWith("files/")) {
+    clean = clean.slice("files/".length);
+  } else if (clean.startsWith(`${jobId}/`)) {
+    clean = clean.slice(jobId.length + 1);
+  }
+
+  return clean;
+}
+
 function authHeaders(): HeadersInit {
   const key = process.env.NEXT_PUBLIC_MIXMASTER_API_KEY;
   return key ? { "X-API-Key": key } : {};
 }
 
-async function signFileUrl(jobId: string, filePath: string): Promise<string> {
+export async function signFileUrl(jobId: string, filePath: string): Promise<string> {
   const baseUrl = getBackendBaseUrl();
   // Request a longer expiration time to prevent 401 on long sessions
   const expiresIn = 3600;
+  const normalizedPath = normalizeFilePath(jobId, filePath);
 
   const res = await fetch(`${baseUrl}/files/sign`, {
     method: "POST",
@@ -116,7 +144,11 @@ async function signFileUrl(jobId: string, filePath: string): Promise<string> {
       "Content-Type": "application/json",
       ...authHeaders(),
     },
-    body: JSON.stringify({ jobId, filePath, expires_in: expiresIn }),
+    body: JSON.stringify({
+      jobId,
+      filePath: normalizedPath,
+      expires_in: expiresIn,
+    }),
   });
   if (!res.ok) {
     throw new Error(`Failed to sign URL: ${res.status} ${res.statusText}`);
