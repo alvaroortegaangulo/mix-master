@@ -12,6 +12,7 @@ import {
   cleanupTemp,  
 } from "../lib/mixApi";
 import dynamic from "next/dynamic";
+import Link from "next/link";
 import { UploadDropzone } from "../components/UploadDropzone";
 import { type SpaceBus } from "../components/SpaceDepthStylePanel";
 
@@ -846,8 +847,14 @@ useEffect(() => {
         </div>
       </main>
 
-      <footer className="border-t border-slate-800/80 py-4 text-center text-xs text-slate-400">
-        © 2025 Audio Alchemy. All Rights Reserved.
+      <footer className="border-t border-slate-800/80 py-4 text-center text-xs text-slate-400 flex flex-col gap-2 items-center justify-center">
+        <p>© 2025 Audio Alchemy. All Rights Reserved.</p>
+        <Link
+          href="/privacy-policy"
+          className="hover:text-teal-400 hover:underline transition-colors"
+        >
+          Privacy Policy
+        </Link>
       </footer>
     </div>
   );
