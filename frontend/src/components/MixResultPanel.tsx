@@ -2,7 +2,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { type MixResult, fetchJobReport, signFileUrl } from "../lib/mixApi";
+import {
+  type MixResult,
+  fetchJobReport,
+  signFileUrl,
+  getBackendBaseUrl,
+} from "../lib/mixApi";
 import { MixPipelinePanel } from "./MixPipelinePanel";
 import { WaveformPlayer } from "./WaveformPlayer";
 import { ReportViewer } from "./ReportViewer";
@@ -44,10 +49,11 @@ export function MixResultPanel({
               ? parsed.pathname.slice(`/files/${jobId}/`.length)
               : parsed.pathname.replace(/^\/files\//, "");
             if (hasSig) {
-              // Ya viene firmada: solo devolvemos (normalizando host al actual)
-              const current = new URL(window.location.href);
-              parsed.protocol = current.protocol;
-              parsed.host = current.host;
+              // Ya viene firmada: solo normalizamos al host del backend (no al host público)
+              const backend = new URL(getBackendBaseUrl());
+              parsed.protocol = backend.protocol;
+              parsed.host = backend.host;
+              parsed.port = backend.port;
               return parsed.toString();
             }
             return await signFileUrl(jobId, path);
