@@ -18,6 +18,8 @@ services:
       context: .
       dockerfile: Dockerfile
     image: mix-master-backend:latest   # imagen backend única
+    env_file:
+      - .env
     # Hypercorn sirviendo FastAPI
     command: >
       hypercorn server:app

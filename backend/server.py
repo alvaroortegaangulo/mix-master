@@ -309,7 +309,7 @@ async def _guard_heavy_endpoint(
 # Upload helpers
 # ---------------------------------------------------------
 
-ALLOWED_UPLOAD_EXTENSIONS = {".wav", ".wave"}
+ALLOWED_UPLOAD_EXTENSIONS = {".wav"}
 ALLOWED_UPLOAD_MIME_TYPES = {
     "audio/wav",
     "audio/x-wav",
@@ -317,6 +317,7 @@ ALLOWED_UPLOAD_MIME_TYPES = {
     "audio/vnd.wave",
 }
 MAX_UPLOAD_SIZE_BYTES = 512 * 1024 * 1024  # 512 MiB
+MAX_JOB_TOTAL_BYTES = 2 * 1024 * 1024 * 1024  # 2 GiB total por job
 
 
 def _sanitize_filename(filename: str) -> str:
@@ -377,7 +378,25 @@ def _prepare_upload_destination(base_dir: Path, upload: UploadFile) -> tuple[Pat
     return dest_path, safe_name
 
 
-async def _stream_upload_file(upload: UploadFile, dest_path: Path) -> int:
+def _get_media_dir_size(media_dir: Path) -> int:
+    total = 0
+    if media_dir.exists():
+        for entry in media_dir.iterdir():
+            try:
+                if entry.is_file():
+                    total += entry.stat().st_size
+            except FileNotFoundError:
+                continue
+    return total
+
+
+async def _stream_upload_file(
+    upload: UploadFile,
+    dest_path: Path,
+    *,
+    max_total_bytes: Optional[int] = None,
+    already_written: int = 0,
+) -> int:
     """
     Copia el UploadFile a dest_path validando el tamano maximo.
     """
@@ -390,12 +409,21 @@ async def _stream_upload_file(upload: UploadFile, dest_path: Path) -> int:
                 if not chunk:
                     break
                 new_size = bytes_written + len(chunk)
+                overall_size = already_written + new_size
                 if new_size > MAX_UPLOAD_SIZE_BYTES:
                     raise HTTPException(
                         status_code=413,
                         detail=(
                             f"Archivo demasiado grande "
                             f"(limite {MAX_UPLOAD_SIZE_BYTES // (1024 * 1024)} MiB)"
+                        ),
+                    )
+                if max_total_bytes is not None and overall_size > max_total_bytes:
+                    raise HTTPException(
+                        status_code=413,
+                        detail=(
+                            "Límite total de subida del job excedido "
+                            f"({max_total_bytes // (1024 * 1024 * 1024)} GiB)"
                         ),
                     )
                 await out.write(chunk)
@@ -529,9 +557,16 @@ async def mix_tracks(
             )
 
     # Guardar los ficheros (usando aiofiles y streaming para evitar bloqueo)
+    total_uploaded = 0
     for f in files:
         dest_path, safe_name = _prepare_upload_destination(media_dir, f)
-        bytes_written = await _stream_upload_file(f, dest_path)
+        bytes_written = await _stream_upload_file(
+            f,
+            dest_path,
+            max_total_bytes=MAX_JOB_TOTAL_BYTES,
+            already_written=total_uploaded,
+        )
+        total_uploaded += bytes_written
 
         logger.info(
             "[/mix] Archivo subido guardado para job_id=%s -> %s (%d bytes)",
@@ -808,7 +843,13 @@ async def upload_file_for_job(
     media_dir.mkdir(parents=True, exist_ok=True)
 
     dest_path, safe_name = _prepare_upload_destination(media_dir, file)
-    bytes_written = await _stream_upload_file(file, dest_path)
+    existing_total = _get_media_dir_size(media_dir)
+    bytes_written = await _stream_upload_file(
+        file,
+        dest_path,
+        max_total_bytes=MAX_JOB_TOTAL_BYTES,
+        already_written=existing_total,
+    )
 
     logger.info(
         "[/mix/%s/upload-file] Archivo subido -> %s (%d bytes) (async streaming)",
