@@ -91,7 +91,7 @@ function normalizeUrl(pathOrUrl: string | undefined, baseUrl: string): string {
   return `${baseUrl}${pathOrUrl}`;
 }
 
-function appendApiKeyParam(url: string): string {
+export function appendApiKeyParam(url: string): string {
   const key = process.env.NEXT_PUBLIC_MIXMASTER_API_KEY;
   if (!key) return url;
   if (!url) return url;
@@ -549,10 +549,9 @@ export async function fetchStyleProfiles(): Promise<StyleProfileDef[]> {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function fetchJobReport(jobId: string): Promise<any> {
   const baseUrl = getBackendBaseUrl();
-  const url = await signFileUrl(
-    jobId,
-    `S11_REPORT_GENERATION/report.json`,
-  );
+  const rel = `/files/${jobId}/S11_REPORT_GENERATION/report.json`;
+  const url = appendApiKeyParam(`${baseUrl}${rel}`);
+
   const res = await fetch(url);
   if (!res.ok) {
     throw new Error(`Failed to fetch report: ${res.statusText}`);

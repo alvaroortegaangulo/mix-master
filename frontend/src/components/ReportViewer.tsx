@@ -1,6 +1,6 @@
 
 import React, { useEffect, useState } from "react";
-import { getBackendBaseUrl, signFileUrl } from "../lib/mixApi";
+import { appendApiKeyParam, getBackendBaseUrl } from "../lib/mixApi";
 
 // --- Types ---
 interface StageParameter {
@@ -55,39 +55,13 @@ const ReportStageCard = ({
   useEffect(() => {
     let cancelled = false;
     const base = getBackendBaseUrl();
-    const fallbackWithApiKey = (name: string): string => {
-      const rel = `/files/${jobId}/S11_REPORT_GENERATION/${name}`;
-      const key = process.env.NEXT_PUBLIC_MIXMASTER_API_KEY;
-      if (!key) return `${base}${rel}`;
-      const sep = rel.includes("?") ? "&" : "?";
-      return `${base}${rel}${sep}api_key=${encodeURIComponent(key)}`;
-    };
 
-    async function prepare() {
-      if (images.waveform) {
-        try {
-          const url = await signFileUrl(jobId, `S11_REPORT_GENERATION/${images.waveform}`);
-          if (!cancelled) setWaveformUrl(url);
-        } catch {
-          if (!cancelled) setWaveformUrl(fallbackWithApiKey(images.waveform));
-        }
-      } else {
-        setWaveformUrl("");
-      }
+    const buildUrl = (name?: string) =>
+      name ? appendApiKeyParam(`${base}/files/${jobId}/S11_REPORT_GENERATION/${name}`) : "";
 
-      if (images.spectrogram) {
-        try {
-          const url = await signFileUrl(jobId, `S11_REPORT_GENERATION/${images.spectrogram}`);
-          if (!cancelled) setSpectrogramUrl(url);
-        } catch {
-          if (!cancelled) setSpectrogramUrl(fallbackWithApiKey(images.spectrogram));
-        }
-      } else {
-        setSpectrogramUrl("");
-      }
-    }
+    setWaveformUrl(buildUrl(images.waveform));
+    setSpectrogramUrl(buildUrl(images.spectrogram));
 
-    void prepare();
     return () => {
       cancelled = true;
     };
