@@ -22,6 +22,23 @@ services:
     networks:
       - app-net
 
+  db:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-mixmaster}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-securepassword}
+      POSTGRES_DB: ${POSTGRES_DB:-mixmaster}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-mixmaster}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-net
+
   web:
     build:
       context: .
@@ -41,11 +58,14 @@ services:
       REDIS_PASSWORD: ${REDIS_PASSWORD}
       CELERY_BROKER_URL: redis://default:${REDIS_PASSWORD}@redis:6379/0
       CELERY_RESULT_BACKEND: redis://default:${REDIS_PASSWORD}@redis:6379/0
+      DATABASE_URL: postgresql://${POSTGRES_USER:-mixmaster}:${POSTGRES_PASSWORD:-securepassword}@db:5432/${POSTGRES_DB:-mixmaster}
       MIX_TEMP_ROOT: /app/temp
       MPLCONFIGDIR: /tmp/mplconfig
       XDG_CACHE_HOME: /tmp/.cache
     depends_on:
       redis:
+        condition: service_healthy
+      db:
         condition: service_healthy
     read_only: true
     volumes:
@@ -69,11 +89,14 @@ services:
       REDIS_PASSWORD: ${REDIS_PASSWORD}
       CELERY_BROKER_URL: redis://default:${REDIS_PASSWORD}@redis:6379/0
       CELERY_RESULT_BACKEND: redis://default:${REDIS_PASSWORD}@redis:6379/0
+      DATABASE_URL: postgresql://${POSTGRES_USER:-mixmaster}:${POSTGRES_PASSWORD:-securepassword}@db:5432/${POSTGRES_DB:-mixmaster}
       MIX_TEMP_ROOT: /app/temp
       MPLCONFIGDIR: /tmp/mplconfig
       XDG_CACHE_HOME: /tmp/.cache
     depends_on:
       redis:
+        condition: service_healthy
+      db:
         condition: service_healthy
     restart: unless-stopped
     security_opt:
@@ -138,3 +161,4 @@ volumes:
   frontend-tmp:
   caddy_data:
   caddy_config:
+  postgres_data:

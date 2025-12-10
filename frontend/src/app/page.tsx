@@ -16,6 +16,8 @@ import Link from "next/link";
 import Script from "next/script";
 import { UploadDropzone } from "../components/UploadDropzone";
 import { type SpaceBus } from "../components/SpaceDepthStylePanel";
+import { AuthModal } from "../components/AuthModal";
+import { useAuth } from "../context/AuthContext";
 
 const siteName = "Audio Alchemy";
 const fallbackSiteUrl = "https://music-mix-master.com";
@@ -293,6 +295,9 @@ export default function HomePage() {
   const [selectedStageKeys, setSelectedStageKeys] = useState<string[]>([]);
   const [showStageSelector, setShowStageSelector] = useState(true);
   const [isPipelineCollapsed, setIsPipelineCollapsed] = useState(true);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+
+  const { user, loading: authLoading } = useAuth();
 
   const [spaceBusStyles, setSpaceBusStyles] = useState<Record<string, string>>(
      {},
@@ -717,16 +722,30 @@ useEffect(() => {
           </nav>
 
           <div className="flex items-center gap-2 shrink-0">
-            <Link
-              href="#upload"
-              className="rounded-full bg-teal-400 text-slate-950 px-3.5 py-2 text-sm font-semibold shadow-md shadow-teal-500/30 hover:bg-teal-300 transition"
-              prefetch={false}
-            >
-              Upload stems
-            </Link>
+            {!authLoading && (
+              user ? (
+                <div className="flex items-center gap-2">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-purple-600 font-bold text-white shadow-md ring-2 ring-slate-800">
+                    {user.full_name ? user.full_name.charAt(0).toUpperCase() : user.email.charAt(0).toUpperCase()}
+                  </div>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setIsAuthModalOpen(true)}
+                  className="rounded-full bg-teal-400 text-slate-950 px-3.5 py-2 text-sm font-semibold shadow-md shadow-teal-500/30 hover:bg-teal-300 transition"
+                >
+                  Try it
+                </button>
+              )
+            )}
           </div>
         </div>
       </header>
+
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+      />
 
       {/* Layout: grid con 3 columnas a partir de lg.
           Centro más estrecho en portátiles, más ancho en pantallas grandes */}
