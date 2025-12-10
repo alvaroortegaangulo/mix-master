@@ -724,11 +724,11 @@ useEffect(() => {
           <div className="flex items-center gap-2 shrink-0">
             {!authLoading && (
               user ? (
-                <div className="flex items-center gap-2">
+                <Link href="/profile" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
                   <div className="flex h-9 w-9 items-center justify-center rounded-full bg-purple-600 font-bold text-white shadow-md ring-2 ring-slate-800">
                     {user.full_name ? user.full_name.charAt(0).toUpperCase() : user.email.charAt(0).toUpperCase()}
                   </div>
-                </div>
+                </Link>
               ) : (
                 <button
                   onClick={() => setIsAuthModalOpen(true)}
