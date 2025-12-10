@@ -19,6 +19,7 @@ from urllib.parse import urlparse
 from typing import List, Dict, Optional, Any
 
 import aiofiles
+from sqlalchemy import text
 try:
     import redis.asyncio as aioredis
 except Exception:  # pragma: no cover - fallback si no existe redis.asyncio
@@ -46,7 +47,24 @@ from src.routers import auth
 # Database
 # ---------------------------------------------------------
 
-Base.metadata.create_all(bind=engine)
+def _init_db_schema() -> None:
+    """
+    Serializa la creacion de tablas para evitar carreras entre workers
+    (Hypercorn lanza varios procesos) que terminan en duplicados de secuencias.
+    """
+    if engine.dialect.name == "postgresql":
+        lock_id = 912345  # entero estable para pg_advisory_lock
+        with engine.begin() as conn:
+            conn.execute(text("SELECT pg_advisory_lock(:lock_id)"), {"lock_id": lock_id})
+            try:
+                Base.metadata.create_all(bind=conn)
+            finally:
+                conn.execute(text("SELECT pg_advisory_unlock(:lock_id)"), {"lock_id": lock_id})
+    else:
+        Base.metadata.create_all(bind=engine)
+
+
+_init_db_schema()
 
 # ---------------------------------------------------------
 # Logging
