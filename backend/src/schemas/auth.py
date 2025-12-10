@@ -12,6 +12,9 @@ class UserLogin(BaseModel):
     email: EmailStr
     password: str
 
+class GoogleLogin(BaseModel):
+    token: str
+
 class UserResponse(UserBase):
     id: int
     is_active: bool

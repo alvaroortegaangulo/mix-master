@@ -4,6 +4,7 @@ import { useState } from "react";
 import { XMarkIcon } from "@heroicons/react/24/outline";
 import { getBackendBaseUrl } from "../lib/mixApi";
 import { useAuth } from "../context/AuthContext";
+import { useGoogleLogin } from "@react-oauth/google";
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -18,6 +19,43 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
+
+  const handleGoogleLogin = useGoogleLogin({
+    onSuccess: async (tokenResponse) => {
+      setLoading(true);
+      setError(null);
+      try {
+        const baseUrl = getBackendBaseUrl();
+        const res = await fetch(`${baseUrl}/auth/google`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ token: tokenResponse.credential || tokenResponse.access_token || (tokenResponse as any).id_token }),
+        });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.detail || "Authentication failed");
+      }
+
+      login(data.access_token);
+      onClose();
+
+      } catch (err: any) {
+         setError(err.message || "An error occurred");
+      } finally {
+        setLoading(false);
+      }
+    }
+  });
+
+  if (!isOpen) return null;
+         // ...
+      }
+    }
+  });
 
   if (!isOpen) return null;
 
@@ -131,7 +169,7 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
               <button
                 type="button"
                 className="flex w-full items-center justify-center gap-2 rounded-lg bg-white py-2.5 text-sm font-medium text-slate-900 hover:bg-slate-100 transition"
-                onClick={() => alert("Google login not implemented yet")}
+                onClick={() => handleGoogleLogin()}
               >
                 <svg className="h-5 w-5" viewBox="0 0 24 24">
                   <path
