@@ -27,7 +27,8 @@ sqlalchemy
 psycopg2-binary
 
 # Auth
-passlib[bcrypt]
+passlib[bcrypt]==1.7.4   # 1.7.4 compatible con bcrypt 3.x
+bcrypt<4.0                # evitar incompatibilidad passlib vs bcrypt 4.x
 python-jose[cryptography]
 email-validator
 
