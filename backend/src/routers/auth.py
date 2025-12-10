@@ -10,7 +10,7 @@ from google.auth.transport import requests as google_requests
 
 from ..database import get_db
 from ..models.user import User
-from ..schemas.auth import UserCreate, UserResponse, UserLogin, GoogleLogin, Token, TokenData
+from ..schemas.auth import UserCreate, UserResponse, UserLogin, GoogleLogin, Token, TokenData, UserPasswordChange
 from ..utils.security import verify_password, get_password_hash, create_access_token, SECRET_KEY, ALGORITHM
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -129,3 +129,25 @@ def delete_account(current_user: User = Depends(get_current_user), db: Session =
     db.delete(current_user)
     db.commit()
     return
+
+@router.post("/change-password", status_code=status.HTTP_200_OK)
+def change_password(
+    password_data: UserPasswordChange,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    # Verify old password
+    if not current_user.hashed_password or not verify_password(password_data.old_password, current_user.hashed_password):
+        raise HTTPException(status_code=400, detail="Incorrect old password")
+
+    # Validate new password strength
+    if len(password_data.new_password) < 8:
+        raise HTTPException(status_code=400, detail="New password must be at least 8 characters long")
+
+    # Update with new password
+    hashed_new_password = get_password_hash(password_data.new_password)
+    current_user.hashed_password = hashed_new_password
+    db.add(current_user)
+    db.commit()
+
+    return {"message": "Password updated successfully"}
