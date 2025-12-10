@@ -43,3 +43,5 @@ email-validator
 # torchaudio
 
 aiofiles
+google-auth
+requests
