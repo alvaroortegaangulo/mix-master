@@ -1,3 +1,4 @@
+import os
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from fastapi.security import OAuth2PasswordBearer
@@ -14,6 +15,7 @@ from ..utils.security import verify_password, get_password_hash, create_access_t
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
 
 def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     credentials_exception = HTTPException(
@@ -61,6 +63,9 @@ def login(user_credentials: UserLogin, db: Session = Depends(get_db)):
 
 @router.post("/google", response_model=Token)
 def google_login(login_data: GoogleLogin, db: Session = Depends(get_db)):
+    if not GOOGLE_CLIENT_ID:
+        raise HTTPException(status_code=500, detail="Google OAuth not configured (missing GOOGLE_CLIENT_ID)")
+
     email = None
     full_name = None
 
@@ -69,7 +74,7 @@ def google_login(login_data: GoogleLogin, db: Session = Depends(get_db)):
         # Verify the token
         # In a real production environment, you should also verify the 'aud' (audience) claim
         # matches your Google Client ID.
-        idinfo = id_token.verify_oauth2_token(login_data.token, google_requests.Request())
+        idinfo = id_token.verify_oauth2_token(login_data.token, google_requests.Request(), GOOGLE_CLIENT_ID)
 
         email = idinfo.get('email')
         full_name = idinfo.get('name')
