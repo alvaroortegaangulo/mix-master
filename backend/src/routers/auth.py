@@ -1,4 +1,5 @@
 import os
+import secrets
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from fastapi.security import OAuth2PasswordBearer
@@ -104,7 +105,13 @@ def google_login(login_data: GoogleLogin, db: Session = Depends(get_db)):
 
     if not user:
         # Create new user
-        new_user = User(email=email, hashed_password=None, full_name=full_name)
+        # Generar una contraseña aleatoria para cumplir el NOT NULL y bloquear login por password
+        random_pwd = secrets.token_urlsafe(16)
+        new_user = User(
+            email=email,
+            hashed_password=get_password_hash(random_pwd),
+            full_name=full_name,
+        )
         db.add(new_user)
         db.commit()
         db.refresh(new_user)
