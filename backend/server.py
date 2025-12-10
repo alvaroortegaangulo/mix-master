@@ -39,6 +39,14 @@ from fastapi.responses import FileResponse
 from fastapi.responses import JSONResponse
 
 from tasks import run_full_pipeline_task
+from src.database import engine, Base
+from src.routers import auth
+
+# ---------------------------------------------------------
+# Database
+# ---------------------------------------------------------
+
+Base.metadata.create_all(bind=engine)
 
 # ---------------------------------------------------------
 # Logging
@@ -81,6 +89,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(auth.router)
 
 
 # ---------------------------------------------------------

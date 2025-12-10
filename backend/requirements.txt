@@ -22,6 +22,14 @@ python-multipart   # necesario para UploadFile / multipart/form-data
 celery[redis]
 redis
 
+# Database
+sqlalchemy
+psycopg2-binary
+
+# Auth
+passlib[bcrypt]
+python-jose[cryptography]
+
 # --- Opcionales históricos / futuros (comentados) ---
 # psutil         # monitorización de memoria/CPU si lo quieres usar más adelante
 # essentia       # análisis de audio avanzado si reactivas el pipeline antiguo
@@ -31,7 +39,5 @@ redis
 # torch
 # torchvision
 # torchaudio
-
-
 
 aiofiles
