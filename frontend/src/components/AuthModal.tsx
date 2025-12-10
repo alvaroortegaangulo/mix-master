@@ -22,39 +22,40 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
 
   const handleGoogleLogin = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
+      const token =
+        (tokenResponse as any).credential ||
+        (tokenResponse as any).access_token ||
+        (tokenResponse as any).id_token;
+
+      if (!token) {
+        setError("No hemos recibido el token de Google.");
+        return;
+      }
+
       setLoading(true);
       setError(null);
       try {
         const baseUrl = getBackendBaseUrl();
         const res = await fetch(`${baseUrl}/auth/google`, {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ token: tokenResponse.credential || tokenResponse.access_token || (tokenResponse as any).id_token }),
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token }),
         });
 
-      const data = await res.json();
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.detail || "Authentication failed");
+        }
 
-      if (!res.ok) {
-        throw new Error(data.detail || "Authentication failed");
-      }
-
-      login(data.access_token);
-      onClose();
-
+        login(data.access_token);
+        onClose();
       } catch (err: any) {
-         setError(err.message || "An error occurred");
+        setError(err.message || "An error occurred");
       } finally {
         setLoading(false);
       }
-    }
-  });
-
-  if (!isOpen) return null;
-         // ...
-      }
-    }
+    },
+    onError: () => setError("No se pudo completar el login con Google."),
   });
 
   if (!isOpen) return null;
@@ -254,14 +255,14 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
                   Password
                 </label>
                 <input
-                  type="password"
-                  required
-                  className="w-full rounded-lg bg-slate-900 border border-slate-700 px-4 py-2.5 text-slate-200 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-              </div>
+                type="password"
+                required
+                className="w-full rounded-lg bg-slate-900 border border-slate-700 px-4 py-2.5 text-slate-200 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                placeholder="********"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
 
               {isLogin && (
                 <div className="flex justify-end">
