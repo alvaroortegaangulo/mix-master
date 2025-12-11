@@ -16,7 +16,7 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
             alt="Piroola logo"
             width={96}
             height={96}
-            className="h-24 w-24 rounded-full shadow-lg shadow-teal-500/30"
+            className="h-24 w-24"
             priority
           />
         </div>
