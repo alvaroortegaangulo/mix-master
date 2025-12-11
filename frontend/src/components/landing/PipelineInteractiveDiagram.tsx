@@ -11,47 +11,51 @@ import {
 
 const stepsData = [
   {
-    title: "Análisis",
+    title: "Analysis",
     icon: ChartBarIcon,
     colorClass: "text-cyan-400",
     bgClass: "bg-cyan-900/30",
     borderClass: "border-cyan-800",
-    desc: "Antes de procesar, es crucial entender la materia prima. Utilizamos espectrómetros, medidores de correlación de fase y medidores LUFS para identificar problemas resonantes, desequilibrios tonales o problemas de fase.",
-    tools: ["Analizador de Espectro", "Goniometro", "Medidor LUFS"],
-    tip: "Escucha siempre en mono al principio para detectar cancelaciones de fase.",
+    shortDesc: "Frequency, phase, and dynamic range diagnosis.",
+    desc: "Before processing, understanding the source material is crucial. We use spectrum analyzers, phase correlation meters, and LUFS meters to identify resonant issues, tonal imbalances, or phase problems.",
+    tools: ["Spectrum Analyzer", "Goniometer", "LUFS Meter"],
+    tip: "Always listen in mono initially to detect phase cancellations.",
     image: "/analysis.png"
   },
   {
-    title: "Corrección",
+    title: "Correction",
     icon: WrenchScrewdriverIcon,
     colorClass: "text-purple-400",
     bgClass: "bg-purple-900/30",
     borderClass: "border-purple-800",
-    desc: "La etapa quirúrgica. Aquí eliminamos frecuencias molestas con EQ sustractiva, reducimos el ruido de fondo y corregimos la afinación vocal si es necesario. El objetivo es limpiar antes de embellecer.",
-    tools: ["EQ Paramétrico", "De-noiser", "Pitch Correction"],
-    tip: "Corta frecuencias graves (High Pass) en instrumentos que no las necesitan para ganar claridad.",
+    shortDesc: "Cleaning, subtractive EQ, and noise reduction.",
+    desc: "The surgical stage. We remove problematic frequencies with subtractive EQ, reduce background noise, and correct vocal pitch if necessary. The goal is to clean before enhancing.",
+    tools: ["Parametric EQ", "De-noiser", "Pitch Correction"],
+    tip: "Cut low frequencies (High Pass) on instruments that don't need them to gain clarity.",
     image: "/correction.png"
   },
   {
-    title: "Dinámica",
+    title: "Dynamics",
     icon: ArrowsPointingInIcon,
     colorClass: "text-orange-400",
     bgClass: "bg-orange-900/30",
     borderClass: "border-orange-800",
-    desc: "Controlamos el rango dinámico para que la mezcla suene consistente. Usamos compresores para pegar los elementos (glue) y limitadores suaves para controlar los picos rebeldes.",
-    tools: ["Compresor VCA", "Compresor Multibanda", "De-esser", "Limiter"],
-    tip: "Usa compresión en serie (varios compresores suaves) en lugar de uno solo agresivo para un sonido más natural.",
+    shortDesc: "Transient control, compression, and balance.",
+    desc: "We control the dynamic range for a consistent mix. We use compressors to glue elements together and soft limiters to tame unruly peaks.",
+    tools: ["VCA Compressor", "Multiband Compressor", "De-esser", "Limiter"],
+    tip: "Use serial compression (multiple gentle compressors) instead of a single aggressive one for a more natural sound.",
     image: "/dynamics.png"
   },
   {
-    title: "Espacial",
+    title: "Spatial",
     icon: WifiIcon,
     colorClass: "text-pink-400",
     bgClass: "bg-pink-900/30",
     borderClass: "border-pink-800",
-    desc: "Creamos el mundo tridimensional de la canción. Colocamos instrumentos en el campo estéreo (panning) y añadimos profundidad con reverberación (Reverb) y eco (Delay).",
+    shortDesc: "Depth, reverberation, and stereo image.",
+    desc: "We create the song's 3D world. We place instruments in the stereo field (panning) and add depth with reverb and delay.",
     tools: ["Reverb Plate/Hall", "Stereo Delay", "Stereo Widener", "Pan Pot"],
-    tip: "Deja el bombo, bajo y voz principal al centro. Mueve los elementos rítmicos y armónicos a los lados.",
+    tip: "Keep the kick, bass, and lead vocal in the center. Move rhythmic and harmonic elements to the sides.",
     image: "/spatial.png"
   },
   {
@@ -60,9 +64,10 @@ const stepsData = [
     colorClass: "text-yellow-400",
     bgClass: "bg-yellow-900/30",
     borderClass: "border-yellow-800",
-    desc: "El pulido final. Buscamos el volumen comercial competitivo, balance tonal global y nos aseguramos de que la canción suene bien en cualquier sistema de reproducción (coche, celular, club).",
-    tools: ["Master Bus Comp", "EQ Lineal", "Maximizador", "Dithering"],
-    tip: "Compara siempre tu master con canciones de referencia del mismo género (A/B testing).",
+    shortDesc: "Loudness, final cohesion, and delivery formats.",
+    desc: "The final polish. We aim for competitive commercial loudness, global tonal balance, and ensure the song translates well to any playback system (car, phone, club).",
+    tools: ["Master Bus Comp", "Linear EQ", "Maximizer", "Dithering"],
+    tip: "Always compare your master with reference songs of the same genre (A/B testing).",
     image: "/mastering.png"
   }
 ];
@@ -94,15 +99,15 @@ export default function PipelineInteractiveDiagram() {
   return (
     <div className="w-full max-w-7xl mx-auto py-12 px-4 md:px-8 relative z-10">
       {/* Header */}
-      <header className="text-center mb-16 relative z-10 max-w-4xl mx-auto">
+      <header className="text-left mb-16 relative z-10 max-w-4xl">
         <div className="inline-block mb-4 px-4 py-1.5 rounded-full border border-cyan-500/30 bg-cyan-500/10 text-cyan-300 text-xs font-semibold tracking-wider uppercase">
           Audio Engineering Workflow
         </div>
         <h2 className="text-4xl md:text-6xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-white via-cyan-200 to-indigo-200 drop-shadow-lg">
-          Pipeline de Mezcla & Masterización
+          Mixing & Mastering Pipeline
         </h2>
-        <p className="text-slate-400 text-lg max-w-2xl mx-auto">
-          Explora interactivamente cada etapa del proceso de producción de audio, desde el análisis inicial hasta el pulido final.
+        <p className="text-slate-400 text-lg max-w-2xl">
+          Interactively explore each stage of the audio production process, from initial analysis to final polishing.
         </p>
       </header>
 
@@ -143,7 +148,7 @@ export default function PipelineInteractiveDiagram() {
                     {index + 1}. {step.title}
                   </h3>
                   <p className="text-sm text-slate-400 line-clamp-2">
-                    {step.desc}
+                    {step.shortDesc}
                   </p>
                 </div>
                 {/* Connector */}
@@ -183,7 +188,7 @@ export default function PipelineInteractiveDiagram() {
 
               <div className="bg-slate-800/50 rounded-xl p-5 border border-slate-700">
                 <h4 className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-3">
-                  Herramientas Clave
+                  Key Tools
                 </h4>
                 <div className="flex flex-wrap gap-2">
                   {data.tools.map((tool, idx) => (
