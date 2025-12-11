@@ -20,6 +20,26 @@ export default function sitemap(): MetadataRoute.Sitemap {
       lastModified,
     },
     {
+      url: `${siteUrl}/examples`,
+      lastModified,
+    },
+    {
+      url: `${siteUrl}/pricing`,
+      lastModified,
+    },
+    {
+      url: `${siteUrl}/docs`,
+      lastModified,
+    },
+    {
+      url: `${siteUrl}/support`,
+      lastModified,
+    },
+    {
+      url: `${siteUrl}/faq`,
+      lastModified,
+    },
+    {
       url: `${siteUrl}/terms-of-service`,
       lastModified,
     },

@@ -35,7 +35,7 @@ const HOMEPAGE_DESCRIPTION =
   "Transform your tracks with Audio Alchemy. Our AI-powered mixing and mastering service delivers professional studio-quality results from your multi-track stems in minutes.";
 
 const NAV_LINKS = [
-  { label: "Examples", href: "#examples" },
+  { label: "Examples", href: "/examples" },
   { label: "Pricing", href: "/pricing" },
   { label: "FAQ", href: "/faq" },
   { label: "How it works", href: "/docs" },

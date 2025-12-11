@@ -28,6 +28,13 @@ const siteUrl = (() => {
 })();
 
 const siteName = "Audio Alchemy";
+const navLinks = [
+  { name: "Examples", url: `${siteUrl}/examples` },
+  { name: "Pricing", url: `${siteUrl}/pricing` },
+  { name: "FAQ", url: `${siteUrl}/faq` },
+  { name: "How it works", url: `${siteUrl}/docs` },
+  { name: "Support", url: `${siteUrl}/support` },
+];
 
 const organizationJsonLd = {
   "@context": "https://schema.org",
@@ -55,6 +62,17 @@ const websiteJsonLd = {
   name: siteName,
   url: siteUrl,
   inLanguage: "en",
+};
+
+const siteNavigationJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "ItemList",
+  itemListElement: navLinks.map((item, index) => ({
+    "@type": "SiteNavigationElement",
+    position: index + 1,
+    name: item.name,
+    url: item.url,
+  })),
 };
 
 export const metadata: Metadata = {
@@ -112,6 +130,12 @@ export default function RootLayout({
           type="application/ld+json"
           strategy="beforeInteractive"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }}
+        />
+        <Script
+          id="ld-site-navigation"
+          type="application/ld+json"
+          strategy="beforeInteractive"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(siteNavigationJsonLd) }}
         />
 
         {children}
