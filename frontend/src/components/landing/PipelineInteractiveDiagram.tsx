@@ -1,18 +1,11 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import {
-  ChartBarIcon,
-  WrenchScrewdriverIcon,
-  ArrowsPointingInIcon,
-  WifiIcon,
-  SparklesIcon
-} from '@heroicons/react/24/outline';
+import React, { useState } from 'react';
 
 const stepsData = [
   {
     title: "Analysis",
-    icon: ChartBarIcon,
+    icon: "/icon_analysis.png",
     colorClass: "text-cyan-400",
     bgClass: "bg-cyan-900/30",
     borderClass: "border-cyan-800",
@@ -24,7 +17,7 @@ const stepsData = [
   },
   {
     title: "Correction",
-    icon: WrenchScrewdriverIcon,
+    icon: "/icon_correction.png",
     colorClass: "text-purple-400",
     bgClass: "bg-purple-900/30",
     borderClass: "border-purple-800",
@@ -36,7 +29,7 @@ const stepsData = [
   },
   {
     title: "Dynamics",
-    icon: ArrowsPointingInIcon,
+    icon: "/icon_dynamics.png",
     colorClass: "text-orange-400",
     bgClass: "bg-orange-900/30",
     borderClass: "border-orange-800",
@@ -48,7 +41,7 @@ const stepsData = [
   },
   {
     title: "Spatial",
-    icon: WifiIcon,
+    icon: "/icon_spatial.png",
     colorClass: "text-pink-400",
     bgClass: "bg-pink-900/30",
     borderClass: "border-pink-800",
@@ -60,7 +53,7 @@ const stepsData = [
   },
   {
     title: "Mastering",
-    icon: SparklesIcon,
+    icon: "/icon_mastering.png",
     colorClass: "text-yellow-400",
     bgClass: "bg-yellow-900/30",
     borderClass: "border-yellow-800",
@@ -94,7 +87,6 @@ export default function PipelineInteractiveDiagram() {
   };
 
   const data = stepsData[displayStep];
-  const DisplayIcon = data.icon;
 
   return (
     <div className="w-full max-w-7xl mx-auto py-12 px-4 md:px-8 relative z-10">
@@ -118,7 +110,6 @@ export default function PipelineInteractiveDiagram() {
         <div className="flex flex-col lg:flex-row justify-between items-center gap-8 lg:gap-4 mb-16 relative">
           {stepsData.map((step, index) => {
             const isActive = index === currentStep;
-            const Icon = step.icon;
 
             return (
               <div
@@ -141,7 +132,11 @@ export default function PipelineInteractiveDiagram() {
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-900 to-transparent opacity-60"></div>
                     <div className="absolute bottom-2 left-2 flex items-center gap-2">
-                      <Icon className={`w-6 h-6 ${step.colorClass}`} />
+                      <img
+                        src={step.icon}
+                        alt=""
+                        className="w-6 h-6 object-contain"
+                      />
                     </div>
                   </div>
                   <h3 className={`text-xl font-bold text-white mb-1 transition-colors ${isActive ? step.colorClass : 'group-hover:text-indigo-300'}`}>
@@ -177,7 +172,11 @@ export default function PipelineInteractiveDiagram() {
             {/* Left: Text Info */}
             <div>
               <div className="flex items-center gap-3 mb-4">
-                <DisplayIcon className={`w-10 h-10 ${data.colorClass}`} />
+                <img
+                  src={data.icon}
+                  alt=""
+                  className="w-10 h-10 object-contain"
+                />
                 <h2 className="text-3xl md:text-4xl font-bold text-white font-display">
                   {data.title}
                 </h2>
