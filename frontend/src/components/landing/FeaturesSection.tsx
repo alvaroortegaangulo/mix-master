@@ -1,59 +1,178 @@
-import { BeakerIcon, AdjustmentsHorizontalIcon, SparklesIcon } from "@heroicons/react/24/outline";
+"use client";
+
+import { useState } from "react";
+import {
+  ArrowUpTrayIcon,
+  CpuChipIcon,
+  AdjustmentsHorizontalIcon,
+  RocketLaunchIcon,
+} from "@heroicons/react/24/outline";
 
 export function FeaturesSection() {
+  const [activeStep, setActiveStep] = useState(0);
+
   const features = [
     {
-      title: "Intelligent Analysis",
-      description: "Our AI scans your tracks to understand key, tempo, genre, and instrumentation, creating a custom mixing strategy.",
-      icon: BeakerIcon,
-      color: "text-purple-400",
-      bg: "bg-purple-400/10",
+      id: 0,
+      title: "Smart Ingestion",
+      description:
+        "Drag your stems (WAV, AIFF). Our \"Smart-Tag\" engine automatically detects if it's a kick, a vocal, or a synth and organizes them.",
+      icon: ArrowUpTrayIcon,
+      colorClass: "text-cyan-400",
+      borderClass: "border-cyan-400",
+      bgClass: "bg-cyan-950/30",
+      placeholderBg: "bg-cyan-900/20",
+      borderColor: "border-cyan-500/30",
     },
     {
-      title: "Precision Mixing",
-      description: "Applies surgical EQ, dynamic compression, and spatial enhancements tailored to each stem's role in the mix.",
+      id: 1,
+      title: "AI Analysis & Mixing",
+      description:
+        "Thousands of calculations per second. Piroola balances levels, carves space with EQ, and applies analog \"Glue\" compression.",
+      icon: CpuChipIcon,
+      colorClass: "text-purple-400",
+      borderClass: "border-purple-400",
+      bgClass: "bg-purple-950/30",
+      placeholderBg: "bg-purple-900/20",
+      borderColor: "border-purple-500/30",
+    },
+    {
+      id: 2,
+      title: "Creative Control",
+      description:
+        "It's not a black box. Adjust \"Warmth\", \"Width\", and \"Presence\" with simple macro controls if the AI didn't hit your exact vision.",
       icon: AdjustmentsHorizontalIcon,
-      color: "text-teal-400",
-      bg: "bg-teal-400/10",
+      colorClass: "text-pink-400",
+      borderClass: "border-pink-400",
+      bgClass: "bg-pink-950/30",
+      placeholderBg: "bg-pink-900/20",
+      borderColor: "border-pink-500/30",
     },
     {
-      title: "Mastering Grade Polish",
-      description: "Finalizes your track with industry-standard loudness matching, stereo widening, and limiter safety.",
-      icon: SparklesIcon,
-      color: "text-amber-400",
-      bg: "bg-amber-400/10",
+      id: 3,
+      title: "Master & Export",
+      description:
+        "High resolution download (24-bit/48kHz). Masters optimized for Spotify (-14 LUFS) or Club (-9 LUFS) with one click.",
+      icon: RocketLaunchIcon,
+      colorClass: "text-amber-400",
+      borderClass: "border-amber-400",
+      bgClass: "bg-amber-950/30",
+      placeholderBg: "bg-amber-900/20",
+      borderColor: "border-amber-500/30",
     },
   ];
 
   return (
-    <section id="features" className="py-24 bg-slate-900">
+    <section className="py-24 bg-slate-950" id="features">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="text-center mb-16">
-          <h2 className="text-3xl font-bold tracking-tight text-white sm:text-4xl">
-            Under the Hood
+        {/* Header */}
+        <div className="text-center mb-20">
+          <div className="inline-block px-3 py-1 mb-6 text-xs font-semibold tracking-wider text-cyan-400 uppercase rounded-full bg-cyan-950/50 border border-cyan-800/50">
+            WORKFLOW
+          </div>
+          <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-white mb-6">
+            From your DAW to the <span className="text-cyan-400">World</span>.
           </h2>
-          <p className="mt-4 text-lg text-slate-400">
-            A complete audio engineering team in the cloud.
+          <p className="max-w-3xl mx-auto text-lg md:text-xl text-slate-400 leading-relaxed">
+            We have simplified the complex engineering process into 4 intuitive steps.
+            No infinite menus, only superior sonic results.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 gap-8 md:grid-cols-3">
-          {features.map((feature, idx) => (
-            <div
-              key={idx}
-              className="relative rounded-2xl border border-slate-800 bg-slate-950/50 p-8 transition hover:border-slate-700 hover:bg-slate-950"
-            >
-              <div className={`mb-4 inline-flex h-12 w-12 items-center justify-center rounded-xl ${feature.bg}`}>
-                <feature.icon className={`h-6 w-6 ${feature.color}`} />
-              </div>
-              <h3 className="mb-2 text-xl font-semibold text-white">
-                {feature.title}
-              </h3>
-              <p className="text-slate-400 leading-relaxed">
-                {feature.description}
-              </p>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-start">
+          {/* Left Column: Interactive Menu */}
+          <div className="space-y-2 relative">
+             {/* Connecting Line */}
+             <div className="absolute left-[51px] top-12 bottom-12 w-0.5 bg-slate-800 hidden md:block z-0" />
+
+            {features.map((feature, idx) => {
+              const isActive = activeStep === idx;
+              return (
+                <div
+                  key={feature.id}
+                  onMouseEnter={() => setActiveStep(idx)}
+                  className={`relative z-10 group cursor-pointer rounded-r-2xl border-l-[3px] p-6 transition-all duration-300 ease-in-out ${
+                    isActive
+                      ? `${feature.borderClass} bg-slate-900/80 shadow-lg`
+                      : "border-transparent hover:bg-slate-900/40"
+                  }`}
+                >
+                  <div className="flex items-start gap-6">
+                    {/* Icon Bubble */}
+                    <div
+                      className={`relative shrink-0 flex h-12 w-12 items-center justify-center rounded-full border transition-all duration-300 ${
+                         isActive
+                         ? `${feature.bgClass} ${feature.borderColor} ${feature.colorClass}`
+                         : "bg-slate-900 border-slate-800 text-slate-500 group-hover:border-slate-700 group-hover:text-slate-400"
+                      }`}
+                    >
+                      <feature.icon className="h-6 w-6" />
+                    </div>
+
+                    <div className="pt-1">
+                      <h3
+                        className={`text-lg font-bold mb-2 transition-colors duration-300 ${
+                          isActive ? "text-white" : "text-slate-400 group-hover:text-slate-300"
+                        }`}
+                      >
+                        {idx + 1}. {feature.title}
+                      </h3>
+                      <p
+                        className={`text-sm leading-relaxed transition-colors duration-300 ${
+                          isActive ? "text-slate-300" : "text-slate-500 group-hover:text-slate-400"
+                        }`}
+                      >
+                        {feature.description}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Right Column: Dynamic Image Placeholder */}
+          <div className="relative aspect-[4/3] w-full rounded-2xl border border-slate-800 bg-slate-900 overflow-hidden shadow-2xl">
+            {features.map((feature, idx) => (
+                <div
+                    key={feature.id}
+                    className={`absolute inset-0 flex items-center justify-center p-8 transition-all duration-500 ease-in-out transform ${
+                        activeStep === idx
+                            ? 'opacity-100 scale-100 z-10'
+                            : 'opacity-0 scale-95 z-0'
+                    }`}
+                >
+                    {/* Placeholder Visualization */}
+                    <div className={`w-full h-full rounded-xl border ${feature.borderColor} ${feature.placeholderBg} flex flex-col items-center justify-center relative overflow-hidden`}>
+                        {/* Decorative background elements */}
+                        <div className={`absolute top-0 right-0 w-64 h-64 ${feature.bgClass} rounded-full blur-3xl -mr-32 -mt-32 opacity-20`}></div>
+                        <div className={`absolute bottom-0 left-0 w-64 h-64 ${feature.bgClass} rounded-full blur-3xl -ml-32 -mb-32 opacity-20`}></div>
+
+                        <feature.icon className={`h-20 w-20 mb-6 ${feature.colorClass} opacity-80`} />
+
+                        <div className="text-center z-10">
+                            <h4 className={`text-2xl font-bold ${feature.colorClass} mb-2`}>{feature.title}</h4>
+                            <div className="text-xs font-mono text-slate-500 uppercase tracking-widest">Interactive Preview</div>
+                        </div>
+
+                        {/* Mock UI elements */}
+                        <div className="mt-8 w-3/4 space-y-3 opacity-50">
+                            <div className="h-2 bg-slate-700 rounded-full w-full"></div>
+                            <div className="h-2 bg-slate-700 rounded-full w-5/6 mx-auto"></div>
+                            <div className="h-2 bg-slate-700 rounded-full w-4/6 mx-auto"></div>
+                        </div>
+                    </div>
+                </div>
+            ))}
+
+            {/* Top Bar Decoration for the "App Window" look */}
+            <div className="absolute top-0 left-0 right-0 h-10 bg-slate-950 border-b border-slate-800 flex items-center px-4 gap-2 z-20">
+                <div className="w-3 h-3 rounded-full bg-slate-700"></div>
+                <div className="w-3 h-3 rounded-full bg-slate-700"></div>
+                <div className="w-3 h-3 rounded-full bg-slate-700"></div>
+                <div className="ml-auto text-[10px] text-slate-600 font-mono">piroola.ai/mix</div>
             </div>
-          ))}
+          </div>
         </div>
       </div>
     </section>
