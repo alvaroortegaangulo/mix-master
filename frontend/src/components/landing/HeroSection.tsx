@@ -25,16 +25,17 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
 
         <h1 className="flex flex-col text-5xl font-extrabold tracking-tight md:text-7xl lg:text-8xl gap-2">
           <span className="text-white">
-            Sonido de Estudio.
+            Studio Sound.
           </span>
-          <span className="bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
-            Perfeccionado por IA.
+          <span className="bg-gradient-to-r from-teal-400 to-purple-500 bg-clip-text text-transparent">
+            Perfected by AI.
           </span>
         </h1>
 
         <p className="mx-auto max-w-3xl text-lg font-light leading-relaxed text-slate-300 md:text-xl">
-          Transforma tus grabaciones caseras (stems) en mezclas profesionales y listas para Spotify en minutos.
-          Piroola maneja la ingeniería técnica para que tú te concentres en la música.
+          Transform your home recordings (stems) into professional,
+          Spotify-ready mixes in minutes. Piroola handles the technical
+          engineering so you can focus on the music.
         </p>
 
         <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-center mt-4">
@@ -54,7 +55,7 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
             >
               <circle cx="12" cy="12" r="9" />
             </svg>
-            <span>Mezclar mi Track</span>
+            <span>Mix my Tracks</span>
           </button>
 
           {/* Button 2: Escuchar Demos */}
@@ -63,7 +64,7 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
              className="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-full bg-slate-800/80 px-8 py-4 text-lg font-semibold text-white transition-all hover:bg-slate-700 hover:scale-105 focus:outline-none focus:ring-4 focus:ring-purple-500/30 border border-slate-700"
           >
             <PlayCircleIcon className="h-6 w-6 text-white" />
-            <span>Escuchar Demos</span>
+            <span>Listen to Demos</span>
           </button>
         </div>
 
@@ -74,7 +75,7 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
                 <span>4.9/5 Rating</span>
             </div>
             <span>•</span>
-            <span>+10k Tracks Masterizados</span>
+            <span>+10k Tracks Mastered</span>
         </div>
       </div>
 
