@@ -1,235 +1,223 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   ChartBarIcon,
-  AdjustmentsHorizontalIcon,
+  WrenchScrewdriverIcon,
   ArrowsPointingInIcon,
   WifiIcon,
-  SparklesIcon,
-  WrenchScrewdriverIcon,
-  SpeakerWaveIcon,
-  GlobeAltIcon,
-  CpuChipIcon
+  SparklesIcon
 } from '@heroicons/react/24/outline';
-import {
-  ChartBarIcon as ChartBarSolid,
-  AdjustmentsHorizontalIcon as AdjustmentsSolid,
-  ArrowsPointingInIcon as ArrowsSolid,
-  WifiIcon as WifiSolid,
-  SparklesIcon as SparklesSolid
-} from '@heroicons/react/24/solid';
 
-const steps = [
+const stepsData = [
   {
-    id: 1,
     title: "Análisis",
-    subtitle: "Diagnóstico de frecuencias, fase y rango dinámico.",
-    description: "Antes de procesar, escuchamos y analizamos. Identificamos problemas de fase, resonancias molestas y desequilibrios tonales.",
-    tools: ["Analizador de Espectro", "Medidor de Fase", "Medidor LUFS", "Detección de Tonalidad"],
-    proTip: "Un buen análisis ahorra horas de corrección. Si la grabación es mala, mejor volver a grabar.",
     icon: ChartBarIcon,
-    solidIcon: ChartBarSolid,
-    color: "cyan",
-    borderColor: "border-cyan-400",
-    textColor: "text-cyan-400",
-    bgColor: "bg-cyan-400/10",
-    gradient: "from-cyan-500/20 to-blue-600/20"
+    colorClass: "text-cyan-400",
+    bgClass: "bg-cyan-900/30",
+    borderClass: "border-cyan-800",
+    desc: "Antes de procesar, es crucial entender la materia prima. Utilizamos espectrómetros, medidores de correlación de fase y medidores LUFS para identificar problemas resonantes, desequilibrios tonales o problemas de fase.",
+    tools: ["Analizador de Espectro", "Goniometro", "Medidor LUFS"],
+    tip: "Escucha siempre en mono al principio para detectar cancelaciones de fase.",
+    image: "/analysis.png"
   },
   {
-    id: 2,
     title: "Corrección",
-    subtitle: "Limpieza, EQ sustractiva y reducción de ruido.",
-    description: "Eliminamos lo que no sirve. Filtramos frecuencias graves innecesarias (Low Cut), atenuamos resonancias y limpiamos ruidos de fondo.",
-    tools: ["EQ Paramétrico", "De-noise", "De-click", "Filtros HPF/LPF"],
-    proTip: "Corta antes de añadir. Eliminar frecuencias 'barrosas' da claridad instantánea.",
-    icon: WrenchScrewdriverIcon, // Using Wrench as a proxy for the sliders/tools
-    solidIcon: AdjustmentsSolid,
-    color: "indigo",
-    borderColor: "border-indigo-400",
-    textColor: "text-indigo-400",
-    bgColor: "bg-indigo-400/10",
-    gradient: "from-indigo-500/20 to-purple-600/20"
+    icon: WrenchScrewdriverIcon,
+    colorClass: "text-purple-400",
+    bgClass: "bg-purple-900/30",
+    borderClass: "border-purple-800",
+    desc: "La etapa quirúrgica. Aquí eliminamos frecuencias molestas con EQ sustractiva, reducimos el ruido de fondo y corregimos la afinación vocal si es necesario. El objetivo es limpiar antes de embellecer.",
+    tools: ["EQ Paramétrico", "De-noiser", "Pitch Correction"],
+    tip: "Corta frecuencias graves (High Pass) en instrumentos que no las necesitan para ganar claridad.",
+    image: "/correction.png"
   },
   {
-    id: 3,
     title: "Dinámica",
-    subtitle: "Control de transitorios, compresión y balance.",
-    description: "Controlamos el rango dinámico para que la mezcla suene consistente. Usamos compresores para dar 'pegada' (punch) y limitadores suaves para controlar picos.",
+    icon: ArrowsPointingInIcon,
+    colorClass: "text-orange-400",
+    bgClass: "bg-orange-900/30",
+    borderClass: "border-orange-800",
+    desc: "Controlamos el rango dinámico para que la mezcla suene consistente. Usamos compresores para pegar los elementos (glue) y limitadores suaves para controlar los picos rebeldes.",
     tools: ["Compresor VCA", "Compresor Multibanda", "De-esser", "Limiter"],
-    proTip: "Usa compresión en serie: varios compresores haciendo poco trabajo suenan más naturales que uno solo trabajando mucho.",
-    icon: SpeakerWaveIcon, // Represents dynamics/volume
-    solidIcon: ArrowsSolid,
-    color: "amber",
-    borderColor: "border-amber-400",
-    textColor: "text-amber-400",
-    bgColor: "bg-amber-400/10",
-    gradient: "from-amber-500/20 to-orange-600/20"
+    tip: "Usa compresión en serie (varios compresores suaves) en lugar de uno solo agresivo para un sonido más natural.",
+    image: "/dynamics.png"
   },
   {
-    id: 4,
     title: "Espacial",
-    subtitle: "Profundidad, reverberación e imagen estéreo.",
-    description: "Creamos el mundo tridimensional de la canción. Colocamos instrumentos en el campo estéreo (panning) y añadimos profundidad con reverberación (Reverb) y eco (Delay).",
+    icon: WifiIcon,
+    colorClass: "text-pink-400",
+    bgClass: "bg-pink-900/30",
+    borderClass: "border-pink-800",
+    desc: "Creamos el mundo tridimensional de la canción. Colocamos instrumentos en el campo estéreo (panning) y añadimos profundidad con reverberación (Reverb) y eco (Delay).",
     tools: ["Reverb Plate/Hall", "Stereo Delay", "Stereo Widener", "Pan Pot"],
-    proTip: "Deja el bombo, bajo y voz principal al centro. Mueve los elementos rítmicos y armónicos a los lados.",
-    icon: WifiIcon, // Represents waves/space
-    solidIcon: WifiSolid,
-    color: "fuchsia",
-    borderColor: "border-fuchsia-400",
-    textColor: "text-fuchsia-400",
-    bgColor: "bg-fuchsia-400/10",
-    gradient: "from-fuchsia-500/20 to-pink-600/20"
+    tip: "Deja el bombo, bajo y voz principal al centro. Mueve los elementos rítmicos y armónicos a los lados.",
+    image: "/spatial.png"
   },
   {
-    id: 5,
     title: "Mastering",
-    subtitle: "Loudness, cohesión final y formatos de entrega.",
-    description: "El pulido final. Buscamos el volumen comercial competitivo, balance tonal global y nos aseguramos de que la canción suene bien en cualquier sistema de reproducción (coche, celular, club).",
-    tools: ["Master Bus Comp", "EQ Lineal", "Maximizador", "Dithering"],
-    proTip: "Compara siempre tu master con canciones de referencia del mismo género (A/B testing).",
     icon: SparklesIcon,
-    solidIcon: SparklesSolid,
-    color: "yellow",
-    borderColor: "border-yellow-400",
-    textColor: "text-yellow-400",
-    bgColor: "bg-yellow-400/10",
-    gradient: "from-yellow-500/20 to-amber-600/20"
+    colorClass: "text-yellow-400",
+    bgClass: "bg-yellow-900/30",
+    borderClass: "border-yellow-800",
+    desc: "El pulido final. Buscamos el volumen comercial competitivo, balance tonal global y nos aseguramos de que la canción suene bien en cualquier sistema de reproducción (coche, celular, club).",
+    tools: ["Master Bus Comp", "EQ Lineal", "Maximizador", "Dithering"],
+    tip: "Compara siempre tu master con canciones de referencia del mismo género (A/B testing).",
+    image: "/mastering.png"
   }
 ];
 
 export default function PipelineInteractiveDiagram() {
-  const [activeStep, setActiveStep] = useState(0);
-  const currentStep = steps[activeStep];
+  const [currentStep, setCurrentStep] = useState(0);
+  const [isFadingOut, setIsFadingOut] = useState(false);
+  // Separate state for display data to handle transition delay
+  const [displayStep, setDisplayStep] = useState(0);
+
+  // Handle step selection with animation timing
+  const handleStepClick = (index: number) => {
+    if (index === currentStep) return;
+
+    // Start fade out
+    setIsFadingOut(true);
+    setCurrentStep(index);
+
+    // Update displayed content after fade out
+    setTimeout(() => {
+      setDisplayStep(index);
+      setIsFadingOut(false);
+    }, 400); // 400ms delay matches the transition duration
+  };
+
+  const data = stepsData[displayStep];
+  const DisplayIcon = data.icon;
 
   return (
-    <div className="w-full max-w-6xl mx-auto py-12 px-4">
+    <div className="w-full max-w-7xl mx-auto py-12 px-4 md:px-8 relative z-10">
       {/* Header */}
-      <div className="text-center mb-12">
-        <div className="inline-block px-3 py-1 mb-4 text-xs font-semibold tracking-wider text-blue-300 uppercase bg-blue-900/30 rounded-full border border-blue-800">
+      <header className="text-center mb-16 relative z-10 max-w-4xl mx-auto">
+        <div className="inline-block mb-4 px-4 py-1.5 rounded-full border border-cyan-500/30 bg-cyan-500/10 text-cyan-300 text-xs font-semibold tracking-wider uppercase">
           Audio Engineering Workflow
         </div>
-        <h2 className="text-4xl md:text-5xl font-bold text-white mb-4 tracking-tight">
-          Pipeline de Mezcla & <br className="hidden md:block" />
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">
-            Masterización
-          </span>
+        <h2 className="text-4xl md:text-6xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-white via-cyan-200 to-indigo-200 drop-shadow-lg">
+          Pipeline de Mezcla & Masterización
         </h2>
-        <p className="text-slate-400 max-w-2xl mx-auto text-lg">
+        <p className="text-slate-400 text-lg max-w-2xl mx-auto">
           Explora interactivamente cada etapa del proceso de producción de audio, desde el análisis inicial hasta el pulido final.
         </p>
-      </div>
+      </header>
 
-      {/* Steps Navigation Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
-        {steps.map((step, index) => {
-          const isActive = index === activeStep;
-          const StepIcon = step.icon;
+      {/* Main Pipeline Diagram */}
+      <div className="w-full relative z-10">
 
-          return (
-            <button
-              key={step.id}
-              onClick={() => setActiveStep(index)}
-              className={`relative flex flex-col items-start p-4 rounded-xl text-left transition-all duration-300 border-2 group h-full
-                ${isActive
-                  ? `${step.borderColor} bg-slate-800/80 shadow-[0_0_20px_rgba(0,0,0,0.3)]`
-                  : 'border-slate-800 bg-slate-900/50 hover:border-slate-700 hover:bg-slate-800'
-                }
-              `}
-            >
-              {/* Image Placeholder area for card */}
-              <div className={`w-full h-24 mb-4 rounded-lg overflow-hidden relative ${isActive ? 'opacity-100' : 'opacity-60 group-hover:opacity-80'}`}>
-                 <div className={`absolute inset-0 bg-gradient-to-br ${step.gradient} flex items-center justify-center`}>
-                    <StepIcon className={`w-10 h-10 text-white/50`} />
-                 </div>
-                 {/* Visual indicator for active state selection cursor (optional visual cue from video) */}
-                 {isActive && (
-                    <div className="absolute inset-0 ring-1 ring-white/10" />
-                 )}
-              </div>
+        {/* Steps Container */}
+        <div className="flex flex-col lg:flex-row justify-between items-center gap-8 lg:gap-4 mb-16 relative">
+          {stepsData.map((step, index) => {
+            const isActive = index === currentStep;
+            const Icon = step.icon;
 
-              <div className="mt-auto">
-                <div className={`text-sm font-bold mb-1 flex items-center gap-2 ${isActive ? 'text-white' : 'text-slate-400'}`}>
-                   <span className={isActive ? step.textColor : ''}>{step.id}.</span> {step.title}
+            return (
+              <div
+                key={index}
+                className="relative group w-full lg:w-1/5"
+                onClick={() => handleStepClick(index)}
+              >
+                <div
+                  className={`step-card cursor-pointer rounded-2xl p-3 h-full flex flex-col transition-all duration-400 ease-[cubic-bezier(0.4,0,0.2,1)] backdrop-blur-xl border border-white/10
+                    ${isActive
+                      ? 'border-cyan-400 bg-slate-800/70 shadow-[0_0_30px_rgba(34,211,238,0.15)] opacity-100'
+                      : 'bg-slate-800/40 opacity-70 hover:-translate-y-2 hover:scale-105 hover:border-indigo-500/50 hover:shadow-xl'
+                    }`}
+                >
+                  <div className="relative h-40 w-full overflow-hidden rounded-xl mb-4">
+                    <img
+                      src={step.image}
+                      alt={step.title}
+                      className="object-cover w-full h-full transform transition duration-700 group-hover:scale-110"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900 to-transparent opacity-60"></div>
+                    <div className="absolute bottom-2 left-2 flex items-center gap-2">
+                      <Icon className={`w-6 h-6 ${step.colorClass}`} />
+                    </div>
+                  </div>
+                  <h3 className={`text-xl font-bold text-white mb-1 transition-colors ${isActive ? step.colorClass : 'group-hover:text-indigo-300'}`}>
+                    {index + 1}. {step.title}
+                  </h3>
+                  <p className="text-sm text-slate-400 line-clamp-2">
+                    {step.desc}
+                  </p>
                 </div>
-                <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">
-                  {step.subtitle}
-                </p>
+                {/* Connector */}
+                {index < stepsData.length - 1 && (
+                  <div className="connector-line hidden lg:block"></div>
+                )}
               </div>
-
-              {/* Connecting line (hide for last item) */}
-              {index < steps.length - 1 && (
-                 <div className="hidden md:block absolute -right-3 top-1/2 w-2 h-[2px] bg-slate-800 -translate-y-1/2 z-10" />
-              )}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Detail Panel */}
-      <div className="bg-slate-900 rounded-3xl border border-slate-800 overflow-hidden shadow-2xl relative transition-all duration-500 ease-in-out">
-
-        {/* Background glow effect based on active color */}
-        <div className={`absolute top-0 left-0 w-full h-1 bg-gradient-to-r ${currentStep.gradient} opacity-50`} />
-
-        <div className="grid md:grid-cols-2 gap-0">
-
-          {/* Left Column: Text Content */}
-          <div className="p-8 md:p-12 flex flex-col justify-center relative z-10">
-            <div className="flex items-center gap-4 mb-6">
-              <div className={`p-3 rounded-2xl ${currentStep.bgColor}`}>
-                <currentStep.solidIcon className={`w-8 h-8 ${currentStep.textColor}`} />
-              </div>
-              <h3 className="text-3xl font-bold text-white">
-                {currentStep.title}
-              </h3>
-            </div>
-
-            <p className="text-slate-300 text-lg leading-relaxed mb-8">
-              {currentStep.description}
-            </p>
-
-            <div className="space-y-4">
-              <h4 className="text-xs font-bold text-slate-500 uppercase tracking-widest">
-                Herramientas Clave
-              </h4>
-              <div className="flex flex-wrap gap-2">
-                {currentStep.tools.map((tool, i) => (
-                  <span
-                    key={i}
-                    className="px-3 py-1.5 bg-slate-800 text-slate-300 text-sm rounded-lg border border-slate-700/50 hover:border-slate-600 transition-colors"
-                  >
-                    {tool}
-                  </span>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Right Column: Visual/Pro Tip */}
-          <div className="relative min-h-[300px] md:min-h-full">
-            {/* Main Visual Background */}
-            <div className={`absolute inset-0 bg-gradient-to-br ${currentStep.gradient} opacity-20`} />
-            <div className="absolute inset-0 bg-[url('/grid-pattern.svg')] opacity-10" /> {/* Optional pattern if available, otherwise just gradient */}
-
-            {/* Center Icon (Large) */}
-            <div className="absolute inset-0 flex items-center justify-center">
-               <currentStep.icon className={`w-48 h-48 ${currentStep.textColor} opacity-10 rotate-12 transform transition-transform duration-700 ease-out`} />
-            </div>
-
-            {/* Pro Tip Overlay Card */}
-            <div className="absolute bottom-6 left-6 right-6 bg-slate-950/80 backdrop-blur-sm p-6 rounded-xl border border-slate-800/50 shadow-xl">
-               <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-2">
-                  <span className="w-1 h-1 rounded-full bg-slate-400" />
-                  Pro Tip
-               </div>
-               <p className="text-slate-200 text-sm italic font-medium leading-relaxed">
-                 "{currentStep.proTip}"
-               </p>
-            </div>
-          </div>
-
+            );
+          })}
         </div>
+
+        {/* Detail Inspector Panel */}
+        <div className="relative w-full bg-slate-900/50 border border-slate-700/50 rounded-3xl p-6 md:p-10 backdrop-blur-xl overflow-hidden min-h-[300px]">
+          {/* Decorative Background Elements */}
+          <div className="absolute top-0 right-0 w-64 h-64 bg-cyan-500/10 rounded-full blur-3xl -mr-20 -mt-20 pointer-events-none"></div>
+          <div className="absolute bottom-0 left-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl -ml-20 -mb-20 pointer-events-none"></div>
+
+          {/* Content Area */}
+          <div
+            className={`relative z-10 grid grid-cols-1 md:grid-cols-2 gap-8 items-center transition-all duration-500 ease-in-out
+              ${isFadingOut
+                ? 'opacity-0 translate-y-5 pointer-events-none absolute'
+                : 'opacity-100 translate-y-0 relative'
+              }`}
+          >
+            {/* Left: Text Info */}
+            <div>
+              <div className="flex items-center gap-3 mb-4">
+                <DisplayIcon className={`w-10 h-10 ${data.colorClass}`} />
+                <h2 className="text-3xl md:text-4xl font-bold text-white font-display">
+                  {data.title}
+                </h2>
+              </div>
+              <p className="text-slate-300 text-lg leading-relaxed mb-6">
+                {data.desc}
+              </p>
+
+              <div className="bg-slate-800/50 rounded-xl p-5 border border-slate-700">
+                <h4 className="text-xs font-bold uppercase tracking-widest text-slate-500 mb-3">
+                  Herramientas Clave
+                </h4>
+                <div className="flex flex-wrap gap-2">
+                  {data.tools.map((tool, idx) => (
+                    <span
+                      key={idx}
+                      className={`px-3 py-1 ${data.bgClass} text-xs md:text-sm rounded-full border ${data.borderClass} text-white/90`}
+                    >
+                      {tool}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Right: Visual Context */}
+            <div className="h-full min-h-[250px] relative rounded-2xl overflow-hidden border border-slate-700/50 shadow-2xl">
+                <img
+                  src={data.image}
+                  className="absolute inset-0 w-full h-full object-cover"
+                  alt={data.title}
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent opacity-80"></div>
+                <div className="absolute bottom-4 left-4 right-4">
+                  <div className="text-xs text-white/70 font-mono bg-black/50 inline-block px-2 py-1 rounded mb-1">
+                    PRO TIP
+                  </div>
+                  <p className="text-sm font-medium text-white italic">
+                    "{data.tip}"
+                  </p>
+                </div>
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
   );
