@@ -40,7 +40,7 @@ const webPageJsonLd = {
   isPartOf: {
     "@type": "WebSite",
     url: siteUrl,
-    name: "Audio Alchemy",
+    name: "Piroola",
   },
   inLanguage: "en",
 };
@@ -48,7 +48,7 @@ const webPageJsonLd = {
 export const metadata: Metadata = {
   title: "Privacy Policy",
   description:
-    "Read how Audio Alchemy collects, uses, and protects your data when using our AI audio mixing and mastering service.",
+    "Read how Piroola collects, uses, and protects your data when using our AI audio mixing and mastering service.",
   alternates: { canonical: "/privacy-policy" },
   robots: { index: true, follow: true },
 };
@@ -71,7 +71,7 @@ export default function PrivacyPolicyPage() {
               <div className="h-7 w-7 rounded-full bg-teal-400/90 flex items-center justify-center text-slate-950 text-lg font-bold">
                 A
               </div>
-              <span className="text-lg font-semibold tracking-tight">Audio Alchemy</span>
+              <span className="text-lg font-semibold tracking-tight">Piroola</span>
             </Link>
           </div>
           <Link href="/" className="text-sm font-medium text-teal-400 hover:text-teal-300">
@@ -89,7 +89,7 @@ export default function PrivacyPolicyPage() {
           <section className="mb-8">
             <h2 className="text-xl font-semibold mb-4 text-slate-200">1. Introduction</h2>
             <p className="text-slate-400 leading-relaxed">
-              Welcome to <strong>Audio Alchemy</strong>. We respect your privacy and are committed to protecting your personal data.
+              Welcome to <strong>Piroola</strong>. We respect your privacy and are committed to protecting your personal data.
               This privacy policy will inform you as to how we look after your personal data when you visit our website
               and tell you about your privacy rights and how the law protects you.
             </p>
@@ -98,7 +98,7 @@ export default function PrivacyPolicyPage() {
           <section className="mb-8">
             <h2 className="text-xl font-semibold mb-4 text-slate-200">2. Data Controller</h2>
             <p className="text-slate-400 leading-relaxed">
-              Audio Alchemy is the controller and responsible for your personal data.
+              Piroola is the controller and responsible for your personal data.
               If you have any questions about this privacy policy, please contact us.
             </p>
           </section>
@@ -183,7 +183,7 @@ export default function PrivacyPolicyPage() {
       </main>
 
       <footer className="border-t border-slate-800/80 py-6 text-center text-xs text-slate-400 bg-slate-950">
-        <p>© {new Date().getFullYear()} Audio Alchemy. All Rights Reserved.</p>
+        <p>© {new Date().getFullYear()} Piroola. All Rights Reserved.</p>
       </footer>
     </div>
   );

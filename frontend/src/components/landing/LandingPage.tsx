@@ -30,7 +30,7 @@ export function LandingPage({ onTryIt }: { onTryIt: () => void }) {
           <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8 text-slate-400 text-sm">
               <div className="flex items-center gap-2">
                  <div className="h-6 w-6 rounded-full bg-teal-500/90 flex items-center justify-center text-slate-950 font-bold text-xs">A</div>
-                 <span className="font-semibold text-slate-200">Audio Alchemy</span>
+                 <span className="font-semibold text-slate-200">Piroola</span>
               </div>
               <div className="flex gap-6">
                 <Link href="/terms-of-service" className="hover:text-white transition">Terms</Link>
@@ -39,7 +39,7 @@ export function LandingPage({ onTryIt }: { onTryIt: () => void }) {
                 <Link href="/contact" className="hover:text-white transition">Contact</Link>
               </div>
               <div>
-                  © 2025 Audio Alchemy.
+                  © 2025 Piroola.
               </div>
           </div>
       </footer>

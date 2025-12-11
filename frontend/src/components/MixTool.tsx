@@ -16,7 +16,7 @@ import { UploadDropzone } from "./UploadDropzone";
 import { type SpaceBus } from "./SpaceDepthStylePanel";
 import { useAuth } from "../context/AuthContext";
 
-const siteName = "Audio Alchemy";
+const siteName = "Piroola";
 const fallbackSiteUrl = "https://music-mix-master.com";
 const siteUrl = (() => {
   // Safe check for window/process
@@ -34,7 +34,7 @@ const siteUrl = (() => {
 })();
 
 const HOMEPAGE_DESCRIPTION =
-  "Transform your tracks with Audio Alchemy. Our AI-powered mixing and mastering service delivers professional studio-quality results from your multi-track stems in minutes.";
+  "Transform your tracks with Piroola. Our AI-powered mixing and mastering service delivers professional studio-quality results from your multi-track stems in minutes.";
 
 const MixResultPanel = dynamic(
   () => import("./MixResultPanel").then((mod) => mod.MixResultPanel),

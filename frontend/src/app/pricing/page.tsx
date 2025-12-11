@@ -114,7 +114,7 @@ export default function PricingPage() {
                 A
               </div>
               <span className="text-xl font-bold tracking-tight text-slate-100 group-hover:text-teal-300 transition">
-                Audio Alchemy
+                Piroola
               </span>
             </Link>
           </div>
@@ -234,7 +234,7 @@ export default function PricingPage() {
 
       {/* Footer */}
       <footer className="border-t border-slate-800/80 py-8 text-center text-xs text-slate-400">
-        <p>© 2025 Audio Alchemy. All Rights Reserved.</p>
+        <p>© 2025 Piroola. All Rights Reserved.</p>
         <div className="mt-4 flex justify-center gap-6">
           <Link href="/terms-of-service" className="hover:text-teal-400 transition">Terms of Service</Link>
           <Link href="/privacy-policy" className="hover:text-teal-400 transition">Privacy Policy</Link>

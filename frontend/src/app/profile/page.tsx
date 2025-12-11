@@ -133,7 +133,7 @@ export default function ProfilePage() {
               A
             </div>
             <span className="text-lg font-semibold tracking-tight text-slate-100">
-              Audio Alchemy
+              Piroola
             </span>
           </Link>
 

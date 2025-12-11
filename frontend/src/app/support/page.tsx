@@ -72,7 +72,7 @@ export default function SupportPage() {
               A
             </div>
             <Link href="/" className="text-lg font-semibold tracking-tight text-slate-100 hover:text-teal-400 transition">
-              Audio Alchemy
+              Piroola
             </Link>
           </div>
           <nav className="hidden md:flex gap-6 text-sm">
@@ -220,7 +220,7 @@ export default function SupportPage() {
       </main>
 
       <footer className="border-t border-slate-800/80 py-4 text-center text-xs text-slate-400 flex flex-col gap-2 items-center justify-center">
-        <p>© 2025 Audio Alchemy. All Rights Reserved.</p>
+        <p>© 2025 Piroola. All Rights Reserved.</p>
         <div className="flex gap-4">
           <Link href="/terms-of-service" className="hover:text-teal-400 hover:underline">Terms of Service</Link>
           <Link href="/privacy-policy" className="hover:text-teal-400 hover:underline">Privacy Policy</Link>

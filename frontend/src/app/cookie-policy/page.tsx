@@ -40,7 +40,7 @@ const webPageJsonLd = {
   isPartOf: {
     "@type": "WebSite",
     url: siteUrl,
-    name: "Audio Alchemy",
+    name: "Piroola",
   },
   inLanguage: "en",
 };
@@ -48,7 +48,7 @@ const webPageJsonLd = {
 export const metadata: Metadata = {
   title: "Cookie Policy",
   description:
-    "Understand how Audio Alchemy uses cookies and similar technologies to improve your AI mixing and mastering experience.",
+    "Understand how Piroola uses cookies and similar technologies to improve your AI mixing and mastering experience.",
   alternates: { canonical: "/cookie-policy" },
   robots: { index: true, follow: true },
 };
@@ -71,7 +71,7 @@ export default function CookiePolicyPage() {
               <div className="h-7 w-7 rounded-full bg-teal-400/90 flex items-center justify-center text-slate-950 text-lg font-bold">
                 A
               </div>
-              <span className="text-lg font-semibold tracking-tight">Audio Alchemy</span>
+              <span className="text-lg font-semibold tracking-tight">Piroola</span>
             </Link>
           </div>
           <Link href="/" className="text-sm font-medium text-teal-400 hover:text-teal-300">
@@ -154,7 +154,7 @@ export default function CookiePolicyPage() {
       </main>
 
       <footer className="border-t border-slate-800/80 py-6 text-center text-xs text-slate-400 bg-slate-950">
-        <p>© {new Date().getFullYear()} Audio Alchemy. All Rights Reserved.</p>
+        <p>© {new Date().getFullYear()} Piroola. All Rights Reserved.</p>
       </footer>
     </div>
   );

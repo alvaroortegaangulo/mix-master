@@ -72,7 +72,7 @@ export default function Page() {
             <div className="h-8 w-8 rounded-full bg-gradient-to-br from-teal-400 to-teal-600 flex items-center justify-center text-slate-950 text-lg font-bold shadow-lg shadow-teal-500/20" aria-hidden="true">
               A
             </div>
-            <span className="text-xl font-bold tracking-tight text-white hidden sm:block">Audio Alchemy</span>
+            <span className="text-xl font-bold tracking-tight text-white hidden sm:block">Piroola</span>
           </div>
 
           <nav className="hidden md:flex items-center gap-8">
