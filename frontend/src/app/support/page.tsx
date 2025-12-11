@@ -2,6 +2,37 @@
 
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
+import Script from "next/script";
+
+const fallbackSiteUrl = "https://music-mix-master.com";
+const siteUrl = (() => {
+  const envUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+  if (!envUrl) return fallbackSiteUrl;
+  try {
+    return new URL(envUrl).origin;
+  } catch {
+    return fallbackSiteUrl;
+  }
+})();
+
+const breadcrumbsJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  itemListElement: [
+    {
+      "@type": "ListItem",
+      position: 1,
+      name: "Home",
+      item: `${siteUrl}/`,
+    },
+    {
+      "@type": "ListItem",
+      position: 2,
+      name: "Support",
+      item: `${siteUrl}/support`,
+    },
+  ],
+};
 
 export default function SupportPage() {
   const [formData, setFormData] = useState({
@@ -196,6 +227,12 @@ export default function SupportPage() {
           <Link href="/cookie-policy" className="hover:text-teal-400 hover:underline">Cookie Policy</Link>
         </div>
       </footer>
+      <Script
+        id="ld-breadcrumbs-support"
+        type="application/ld+json"
+        strategy="afterInteractive"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbsJsonLd) }}
+      />
     </div>
   );
 }

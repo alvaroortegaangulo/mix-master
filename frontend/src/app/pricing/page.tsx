@@ -3,6 +3,37 @@
 import { useState } from "react";
 import Link from "next/link";
 import { CheckIcon, XMarkIcon } from "@heroicons/react/20/solid";
+import Script from "next/script";
+
+const fallbackSiteUrl = "https://music-mix-master.com";
+const siteUrl = (() => {
+  const envUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+  if (!envUrl) return fallbackSiteUrl;
+  try {
+    return new URL(envUrl).origin;
+  } catch {
+    return fallbackSiteUrl;
+  }
+})();
+
+const breadcrumbsJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  itemListElement: [
+    {
+      "@type": "ListItem",
+      position: 1,
+      name: "Home",
+      item: `${siteUrl}/`,
+    },
+    {
+      "@type": "ListItem",
+      position: 2,
+      name: "Pricing",
+      item: `${siteUrl}/pricing`,
+    },
+  ],
+};
 
 const TIERS = [
   {
@@ -210,6 +241,12 @@ export default function PricingPage() {
           <Link href="/cookie-policy" className="hover:text-teal-400 transition">Cookie Policy</Link>
         </div>
       </footer>
+      <Script
+        id="ld-breadcrumbs-pricing"
+        type="application/ld+json"
+        strategy="afterInteractive"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbsJsonLd) }}
+      />
     </div>
   );
 }

@@ -1,11 +1,42 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import Image from "next/image";
+import Script from "next/script";
+
+const fallbackSiteUrl = "https://music-mix-master.com";
+const siteUrl = (() => {
+  const envUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+  if (!envUrl) return fallbackSiteUrl;
+  try {
+    return new URL(envUrl).origin;
+  } catch {
+    return fallbackSiteUrl;
+  }
+})();
 
 export const metadata: Metadata = {
   title: "Documentation & Guide",
   description: "Comprehensive guide to using Audio Alchemy, including detailed explanations of the mixing and mastering pipeline, stages, and results.",
   alternates: { canonical: "/docs" },
+};
+
+const breadcrumbsJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  itemListElement: [
+    {
+      "@type": "ListItem",
+      position: 1,
+      name: "Home",
+      item: `${siteUrl}/`,
+    },
+    {
+      "@type": "ListItem",
+      position: 2,
+      name: "How it works",
+      item: `${siteUrl}/docs`,
+    },
+  ],
 };
 
 export default function DocsPage() {
@@ -378,6 +409,12 @@ export default function DocsPage() {
       <footer className="border-t border-slate-800/80 py-6 text-center text-xs text-slate-400 bg-slate-950">
         <p>© 2025 Audio Alchemy. All Rights Reserved.</p>
       </footer>
+      <Script
+        id="ld-breadcrumbs-docs"
+        type="application/ld+json"
+        strategy="afterInteractive"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbsJsonLd) }}
+      />
     </div>
   );
 }
