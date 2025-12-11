@@ -14,9 +14,9 @@ export function FeaturesSection() {
   const features = [
     {
       id: 0,
-      title: "Smart Ingestion",
+      title: "Intelligent Analysis",
       description:
-        "Drag your stems (WAV, AIFF). Our \"Smart-Tag\" engine automatically detects if it's a kick, a vocal, or a synth and organizes them.",
+        "Our AI scans your tracks to understand key, tempo, genre, and instrumentation, creating a custom mixing strategy.",
       icon: ArrowUpTrayIcon,
       colorClass: "text-cyan-400",
       borderClass: "border-cyan-400",
@@ -26,9 +26,9 @@ export function FeaturesSection() {
     },
     {
       id: 1,
-      title: "AI Analysis & Mixing",
+      title: "Precision Mixing",
       description:
-        "Thousands of calculations per second. Piroola balances levels, carves space with EQ, and applies analog \"Glue\" compression.",
+        "Piroola applies surgical EQ, dynamic compression, and spatial enhancements tailored to each stem's role in the mix.",
       icon: CpuChipIcon,
       colorClass: "text-purple-400",
       borderClass: "border-purple-400",
@@ -40,7 +40,7 @@ export function FeaturesSection() {
       id: 2,
       title: "Creative Control",
       description:
-        "It's not a black box. Adjust \"Warmth\", \"Width\", and \"Presence\" with simple macro controls if the AI didn't hit your exact vision.",
+        "Adjust the workflow to your needs for optimal sound. Configure your instruments and musical styles to their fullest potential.",
       icon: AdjustmentsHorizontalIcon,
       colorClass: "text-pink-400",
       borderClass: "border-pink-400",
@@ -50,9 +50,9 @@ export function FeaturesSection() {
     },
     {
       id: 3,
-      title: "Master & Export",
+      title: "Mastering Grade Polish",
       description:
-        "High resolution download (24-bit/48kHz). Masters optimized for Spotify (-14 LUFS) or Club (-9 LUFS) with one click.",
+        "Finalizes your track with industry-standard loudness matching, stereo widening, and limiter safety.",
       icon: RocketLaunchIcon,
       colorClass: "text-amber-400",
       borderClass: "border-amber-400",
@@ -74,7 +74,7 @@ export function FeaturesSection() {
             From your DAW to the <span className="text-cyan-400">World</span>.
           </h2>
           <p className="max-w-3xl mx-auto text-lg md:text-xl text-slate-400 leading-relaxed">
-            We have simplified the complex engineering process into 4 intuitive steps.
+            We have simplified the complex engineering process.
             No infinite menus, only superior sonic results.
           </p>
         </div>
