@@ -8,12 +8,14 @@ export function BenefitsSection() {
             <div className="flex-1 order-2 lg:order-1">
                {/* Image Placeholder */}
                <div className="w-full aspect-video rounded-2xl bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 flex items-center justify-center relative shadow-2xl overflow-hidden group">
-                  <div className="absolute inset-0 bg-teal-500/5 group-hover:bg-teal-500/10 transition duration-500"></div>
-                  <div className="text-slate-500 font-mono text-sm">[ Animation: Fast Processing ]</div>
-                  {/* Decorative elements */}
-                  <div className="absolute left-10 top-10 w-20 h-1 bg-slate-700 rounded-full animate-pulse"></div>
-                  <div className="absolute left-10 top-14 w-32 h-1 bg-slate-700 rounded-full animate-pulse delay-75"></div>
-                  <div className="absolute right-10 bottom-10 h-16 w-16 rounded-full border-4 border-teal-500/20"></div>
+                  <video
+                    src="/master_interface.mp4"
+                    className="w-full h-full object-cover"
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                  />
                </div>
             </div>
             <div className="flex-1 order-1 lg:order-2">
@@ -62,12 +64,15 @@ export function BenefitsSection() {
             </div>
             <div className="flex-1">
                {/* Image Placeholder */}
-               <div className="w-full aspect-video rounded-2xl bg-gradient-to-br from-purple-900/20 to-slate-900 border border-slate-700 flex items-center justify-center relative shadow-2xl">
-                  <div className="text-slate-500 font-mono text-sm">[ Animation: Spectral Balance ]</div>
-                   {/* Decorative elements representing EQ curve */}
-                   <svg className="absolute bottom-0 left-0 w-full h-1/2 text-purple-500/20" viewBox="0 0 100 20" preserveAspectRatio="none">
-                      <path d="M0 20 Q 25 5 50 15 T 100 10 V 20 Z" fill="currentColor" />
-                   </svg>
+               <div className="w-full aspect-video rounded-2xl bg-gradient-to-br from-purple-900/20 to-slate-900 border border-slate-700 flex items-center justify-center relative shadow-2xl overflow-hidden">
+                  <video
+                    src="/spectral_analysis.mp4"
+                    className="w-full h-full object-cover"
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                  />
                </div>
             </div>
           </div>
