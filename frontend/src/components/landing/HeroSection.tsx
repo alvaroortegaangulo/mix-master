@@ -1,4 +1,5 @@
 import Image from "next/image";
+import { PlayIcon, StarIcon } from "@heroicons/react/24/solid";
 
 export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
   return (
@@ -21,32 +22,50 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
           />
         </div>
 
-        <h1 className="text-5xl font-extrabold tracking-tight text-white md:text-7xl lg:text-8xl">
-          <span className="bg-gradient-to-r from-teal-400 to-purple-500 bg-clip-text text-transparent">
-            Piroola
+        <h1 className="text-5xl font-extrabold tracking-tight text-white md:text-7xl lg:text-8xl flex flex-col gap-2">
+          <span>Studio Sound.</span>
+          <span className="bg-gradient-to-r from-purple-400 to-purple-600 bg-clip-text text-transparent">
+            Perfected by AI.
           </span>
         </h1>
 
         <p className="mx-auto max-w-2xl text-lg font-light leading-relaxed text-slate-300 md:text-2xl">
-          Transform your raw stems into professional, studio-quality mixes in minutes.
-          Powered by advanced AI that understands your music.
+          Transform your home recordings (stems) into professional, Spotify-ready mixes in minutes. Piroola handles the technical engineering so you can focus on the music.
         </p>
 
         <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
           <button
             onClick={onTryIt}
-            className="group relative inline-flex items-center justify-center overflow-hidden rounded-full bg-teal-500 px-8 py-4 text-lg font-bold text-slate-950 transition-all hover:bg-teal-400 hover:scale-105 focus:outline-none focus:ring-4 focus:ring-teal-500/30"
+            className="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-full bg-teal-500 px-8 py-4 text-lg font-bold text-slate-950 transition-all hover:bg-teal-400 hover:scale-105 focus:outline-none focus:ring-4 focus:ring-teal-500/30"
           >
-            <span className="relative z-10">Try it for free</span>
-            <div className="absolute inset-0 -z-10 bg-gradient-to-r from-teal-600 to-teal-400 opacity-0 transition-opacity group-hover:opacity-100" />
+            {/* Simple circle outline icon */}
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              className="w-5 h-5"
+            >
+              <circle cx="12" cy="12" r="9" />
+            </svg>
+            <span className="relative z-10">Mix my Track</span>
           </button>
 
           <button
-             onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}
-             className="text-sm font-semibold text-slate-400 hover:text-white transition-colors"
+             onClick={() => document.getElementById('benefits')?.scrollIntoView({ behavior: 'smooth' })}
+             className="group inline-flex items-center justify-center gap-2 rounded-full bg-slate-800/80 px-8 py-4 text-lg font-semibold text-white transition-all hover:bg-slate-700 hover:scale-105 border border-slate-700/50"
           >
-            Learn more ↓
+            <PlayIcon className="h-5 w-5 text-white" />
+            <span>Listen to Demos</span>
           </button>
+        </div>
+
+        {/* Ratings */}
+        <div className="flex items-center justify-center gap-2 text-sm text-slate-400">
+           <StarIcon className="h-4 w-4 text-yellow-500" />
+           <span className="font-medium">4.9/5 Rating</span>
+           <span className="text-slate-600">•</span>
+           <span>+10k Tracks Mastered</span>
         </div>
       </div>
 
