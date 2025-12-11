@@ -16,7 +16,7 @@ const siteUrl = (() => {
 
 export const metadata: Metadata = {
   title: "Documentation & Guide",
-  description: "Comprehensive guide to using Audio Alchemy, including detailed explanations of the mixing and mastering pipeline, stages, and results.",
+  description: "Comprehensive guide to using Piroola, including detailed explanations of the mixing and mastering pipeline, stages, and results.",
   alternates: { canonical: "/docs" },
 };
 
@@ -50,7 +50,7 @@ export default function DocsPage() {
               <div className="h-7 w-7 rounded-full bg-teal-400/90 flex items-center justify-center text-slate-950 text-lg font-bold">
                 A
               </div>
-              <span className="text-lg font-semibold tracking-tight">Audio Alchemy</span>
+              <span className="text-lg font-semibold tracking-tight">Piroola</span>
             </Link>
           </div>
           <div className="flex items-center gap-4">
@@ -94,9 +94,9 @@ export default function DocsPage() {
         {/* Main Content */}
         <main className="flex-1 py-12 px-4 lg:px-12 prose prose-invert prose-slate max-w-none">
           <section id="introduction" className="scroll-mt-24 mb-16">
-            <h1 className="text-4xl font-bold mb-6 text-teal-400">Audio Alchemy Documentation</h1>
+            <h1 className="text-4xl font-bold mb-6 text-teal-400">Piroola Documentation</h1>
             <p className="text-xl text-slate-300 leading-relaxed">
-              Welcome to the official guide for <strong>Audio Alchemy</strong>. This platform leverages advanced AI to provide professional mixing and mastering services directly in your browser. Whether you are a musician, producer, or audio engineer, Audio Alchemy streamlines the complex process of audio engineering into a few simple steps.
+              Welcome to the official guide for <strong>Piroola</strong>. This platform leverages advanced AI to provide professional mixing and mastering services directly in your browser. Whether you are a musician, producer, or audio engineer, Piroola streamlines the complex process of audio engineering into a few simple steps.
             </p>
             <p className="text-slate-400">
               Our pipeline analyzes your audio stems, corrects technical issues, balances levels, applies creative processing, and delivers a release-ready master. This guide covers everything from uploading your first track to understanding the detailed engineering report.
@@ -193,7 +193,7 @@ export default function DocsPage() {
           <section id="pipeline-overview" className="scroll-mt-24 mb-16 border-t border-slate-800/50 pt-8">
             <h2 className="text-3xl font-semibold mb-6 text-slate-100">Pipeline Stages (Deep Dive)</h2>
             <p className="text-slate-300 mb-8">
-              The Audio Alchemy pipeline consists of 12 sequential stages (S0-S11). Each stage addresses a specific aspect of audio engineering.
+              The Piroola pipeline consists of 12 sequential stages (S0-S11). Each stage addresses a specific aspect of audio engineering.
             </p>
             <div className="my-6 p-4 border border-dashed border-slate-700 rounded-lg bg-slate-900/50 flex items-center justify-center text-slate-500 h-120">
               <Image
@@ -407,7 +407,7 @@ export default function DocsPage() {
       </div>
 
       <footer className="border-t border-slate-800/80 py-6 text-center text-xs text-slate-400 bg-slate-950">
-        <p>© 2025 Audio Alchemy. All Rights Reserved.</p>
+        <p>© 2025 Piroola. All Rights Reserved.</p>
       </footer>
       <Script
         id="ld-breadcrumbs-docs"

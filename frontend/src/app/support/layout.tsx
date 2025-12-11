@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Support | Audio Alchemy",
-  description: "Get help with Audio Alchemy. Browse docs, FAQ, or contact support for AI mixing and mastering questions.",
+  title: "Support | Piroola",
+  description: "Get help with Piroola. Browse docs, FAQ, or contact support for AI mixing and mastering questions.",
   alternates: {
     canonical: "/support",
   },

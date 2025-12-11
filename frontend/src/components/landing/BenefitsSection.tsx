@@ -22,7 +22,7 @@ export function BenefitsSection() {
               </h3>
               <p className="text-lg text-slate-400 mb-6 leading-relaxed">
                 Forget about tedious gain staging, phase alignment, and resonance cleanup.
-                Audio Alchemy handles the technical heavy lifting so you can focus on the creative vibe.
+                Piroola handles the technical heavy lifting so you can focus on the creative vibe.
               </p>
               <ul className="space-y-3 text-slate-300">
                 <li className="flex items-center gap-3">

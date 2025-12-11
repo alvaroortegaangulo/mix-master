@@ -14,8 +14,8 @@ const siteUrl = (() => {
 })();
 
 export const metadata: Metadata = {
-  title: "Examples | Audio Alchemy",
-  description: "Listen to sample outcomes from Audio Alchemy: vocal polish, wide pop mixes, punchy hip-hop, and clean acoustic masters.",
+  title: "Examples | Piroola",
+  description: "Listen to sample outcomes from Piroola: vocal polish, wide pop mixes, punchy hip-hop, and clean acoustic masters.",
   alternates: {
     canonical: "/examples",
   },
@@ -81,7 +81,7 @@ export default function ExamplesPage() {
               A
             </div>
             <Link href="/" className="text-lg font-semibold tracking-tight text-slate-100 hover:text-teal-300 transition">
-              Audio Alchemy
+              Piroola
             </Link>
           </div>
           <nav className="hidden md:flex items-center gap-5 text-sm">
@@ -96,7 +96,7 @@ export default function ExamplesPage() {
         <div className="mx-auto max-w-5xl">
           <div className="flex flex-col gap-4 mb-10 text-center">
             <p className="text-xs uppercase tracking-[0.2em] text-teal-300/80">Examples</p>
-            <h1 className="text-4xl font-bold tracking-tight text-slate-50">Hear what Audio Alchemy delivers</h1>
+            <h1 className="text-4xl font-bold tracking-tight text-slate-50">Hear what Piroola delivers</h1>
             <p className="text-lg text-slate-400 max-w-3xl mx-auto">
               Representative mixes and masters that show how our AI pipeline cleans, balances, and enhances different genres.
               Each example highlights the processing moves you can expect on your own tracks.
@@ -157,7 +157,7 @@ export default function ExamplesPage() {
       </main>
 
       <footer className="border-t border-slate-800/80 py-6 text-center text-xs text-slate-500 bg-slate-950">
-        <p>© 2025 Audio Alchemy. All rights reserved.</p>
+        <p>© 2025 Piroola. All rights reserved.</p>
       </footer>
 
       <Script

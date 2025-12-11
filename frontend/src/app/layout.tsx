@@ -27,7 +27,7 @@ const siteUrl = (() => {
   }
 })();
 
-const siteName = "Audio Alchemy";
+const siteName = "Piroola";
 const navLinks = [
   { name: "Examples", url: `${siteUrl}/examples` },
   { name: "Pricing", url: `${siteUrl}/pricing` },
@@ -82,8 +82,8 @@ export const metadata: Metadata = {
     template: `%s | ${siteName}`,
   },
   description:
-    "Transform your tracks with Audio Alchemy. Our AI-powered mixing and mastering service delivers professional studio-quality results from your multi-track stems in minutes.",
-  keywords: ["AI mixing", "AI mastering", "online audio mixing", "automated mixing service", "stem mastering", "Audio Alchemy"],
+    "Transform your tracks with Piroola. Our AI-powered mixing and mastering service delivers professional studio-quality results from your multi-track stems in minutes.",
+  keywords: ["AI mixing", "AI mastering", "online audio mixing", "automated mixing service", "stem mastering", "Piroola"],
   alternates: {
     canonical: "/",
   },
@@ -93,7 +93,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: `${siteName}: Professional AI Audio Mixing & Mastering Online`,
-    description: "Transform your tracks with Audio Alchemy. Our AI-powered mixing and mastering service delivers professional studio-quality results from your multi-track stems in minutes.",
+    description: "Transform your tracks with Piroola. Our AI-powered mixing and mastering service delivers professional studio-quality results from your multi-track stems in minutes.",
     url: siteUrl,
     siteName,
     type: "website",
@@ -102,7 +102,7 @@ export const metadata: Metadata = {
   twitter: {
     card: "summary_large_image",
     title: `${siteName}: Professional AI Audio Mixing & Mastering Online`,
-    description: "Transform your tracks with Audio Alchemy. Our AI-powered mixing and mastering service delivers professional studio-quality results from your multi-track stems in minutes.",
+    description: "Transform your tracks with Piroola. Our AI-powered mixing and mastering service delivers professional studio-quality results from your multi-track stems in minutes.",
   },
 };
 

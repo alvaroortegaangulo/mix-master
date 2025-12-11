@@ -10,7 +10,7 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
       <div className="relative z-10 max-w-4xl space-y-8 animate-in fade-in zoom-in duration-1000">
         <h1 className="text-5xl font-extrabold tracking-tight text-white md:text-7xl lg:text-8xl">
           <span className="bg-gradient-to-r from-teal-400 to-purple-500 bg-clip-text text-transparent">
-            Audio Alchemy
+            Piroola
           </span>
         </h1>
 

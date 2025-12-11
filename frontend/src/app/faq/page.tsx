@@ -2,14 +2,14 @@ import Link from "next/link";
 import Script from "next/script";
 
 export const metadata = {
-  title: "FAQ - Audio Alchemy",
-  description: "Frequently Asked Questions about Audio Alchemy's AI Mixing & Mastering service.",
+  title: "FAQ - Piroola",
+  description: "Frequently Asked Questions about Piroola's AI Mixing & Mastering service.",
 };
 
 const FAQ_ITEMS = [
   {
-    question: "What is Audio Alchemy?",
-    answer: "Audio Alchemy is an advanced online service that uses Artificial Intelligence to mix and master your multi-track audio files. It analyzes your stems and applies professional studio techniques to deliver radio-ready quality tracks in minutes."
+    question: "What is Piroola?",
+    answer: "Piroola is an advanced online service that uses Artificial Intelligence to mix and master your multi-track audio files. It analyzes your stems and applies professional studio techniques to deliver radio-ready quality tracks in minutes."
   },
   {
     question: "How does the AI mixing work?",
@@ -37,7 +37,7 @@ const FAQ_ITEMS = [
   },
   {
     question: "Do I own the rights to the mixed track?",
-    answer: "Yes! You maintain full copyright and ownership of your original music and the final mix produced by Audio Alchemy. You can release your tracks on any streaming platform without paying us royalties."
+    answer: "Yes! You maintain full copyright and ownership of your original music and the final mix produced by Piroola. You can release your tracks on any streaming platform without paying us royalties."
   },
   {
     question: "What if I'm not satisfied with the result?",
@@ -52,7 +52,7 @@ const FAQ_ITEMS = [
     answer: "Once the processing is complete, a 'Download' button will appear. You can download the final mixed and mastered stereo file directly to your device."
   },
   {
-    question: "Can I use Audio Alchemy on mobile?",
+    question: "Can I use Piroola on mobile?",
     answer: "Yes, our website is fully responsive and works on mobile devices. However, for managing multiple stem files, a desktop computer might offer a smoother workflow."
   }
 ];
@@ -87,7 +87,7 @@ export default function FAQPage() {
               A
             </div>
             <Link href="/" className="text-lg font-semibold tracking-tight text-slate-100 hover:text-teal-400 transition">
-              Audio Alchemy
+              Piroola
             </Link>
           </div>
           <nav className="hidden md:flex gap-6 text-sm">
@@ -125,7 +125,7 @@ export default function FAQPage() {
       </main>
 
       <footer className="border-t border-slate-800/80 py-8 text-center text-sm text-slate-500">
-        <p>© 2025 Audio Alchemy. All Rights Reserved.</p>
+        <p>© 2025 Piroola. All Rights Reserved.</p>
       </footer>
     </div>
   );
