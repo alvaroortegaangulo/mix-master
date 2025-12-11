@@ -1,5 +1,6 @@
 import { HeroSection } from "./HeroSection";
 import { FeaturesSection } from "./FeaturesSection";
+import { LiveSoundAnalysis } from "./LiveSoundAnalysis";
 import { BenefitsSection } from "./BenefitsSection";
 import { TechSpecsSection } from "./TechSpecsSection";
 import Link from "next/link";
@@ -9,6 +10,7 @@ export function LandingPage({ onTryIt }: { onTryIt: () => void }) {
     <div className="flex-1 flex flex-col bg-slate-950">
       <HeroSection onTryIt={onTryIt} />
       <FeaturesSection />
+      <LiveSoundAnalysis />
       <BenefitsSection />
       <TechSpecsSection />
 
