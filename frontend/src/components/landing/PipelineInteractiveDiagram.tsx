@@ -91,14 +91,14 @@ export default function PipelineInteractiveDiagram() {
   return (
     <div className="w-full max-w-7xl mx-auto py-12 px-4 md:px-8 relative z-10">
       {/* Header */}
-      <header className="text-left mb-16 relative z-10 max-w-4xl">
+      <header className="text-center mx-auto mb-16 relative z-10 max-w-4xl">
         <div className="inline-block mb-4 px-4 py-1.5 rounded-full border border-cyan-500/30 bg-cyan-500/10 text-cyan-300 text-xs font-semibold tracking-wider uppercase">
           Audio Engineering Workflow
         </div>
         <h2 className="text-4xl md:text-6xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-white via-cyan-200 to-indigo-200 drop-shadow-lg">
           Mixing & Mastering Pipeline
         </h2>
-        <p className="text-slate-400 text-lg max-w-2xl">
+        <p className="text-slate-400 text-lg max-w-2xl mx-auto">
           Interactively explore each stage of the audio production process, from initial analysis to final polishing.
         </p>
       </header>
@@ -170,7 +170,7 @@ export default function PipelineInteractiveDiagram() {
               }`}
           >
             {/* Left: Text Info */}
-            <div>
+            <div className="text-left">
               <div className="flex items-center gap-3 mb-4">
                 <img
                   src={data.icon}
