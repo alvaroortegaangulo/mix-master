@@ -1,3 +1,5 @@
+import Image from "next/image";
+
 export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
   return (
     <section className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-slate-950 px-4 text-center">
@@ -8,6 +10,17 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
       </div>
 
       <div className="relative z-10 max-w-4xl space-y-8 animate-in fade-in zoom-in duration-1000">
+        <div className="mx-auto flex justify-center">
+          <Image
+            src="/logo.png"
+            alt="Piroola logo"
+            width={96}
+            height={96}
+            className="h-24 w-24 rounded-full shadow-lg shadow-teal-500/30"
+            priority
+          />
+        </div>
+
         <h1 className="text-5xl font-extrabold tracking-tight text-white md:text-7xl lg:text-8xl">
           <span className="bg-gradient-to-r from-teal-400 to-purple-500 bg-clip-text text-transparent">
             Piroola
