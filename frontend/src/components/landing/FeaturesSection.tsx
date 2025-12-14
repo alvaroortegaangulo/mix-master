@@ -23,6 +23,7 @@ export function FeaturesSection() {
       bgClass: "bg-cyan-950/30",
       placeholderBg: "bg-cyan-900/20",
       borderColor: "border-cyan-500/30",
+      videoUrl: "/intelligent_analysis.mp4",
     },
     {
       id: 1,
@@ -35,6 +36,7 @@ export function FeaturesSection() {
       bgClass: "bg-purple-950/30",
       placeholderBg: "bg-purple-900/20",
       borderColor: "border-purple-500/30",
+      videoUrl: "/precision_mixing.mp4",
     },
     {
       id: 2,
@@ -47,6 +49,7 @@ export function FeaturesSection() {
       bgClass: "bg-pink-950/30",
       placeholderBg: "bg-pink-900/20",
       borderColor: "border-pink-500/30",
+      videoUrl: "/creative_control.mp4",
     },
     {
       id: 3,
@@ -59,6 +62,7 @@ export function FeaturesSection() {
       bgClass: "bg-amber-950/30",
       placeholderBg: "bg-amber-900/20",
       borderColor: "border-amber-500/30",
+      videoUrl: "/mastering_grade_polish.mp4",
     },
   ];
 
@@ -131,37 +135,25 @@ export function FeaturesSection() {
             })}
           </div>
 
-          {/* Right Column: Dynamic Image Placeholder */}
+          {/* Right Column: Dynamic Video Display */}
           <div className="relative aspect-[4/3] w-full rounded-2xl border border-slate-800 bg-slate-900 overflow-hidden shadow-2xl">
             {features.map((feature, idx) => (
                 <div
                     key={feature.id}
-                    className={`absolute inset-0 flex items-center justify-center p-8 transition-all duration-500 ease-in-out transform ${
+                    className={`absolute inset-0 top-10 transition-all duration-500 ease-in-out transform ${
                         activeStep === idx
                             ? 'opacity-100 scale-100 z-10'
                             : 'opacity-0 scale-95 z-0'
                     }`}
                 >
-                    {/* Placeholder Visualization */}
-                    <div className={`w-full h-full rounded-xl border ${feature.borderColor} ${feature.placeholderBg} flex flex-col items-center justify-center relative overflow-hidden`}>
-                        {/* Decorative background elements */}
-                        <div className={`absolute top-0 right-0 w-64 h-64 ${feature.bgClass} rounded-full blur-3xl -mr-32 -mt-32 opacity-20`}></div>
-                        <div className={`absolute bottom-0 left-0 w-64 h-64 ${feature.bgClass} rounded-full blur-3xl -ml-32 -mb-32 opacity-20`}></div>
-
-                        <feature.icon className={`h-20 w-20 mb-6 ${feature.colorClass} opacity-80`} />
-
-                        <div className="text-center z-10">
-                            <h4 className={`text-2xl font-bold ${feature.colorClass} mb-2`}>{feature.title}</h4>
-                            <div className="text-xs font-mono text-slate-500 uppercase tracking-widest">Interactive Preview</div>
-                        </div>
-
-                        {/* Mock UI elements */}
-                        <div className="mt-8 w-3/4 space-y-3 opacity-50">
-                            <div className="h-2 bg-slate-700 rounded-full w-full"></div>
-                            <div className="h-2 bg-slate-700 rounded-full w-5/6 mx-auto"></div>
-                            <div className="h-2 bg-slate-700 rounded-full w-4/6 mx-auto"></div>
-                        </div>
-                    </div>
+                     <video
+                        src={feature.videoUrl}
+                        autoPlay
+                        loop
+                        muted
+                        playsInline
+                        className="w-full h-full object-cover"
+                     />
                 </div>
             ))}
 
