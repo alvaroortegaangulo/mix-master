@@ -46,12 +46,12 @@ const organizationJsonLd = {
     {
       "@type": "ContactPoint",
       contactType: "legal",
-      email: "legal@audioalchemy.com",
+      email: "legal@piroola.com",
     },
     {
       "@type": "ContactPoint",
       contactType: "privacy",
-      email: "privacy@audioalchemy.com",
+      email: "privacy@piroola.com",
     },
   ],
 };
@@ -84,6 +84,11 @@ export const metadata: Metadata = {
   description:
     "Transform your tracks with Piroola. Our AI-powered mixing and mastering service delivers professional studio-quality results from your multi-track stems in minutes.",
   keywords: ["AI mixing", "AI mastering", "online audio mixing", "automated mixing service", "stem mastering", "Piroola"],
+  icons: {
+    icon: "/logo.png",
+    shortcut: "/logo.png",
+    apple: "/logo.png",
+  },
   alternates: {
     canonical: "/",
   },
@@ -96,6 +101,14 @@ export const metadata: Metadata = {
     description: "Transform your tracks with Piroola. Our AI-powered mixing and mastering service delivers professional studio-quality results from your multi-track stems in minutes.",
     url: siteUrl,
     siteName,
+    images: [
+      {
+        url: "/logo.png",
+        width: 512,
+        height: 512,
+        alt: "Piroola Logo",
+      },
+    ],
     type: "website",
     locale: "en_US",
   },
@@ -103,6 +116,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: `${siteName}: Professional AI Audio Mixing & Mastering Online`,
     description: "Transform your tracks with Piroola. Our AI-powered mixing and mastering service delivers professional studio-quality results from your multi-track stems in minutes.",
+    images: ["/logo.png"],
   },
 };
 
