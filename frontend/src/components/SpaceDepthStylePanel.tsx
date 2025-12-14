@@ -50,7 +50,7 @@ export function SpaceDepthStylePanel({ buses, value, onChange }: Props) {
   if (!buses.length) return null;
 
   return (
-    <aside className="rounded-2xl border border-amber-500/50 bg-amber-500/10 p-4 text-xs shadow-lg text-amber-50">
+    <aside className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 text-xs shadow-lg shadow-amber-500/20 text-amber-50">
       <div className="flex items-start justify-between gap-2">
         <div>
           <h3 className="text-sm font-semibold uppercase tracking-wide text-amber-100">

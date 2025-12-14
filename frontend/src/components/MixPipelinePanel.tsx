@@ -238,7 +238,7 @@ export function MixPipelinePanel({
   }, [activeStage]);
 
   return (
-    <section className="mt-6 rounded-2xl border border-emerald-500/40 bg-emerald-900/30 p-4 text-emerald-50 shadow-inner shadow-emerald-900/40">
+    <section className="mt-6 rounded-2xl border border-emerald-500/40 bg-emerald-500/10 p-4 text-emerald-50 shadow-inner shadow-emerald-500/20">
       <details className="group">
         <summary className="flex cursor-pointer list-none items-center justify-between gap-2 md:flex-row md:items-center md:justify-between [&::-webkit-details-marker]:hidden">
           <div className="flex-1">

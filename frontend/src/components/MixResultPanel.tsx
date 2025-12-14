@@ -110,7 +110,7 @@ export function MixResultPanel({
   }, [jobId]);
 
   return (
-    <section className="mt-6 rounded-3xl border border-emerald-500/40 bg-emerald-900/30 p-6 text-emerald-50 shadow-xl shadow-emerald-900/40">
+    <section className="mt-6 rounded-3xl border border-emerald-500/40 bg-emerald-500/10 p-6 text-emerald-50 shadow-lg shadow-emerald-500/20">
       {/* Header + Main Player */}
       <div className="space-y-3">
         <div>
