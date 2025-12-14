@@ -42,7 +42,7 @@ export function StemsProfilePanel({ stems, onChangeProfile }: Props) {
   if (!stems.length) return null;
 
   return (
-    <aside className="rounded-2xl border border-amber-500/50 bg-amber-500/10 p-4 text-xs shadow-lg text-amber-50">
+    <aside className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 text-xs shadow-lg shadow-amber-500/20 text-amber-50">
       <h3 className="text-sm font-semibold uppercase tracking-wide text-amber-100">
         Select stems profile
       </h3>

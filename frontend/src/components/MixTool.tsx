@@ -686,7 +686,7 @@ useEffect(() => {
             <div className="w-full max-w-3xl">
               <section
                 id="how-it-works"
-                className="rounded-2xl border border-slate-800/80 bg-slate-900/70 p-8 shadow-xl"
+                className="rounded-2xl border border-slate-700/60 bg-slate-900/60 p-8 shadow-2xl shadow-slate-900/50"
               >
                 <h2 className="sr-only">Upload & Mix Configuration</h2>
 
@@ -699,7 +699,7 @@ useEffect(() => {
                 </div>
 
                 {showStageSelector && availableStages.length > 0 && (
-                  <section className="mt-6 rounded-2xl border border-amber-500/50 bg-amber-500/10 text-amber-50 shadow-lg">
+                  <section className="mt-6 rounded-2xl border border-amber-500/40 bg-amber-500/10 text-amber-50 shadow-lg shadow-amber-500/20">
                     {/* Cabecera plegable */}
                     <button
                       type="button"
