@@ -16,8 +16,6 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
           <Image
             src="/logo.png"
             alt="Piroola logo"
-            width={96}
-            height={96}
             className="h-24 w-24"
             priority
           />
