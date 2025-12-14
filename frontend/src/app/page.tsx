@@ -8,11 +8,11 @@ import { AuthModal } from "../components/AuthModal";
 import { useAuth } from "../context/AuthContext";
 
 const NAV_LINKS = [
-  { label: "Features", href: "/#features" },
   { label: "Examples", href: "/examples" },
   { label: "Pricing", href: "/pricing" },
   { label: "FAQ", href: "/faq" },
   { label: "Docs", href: "/docs" },
+  { label: "Support", href: "/support" },
 ];
 
 export default function Page() {
