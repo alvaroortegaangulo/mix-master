@@ -28,6 +28,7 @@ try:
 except Exception:  # pragma: no cover - fallback si no existe redis.asyncio
     aioredis = None
 from fastapi import (
+    Body,
     Depends,
     FastAPI,
     File,
@@ -41,6 +42,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from fastapi.responses import JSONResponse
+from fastapi.responses import StreamingResponse
 
 from tasks import run_full_pipeline_task
 from src.database import engine, Base
@@ -483,6 +485,16 @@ def _sign_download_path(path: str, exp_ts: int) -> str:
     return hmac.new(key, msg, hashlib.sha256).hexdigest()
 
 
+def _sign_studio_token(job_id: str, exp_ts: int) -> str:
+    """
+    Token estable para Studio (HMAC job_id + exp_ts). Devuelve "exp.sig".
+    """
+    msg = f"{job_id}|{exp_ts}|studio".encode("utf-8")
+    key = (API_TOKEN or "").encode("utf-8")
+    sig = hmac.new(key, msg, hashlib.sha256).hexdigest()
+    return f"{exp_ts}.{sig}"
+
+
 def _verify_signed_download(path: str, sig: Optional[str], exp: Optional[str]) -> bool:
     if not API_TOKEN or not sig or not exp:
         return False
@@ -497,6 +509,30 @@ def _verify_signed_download(path: str, sig: Optional[str], exp: Optional[str]) -
         return hmac.compare_digest(sig, expected)
     except Exception:
         return False
+
+
+def _verify_studio_token(token: Optional[str], job_id: str) -> Optional[int]:
+    """
+    Devuelve exp_ts si token es válido para job_id, o None.
+    """
+    if not API_TOKEN or not token:
+        return None
+    try:
+        exp_str, sig = token.split(".", 1)
+        exp_ts = int(exp_str)
+    except Exception:
+        return None
+    if exp_ts < int(time.time()):
+        return None
+    msg = f"{job_id}|{exp_ts}|studio".encode("utf-8")
+    key = (API_TOKEN or "").encode("utf-8")
+    expected = hmac.new(key, msg, hashlib.sha256).hexdigest()
+    try:
+        if hmac.compare_digest(sig, expected):
+            return exp_ts
+    except Exception:
+        return None
+    return None
 
 
 def _get_effective_base_url(request: Request) -> str:
@@ -707,6 +743,78 @@ async def _stream_upload_file(
             pass
         raise
     return bytes_written
+
+
+def _stream_file_response(
+    request: Request,
+    target_path: Path,
+    media_type: Optional[str],
+    cache_seconds: int,
+    extra_headers: Optional[Dict[str, str]] = None,
+):
+    """
+    Devuelve FileResponse o StreamingResponse con soporte Range (206).
+    """
+    headers = {
+        "Accept-Ranges": "bytes",
+        **(extra_headers or {}),
+    }
+    if cache_seconds > 0:
+        headers["Cache-Control"] = f"public, max-age={cache_seconds}"
+
+    range_header = request.headers.get("range")
+    file_size = target_path.stat().st_size
+
+    if not range_header or not range_header.startswith("bytes=") or file_size == 0:
+        return FileResponse(target_path, media_type=media_type, headers=headers)
+
+    match = re.match(r"bytes=(\d*)-(\d*)", range_header)
+    if not match:
+        return FileResponse(target_path, media_type=media_type, headers=headers)
+
+    start_str, end_str = match.groups()
+    try:
+        if start_str:
+            start = int(start_str)
+            end = int(end_str) if end_str else file_size - 1
+        else:
+            # sufijo: bytes=-N
+            suffix = int(end_str) if end_str else 0
+            start = max(file_size - suffix, 0)
+            end = file_size - 1
+    except ValueError:
+        raise HTTPException(status_code=416, detail="Invalid Range header")
+
+    if start < 0 or end < start or start >= file_size:
+        raise HTTPException(status_code=416, detail="Requested range not satisfiable")
+
+    end = min(end, file_size - 1)
+    chunk_size = end - start + 1
+
+    def file_iterator(path: Path, offset: int, length: int):
+        with path.open("rb") as f:
+            f.seek(offset)
+            remaining = length
+            while remaining > 0:
+                data = f.read(min(64 * 1024, remaining))
+                if not data:
+                    break
+                remaining -= len(data)
+                yield data
+
+    headers.update(
+        {
+            "Content-Range": f"bytes {start}-{end}/{file_size}",
+            "Content-Length": str(chunk_size),
+        }
+    )
+
+    return StreamingResponse(
+        file_iterator(target_path, start, chunk_size),
+        status_code=206,
+        media_type=media_type,
+        headers=headers,
+    )
 
 
 # ---------------------------------------------------------
@@ -1656,11 +1764,14 @@ async def get_job_file(
     """
     Devuelve un fichero de temp/<job_id> protegido por API key.
     """
-    # Permitir api_key por header/query o un enlace firmado (?sig=...&exp=...).
+    # Permitir api_key por header/query, enlace firmado (?sig=...&exp=...) o token estable (?t=...).
     sig = request.query_params.get("sig")
     exp = request.query_params.get("exp")
+    token = request.query_params.get("t")
     rel_path = f"/files/{job_id}/{file_path}"
-    if not _verify_signed_download(rel_path, sig, exp):
+    token_exp = _verify_studio_token(token, job_id)
+    signed_ok = _verify_signed_download(rel_path, sig, exp)
+    if not (token_exp or signed_ok):
         key = _extract_api_key(request, request.headers.get("X-API-Key"))
         _require_api_key(key)
 
@@ -1675,8 +1786,40 @@ async def get_job_file(
 
     media_type, _ = mimetypes.guess_type(target_path.name)
     headers = {"Cross-Origin-Resource-Policy": "cross-origin"}
+    cache_seconds = 7 * 24 * 3600 if token_exp else (3600 if signed_ok else 300)
 
-    return FileResponse(target_path, media_type=media_type, headers=headers)
+    return _stream_file_response(
+        request,
+        target_path,
+        media_type,
+        cache_seconds=cache_seconds,
+        extra_headers=headers,
+    )
+
+
+@app.post("/jobs/{job_id}/studio-token")
+async def create_studio_token(
+    job_id: str,
+    payload: Optional[Dict[str, Any]] = Body(None),
+    request: Request,
+    api_key: Optional[str] = Header(None, alias="X-API-Key"),
+):
+    """
+    Devuelve un token estable (t) para Studio, con TTL largo para cachear WAVs.
+    """
+    req_api_key = _extract_api_key(request, api_key)
+    _require_api_key(req_api_key)
+
+    ttl_days = 7
+    if payload and isinstance(payload, dict):
+        try:
+            ttl_days = int(payload.get("ttl_days", ttl_days))
+        except Exception:
+            ttl_days = 7
+    ttl_days = max(1, min(ttl_days, 30))
+    exp_ts = int(time.time()) + ttl_days * 24 * 3600
+    token = _sign_studio_token(job_id, exp_ts)
+    return {"token": token, "expires": exp_ts}
 
 
 @app.post("/files/{job_id}/sign")

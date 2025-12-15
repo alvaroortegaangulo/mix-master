@@ -3,10 +3,9 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
-import { getBackendBaseUrl, signFileUrl } from "@/lib/mixApi";
+import { getBackendBaseUrl, getStudioToken, signFileUrl } from "@/lib/mixApi";
 import { AuthModal } from "@/components/AuthModal";
 import { CanvasWaveform } from "@/components/studio/CanvasWaveform";
-import { StudioCache, AudioBufferData } from "@/lib/studioCache";
 import {
   PlayIcon,
   PauseIcon,
@@ -71,32 +70,54 @@ export default function StudioPage() {
   const [masterVolume, setMasterVolume] = useState(0.8);
   const [downloadingStems, setDownloadingStems] = useState(false);
   const [downloadingMixdown, setDownloadingMixdown] = useState(false);
-  const [mixdownUrl, setMixdownUrl] = useState<string | null>(null);
-
-  // Mixdown buffer now separate from WaveSurfer logic
-  const [mixdownBuffer, setMixdownBuffer] = useState<AudioBuffer | null>(null);
+  const [studioToken, setStudioToken] = useState<string | null>(null);
 
   const selectedStem = stems[selectedStemIndex];
 
-  // Removed WaveSurfer refs
-  // const waveformRef = useRef<HTMLDivElement>(null);
-  // const wavesurferRef = useRef<WaveSurfer | null>(null);
-
   const audioContextRef = useRef<AudioContext | null>(null);
-  const sourceNodesRef = useRef<Map<string, AudioBufferSourceNode>>(new Map());
+  const audioElsRef = useRef<Map<string, HTMLAudioElement>>(new Map());
+  const mediaNodesRef = useRef<Map<string, MediaElementAudioSourceNode>>(new Map());
   const gainNodesRef = useRef<Map<string, GainNode>>(new Map());
   const pannerNodesRef = useRef<Map<string, StereoPannerNode>>(new Map());
-  const audioBuffersRef = useRef<Map<string, AudioBuffer>>(new Map());
   const startTimeRef = useRef<number>(0);
   const pauseTimeRef = useRef<number>(0);
 
   const stopAllSources = () => {
-      sourceNodesRef.current.forEach((node) => {
-          try { node.stop(); } catch (e) { /* noop */ }
+      audioElsRef.current.forEach((el) => {
+          try { el.pause(); } catch (e) { /* noop */ }
       });
-      sourceNodesRef.current.clear();
-      gainNodesRef.current.clear();
-      pannerNodesRef.current.clear();
+  };
+
+  const waitForMediaReady = (el: HTMLAudioElement, timeoutMs = 5000) => {
+      if (el.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+          return Promise.resolve();
+      }
+      return new Promise<void>((resolve, reject) => {
+          const onReady = () => {
+              cleanup();
+              resolve();
+          };
+          const onError = () => {
+              cleanup();
+              reject(new Error("media error"));
+          };
+          const cleanup = () => {
+              el.removeEventListener("loadedmetadata", onReady);
+              el.removeEventListener("canplay", onReady);
+              el.removeEventListener("canplaythrough", onReady);
+              el.removeEventListener("error", onError);
+          };
+          el.addEventListener("loadedmetadata", onReady);
+          el.addEventListener("canplay", onReady);
+          el.addEventListener("canplaythrough", onReady);
+          el.addEventListener("error", onError);
+          if (timeoutMs > 0) {
+              setTimeout(() => {
+                  cleanup();
+                  resolve();
+              }, timeoutMs);
+          }
+      });
   };
 
   useEffect(() => {
@@ -127,10 +148,14 @@ export default function StudioPage() {
       try {
         setLoadingStems(true);
         setStudioReady(false);
-        setMixdownUrl(null);
-        setMixdownBuffer(null);
+        setStudioToken(null);
         stopAllSources();
-        audioBuffersRef.current.clear();
+        audioElsRef.current.forEach((el) => {
+            try { el.pause(); } catch (_) { /* noop */ }
+            try { el.src = ""; el.load(); } catch (_) { /* noop */ }
+        });
+        audioElsRef.current.clear();
+        mediaNodesRef.current.clear();
         gainNodesRef.current.clear();
         pannerNodesRef.current.clear();
         pauseTimeRef.current = 0;
@@ -138,6 +163,15 @@ export default function StudioPage() {
         setCurrentTime(0);
         setDuration(0);
         const baseUrl = getBackendBaseUrl();
+
+        let tokenValue: string | null = null;
+        try {
+            const tokenResp = await getStudioToken(jobId);
+            tokenValue = tokenResp.token;
+            setStudioToken(tokenResp.token);
+        } catch (e) {
+            console.warn("Studio: could not fetch stable token", e);
+        }
 
         const res = await fetch(`${baseUrl}/jobs/${jobId}/stems`, {
           headers: {
@@ -218,218 +252,130 @@ export default function StudioPage() {
 
         const finalStems: StemControl[] = newStems.length ? newStems : fallbackStems;
 
-        const stemFiles = finalStems.map((s) => s.fileName);
+        const stageFallbacks = [
+            "S6_MANUAL_CORRECTION",
+            "S6_MANUAL_CORRECTION_ADJUSTMENT",
+            "S12_SEPARATE_STEMS",
+            "S5_LEADVOX_DYNAMICS",
+            "S5_STEM_DYNAMICS_GENERIC",
+            "S4_STEM_RESONANCE_CONTROL",
+            "S0_SESSION_FORMAT",
+            "S0_MIX_ORIGINAL"
+        ];
 
-        setStems(finalStems);
+        const resolvedStems: StemControl[] = [];
 
-        const loadAssets = async () => {
-          if (!audioContextRef.current) return;
+        for (const stem of finalStems) {
+            const candidates: string[] = [];
+            if (stem.stage) {
+                candidates.push(`${stem.stage}/${stem.fileName}`);
+            }
+            stageFallbacks.forEach((stage) => candidates.push(`${stage}/${stem.fileName}`));
+            candidates.push(stem.fileName);
 
-          // Solo cargar mixdown para fallback y marcar listo; los stems se cargan on-demand.
-          const preferredMixdownPaths = [
-              "S5_LEADVOX_DYNAMICS/full_song.wav",
-              "S5_STEM_DYNAMICS_GENERIC/full_song.wav",
-              "S4_STEM_RESONANCE_CONTROL/full_song.wav",
-              "S3_MIXBUS_HEADROOM/full_song.wav",
-              "S3_LEADVOX_AUDIBILITY/full_song.wav",
-              "S0_SESSION_FORMAT/full_song.wav",
-              "S0_MIX_ORIGINAL/full_song.wav"
-          ];
+            let resolvedUrl = stem.signedUrl || stem.url || "";
+            if (!resolvedUrl) {
+                try {
+                    resolvedUrl = await signFileUrl(jobId, candidates[0] || stem.fileName, tokenValue || undefined);
+                } catch (e) {
+                    resolvedUrl = "";
+                }
+            }
 
-          const mixCacheKey = `pirola-studio-cache-v1-${jobId}-mixdown`;
-          const mixCacheKeyDecoded = `${mixCacheKey}-decoded`;
+            resolvedStems.push({
+                ...stem,
+                url: resolvedUrl || undefined,
+            });
+        }
 
-          let mixDecoded = await StudioCache.getAudioBufferData(mixCacheKeyDecoded);
-          let mixAb: ArrayBuffer | null = null;
+        if (cancelled) return;
+        setStems(resolvedStems);
 
-          if (mixDecoded && audioContextRef.current) {
-               const buffer = audioContextRef.current.createBuffer(
-                  mixDecoded.numberOfChannels,
-                  mixDecoded.length,
-                  mixDecoded.sampleRate
-              );
-              for (let i = 0; i < mixDecoded.numberOfChannels; i++) {
-                  if (mixDecoded.channels[i]) {
-                      buffer.getChannelData(i).set(mixDecoded.channels[i]);
-                  }
-              }
-              setMixdownBuffer(buffer);
-              if (!duration) setDuration(buffer.duration);
-          } else {
-              // Fallback to file cache
-              mixAb = await StudioCache.getCachedArrayBuffer(mixCacheKey);
+        const ensureAudioForStem = async (stem: StemControl) => {
+            let audio = audioElsRef.current.get(stem.fileName);
+            if (!audio) {
+                audio = new Audio(stem.url || "");
+                audio.preload = "auto";
+                audio.crossOrigin = "anonymous";
 
-              if (!mixAb) {
-                 for (const relPath of preferredMixdownPaths) {
-                    if (cancelled) break;
-                    try {
-                        const signedUrl = await signFileUrl(jobId, relPath);
-                        const resp = await fetch(signedUrl);
-                        if (resp.ok) {
-                            mixAb = await resp.arrayBuffer();
-                            setMixdownUrl(signedUrl);
-                            StudioCache.cacheArrayBuffer(mixCacheKey, mixAb).catch(console.warn);
-                            break;
-                        }
-                    } catch (e) {
-                         // continue
-                    }
-                 }
-              }
-
-              if (mixAb && audioContextRef.current) {
-                  try {
-                      const decoded = await audioContextRef.current.decodeAudioData(mixAb.slice(0));
-                      setMixdownBuffer(decoded);
-
-                      const channels: Float32Array[] = [];
-                      for(let i=0; i<decoded.numberOfChannels; i++) {
-                         channels.push(decoded.getChannelData(i));
-                      }
-                      StudioCache.cacheAudioBufferData(mixCacheKeyDecoded, {
-                         sampleRate: decoded.sampleRate,
-                         length: decoded.length,
-                         numberOfChannels: decoded.numberOfChannels,
-                         channels
-                      }).catch(console.warn);
-
-                      if (!duration) setDuration(decoded.duration);
-                  } catch (e) {
-                      console.warn("Failed to decode mixdown", e);
-                  }
-              }
-          }
-
-          // Cargar y decodificar stems antes de marcar listo (concurrencia baja)
-          const metaByFile = new Map(finalStems.map((s) => [s.fileName, s]));
-          const queue: string[] = [...stemFiles];
-          const concurrency =
-            typeof navigator !== "undefined"
-              ? Math.min(3, Math.max(1, navigator.hardwareConcurrency || 3))
-              : 3;
-
-          const loadSingleStem = async (file: string) => {
-            if (cancelled || !audioContextRef.current) return;
-            try {
-                const cacheKey = `pirola-studio-cache-v1-${jobId}-${file}`;
-                const cacheKeyDecoded = `${cacheKey}-decoded`;
-                const meta = metaByFile.get(file);
-
-                const cachedDecoded = await StudioCache.getAudioBufferData(cacheKeyDecoded);
-                if (cachedDecoded) {
-                    const buffer = audioContextRef.current.createBuffer(
-                        cachedDecoded.numberOfChannels,
-                        cachedDecoded.length,
-                        cachedDecoded.sampleRate
-                    );
-                    for (let i = 0; i < cachedDecoded.numberOfChannels; i++) {
-                        if (cachedDecoded.channels[i]) {
-                            buffer.getChannelData(i).set(cachedDecoded.channels[i]);
-                        }
-                    }
-                    audioBuffersRef.current.set(file, buffer);
-                    setStems(prev => prev.map(s => {
-                        if (s.fileName === file) return { ...s, url: "cached-decoded", status: "ready" };
-                        return s;
-                    }));
-                    setDuration(prev => Math.max(prev, buffer.duration));
-                    return;
+                const ctx = audioContextRef.current;
+                if (ctx && !mediaNodesRef.current.has(stem.fileName)) {
+                    const mediaNode = ctx.createMediaElementSource(audio);
+                    const gain = ctx.createGain();
+                    const panner = ctx.createStereoPanner();
+                    mediaNode.connect(gain);
+                    gain.connect(panner);
+                    panner.connect(ctx.destination);
+                    mediaNodesRef.current.set(stem.fileName, mediaNode);
+                    gainNodesRef.current.set(stem.fileName, gain);
+                    pannerNodesRef.current.set(stem.fileName, panner);
                 }
 
-                let ab: ArrayBuffer | null = await StudioCache.getCachedArrayBuffer(cacheKey);
-                let usedUrl = meta?.signedUrl || meta?.url || "";
+                const candidates: string[] = [];
+                if (stem.stage) candidates.push(`${stem.stage}/${stem.fileName}`);
+                stageFallbacks.forEach((stage) => candidates.push(`${stage}/${stem.fileName}`));
+                candidates.push(stem.fileName);
+                let candidateIndex = 0;
 
-                if (!ab) {
-                    let resp: Response | null = null;
-                    if (usedUrl) {
-                        try {
-                            resp = await fetch(usedUrl);
-                        } catch (e) {
-                            resp = null;
-                        }
-                    }
+                const updateUrl = async (index: number) => {
+                    const path = candidates[index] || stem.fileName;
+                    const newUrl = await signFileUrl(jobId, path, tokenValue || undefined);
+                    audio!.src = newUrl;
+                    audio!.load();
+                    setStems(prev => prev.map(s => s.fileName === stem.fileName ? { ...s, url: newUrl } : s));
+                };
 
-                    const stageCandidates = [
-                        meta?.stage,
-                        "S6_MANUAL_CORRECTION",
-                        "S6_MANUAL_CORRECTION_ADJUSTMENT",
-                        "S12_SEPARATE_STEMS",
-                        "S5_LEADVOX_DYNAMICS",
-                        "S5_STEM_DYNAMICS_GENERIC",
-                        "S4_STEM_RESONANCE_CONTROL",
-                        "S0_SESSION_FORMAT",
-                        "S0_MIX_ORIGINAL"
-                    ].filter(Boolean) as string[];
-
-                    if (!resp || !resp.ok) {
-                        for (const stage of stageCandidates) {
-                            const candidate = await signFileUrl(jobId, `${stage}/${file}`);
-                            resp = await fetch(candidate);
-                            if (resp.ok) {
-                                usedUrl = candidate;
-                                break;
-                            }
-                        }
-                    }
-
-                    if (!resp || !resp.ok) {
-                        throw new Error(`Failed to fetch stem ${file}`);
-                    }
-
-                    ab = await resp.arrayBuffer();
-                    StudioCache.cacheArrayBuffer(cacheKey, ab).catch(e => console.warn("Background cache error", e));
-                }
-
-                if (ab && !cancelled) {
-                    const decoded = await audioContextRef.current.decodeAudioData(ab.slice(0));
+                audio.addEventListener("loadedmetadata", () => {
+                    setDuration(prev => Math.max(prev, isFinite(audio!.duration) ? audio!.duration : prev));
+                });
+                audio.addEventListener("canplay", () => {
+                    setStems(prev => prev.map(s => s.fileName === stem.fileName ? { ...s, status: "ready" } : s));
+                    setDuration(prev => Math.max(prev, isFinite(audio!.duration) ? audio!.duration : prev));
+                });
+                audio.addEventListener("ended", () => {
                     if (cancelled) return;
-                    audioBuffersRef.current.set(file, decoded);
-
-                    const channels: Float32Array[] = [];
-                    for(let i=0; i<decoded.numberOfChannels; i++) {
-                       channels.push(decoded.getChannelData(i));
+                    const anyPlaying = Array.from(audioElsRef.current.values()).some(a => !a.paused && !a.ended);
+                    if (!anyPlaying) {
+                        setIsPlaying(false);
+                        pauseTimeRef.current = 0;
+                        setCurrentTime(0);
                     }
-                    StudioCache.cacheAudioBufferData(cacheKeyDecoded, {
-                       sampleRate: decoded.sampleRate,
-                       length: decoded.length,
-                       numberOfChannels: decoded.numberOfChannels,
-                       channels
-                    }).catch(console.warn);
+                });
+                audio.addEventListener("error", () => {
+                    if (cancelled) return;
+                    candidateIndex += 1;
+                    if (candidateIndex < candidates.length) {
+                        updateUrl(candidateIndex).catch(() => {
+                            setStems(prev => prev.map(s => s.fileName === stem.fileName ? { ...s, status: "error" } : s));
+                        });
+                    } else {
+                        setStems(prev => prev.map(s => s.fileName === stem.fileName ? { ...s, status: "error" } : s));
+                    }
+                });
 
-                    setStems(prev => prev.map(s => {
-                        if (s.fileName === file) return { ...s, url: usedUrl || "cached", status: "ready" };
-                        return s;
-                    }));
-                    setDuration(prev => Math.max(prev, decoded.duration));
-                }
-            } catch (e) {
-                if (!cancelled) {
-                    console.error("Failed to load stem", file, e);
-                    setStems(prev => prev.map(s => {
-                        if (s.fileName === file) return { ...s, status: "error" };
-                        return s;
-                    }));
-                }
+                audioElsRef.current.set(stem.fileName, audio);
+            } else if (stem.url && audio.src !== stem.url) {
+                audio.src = stem.url;
+                audio.load();
             }
-          };
-
-          const workers = Array.from({ length: Math.min(concurrency, queue.length) }, async () => {
-            while (!cancelled && queue.length > 0) {
-                const next = queue.shift();
-                if (!next) break;
-                await loadSingleStem(next);
-            }
-          });
-          await Promise.all(workers);
-
-          if (!cancelled) {
-            setStudioReady(true);
-            setLoadingStems(false);
-          }
+            return audio;
         };
 
-        // Cargar stems y mixdown antes de marcar studioReady para que todo sea reproducible al entrar
-        loadAssets().catch(err => console.error("Studio: background load error", err));
+        const readyPromises = resolvedStems.map(async (stem) => {
+            const el = await ensureAudioForStem(stem);
+            try {
+                await waitForMediaReady(el, 4000);
+            } catch {
+                // ignore timeout
+            }
+        });
+
+        await Promise.all(readyPromises);
+
+        if (!cancelled) {
+            setStudioReady(true);
+            setLoadingStems(false);
+        }
       } catch (err) {
         console.error("Error loading stems:", err);
         setStudioReady(true);
@@ -441,121 +387,6 @@ export default function StudioPage() {
     return () => { cancelled = true; };
   }, [jobId, user]);
 
-  // Load stem when selected if not loaded (on-demand)
-  useEffect(() => {
-    const ctx = audioContextRef.current;
-    const stem = selectedStem;
-    if (!ctx || !jobId || !user || !stem) return;
-    if (stem.status === "loading" || stem.status === "error") return;
-    if (stem.status === "ready" && audioBuffersRef.current.has(stem.fileName)) return;
-
-    let cancelled = false;
-
-    const loadStem = async () => {
-        try {
-            setStems(prev => prev.map((s, i) => i === selectedStemIndex ? { ...s, status: "loading" } : s));
-
-            const cacheKey = `pirola-studio-cache-v1-${jobId}-${stem.fileName}`;
-            const cacheKeyDecoded = `${cacheKey}-decoded`;
-
-            // Try decoded first
-            const cachedDecoded = await StudioCache.getAudioBufferData(cacheKeyDecoded);
-
-            if (cachedDecoded && !cancelled) {
-                 const buffer = ctx.createBuffer(
-                      cachedDecoded.numberOfChannels,
-                      cachedDecoded.length,
-                      cachedDecoded.sampleRate
-                  );
-                  for (let i = 0; i < cachedDecoded.numberOfChannels; i++) {
-                      if (cachedDecoded.channels[i]) {
-                          buffer.getChannelData(i).set(cachedDecoded.channels[i]);
-                      }
-                  }
-                  audioBuffersRef.current.set(stem.fileName, buffer);
-                  setStems(prev => prev.map((s, i) => i === selectedStemIndex ? { ...s, url: "cached-decoded", status: "ready" } : s));
-                  setDuration(prev => Math.max(prev, buffer.duration));
-                  return;
-            }
-
-            let ab: ArrayBuffer | null = await StudioCache.getCachedArrayBuffer(cacheKey);
-            let usedUrl = stem.signedUrl || stem.url || "";
-
-            if (!ab) {
-                let resp: Response | null = null;
-                if (stem.signedUrl) {
-                    try {
-                        resp = await fetch(stem.signedUrl);
-                        usedUrl = stem.signedUrl;
-                    } catch (e) {
-                        resp = null;
-                    }
-                }
-
-                const stageCandidates = [
-                    stem.stage,
-                    "S6_MANUAL_CORRECTION",
-                    "S6_MANUAL_CORRECTION_ADJUSTMENT",
-                    "S12_SEPARATE_STEMS",
-                    "S5_LEADVOX_DYNAMICS",
-                    "S5_STEM_DYNAMICS_GENERIC",
-                    "S4_STEM_RESONANCE_CONTROL",
-                    "S0_SESSION_FORMAT",
-                    "S0_MIX_ORIGINAL"
-                ].filter(Boolean) as string[];
-
-                if (!resp || !resp.ok) {
-                    for (const stage of stageCandidates) {
-                        const candidateUrl = await signFileUrl(jobId, `${stage}/${stem.fileName}`);
-                        resp = await fetch(candidateUrl);
-                        if (resp.ok) {
-                            usedUrl = candidateUrl;
-                            break;
-                        }
-                    }
-                }
-
-                if (!resp || !resp.ok) {
-                    throw new Error(`Failed to fetch stem ${stem.fileName}`);
-                }
-
-                ab = await resp.arrayBuffer();
-                StudioCache.cacheArrayBuffer(cacheKey, ab).catch(console.warn);
-            }
-
-            if (!cancelled && ab) {
-                const decoded = await ctx.decodeAudioData(ab.slice(0));
-                if (cancelled) return;
-
-                audioBuffersRef.current.set(stem.fileName, decoded);
-
-                // Cache decoded
-                const channels: Float32Array[] = [];
-                for(let i=0; i<decoded.numberOfChannels; i++) {
-                   channels.push(decoded.getChannelData(i));
-                }
-                StudioCache.cacheAudioBufferData(cacheKeyDecoded, {
-                     sampleRate: decoded.sampleRate,
-                     length: decoded.length,
-                     numberOfChannels: decoded.numberOfChannels,
-                     channels
-                }).catch(console.warn);
-
-                setStems(prev => prev.map((s, i) => i === selectedStemIndex ? { ...s, url: usedUrl || "cached", status: "ready" } : s));
-                setDuration(prev => Math.max(prev, decoded.duration));
-            }
-        } catch (err) {
-            if (!cancelled) {
-                console.error("Failed to load stem", stem.fileName, err);
-                setStems(prev => prev.map((s, i) => i === selectedStemIndex ? { ...s, status: "error" } : s));
-            }
-        }
-    };
-
-    loadStem();
-    return () => { cancelled = true; };
-  }, [jobId, user, selectedStemIndex, selectedStem, duration]);
-
   // Removed WaveSurfer setup effect
 
   const togglePlay = async () => {
@@ -564,57 +395,37 @@ export default function StudioPage() {
 
       if (ctx.state === 'suspended') await ctx.resume();
 
+      const activeAudios = stems
+        .map((s) => audioElsRef.current.get(s.fileName))
+        .filter((a): a is HTMLAudioElement => !!a);
+
+      if (activeAudios.length === 0) return;
+
+      const master = activeAudios[0];
+
       if (isPlaying) {
-          stopAllSources();
-          pauseTimeRef.current = ctx.currentTime - startTimeRef.current;
+          activeAudios.forEach((a) => a.pause());
+          pauseTimeRef.current = master.currentTime;
           setIsPlaying(false);
           return;
       }
-
-      const activeStems = stems.filter(s => audioBuffersRef.current.has(s.fileName));
-      // if (activeStems.length === 0) return; // Allow playing if only mixdown loaded?
-      // Current logic relies on stems. If mixdown fallback is needed for playback, it would need changes.
-      // But user has stems here usually.
-
-      stopAllSources();
 
       if (duration > 0 && pauseTimeRef.current >= duration) {
           pauseTimeRef.current = 0;
       }
 
       const offset = pauseTimeRef.current;
-      startTimeRef.current = ctx.currentTime - offset;
-
-      const anySolo = stems.some(s => s.solo);
-
-      activeStems.forEach(stem => {
-          const buffer = audioBuffersRef.current.get(stem.fileName);
-          if (!buffer) return;
-
-          const source = ctx.createBufferSource();
-          source.buffer = buffer;
-
-          const gain = ctx.createGain();
-          let shouldMute = stem.mute;
-          if (anySolo) shouldMute = !stem.solo;
-
-          const vol = Math.pow(10, stem.volume / 20) * masterVolume;
-          gain.gain.value = shouldMute ? 0 : vol;
-
-          const panner = ctx.createStereoPanner();
-          panner.pan.value = stem.pan.enabled ? stem.pan.value : 0;
-
-          source.connect(gain);
-          gain.connect(panner);
-          panner.connect(ctx.destination);
-
-          source.start(0, offset);
-
-          sourceNodesRef.current.set(stem.fileName, source);
-          gainNodesRef.current.set(stem.fileName, gain);
-          pannerNodesRef.current.set(stem.fileName, panner);
+      activeAudios.forEach((a) => {
+          try { a.currentTime = offset; } catch (_) { /* noop */ }
       });
 
+      try {
+          await Promise.all(activeAudios.map(a => a.play().catch(() => undefined)));
+      } catch (_) {
+          // ignore play errors (e.g. autoplay policies)
+      }
+
+      startTimeRef.current = ctx.currentTime - offset;
       setIsPlaying(true);
   };
 
@@ -622,52 +433,35 @@ export default function StudioPage() {
       const ctx = audioContextRef.current;
       if (!ctx) return;
 
-      let t = Math.max(0, Math.min(time, duration));
+      const activeAudios = stems
+        .map((s) => audioElsRef.current.get(s.fileName))
+        .filter((a): a is HTMLAudioElement => !!a);
 
+      if (activeAudios.length === 0) return;
+
+      const t = Math.max(0, Math.min(time, duration || time));
       const wasPlaying = isPlaying;
-      if (wasPlaying) {
-          stopAllSources();
-      }
+
+      activeAudios.forEach((a) => {
+          try {
+              a.pause();
+              a.currentTime = t;
+          } catch (_) { /* noop */ }
+      });
 
       pauseTimeRef.current = t;
       setCurrentTime(t);
 
       if (wasPlaying) {
           setIsPlaying(false);
-          setTimeout(() => {
-             if (ctx.state === 'suspended') ctx.resume();
-
-             const activeStems = stems.filter(s => audioBuffersRef.current.has(s.fileName));
-             if (activeStems.length === 0) {
-                 setIsPlaying(true);
-                 return;
-             }
-
-             const offset = t;
-             startTimeRef.current = ctx.currentTime - offset;
-             const anySolo = stems.some(s => s.solo);
-
-             activeStems.forEach(stem => {
-                const buffer = audioBuffersRef.current.get(stem.fileName);
-                if (!buffer) return;
-                const source = ctx.createBufferSource();
-                source.buffer = buffer;
-                const gain = ctx.createGain();
-                let shouldMute = stem.mute;
-                if (anySolo) shouldMute = !stem.solo;
-                const vol = Math.pow(10, stem.volume / 20) * masterVolume;
-                gain.gain.value = shouldMute ? 0 : vol;
-                const panner = ctx.createStereoPanner();
-                panner.pan.value = stem.pan.enabled ? stem.pan.value : 0;
-                source.connect(gain);
-                gain.connect(panner);
-                panner.connect(ctx.destination);
-                source.start(0, offset);
-                sourceNodesRef.current.set(stem.fileName, source);
-                gainNodesRef.current.set(stem.fileName, gain);
-                pannerNodesRef.current.set(stem.fileName, panner);
-             });
-             setIsPlaying(true);
+          setTimeout(async () => {
+              if (ctx.state === 'suspended') await ctx.resume();
+              try {
+                  await Promise.all(activeAudios.map(a => a.play().catch(() => undefined)));
+                  setIsPlaying(true);
+              } catch (_) {
+                  // ignore
+              }
           }, 0);
       }
   };
@@ -681,22 +475,23 @@ export default function StudioPage() {
   useEffect(() => {
       let raf: number;
       const update = () => {
-          if (isPlaying && audioContextRef.current) {
-              const now = audioContextRef.current.currentTime - startTimeRef.current;
-              if (duration > 0 && now >= duration) {
-                  setIsPlaying(false);
-                  stopAllSources();
-                  pauseTimeRef.current = 0;
-                  setCurrentTime(0);
-              } else {
-                  setCurrentTime(now);
+          if (isPlaying) {
+              const master = stems
+                .map((s) => audioElsRef.current.get(s.fileName))
+                .find((a) => !!a) as HTMLAudioElement | undefined;
+              if (master) {
+                  setCurrentTime(master.currentTime || 0);
+                  if (isFinite(master.duration) && master.duration > 0) {
+                      setDuration((prev) => Math.max(prev, master.duration));
+                  }
                   raf = requestAnimationFrame(update);
+                  return;
               }
           }
       };
       if (isPlaying) update();
       return () => cancelAnimationFrame(raf);
-  }, [isPlaying, duration]);
+  }, [isPlaying, duration, stems]);
 
   useEffect(() => {
       const anySolo = stems.some(s => s.solo);
@@ -833,11 +628,9 @@ export default function StudioPage() {
       });
   };
 
-  // Get current stem buffer or mixdown for visualization
-  const currentVisualBuffer = selectedStem && audioBuffersRef.current.get(selectedStem.fileName)
-        ? audioBuffersRef.current.get(selectedStem.fileName)
-        : mixdownBuffer;
-  const currentVisualPeaks = selectedStem?.peaks;
+  // Waveform: usamos peaks del backend (no decodeAudioData)
+  const currentVisualBuffer = null;
+  const currentVisualPeaks = selectedStem?.peaks || null;
 
   if (authLoading) return <div className="h-screen bg-[#0f111a]"></div>;
 

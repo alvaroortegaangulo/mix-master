@@ -132,11 +132,34 @@ function authHeaders(): HeadersInit {
   return key ? { "X-API-Key": key } : {};
 }
 
-export async function signFileUrl(jobId: string, filePath: string): Promise<string> {
+export async function getStudioToken(jobId: string, ttlDays = 7): Promise<{ token: string; expires: number }> {
   const baseUrl = getBackendBaseUrl();
+  const res = await fetch(`${baseUrl}/jobs/${jobId}/studio-token`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeaders(),
+    },
+    body: JSON.stringify({ ttl_days: ttlDays }),
+  });
+  if (!res.ok) {
+    throw new Error(`Failed to obtain studio token: ${res.status} ${res.statusText}`);
+  }
+  return (await res.json()) as { token: string; expires: number };
+}
+
+export async function signFileUrl(jobId: string, filePath: string, token?: string): Promise<string> {
+  const baseUrl = getBackendBaseUrl();
+  const normalizedPath = normalizeFilePath(jobId, filePath);
+
+  if (token) {
+    const sep = normalizedPath ? "/" : "";
+    const clean = normalizedPath.startsWith("/") ? normalizedPath.slice(1) : normalizedPath;
+    return `${baseUrl}/files/${jobId}${sep}${clean}?t=${encodeURIComponent(token)}`;
+  }
+
   // Request a longer expiration time to prevent 401 on long sessions
   const expiresIn = 3600;
-  const normalizedPath = normalizeFilePath(jobId, filePath);
 
   const res = await fetch(`${baseUrl}/files/sign`, {
     method: "POST",
