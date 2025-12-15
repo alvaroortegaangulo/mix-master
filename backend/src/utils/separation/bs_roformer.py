@@ -233,7 +233,48 @@ def separate_bs_roformer_to_dir(
 
     params_cls = getattr(metadata, "params", BSRoformerParams)
     model_cls = getattr(metadata, "model", BSRoformer)
-    model_params = config.model.to_concrete(params_cls)
+
+    def _model_cfg_to_dict(cfg_obj):
+        if isinstance(cfg_obj, dict):
+            return cfg_obj
+        for attr in ("model_dump", "dict"):
+            fn = getattr(cfg_obj, attr, None)
+            if callable(fn):
+                try:
+                    return fn(exclude_none=True)
+                except Exception:
+                    try:
+                        return fn()
+                    except Exception:
+                        pass
+        return getattr(cfg_obj, "__dict__", None)
+
+    if hasattr(config.model, "to_concrete") and params_cls is not None:
+        model_params = config.model.to_concrete(params_cls)
+    else:
+        cfg_dict = _model_cfg_to_dict(config.model)
+        if cfg_dict is None:
+            raise TypeError("Config.model no se puede convertir a dict para BSRoformer")
+
+        # Compatibilidad: pydantic v1/v2 o dataclass.
+        builders = []
+        if params_cls is not None:
+            builders = [
+                lambda: params_cls.model_validate(cfg_dict),  # pydantic v2
+                lambda: params_cls.model_construct(**cfg_dict),  # pydantic v2 sin validaciÃ³n
+                lambda: params_cls.parse_obj(cfg_dict),  # pydantic v1
+                lambda: params_cls(**cfg_dict),  # dataclass / clase normal
+            ]
+        last_exc = None
+        model_params = None
+        for b in builders:
+            try:
+                model_params = b()
+                break
+            except Exception as exc:
+                last_exc = exc
+        if model_params is None:
+            raise last_exc or TypeError("No se pudo construir params para BSRoformer")
 
     model = model_cls(model_params)
     model = _load_weights(model, assets.checkpoint_path, device=device)
