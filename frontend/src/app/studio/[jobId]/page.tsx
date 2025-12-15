@@ -297,7 +297,10 @@ export default function StudioPage() {
                 const stemBase = stem.fileName.replace(/\.wav$/i, "");
                 const peakCandidates: string[] = [];
                 if (stem.stage) peakCandidates.push(`${stem.stage}/peaks/${stemBase}.peaks.json`);
-                stageFallbacks.forEach((stage) => peakCandidates.push(`${stage}/peaks/${stemBase}.peaks.json`));
+                // Solo un fallback ligero (primer stage de la lista) para evitar spam 404
+                const fallbackStage = stageFallbacks[0];
+                if (fallbackStage) peakCandidates.push(`${fallbackStage}/peaks/${stemBase}.peaks.json`);
+
                 for (const rel of peakCandidates) {
                     try {
                         const url = await signFileUrl(jobId, rel, tokenValue || undefined);
@@ -308,11 +311,14 @@ export default function StudioPage() {
                                 return { ...stem, peaks: data.map((x: any) => Number(x) || 0) };
                             }
                         }
+                        // Si 404/500, probamos siguiente, pero sin lanzar
                     } catch (_) {
                         // continuar con siguiente candidato
                     }
                 }
-                return stem;
+                // Fallback para que la waveform pinte una lïnea central
+                const flatPeaks = Array.from({ length: 400 }, () => 0);
+                return { ...stem, peaks: flatPeaks };
             })
         );
 
