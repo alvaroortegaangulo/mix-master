@@ -19,7 +19,7 @@ uvicorn[standard]
 python-multipart   # necesario para UploadFile / multipart/form-data
 
 # Cola de tareas (procesamiento asíncrono)
-celery[redis]
+celery[redis]==5.2.7
 redis
 
 # Database
