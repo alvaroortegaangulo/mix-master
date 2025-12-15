@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { LandingPage } from "../components/landing/LandingPage";
@@ -16,7 +16,7 @@ const NAV_LINKS = [
   { label: "Support", href: "/support" },
 ];
 
-export default function Page() {
+function PageContent() {
   // view state: 'landing' or 'tool'
   const searchParams = useSearchParams();
   const jobIdParam = searchParams.get("jobId");
@@ -144,5 +144,13 @@ export default function Page() {
         onClose={() => setIsAuthModalOpen(false)}
       />
     </div>
+  );
+}
+
+export default function Page() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-slate-950" />}>
+      <PageContent />
+    </Suspense>
   );
 }
