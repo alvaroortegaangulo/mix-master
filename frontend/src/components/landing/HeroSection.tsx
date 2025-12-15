@@ -10,9 +10,9 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
         <div className="absolute top-[40%] -right-[10%] h-[60%] w-[60%] rounded-full bg-purple-600/10 blur-[120px]" />
       </div>
 
-      <div className="relative z-10 max-w-5xl space-y-8 animate-in fade-in zoom-in duration-1000 flex flex-col items-center">
-        {/* Logo is kept as per previous design, though not explicitly mentioned in the image snippet, it's good for branding */}
-        <div className="mx-auto flex justify-center mb-4">
+      <div className="relative z-10 max-w-5xl space-y-8 flex flex-col items-center">
+        {/* Logo */}
+        <div className="mx-auto flex justify-center mb-4 animate-in fade-in zoom-in duration-1000">
           <Image
             src="/logo.png"
             alt="Piroola logo"
@@ -23,6 +23,7 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
           />
         </div>
 
+        {/* Main Heading - LCP Element (No entrance animation to minimize render delay) */}
         <h1 className="flex flex-col text-5xl font-extrabold tracking-tight md:text-7xl lg:text-8xl gap-2">
           <span className="text-white">
             Studio Sound.
@@ -32,13 +33,13 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
           </span>
         </h1>
 
-        <p className="mx-auto max-w-3xl text-lg font-light leading-relaxed text-slate-300 md:text-xl">
+        <p className="mx-auto max-w-3xl text-lg font-light leading-relaxed text-slate-300 md:text-xl animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-100 fill-mode-backwards">
           Transform your home recordings (stems) into professional,
           Spotify-ready mixes in minutes. Piroola handles the technical
           engineering so you can focus on the music.
         </p>
 
-        <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-center mt-4">
+        <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-center mt-4 animate-in fade-in slide-in-from-bottom-6 duration-1000 delay-200 fill-mode-backwards">
           {/* Button 1: Mezclar mi Track */}
           <button
             onClick={onTryIt}
@@ -60,7 +61,7 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
 
           {/* Button 2: Escuchar Demos */}
           <button
-             onClick={() => document.getElementById('benefits')?.scrollIntoView({ behavior: 'smooth' })} // Assuming demos are in benefits or we scroll down
+             onClick={() => document.getElementById('benefits')?.scrollIntoView({ behavior: 'smooth' })}
              className="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-full bg-slate-800/80 px-8 py-4 text-lg font-semibold text-white transition-all hover:bg-slate-700 hover:scale-105 focus:outline-none focus:ring-4 focus:ring-purple-500/30 border border-slate-700"
           >
             <PlayCircleIcon className="h-6 w-6 text-white" />
@@ -69,7 +70,7 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
         </div>
 
         {/* Rating Section */}
-        <div className="flex items-center gap-2 text-sm font-medium text-slate-400 mt-2">
+        <div className="flex items-center gap-2 text-sm font-medium text-slate-400 mt-2 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-300 fill-mode-backwards">
             <div className="flex items-center gap-1 text-yellow-400">
                 <StarIcon className="h-5 w-5" />
                 <span>4.9/5 Rating</span>
