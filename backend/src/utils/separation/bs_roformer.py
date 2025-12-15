@@ -205,7 +205,14 @@ def separate_bs_roformer_to_dir(
             )
 
     # 1) Config + modelo
-    config = Config.from_file(assets.config_path)
+    try:
+        config = Config.from_file(assets.config_path)
+    except Exception as exc:
+        # Algunas versiones de splifft/pydantic fallan por campos extra en stft/masking.
+        # En ese caso cargamos el JSON y construimos el modelo sin validación estricta.
+        with assets.config_path.open("r", encoding="utf-8") as f:
+            raw_cfg = json.load(f)
+        config = Config.model_construct(**raw_cfg)  # type: ignore[arg-type]
     metadata = ModelMetadata(model_type="bs_roformer", params=BSRoformerParams, model=BSRoformer)
     model_params = config.model.to_concrete(metadata.params)
 
