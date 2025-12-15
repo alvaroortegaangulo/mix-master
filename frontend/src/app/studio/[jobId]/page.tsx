@@ -66,6 +66,7 @@ export default function StudioPage() {
   const [downloadingStems, setDownloadingStems] = useState(false);
   const [downloadingMixdown, setDownloadingMixdown] = useState(false);
   const [mixdownUrl, setMixdownUrl] = useState<string | null>(null);
+  const [mixdownBuffer, setMixdownBuffer] = useState<AudioBuffer | null>(null);
 
   const selectedStem = stems[selectedStemIndex];
 
@@ -118,6 +119,8 @@ export default function StudioPage() {
       console.log("Studio: Starting load stems...");
       try {
         setLoadingStems(true);
+        setMixdownUrl(null);
+        setMixdownBuffer(null);
         stopAllSources();
         audioBuffersRef.current.clear();
         gainNodesRef.current.clear();
@@ -125,6 +128,7 @@ export default function StudioPage() {
         pauseTimeRef.current = 0;
         setIsPlaying(false);
         setCurrentTime(0);
+        setDuration(0);
         const baseUrl = getBackendBaseUrl();
 
         const res = await fetch(`${baseUrl}/jobs/${jobId}/stems`, {
@@ -204,7 +208,7 @@ export default function StudioPage() {
                             return s;
                         }));
 
-                        setDuration(prev => prev || decoded.duration);
+                        setDuration(prev => Math.max(prev, decoded.duration));
 
                     } else {
                         console.warn("Studio: Fetch failed for", file);
@@ -223,19 +227,46 @@ export default function StudioPage() {
             }));
 
             // Attempt to load mixdown for waveform visualization
-            try {
-                let mixSignedUrl = await signFileUrl(jobId, `S9_MASTER_GENERIC/mixdown.wav`);
-                let mixResp = await fetch(mixSignedUrl);
-                if (!mixResp.ok) {
-                     mixSignedUrl = await signFileUrl(jobId, `S0_MIX_ORIGINAL/full_song.wav`);
-                     mixResp = await fetch(mixSignedUrl);
-                }
+            const preferredMixdownPaths = [
+                "S11_REPORT_GENERATION/full_song.wav",
+                "S10_MASTER_FINAL_LIMITS/full_song.wav",
+                "S9_MASTER_GENERIC/full_song.wav",
+                "S8_MIXBUS_COLOR_GENERIC/full_song.wav",
+                "S7_MIXBUS_TONAL_BALANCE/full_song.wav",
+                "S6_MANUAL_CORRECTION/full_song.wav",
+                "S5_LEADVOX_DYNAMICS/full_song.wav",
+                "S5_STEM_DYNAMICS_GENERIC/full_song.wav",
+                "S4_STEM_RESONANCE_CONTROL/full_song.wav",
+                "S3_MIXBUS_HEADROOM/full_song.wav",
+                "S3_LEADVOX_AUDIBILITY/full_song.wav",
+                "S0_SESSION_FORMAT/full_song.wav",
+                "S0_MIX_ORIGINAL/full_song.wav"
+            ];
 
-                if (mixResp.ok) {
-                    setMixdownUrl(mixSignedUrl);
+            for (const relPath of preferredMixdownPaths) {
+                if (cancelled) return;
+                try {
+                    const signedUrl = await signFileUrl(jobId, relPath);
+                    const resp = await fetch(signedUrl);
+                    if (!resp.ok) continue;
+
+                    const ab = await resp.arrayBuffer();
+                    if (cancelled) return;
+
+                    const decodePromise = audioContextRef.current!.decodeAudioData(ab);
+                    const timeoutPromise = new Promise<AudioBuffer>((_, reject) =>
+                        setTimeout(() => reject(new Error("Audio decoding timed out")), 15000)
+                    );
+                    const decoded = await Promise.race([decodePromise, timeoutPromise]);
+                    if (cancelled) return;
+
+                    setMixdownBuffer(decoded);
+                    setMixdownUrl(signedUrl);
+                    setDuration(prev => Math.max(prev, decoded.duration));
+                    break;
+                } catch (e) {
+                    console.warn("Could not load reference mixdown for waveform", relPath, e);
                 }
-            } catch (e) {
-                console.warn("Could not load reference mixdown for waveform", e);
             }
         }
       } catch (err) {
@@ -279,7 +310,7 @@ export default function StudioPage() {
 
             audioBuffersRef.current.set(stem.fileName, decoded);
             setStems(prev => prev.map((s, i) => i === selectedStemIndex ? { ...s, url: signedUrl, status: "ready" } : s));
-            if (!duration) setDuration(decoded.duration);
+            setDuration(prev => Math.max(prev, decoded.duration));
         } catch (err) {
             if (!cancelled) {
                 console.error("Failed to load stem", stem.fileName, err);
@@ -296,9 +327,10 @@ export default function StudioPage() {
     if (!waveformRef.current) return;
 
     const stemBuffer = selectedStem ? audioBuffersRef.current.get(selectedStem.fileName) : null;
-    const urlToLoad = mixdownUrl || selectedStem?.url;
+    const waveformBuffer = mixdownBuffer || stemBuffer;
+    const urlToLoad = waveformBuffer ? null : (mixdownUrl || selectedStem?.url);
 
-    if (!stemBuffer && !urlToLoad) return;
+    if (!waveformBuffer && !urlToLoad) return;
 
     if (wavesurferRef.current) {
         wavesurferRef.current.destroy();
@@ -307,6 +339,7 @@ export default function StudioPage() {
     try {
         wavesurferRef.current = WaveSurfer.create({
           container: waveformRef.current,
+          backend: "WebAudio",
           waveColor: '#334155',
           progressColor: '#10b981',
           cursorColor: '#fbbf24',
@@ -316,13 +349,14 @@ export default function StudioPage() {
           height: 300,
           normalize: true,
           interact: true,
+          audioContext: audioContextRef.current || undefined,
         });
 
-        if (stemBuffer && wavesurferRef.current) {
+        if (waveformBuffer && wavesurferRef.current) {
             // Prefer direct buffer to avoid extra network fetch and blobs
             const wsAny = wavesurferRef.current as any;
             if (typeof wsAny.loadDecodedBuffer === "function") {
-                wsAny.loadDecodedBuffer(stemBuffer);
+                wsAny.loadDecodedBuffer(waveformBuffer);
             } else if (urlToLoad) {
                 wavesurferRef.current.load(urlToLoad);
             }
@@ -347,7 +381,7 @@ export default function StudioPage() {
     return () => {
         wavesurferRef.current?.destroy();
     };
-  }, [mixdownUrl, selectedStem?.url, selectedStem?.fileName]);
+  }, [mixdownBuffer, mixdownUrl, selectedStem?.url, selectedStem?.fileName]);
 
   useEffect(() => {
      if (wavesurferRef.current) {
