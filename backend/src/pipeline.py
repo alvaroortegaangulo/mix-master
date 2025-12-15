@@ -310,6 +310,21 @@ def run_pipeline_for_job(
     # cualquier contrato del pipeline completo.
     set_active_contract_sequence(contract_ids)
 
+    # Si la primera stage no es S0_SESSION_FORMAT (ej. empezamos en S7),
+    # debemos copiar manualmente los datos de S0_SESSION_FORMAT a esa primera stage
+    # para "arrancar" la cadena.
+    if contract_ids and contract_ids[0] != "S0_SESSION_FORMAT":
+        first_stage = contract_ids[0]
+        logger.info(
+            "[pipeline] Stage inicial es %s (no S0). Copiando S0_SESSION_FORMAT -> %s...",
+            first_stage,
+            first_stage,
+        )
+        subprocess.run(
+            [sys.executable, str(copy_script), "S0_SESSION_FORMAT", first_stage],
+            check=False,
+        )
+
     # Callback inicial de progreso (antes de cualquier stage)
     if progress_cb is not None:
         progress_cb(
