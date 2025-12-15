@@ -5,8 +5,11 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import { LandingPage } from "../components/landing/LandingPage";
-import { AuthModal } from "../components/AuthModal";
 import { useAuth } from "../context/AuthContext";
+
+const AuthModal = dynamic(() => import("../components/AuthModal").then((mod) => mod.AuthModal), {
+  ssr: false, // AuthModal is client-only interaction
+});
 
 const MixTool = dynamic(
   () => import("../components/MixTool").then((mod) => mod.MixTool),

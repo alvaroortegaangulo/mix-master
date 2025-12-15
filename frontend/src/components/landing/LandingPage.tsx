@@ -1,7 +1,10 @@
 import { HeroSection } from "./HeroSection";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { PipelineInteractiveDiagram } from "./PipelineInteractiveDiagram";
+
+const PipelineInteractiveDiagram = dynamic(() => import("./PipelineInteractiveDiagram").then(mod => mod.PipelineInteractiveDiagram), {
+  loading: () => <div className="h-96 bg-slate-900" />
+});
 
 const FeaturesSection = dynamic(() => import("./FeaturesSection").then(mod => mod.FeaturesSection), {
   loading: () => <div className="h-96 bg-slate-900" />

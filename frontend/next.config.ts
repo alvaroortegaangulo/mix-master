@@ -3,6 +3,9 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   reactCompiler: true,
   compress: true,
+  experimental: {
+    optimizePackageImports: ['@heroicons/react', 'lucide-react', 'date-fns', 'lodash'],
+  },
 
   async headers() {
     return [
