@@ -356,6 +356,21 @@
           }
         }
       ]
+    },
+    "S12_POST": {
+      "id": "S12_POST",
+      "name": "Post Separation",
+      "contracts": [
+        {
+          "id": "S12_SEPARATE_STEMS",
+          "stage_id": "S12_POST",
+          "instrument_id": "*",
+          "style_id": "*",
+          "target_scope": "session",
+          "metrics": {},
+          "limits": {}
+        }
+      ]
     }              
   }
 }
