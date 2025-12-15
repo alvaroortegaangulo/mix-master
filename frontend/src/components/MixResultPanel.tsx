@@ -112,20 +112,6 @@ export function MixResultPanel({
   return (
     <section className="mt-6 rounded-3xl border border-emerald-500/40 bg-emerald-500/10 p-6 text-emerald-50 shadow-lg shadow-emerald-500/20">
 
-      {/* Studio Banner */}
-      <div className="mb-6 flex flex-col items-center justify-center rounded-xl border border-emerald-500/20 bg-emerald-900/20 p-4 text-center">
-        <h3 className="mb-2 text-lg font-bold text-emerald-100">Want to tweak the mix?</h3>
-        <p className="mb-4 text-sm text-emerald-300">
-          Manual correction is available. Access the Studio to adjust individual stems.
-        </p>
-        <a
-          href={`/studio/${jobId}`}
-          className="inline-flex items-center justify-center rounded-full bg-emerald-500 px-8 py-2 text-sm font-bold text-black transition hover:bg-emerald-400 shadow-lg shadow-emerald-500/30"
-        >
-          PIROOLA STUDIO
-        </a>
-      </div>
-
       {/* Header + Main Player */}
       <div className="space-y-3">
         <div>
