@@ -289,7 +289,35 @@ export default function StudioPage() {
         }
 
         if (cancelled) return;
-        setStems(resolvedStems);
+
+        // Asegurar peaks para la waveform (si no vienen en payload)
+        const stemsWithPeaks = await Promise.all(
+            resolvedStems.map(async (stem) => {
+                if (stem.peaks && stem.peaks.length) return stem;
+                const stemBase = stem.fileName.replace(/\.wav$/i, "");
+                const peakCandidates: string[] = [];
+                if (stem.stage) peakCandidates.push(`${stem.stage}/peaks/${stemBase}.peaks.json`);
+                stageFallbacks.forEach((stage) => peakCandidates.push(`${stage}/peaks/${stemBase}.peaks.json`));
+                for (const rel of peakCandidates) {
+                    try {
+                        const url = await signFileUrl(jobId, rel, tokenValue || undefined);
+                        const resp = await fetch(url);
+                        if (resp.ok) {
+                            const data = await resp.json();
+                            if (Array.isArray(data) && data.length) {
+                                return { ...stem, peaks: data.map((x: any) => Number(x) || 0) };
+                            }
+                        }
+                    } catch (_) {
+                        // continuar con siguiente candidato
+                    }
+                }
+                return stem;
+            })
+        );
+
+        if (cancelled) return;
+        setStems(stemsWithPeaks);
         // Mostrar UI aunque sigamos preparando audio; waveform puede usar peaks ya.
         setLoadingStems(false);
 
