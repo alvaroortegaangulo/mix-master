@@ -501,7 +501,7 @@ export default function StudioPage() {
                body: JSON.stringify({ stages })
           });
 
-          router.push(`/`);
+          router.push(`/?view=tool&jobId=${encodeURIComponent(jobId)}`);
       } catch (err) {
           console.error(err);
           alert("Error sending corrections");

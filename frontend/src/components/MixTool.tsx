@@ -224,6 +224,10 @@ const STAGE_UI_INFO: Record<string, StageUiInfo> = {
   }
 };
 
+type MixToolProps = {
+  resumeJobId?: string;
+};
+
 
 function mapStemProfileToBusKey(profile: string): string {
   switch (profile) {
@@ -263,7 +267,7 @@ function mapStemProfileToBusKey(profile: string): string {
   }
 }
 
-export function MixTool() {
+export function MixTool({ resumeJobId }: MixToolProps) {
   const [uploadMode, setUploadMode] = useState<"song" | "stems">("stems");
   const [files, setFiles] = useState<File[]>([]);
   const [stemProfiles, setStemProfiles] = useState<StemProfile[]>([]);
@@ -272,6 +276,7 @@ export function MixTool() {
   const [loading, setLoading] = useState(false);
   const [jobStatus, setJobStatus] = useState<JobStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [activeJobId, setActiveJobId] = useState<string | null>(resumeJobId ?? null);
 
   const [availableStages, setAvailableStages] = useState<PipelineStage[]>([]);
   const [selectedStageKeys, setSelectedStageKeys] = useState<string[]>([]);
@@ -433,6 +438,64 @@ useEffect(() => {
   });
 }, []);
 
+useEffect(() => {
+  if (resumeJobId) {
+    setJobStatus(null);
+    setError(null);
+    setActiveJobId(resumeJobId);
+  }
+}, [resumeJobId]);
+
+useEffect(() => {
+  if (!activeJobId) return;
+
+  let cancelled = false;
+  setLoading(true);
+  setError(null);
+
+  const pollStatus = async () => {
+    while (!cancelled) {
+      try {
+        const status = await fetchJobStatus(activeJobId);
+        if (cancelled) break;
+
+        setJobStatus(status);
+
+        if (status.status === "done") {
+          setLoading(false);
+          break;
+        }
+
+        if (status.status === "error") {
+          setError(status.error ?? "Error processing mix");
+          setLoading(false);
+          break;
+        }
+
+        if (status.stageKey === "waiting_for_correction") {
+             setLoading(false);
+             window.location.href = `/studio/${activeJobId}`;
+             return;
+        }
+      } catch (err: any) {
+        if (!cancelled) {
+          setError(err.message ?? "Unknown error");
+          setLoading(false);
+        }
+        break;
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+  };
+
+  void pollStatus();
+
+  return () => {
+    cancelled = true;
+  };
+}, [activeJobId]);
+
 
   // Cargar definición de stages del backend
   useEffect(() => {
@@ -516,6 +579,8 @@ useEffect(() => {
     setUploadMode(mode);
     setFiles([]); // Reset files on mode change
     setJobStatus(null);
+    setActiveJobId(null);
+    setLoading(false);
     setError(null);
     setStemProfiles([]);
     setSpaceBusStyles({});
@@ -524,6 +589,8 @@ useEffect(() => {
 
   const handleFilesSelected = (selected: File[]) => {
     setJobStatus(null);
+    setActiveJobId(null);
+    setLoading(false);
     setError(null);
     setSelectionWarning(null);
     setShowStageSelector(true);
@@ -595,6 +662,7 @@ useEffect(() => {
     setLoading(true);
     setError(null);
     setJobStatus(null);
+    setActiveJobId(null);
 
     try {
       const enabled =
@@ -629,38 +697,20 @@ useEffect(() => {
         spaceDepthBusStylesPayload,
       );
 
+      const totalStages =
+        enabled?.length ?? availableStages.length ?? 0;
+
       setJobStatus({
         jobId,
         status: "queued",
         stageIndex: 0,
-        totalStages: 7,
+        totalStages,
         stageKey: "queued",
         message: "Job queued...",
         progress: 0,
       });
 
-      while (true) {
-        const status = await fetchJobStatus(jobId);
-        setJobStatus(status);
-
-        if (status.status === "done") {
-          setLoading(false);
-          break;
-        }
-        if (status.status === "error") {
-          setLoading(false);
-          setError(status.error ?? "Error processing mix");
-          break;
-        }
-
-        if (status.stageKey === "waiting_for_correction") {
-             // Redirect to studio
-             window.location.href = `/studio/${jobId}`;
-             return;
-        }
-
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-      }
+      setActiveJobId(jobId);
     } catch (err: any) {
       setError(err.message ?? "Unknown error");
       setLoading(false);

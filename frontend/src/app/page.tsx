@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { LandingPage } from "../components/landing/LandingPage";
 import { MixTool } from "../components/MixTool";
 import { AuthModal } from "../components/AuthModal";
@@ -17,7 +18,10 @@ const NAV_LINKS = [
 
 export default function Page() {
   // view state: 'landing' or 'tool'
-  const [view, setView] = useState<'landing' | 'tool'>('landing');
+  const searchParams = useSearchParams();
+  const jobIdParam = searchParams.get("jobId");
+  const startInTool = searchParams.get("view") === "tool" || !!jobIdParam;
+  const [view, setView] = useState<'landing' | 'tool'>(startInTool ? 'tool' : 'landing');
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const { user, loading: authLoading } = useAuth();
 
@@ -56,6 +60,11 @@ export default function Page() {
     }
   }, [user, isAuthModalOpen]);
 
+  useEffect(() => {
+    if (startInTool) {
+      setView('tool');
+    }
+  }, [startInTool]);
 
   const handleReset = () => {
       setView('landing');
@@ -126,7 +135,7 @@ export default function Page() {
          {view === 'landing' ? (
              <LandingPage onTryIt={handleTryIt} />
          ) : (
-             <MixTool />
+             <MixTool resumeJobId={jobIdParam || undefined} />
          )}
       </div>
 
