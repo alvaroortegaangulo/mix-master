@@ -14,8 +14,8 @@ if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
 from utils.analysis_utils import get_temp_dir  # type: ignore  # noqa: E402
-from utils.separation.bs_roformer import (  # type: ignore  # noqa: E402
-    separate_bs_roformer_to_dir,
+from utils.separation.demucs_ht import (  # type: ignore  # noqa: E402
+    separate_demucs_htdemucs_ft_to_dir,
     copy_uploaded_stems_to_stage,
 )
 
@@ -324,11 +324,11 @@ def _process_impl(contract_id: str, context: Optional["PipelineContext"] = None)
     tmp_wav = input_dir / "work_in.wav"
     wav_path = _ensure_wav_44100_stereo(song_path, tmp_wav)
 
-    written = separate_bs_roformer_to_dir(
+    written = separate_demucs_htdemucs_ft_to_dir(
         wav_path,
         stage_dir,
-        models_dir=Path(os.environ.get("MIX_MODELS_DIR", stage_dir.parent / "models" / "bs_roformer")),
-        device=os.environ.get("MIX_BS_ROFORMER_DEVICE") or None,
+        model_name=os.environ.get("MIX_DEMUCS_MODEL", "htdemucs_ft"),
+        device=os.environ.get("MIX_DEMUCS_DEVICE") or None,
         write_manifest=True,
     )
 
