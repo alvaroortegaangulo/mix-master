@@ -160,8 +160,12 @@ export async function signFileUrl(jobId: string, filePath: string): Promise<stri
     const signedUrlObj = new URL(data.url);
     const currentBase = new URL(baseUrl);
 
-    // Only replace protocol/host/port if they differ, preserving path and query
-    if (signedUrlObj.host !== currentBase.host) {
+    // Replace protocol/host/port if ANY differ (avoids http URLs blocked by CSP)
+    if (
+      signedUrlObj.host !== currentBase.host ||
+      signedUrlObj.protocol !== currentBase.protocol ||
+      signedUrlObj.port !== currentBase.port
+    ) {
       signedUrlObj.protocol = currentBase.protocol;
       signedUrlObj.host = currentBase.host;
       signedUrlObj.port = currentBase.port;
