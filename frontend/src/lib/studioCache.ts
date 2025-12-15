@@ -1,3 +1,10 @@
+export interface AudioBufferData {
+  sampleRate: number;
+  length: number;
+  numberOfChannels: number;
+  channels: Float32Array[];
+}
+
 export class StudioCache {
   private static DB_NAME = "piroola-studio-cache";
   private static STORE_NAME = "stems";
@@ -63,6 +70,53 @@ export class StudioCache {
         const transaction = db.transaction(this.STORE_NAME, "readwrite");
         const store = transaction.objectStore(this.STORE_NAME);
         const request = store.put(buffer, key);
+
+        request.onsuccess = () => {
+          resolve();
+        };
+        request.onerror = () => {
+          reject(request.error);
+        };
+      });
+    } catch (e) {
+      console.warn("StudioCache write error:", e);
+    }
+  }
+
+  static async getAudioBufferData(key: string): Promise<AudioBufferData | null> {
+    try {
+      const db = await this.getDB();
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction(this.STORE_NAME, "readonly");
+        const store = transaction.objectStore(this.STORE_NAME);
+        const request = store.get(key);
+
+        request.onsuccess = () => {
+          const result = request.result;
+          // Verify it matches the interface roughly
+          if (result && typeof result.sampleRate === 'number' && Array.isArray(result.channels)) {
+             resolve(result as AudioBufferData);
+          } else {
+             resolve(null);
+          }
+        };
+        request.onerror = () => {
+          reject(request.error);
+        };
+      });
+    } catch (e) {
+      console.warn("StudioCache read error:", e);
+      return null;
+    }
+  }
+
+  static async cacheAudioBufferData(key: string, data: AudioBufferData): Promise<void> {
+    try {
+      const db = await this.getDB();
+      return new Promise((resolve, reject) => {
+        const transaction = db.transaction(this.STORE_NAME, "readwrite");
+        const store = transaction.objectStore(this.STORE_NAME);
+        const request = store.put(data, key);
 
         request.onsuccess = () => {
           resolve();
