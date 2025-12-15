@@ -14,7 +14,7 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
         {/* Logo */}
         <div className="mx-auto flex justify-center mb-4 animate-in fade-in zoom-in duration-1000">
           <Image
-            src="/logo.png"
+            src="/logo.webp"
             alt="Piroola logo"
             width={96}
             height={96}

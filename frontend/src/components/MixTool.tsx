@@ -1002,7 +1002,7 @@ useEffect(() => {
               {isProcessing && (
                 <div className="flex justify-center">
                   <img
-                    src="/miner.gif"
+                    src="/miner.webp"
                     alt="Processing your mix..."
                     className="h-24 w-auto rounded-lg"
                   />
