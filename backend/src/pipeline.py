@@ -254,14 +254,55 @@ def run_pipeline_for_job(
 
     # Copiar stems desde media_dir a S0_MIX_ORIGINAL (admite formatos de entrada)
     audio_exts = {".wav", ".aif", ".aiff", ".flac", ".mp3", ".m4a", ".ogg", ".aac"}
-    for src in media_dir.iterdir():
-        if not src.is_file():
-            continue
-        if src.suffix.lower() not in audio_exts:
-            continue
-        dst = s0_original_dir / src.name
-        shutil.copy2(src, dst)
-        logger.info("[pipeline] Copiado stem %s -> %s", src.name, dst)
+    copied = 0
+    if media_dir.exists():
+        for src in media_dir.iterdir():
+            if not src.is_file():
+                continue
+            if src.suffix.lower() not in audio_exts:
+                continue
+            dst = s0_original_dir / src.name
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(src, dst)
+            logger.info("[pipeline] Copiado stem %s -> %s", src.name, dst)
+            copied += 1
+    else:
+        logger.warning(
+            "[pipeline] media_dir %s no existe al reanudar; intentando usar stems previos del job.",
+            media_dir,
+        )
+
+    # Si no hemos copiado nada desde media_dir (p.ej. reanudaciИn tras Studio
+    # o el directorio de subidas fue limpiado), intentamos sembrar S0 usando
+    # la mejor carpeta previa del job para evitar FileNotFound.
+    if copied == 0:
+        fallback_dirs = [
+            temp_root / "S6_MANUAL_CORRECTION",
+            temp_root / "S0_SESSION_FORMAT",
+        ]
+        for fb_dir in fallback_dirs:
+            if not fb_dir.exists():
+                continue
+            candidates = [
+                p for p in fb_dir.iterdir()
+                if p.is_file() and p.suffix.lower() in audio_exts and p.name.lower() != "full_song.wav"
+            ]
+            if not candidates:
+                continue
+            for src in candidates:
+                dst = s0_original_dir / src.name
+                dst.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(src, dst)
+                copied += 1
+            # Copiar session_config si existe para mantener perfiles
+            cfg = fb_dir / "session_config.json"
+            if cfg.exists():
+                shutil.copy2(cfg, s0_original_dir / "session_config.json")
+            logger.info("[pipeline] Sembrado S0_MIX_ORIGINAL desde %s (%d archivos).", fb_dir, copied)
+            break
+
+    if copied == 0:
+        raise FileNotFoundError("No se encontraron stems en media_dir ni en carpetas previas para iniciar el pipeline.")
 
     # Persistir session_config con los perfiles seleccionados
     _write_session_config(s0_original_dir, profiles_by_name)
