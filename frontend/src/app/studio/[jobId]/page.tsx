@@ -58,6 +58,7 @@ export default function StudioPage() {
   const [stems, setStems] = useState<StemControl[]>([]);
   const [selectedStemIndex, setSelectedStemIndex] = useState<number>(0);
   const [loadingStems, setLoadingStems] = useState(true);
+  const [studioReady, setStudioReady] = useState(false);
   const [rendering, setRendering] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -117,6 +118,7 @@ export default function StudioPage() {
     async function load() {
       try {
         setLoadingStems(true);
+        setStudioReady(false);
         setMixdownUrl(null);
         setMixdownBuffer(null);
         stopAllSources();
@@ -164,7 +166,6 @@ export default function StudioPage() {
         }));
 
         setStems(newStems);
-        setLoadingStems(false); // liberar UI; audio se carga en background
 
         const loadAssets = async () => {
           if (!audioContextRef.current) return;
@@ -259,12 +260,18 @@ export default function StudioPage() {
                   console.warn("Could not load reference mixdown for waveform", relPath, e);
               }
           }
+
+          if (!cancelled) {
+            setStudioReady(true);
+            setLoadingStems(false);
+          }
         };
 
         // Fire-and-forget para que la UI aparezca antes
         loadAssets().catch(err => console.error("Studio: background load error", err));
       } catch (err) {
         console.error("Error loading stems:", err);
+        setStudioReady(true);
         setLoadingStems(false);
       }
     }
@@ -666,7 +673,15 @@ export default function StudioPage() {
       );
   }
 
-  if (loadingStems) return <div className="h-screen bg-[#0f111a] flex items-center justify-center text-emerald-500 font-mono">LOADING STUDIO ASSETS...</div>;
+  if (loadingStems) {
+      return (
+        <div className="h-screen bg-[#0f111a] flex flex-col items-center justify-center text-emerald-500 font-mono gap-3">
+            <div className="h-10 w-10 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+            <div>Loading Piroola Studio...</div>
+            <div className="text-xs text-slate-500">Cargando stems y forma de onda</div>
+        </div>
+      );
+  }
 
   return (
     <div className="flex flex-col h-screen bg-[#0f111a] text-slate-300 font-sans overflow-hidden selection:bg-emerald-500/30">
