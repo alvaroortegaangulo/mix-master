@@ -1210,23 +1210,42 @@ async def start_mix_job_endpoint(
 @app.get("/jobs/{job_id}/stems")
 def get_job_stems(job_id: str, _: None = Depends(_guard_heavy_endpoint)) -> Dict[str, List[str]]:
     """
-    Devuelve la lista de stems generados en S12 (o S13 si existiera).
+    Devuelve la lista de stems disponibles tras el pipeline.
     """
     _, temp_root = _get_job_dirs(job_id)
     if not temp_root.exists():
         raise HTTPException(status_code=404, detail="Job not found")
 
-    # Busca la carpeta S12
-    # Podriamos buscar la ultima S13 si quisieramos editar sobre lo editado,
-    # pero usualmente se edita sobre el original separado (S12).
-    s12_dir = temp_root / "S12_SEPARATE_STEMS"
+    def _collect_stems(stage_dir: Path) -> List[str]:
+        wavs: List[str] = []
+        if not stage_dir.exists():
+            return wavs
+        for item in stage_dir.iterdir():
+            if item.is_file() and item.suffix.lower() == ".wav" and item.name.lower() != "full_song.wav":
+                wavs.append(item.name)
+        return wavs
 
     stems = []
-    if s12_dir.exists():
-        # Listamos wavs que no sean full_song
-        for item in s12_dir.iterdir():
-            if item.is_file() and item.suffix.lower() == ".wav" and item.name.lower() != "full_song.wav":
-                stems.append(item.name)
+    preferred_order = [
+        temp_root / "S11_REPORT_GENERATION",
+        temp_root / "S10_MASTER_FINAL_LIMITS",
+        temp_root / "S0_SESSION_FORMAT",
+        temp_root / "S0_MIX_ORIGINAL",
+    ]
+
+    for stage_dir in preferred_order:
+        stems = _collect_stems(stage_dir)
+        if stems:
+            break
+
+    if not stems:
+        # Fallback: busca cualquier stage con stems wav
+        for stage_dir in sorted(temp_root.iterdir()):
+            if not stage_dir.is_dir():
+                continue
+            stems = _collect_stems(stage_dir)
+            if stems:
+                break
 
     stems.sort()
     return {"stems": stems}

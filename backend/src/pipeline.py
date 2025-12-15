@@ -195,7 +195,7 @@ def run_pipeline(
 
     # Paso inicial "legacy"
     src_stage = "S0_MIX_ORIGINAL"
-    dst_stage = "S0_SEPARATE_STEMS"
+    dst_stage = "S0_SESSION_FORMAT"
 
     _run_copy_and_mixdown(src_stage, dst_stage)
     _run_contracts_global(enabled_stage_keys=enabled_stage_keys)
@@ -277,9 +277,9 @@ def run_pipeline_for_job(
     # ------------------------------------------------------------------
     # 2) Copiar stems a S0_SESSION_FORMAT
     # ------------------------------------------------------------------
-    logger.info("[pipeline] Copiando stems S0_MIX_ORIGINAL -> S0_SEPARATE_STEMS...")
+    logger.info("[pipeline] Copiando stems S0_MIX_ORIGINAL -> S0_SESSION_FORMAT...")
     subprocess.run(
-        [sys.executable, str(copy_script), "S0_MIX_ORIGINAL", "S0_SEPARATE_STEMS"],
+        [sys.executable, str(copy_script), "S0_MIX_ORIGINAL", "S0_SESSION_FORMAT"],
         check=False,
     )
 

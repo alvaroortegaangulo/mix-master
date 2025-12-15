@@ -57,7 +57,7 @@ def process(context: PipelineContext) -> bool:
     """
     S13_MANUAL_CORRECTION:
     1. Lee changes.json del stage_dir actual.
-    2. Busca stems originales en S12_SEPARATE_STEMS (siempre partimos de la separacion limpia).
+    2. Busca stems finales disponibles (prioriza S11_REPORT_GENERATION).
     3. Aplica efectos (EQ, Comp, Gain, Pan) a cada stem.
     4. Guarda los stems procesados en stage_dir.
     5. mixdown_stems.py se encargará (llamado externamente) de sumarlos.
@@ -71,10 +71,24 @@ def process(context: PipelineContext) -> bool:
         logger.logger.info("[S13] Sin correcciones definidas. Saliendo.")
         return False
 
-    # 2. Origen: S12
-    s12_dir = temp_root / "S12_SEPARATE_STEMS"
-    if not s12_dir.exists():
-        logger.logger.error(f"[S13] No existe S12_SEPARATE_STEMS en {temp_root}")
+    # 2. Origen: stems finales disponibles (S11 -> S10 -> S0 fallback)
+    candidate_sources = [
+        temp_root / "S11_REPORT_GENERATION",
+        temp_root / "S10_MASTER_FINAL_LIMITS",
+        temp_root / "S0_SESSION_FORMAT",
+        temp_root / "S0_MIX_ORIGINAL",
+    ]
+
+    source_dir: Optional[Path] = None
+    for cand in candidate_sources:
+        if cand.exists():
+            stems_here = [p for p in cand.glob("*.wav") if p.name.lower() != "full_song.wav"]
+            if stems_here:
+                source_dir = cand
+                break
+
+    if source_dir is None:
+        logger.logger.error(f"[S13] No se encontraron stems fuente en {temp_root}")
         return False
 
     # Mapa de correcciones por nombre de stem
@@ -87,7 +101,7 @@ def process(context: PipelineContext) -> bool:
     logger.logger.info(f"[S13] Procesando correcciones para {len(corrections)} stems. Solo Mode: {solo_active}")
 
     # Procesar cada stem
-    stems_found = list(s12_dir.glob("*.wav"))
+    stems_found = list(source_dir.glob("*.wav"))
     processed_count = 0
 
     for stem_path in stems_found:

@@ -45,7 +45,3 @@ email-validator
 aiofiles
 google-auth
 requests
-
-#Inteligencia musical
-spleeter==2.4.0
-tensorflow==2.9.3
