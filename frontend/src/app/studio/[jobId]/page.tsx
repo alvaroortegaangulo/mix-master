@@ -6,7 +6,7 @@ import { useAuth } from "@/context/AuthContext";
 import { getBackendBaseUrl, signFileUrl } from "@/lib/mixApi";
 import { AuthModal } from "@/components/AuthModal";
 import { CanvasWaveform } from "@/components/studio/CanvasWaveform";
-import { StudioCache } from "@/lib/studioCache";
+import { StudioCache, AudioBufferData } from "@/lib/studioCache";
 import {
   PlayIcon,
   PauseIcon,
@@ -179,6 +179,36 @@ export default function StudioPage() {
             try {
                 // Try cache first
                 const cacheKey = `pirola-studio-cache-v1-${jobId}-${file}`;
+                const cacheKeyDecoded = `${cacheKey}-decoded`;
+
+                // Try loading decoded buffer directly
+                const cachedDecoded = await StudioCache.getAudioBufferData(cacheKeyDecoded);
+
+                if (cachedDecoded) {
+                  // Reconstruct AudioBuffer from cached PCM data
+                  const buffer = audioContextRef.current!.createBuffer(
+                      cachedDecoded.numberOfChannels,
+                      cachedDecoded.length,
+                      cachedDecoded.sampleRate
+                  );
+
+                  for (let i = 0; i < cachedDecoded.numberOfChannels; i++) {
+                      // Note: getChannelData returns a Float32Array, which we can set directly
+                      if (cachedDecoded.channels[i]) {
+                          buffer.getChannelData(i).set(cachedDecoded.channels[i]);
+                      }
+                  }
+
+                  audioBuffersRef.current.set(file, buffer);
+                  setStems(prev => prev.map(s => {
+                      if (s.fileName === file) return { ...s, url: "cached-decoded", status: "ready" };
+                      return s;
+                  }));
+                  setDuration(prev => Math.max(prev, buffer.duration));
+                  return; // Done
+                }
+
+                // If no decoded cache, try raw file cache or fetch
                 let ab: ArrayBuffer | null = await StudioCache.getCachedArrayBuffer(cacheKey);
                 let signedUrl = "";
 
@@ -205,8 +235,8 @@ export default function StudioPage() {
 
                     if (resp.ok) {
                         ab = await resp.arrayBuffer();
-                        // Store in cache
-                        await StudioCache.cacheArrayBuffer(cacheKey, ab);
+                        // Store in cache (background)
+                        StudioCache.cacheArrayBuffer(cacheKey, ab).catch(e => console.warn("Background cache error", e));
                     } else {
                         throw new Error(`Failed to fetch stem ${file}`);
                     }
@@ -220,6 +250,19 @@ export default function StudioPage() {
 
                     const decoded = await Promise.race([decodePromise, timeoutPromise]);
                     audioBuffersRef.current.set(file, decoded);
+
+                    // Cache decoded data for next time
+                    const channels: Float32Array[] = [];
+                    for(let i=0; i<decoded.numberOfChannels; i++) {
+                        channels.push(decoded.getChannelData(i));
+                    }
+                    const decodedData: AudioBufferData = {
+                        sampleRate: decoded.sampleRate,
+                        length: decoded.length,
+                        numberOfChannels: decoded.numberOfChannels,
+                        channels: channels
+                    };
+                    StudioCache.cacheAudioBufferData(cacheKeyDecoded, decodedData).catch(e => console.warn("Background decoded cache error", e));
 
                     setStems(prev => prev.map(s => {
                         if (s.fileName === file) return { ...s, url: signedUrl || "cached", status: "ready" };
@@ -263,33 +306,66 @@ export default function StudioPage() {
               ];
 
               const mixCacheKey = `pirola-studio-cache-v1-${jobId}-mixdown`;
-              let mixAb: ArrayBuffer | null = await StudioCache.getCachedArrayBuffer(mixCacheKey);
+              const mixCacheKeyDecoded = `${mixCacheKey}-decoded`;
 
-              if (!mixAb) {
-                 for (const relPath of preferredMixdownPaths) {
-                    if (cancelled) break;
-                    try {
-                        const signedUrl = await signFileUrl(jobId, relPath);
-                        const resp = await fetch(signedUrl);
-                        if (resp.ok) {
-                            mixAb = await resp.arrayBuffer();
-                            setMixdownUrl(signedUrl);
-                            await StudioCache.cacheArrayBuffer(mixCacheKey, mixAb);
-                            break;
+              let mixDecoded = await StudioCache.getAudioBufferData(mixCacheKeyDecoded);
+              let mixAb: ArrayBuffer | null = null;
+
+              if (mixDecoded && audioContextRef.current) {
+                   const buffer = audioContextRef.current.createBuffer(
+                      mixDecoded.numberOfChannels,
+                      mixDecoded.length,
+                      mixDecoded.sampleRate
+                  );
+                  for (let i = 0; i < mixDecoded.numberOfChannels; i++) {
+                      if (mixDecoded.channels[i]) {
+                          buffer.getChannelData(i).set(mixDecoded.channels[i]);
+                      }
+                  }
+                  setMixdownBuffer(buffer);
+                  if (!duration) setDuration(buffer.duration);
+              } else {
+                  // Fallback to file cache
+                  mixAb = await StudioCache.getCachedArrayBuffer(mixCacheKey);
+
+                  if (!mixAb) {
+                     for (const relPath of preferredMixdownPaths) {
+                        if (cancelled) break;
+                        try {
+                            const signedUrl = await signFileUrl(jobId, relPath);
+                            const resp = await fetch(signedUrl);
+                            if (resp.ok) {
+                                mixAb = await resp.arrayBuffer();
+                                setMixdownUrl(signedUrl);
+                                StudioCache.cacheArrayBuffer(mixCacheKey, mixAb).catch(console.warn);
+                                break;
+                            }
+                        } catch (e) {
+                             // continue
                         }
-                    } catch (e) {
-                         // continue
-                    }
-                 }
-              }
+                     }
+                  }
 
-              if (mixAb && audioContextRef.current) {
-                  try {
-                      const decoded = await audioContextRef.current.decodeAudioData(mixAb.slice(0));
-                      setMixdownBuffer(decoded);
-                      if (!duration) setDuration(decoded.duration);
-                  } catch (e) {
-                      console.warn("Failed to decode mixdown", e);
+                  if (mixAb && audioContextRef.current) {
+                      try {
+                          const decoded = await audioContextRef.current.decodeAudioData(mixAb.slice(0));
+                          setMixdownBuffer(decoded);
+
+                          const channels: Float32Array[] = [];
+                          for(let i=0; i<decoded.numberOfChannels; i++) {
+                             channels.push(decoded.getChannelData(i));
+                          }
+                          StudioCache.cacheAudioBufferData(mixCacheKeyDecoded, {
+                             sampleRate: decoded.sampleRate,
+                             length: decoded.length,
+                             numberOfChannels: decoded.numberOfChannels,
+                             channels
+                          }).catch(console.warn);
+
+                          if (!duration) setDuration(decoded.duration);
+                      } catch (e) {
+                          console.warn("Failed to decode mixdown", e);
+                      }
                   }
               }
           }
@@ -327,6 +403,28 @@ export default function StudioPage() {
             setStems(prev => prev.map((s, i) => i === selectedStemIndex ? { ...s, status: "loading" } : s));
 
             const cacheKey = `pirola-studio-cache-v1-${jobId}-${stem.fileName}`;
+            const cacheKeyDecoded = `${cacheKey}-decoded`;
+
+            // Try decoded first
+            const cachedDecoded = await StudioCache.getAudioBufferData(cacheKeyDecoded);
+
+            if (cachedDecoded && !cancelled) {
+                 const buffer = ctx.createBuffer(
+                      cachedDecoded.numberOfChannels,
+                      cachedDecoded.length,
+                      cachedDecoded.sampleRate
+                  );
+                  for (let i = 0; i < cachedDecoded.numberOfChannels; i++) {
+                      if (cachedDecoded.channels[i]) {
+                          buffer.getChannelData(i).set(cachedDecoded.channels[i]);
+                      }
+                  }
+                  audioBuffersRef.current.set(stem.fileName, buffer);
+                  setStems(prev => prev.map((s, i) => i === selectedStemIndex ? { ...s, url: "cached-decoded", status: "ready" } : s));
+                  setDuration(prev => Math.max(prev, buffer.duration));
+                  return;
+            }
+
             let ab: ArrayBuffer | null = await StudioCache.getCachedArrayBuffer(cacheKey);
             let signedUrl = "";
 
@@ -342,7 +440,7 @@ export default function StudioPage() {
                     throw new Error(`Failed to fetch stem ${stem.fileName}: ${resp.status} ${resp.statusText}`);
                 }
                 ab = await resp.arrayBuffer();
-                await StudioCache.cacheArrayBuffer(cacheKey, ab);
+                StudioCache.cacheArrayBuffer(cacheKey, ab).catch(console.warn);
             }
 
             if (!cancelled && ab) {
@@ -350,6 +448,19 @@ export default function StudioPage() {
                 if (cancelled) return;
 
                 audioBuffersRef.current.set(stem.fileName, decoded);
+
+                // Cache decoded
+                const channels: Float32Array[] = [];
+                for(let i=0; i<decoded.numberOfChannels; i++) {
+                   channels.push(decoded.getChannelData(i));
+                }
+                StudioCache.cacheAudioBufferData(cacheKeyDecoded, {
+                     sampleRate: decoded.sampleRate,
+                     length: decoded.length,
+                     numberOfChannels: decoded.numberOfChannels,
+                     channels
+                }).catch(console.warn);
+
                 setStems(prev => prev.map((s, i) => i === selectedStemIndex ? { ...s, url: signedUrl || "cached", status: "ready" } : s));
                 setDuration(prev => Math.max(prev, decoded.duration));
             }
