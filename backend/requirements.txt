@@ -48,5 +48,9 @@ requests
 
 #Inteligencia musical
 splifft[config,inference]==0.0.3
-torch
 soundfile
+
+--index-url https://download.pytorch.org/whl/cpu
+--extra-index-url https://pypi.org/simple
+
+torch==2.7.1
