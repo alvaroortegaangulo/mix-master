@@ -330,8 +330,8 @@ def _process_impl(contract_id: str, context: Optional["PipelineContext"] = None)
         stage_dir,
         model_name=os.environ.get("MIX_DEMUCS_MODEL", "htdemucs_ft"),
         device=os.environ.get("MIX_DEMUCS_DEVICE") or None,
-        shifts=2,
-        overlap=0.5,
+        shifts=0,
+        overlap=0.1,
         write_manifest=True,
     )
 
