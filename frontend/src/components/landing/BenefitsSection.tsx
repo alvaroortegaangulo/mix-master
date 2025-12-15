@@ -1,6 +1,6 @@
-export function BenefitsSection() {
+export function BenefitsSection({ className }: { className?: string }) {
     return (
-      <section className="py-24 bg-slate-950 overflow-hidden">
+      <section className={`py-24 overflow-hidden ${className || 'bg-slate-950'}`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
           {/* Benefit 1: Speed */}
