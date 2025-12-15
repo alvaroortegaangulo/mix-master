@@ -128,12 +128,13 @@ def _find_work_stems_dir(work_dir: Path) -> Optional[Path]:
 def _find_uploaded_song(
     work_dir: Path,
     stage_dir: Path,
+    job_root: Path,
     media_dir: Optional[Path] = None,
 ) -> Optional[Path]:
     """
     Busca la cancion subida sin depender del nombre del archivo.
-    Prioriza lo que ya esta en la carpeta del stage, luego media/, y por
-    ultimo las heuristicas antiguas en work/.
+    Prioriza carpeta del stage/input, luego media/, luego S0_MIX_ORIGINAL y
+    finalmente heuristicas en work/.
     """
     skip = {"full_song.wav"}
 
@@ -151,6 +152,12 @@ def _find_uploaded_song(
         media_audio = _list_audio_files(media_dir, skip_names=skip)
         if media_audio:
             return media_audio[0]
+
+    s0_original = job_root / "S0_MIX_ORIGINAL"
+    if s0_original.exists():
+        original_audio = _list_audio_files(s0_original, skip_names=skip)
+        if original_audio:
+            return original_audio[0]
 
     preferred = [
         work_dir / "song.wav",
@@ -225,6 +232,7 @@ def _process_impl(contract_id: str, context: Optional["PipelineContext"] = None)
     is_stems_upload = bool(session.get("is_stems_upload", upload_mode == "stems"))
 
     work_dir = _job_work_dir(stage_dir)
+    job_root = stage_dir.parent
     media_dir = _get_media_dir_from_env()
     input_dir = stage_dir / "input"
     input_dir.mkdir(parents=True, exist_ok=True)
@@ -270,7 +278,7 @@ def _process_impl(contract_id: str, context: Optional["PipelineContext"] = None)
         return True
 
     # upload_mode = song -> separar
-    song_path = _find_uploaded_song(work_dir, stage_dir, media_dir)
+    song_path = _find_uploaded_song(work_dir, stage_dir, job_root, media_dir)
     if not song_path:
         raise FileNotFoundError(
             f"[S0_SEPARATE_STEMS] No encuentro cancion subida en {stage_dir} ni en {work_dir}"
