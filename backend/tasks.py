@@ -325,7 +325,9 @@ def run_full_pipeline_task(
             logger.exception("[%s] No se pudo leer estado previo para reanudar progresos", job_id)
 
     # Total inicial para status (usa total previo si existe, si no calcula aprox con stages habilitadas)
-    initial_total_guess = max(resume_total_stages or 0, resume_stage_index_offset + len(enabled_stage_keys or []))
+    # Si ya tenНamos total_stages en job_status, lo respetamos para no crear saltos.
+    # Si no, estimamos usando offset + stages habilitadas.
+    initial_total_guess = resume_total_stages or (resume_stage_index_offset + len(enabled_stage_keys or []))
     initial_progress = 0.0
     if initial_total_guess > 0:
         initial_progress = min(100.0, float(resume_stage_index_offset) / initial_total_guess * 100.0)

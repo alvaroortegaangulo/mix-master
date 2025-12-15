@@ -347,7 +347,7 @@ def run_pipeline_for_job(
         contract_ids = all_contract_ids
 
     total_stages = len(contract_ids)
-    effective_total_stages = max(resume_total_stages or 0, resume_stage_index_offset + total_stages)
+    effective_total_stages = resume_total_stages or (resume_stage_index_offset + total_stages)
     if effective_total_stages == 0:
         effective_total_stages = total_stages
 
