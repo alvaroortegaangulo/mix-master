@@ -5,7 +5,8 @@ import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { getBackendBaseUrl, signFileUrl } from "@/lib/mixApi";
 import { AuthModal } from "@/components/AuthModal";
-import WaveSurfer from 'wavesurfer.js';
+import { CanvasWaveform } from "@/components/studio/CanvasWaveform";
+import { StudioCache } from "@/lib/studioCache";
 import {
   PlayIcon,
   PauseIcon,
@@ -67,12 +68,15 @@ export default function StudioPage() {
   const [downloadingStems, setDownloadingStems] = useState(false);
   const [downloadingMixdown, setDownloadingMixdown] = useState(false);
   const [mixdownUrl, setMixdownUrl] = useState<string | null>(null);
+
+  // Mixdown buffer now separate from WaveSurfer logic
   const [mixdownBuffer, setMixdownBuffer] = useState<AudioBuffer | null>(null);
 
   const selectedStem = stems[selectedStemIndex];
 
-  const waveformRef = useRef<HTMLDivElement>(null);
-  const wavesurferRef = useRef<WaveSurfer | null>(null);
+  // Removed WaveSurfer refs
+  // const waveformRef = useRef<HTMLDivElement>(null);
+  // const wavesurferRef = useRef<WaveSurfer | null>(null);
 
   const audioContextRef = useRef<AudioContext | null>(null);
   const sourceNodesRef = useRef<Map<string, AudioBufferSourceNode>>(new Map());
@@ -173,30 +177,43 @@ export default function StudioPage() {
           const loadSingleStem = async (file: string) => {
             if (cancelled) return;
             try {
-                let signedUrl = await signFileUrl(jobId, `S5_LEADVOX_DYNAMICS/${file}`);
-                let resp = await fetch(signedUrl);
-                if (!resp.ok) {
-                     signedUrl = await signFileUrl(jobId, `S5_STEM_DYNAMICS_GENERIC/${file}`);
-                     resp = await fetch(signedUrl);
-                }
-                 if (!resp.ok) {
-                     signedUrl = await signFileUrl(jobId, `S12_SEPARATE_STEMS/${file}`);
-                     resp = await fetch(signedUrl);
-                }
-                if (!resp.ok) {
-                     const stages = ["S5_LEADVOX_DYNAMICS", "S5_STEM_DYNAMICS_GENERIC", "S4_SPECTRAL_CLEANUP", "S0_SESSION_FORMAT", "S0_MIX_ORIGINAL"];
-                     for (const s of stages) {
-                         signedUrl = await signFileUrl(jobId, `${s}/${file}`);
-                         resp = await fetch(signedUrl);
-                         if (resp.ok) break;
-                     }
+                // Try cache first
+                const cacheKey = `pirola-studio-cache-v1-${jobId}-${file}`;
+                let ab: ArrayBuffer | null = await StudioCache.getCachedArrayBuffer(cacheKey);
+                let signedUrl = "";
+
+                if (!ab) {
+                    // Cache miss, fetch
+                    signedUrl = await signFileUrl(jobId, `S5_LEADVOX_DYNAMICS/${file}`);
+                    let resp = await fetch(signedUrl);
+                    if (!resp.ok) {
+                        signedUrl = await signFileUrl(jobId, `S5_STEM_DYNAMICS_GENERIC/${file}`);
+                        resp = await fetch(signedUrl);
+                    }
+                    if (!resp.ok) {
+                        signedUrl = await signFileUrl(jobId, `S12_SEPARATE_STEMS/${file}`);
+                        resp = await fetch(signedUrl);
+                    }
+                    if (!resp.ok) {
+                        const stages = ["S5_LEADVOX_DYNAMICS", "S5_STEM_DYNAMICS_GENERIC", "S4_SPECTRAL_CLEANUP", "S0_SESSION_FORMAT", "S0_MIX_ORIGINAL"];
+                        for (const s of stages) {
+                            signedUrl = await signFileUrl(jobId, `${s}/${file}`);
+                            resp = await fetch(signedUrl);
+                            if (resp.ok) break;
+                        }
+                    }
+
+                    if (resp.ok) {
+                        ab = await resp.arrayBuffer();
+                        // Store in cache
+                        await StudioCache.cacheArrayBuffer(cacheKey, ab);
+                    } else {
+                        throw new Error(`Failed to fetch stem ${file}`);
+                    }
                 }
 
-                if (resp.ok) {
-                    const ab = await resp.arrayBuffer();
-                    if (cancelled) return;
-
-                    const decodePromise = audioContextRef.current!.decodeAudioData(ab);
+                if (ab && !cancelled) {
+                    const decodePromise = audioContextRef.current!.decodeAudioData(ab.slice(0)); // slice to clone if needed
                     const timeoutPromise = new Promise<AudioBuffer>((_, reject) =>
                         setTimeout(() => reject(new Error("Audio decoding timed out")), 15000)
                     );
@@ -205,18 +222,11 @@ export default function StudioPage() {
                     audioBuffersRef.current.set(file, decoded);
 
                     setStems(prev => prev.map(s => {
-                        if (s.fileName === file) return { ...s, url: signedUrl, status: "ready" };
+                        if (s.fileName === file) return { ...s, url: signedUrl || "cached", status: "ready" };
                         return s;
                     }));
 
                     setDuration(prev => Math.max(prev, decoded.duration));
-
-                } else {
-                    console.warn("Studio: Fetch failed for", file);
-                    setStems(prev => prev.map(s => {
-                        if (s.fileName === file) return { ...s, status: "error" };
-                        return s;
-                    }));
                 }
             } catch (e) {
                 console.error("Failed to load stem", file, e);
@@ -228,7 +238,9 @@ export default function StudioPage() {
           };
 
           const queue: string[] = [...stemFiles];
-          const workers = Array.from({ length: Math.min(3, queue.length) }, async () => {
+          // Parallelism: use more workers
+          const concurrency = typeof navigator !== "undefined" ? (navigator.hardwareConcurrency || 6) : 6;
+          const workers = Array.from({ length: Math.min(concurrency, queue.length) }, async () => {
             while (!cancelled && queue.length > 0) {
                 const next = queue.shift();
                 if (!next) break;
@@ -237,27 +249,48 @@ export default function StudioPage() {
           });
           await Promise.all(workers);
 
-          // Attempt to load mixdown for waveform visualization (URL only to avoid heavy decode)
-          const preferredMixdownPaths = [
-              "S5_LEADVOX_DYNAMICS/full_song.wav",
-              "S5_STEM_DYNAMICS_GENERIC/full_song.wav",
-              "S4_STEM_RESONANCE_CONTROL/full_song.wav",
-              "S3_MIXBUS_HEADROOM/full_song.wav",
-              "S3_LEADVOX_AUDIBILITY/full_song.wav",
-              "S0_SESSION_FORMAT/full_song.wav",
-              "S0_MIX_ORIGINAL/full_song.wav"
-          ];
+          // Load mixdown for fallback waveform
+          // Also try to cache mixdown buffer
+          if (!cancelled) {
+              const preferredMixdownPaths = [
+                  "S5_LEADVOX_DYNAMICS/full_song.wav",
+                  "S5_STEM_DYNAMICS_GENERIC/full_song.wav",
+                  "S4_STEM_RESONANCE_CONTROL/full_song.wav",
+                  "S3_MIXBUS_HEADROOM/full_song.wav",
+                  "S3_LEADVOX_AUDIBILITY/full_song.wav",
+                  "S0_SESSION_FORMAT/full_song.wav",
+                  "S0_MIX_ORIGINAL/full_song.wav"
+              ];
 
-          for (const relPath of preferredMixdownPaths) {
-              if (cancelled) return;
-              try {
-                  const signedUrl = await signFileUrl(jobId, relPath);
-                  const resp = await fetch(signedUrl, { method: "HEAD" });
-                  if (!resp.ok) continue;
-                  setMixdownUrl(signedUrl);
-                  break;
-              } catch (e) {
-                  console.warn("Could not load reference mixdown for waveform", relPath, e);
+              const mixCacheKey = `pirola-studio-cache-v1-${jobId}-mixdown`;
+              let mixAb: ArrayBuffer | null = await StudioCache.getCachedArrayBuffer(mixCacheKey);
+
+              if (!mixAb) {
+                 for (const relPath of preferredMixdownPaths) {
+                    if (cancelled) break;
+                    try {
+                        const signedUrl = await signFileUrl(jobId, relPath);
+                        const resp = await fetch(signedUrl);
+                        if (resp.ok) {
+                            mixAb = await resp.arrayBuffer();
+                            setMixdownUrl(signedUrl);
+                            await StudioCache.cacheArrayBuffer(mixCacheKey, mixAb);
+                            break;
+                        }
+                    } catch (e) {
+                         // continue
+                    }
+                 }
+              }
+
+              if (mixAb && audioContextRef.current) {
+                  try {
+                      const decoded = await audioContextRef.current.decodeAudioData(mixAb.slice(0));
+                      setMixdownBuffer(decoded);
+                      if (!duration) setDuration(decoded.duration);
+                  } catch (e) {
+                      console.warn("Failed to decode mixdown", e);
+                  }
               }
           }
 
@@ -267,7 +300,6 @@ export default function StudioPage() {
           }
         };
 
-        // Fire-and-forget para que la UI aparezca antes
         loadAssets().catch(err => console.error("Studio: background load error", err));
       } catch (err) {
         console.error("Error loading stems:", err);
@@ -280,12 +312,13 @@ export default function StudioPage() {
     return () => { cancelled = true; };
   }, [jobId, user]);
 
+  // Load stem when selected if not loaded (same logic, add cache)
   useEffect(() => {
     const ctx = audioContextRef.current;
     const stem = selectedStem;
     if (!ctx || !jobId || !user || !stem) return;
     if (stem.status === "loading" || stem.status === "error") return;
-    if (stem.url && audioBuffersRef.current.has(stem.fileName)) return;
+    if (stem.status === "ready" && audioBuffersRef.current.has(stem.fileName)) return;
 
     let cancelled = false;
 
@@ -293,24 +326,33 @@ export default function StudioPage() {
         try {
             setStems(prev => prev.map((s, i) => i === selectedStemIndex ? { ...s, status: "loading" } : s));
 
-            let signedUrl = await signFileUrl(jobId, `S12_SEPARATE_STEMS/${stem.fileName}`);
-            let resp = await fetch(signedUrl);
-            if (!resp.ok) {
-                signedUrl = await signFileUrl(jobId, `S0_SESSION_FORMAT/${stem.fileName}`);
-                resp = await fetch(signedUrl);
+            const cacheKey = `pirola-studio-cache-v1-${jobId}-${stem.fileName}`;
+            let ab: ArrayBuffer | null = await StudioCache.getCachedArrayBuffer(cacheKey);
+            let signedUrl = "";
+
+            if (!ab) {
+                signedUrl = await signFileUrl(jobId, `S12_SEPARATE_STEMS/${stem.fileName}`);
+                let resp = await fetch(signedUrl);
+                if (!resp.ok) {
+                    signedUrl = await signFileUrl(jobId, `S0_SESSION_FORMAT/${stem.fileName}`);
+                    resp = await fetch(signedUrl);
+                }
+
+                if (!resp.ok) {
+                    throw new Error(`Failed to fetch stem ${stem.fileName}: ${resp.status} ${resp.statusText}`);
+                }
+                ab = await resp.arrayBuffer();
+                await StudioCache.cacheArrayBuffer(cacheKey, ab);
             }
 
-            if (!resp.ok) {
-                throw new Error(`Failed to fetch stem ${stem.fileName}: ${resp.status} ${resp.statusText}`);
+            if (!cancelled && ab) {
+                const decoded = await ctx.decodeAudioData(ab.slice(0));
+                if (cancelled) return;
+
+                audioBuffersRef.current.set(stem.fileName, decoded);
+                setStems(prev => prev.map((s, i) => i === selectedStemIndex ? { ...s, url: signedUrl || "cached", status: "ready" } : s));
+                setDuration(prev => Math.max(prev, decoded.duration));
             }
-
-            const ab = await resp.arrayBuffer();
-            const decoded = await ctx.decodeAudioData(ab.slice(0));
-            if (cancelled) return;
-
-            audioBuffersRef.current.set(stem.fileName, decoded);
-            setStems(prev => prev.map((s, i) => i === selectedStemIndex ? { ...s, url: signedUrl, status: "ready" } : s));
-            setDuration(prev => Math.max(prev, decoded.duration));
         } catch (err) {
             if (!cancelled) {
                 console.error("Failed to load stem", stem.fileName, err);
@@ -323,59 +365,7 @@ export default function StudioPage() {
     return () => { cancelled = true; };
   }, [jobId, user, selectedStemIndex, selectedStem, duration]);
 
-  useEffect(() => {
-    if (!waveformRef.current) return;
-
-    // Prioritize selected stem, fallback to mixdown if stem not ready or available
-    const urlToLoad = selectedStem?.url || mixdownUrl;
-
-    if (!urlToLoad) return;
-
-    if (wavesurferRef.current) {
-        wavesurferRef.current.destroy();
-    }
-
-    try {
-        const wsOptions: any = {
-          container: waveformRef.current,
-          waveColor: '#334155',
-          progressColor: '#10b981',
-          cursorColor: '#fbbf24',
-          barWidth: 2,
-          barGap: 3,
-          barRadius: 3,
-          height: 300,
-          normalize: true,
-          interact: true,
-        };
-
-        wavesurferRef.current = WaveSurfer.create(wsOptions);
-        wavesurferRef.current.load(urlToLoad);
-
-        wavesurferRef.current.on('ready', () => {
-           if (wavesurferRef.current) {
-               wavesurferRef.current.setTime(currentTime);
-           }
-        });
-
-        wavesurferRef.current.on('interaction', (newTime) => {
-            seek(newTime);
-        });
-
-    } catch (e) {
-        console.error("WaveSurfer init error", e);
-    }
-
-    return () => {
-        wavesurferRef.current?.destroy();
-    };
-  }, [mixdownUrl, selectedStem?.url]);
-
-  useEffect(() => {
-     if (wavesurferRef.current) {
-         wavesurferRef.current.setVolume(0);
-     }
-  }, [isPlaying]);
+  // Removed WaveSurfer setup effect
 
   const togglePlay = async () => {
       const ctx = audioContextRef.current;
@@ -391,7 +381,9 @@ export default function StudioPage() {
       }
 
       const activeStems = stems.filter(s => audioBuffersRef.current.has(s.fileName));
-      if (activeStems.length === 0) return;
+      // if (activeStems.length === 0) return; // Allow playing if only mixdown loaded?
+      // Current logic relies on stems. If mixdown fallback is needed for playback, it would need changes.
+      // But user has stems here usually.
 
       stopAllSources();
 
@@ -433,7 +425,6 @@ export default function StudioPage() {
       });
 
       setIsPlaying(true);
-      if(wavesurferRef.current) wavesurferRef.current.play();
   };
 
   const seek = (time: number) => {
@@ -449,10 +440,6 @@ export default function StudioPage() {
 
       pauseTimeRef.current = t;
       setCurrentTime(t);
-
-      if (wavesurferRef.current && Math.abs(wavesurferRef.current.getCurrentTime() - t) > 0.1) {
-          wavesurferRef.current.setTime(t);
-      }
 
       if (wasPlaying) {
           setIsPlaying(false);
@@ -490,7 +477,6 @@ export default function StudioPage() {
                 pannerNodesRef.current.set(stem.fileName, panner);
              });
              setIsPlaying(true);
-             if(wavesurferRef.current) wavesurferRef.current.play();
           }, 0);
       }
   };
@@ -511,15 +497,8 @@ export default function StudioPage() {
                   stopAllSources();
                   pauseTimeRef.current = 0;
                   setCurrentTime(0);
-                  if (wavesurferRef.current) {
-                      wavesurferRef.current.setTime(0);
-                      wavesurferRef.current.pause();
-                  }
               } else {
                   setCurrentTime(now);
-                   if (wavesurferRef.current && Math.abs(wavesurferRef.current.getCurrentTime() - now) > 0.2) {
-                       wavesurferRef.current.setTime(now);
-                   }
                   raf = requestAnimationFrame(update);
               }
           }
@@ -663,6 +642,11 @@ export default function StudioPage() {
       });
   };
 
+  // Get current stem buffer or mixdown for visualization
+  const currentVisualBuffer = selectedStem && audioBuffersRef.current.get(selectedStem.fileName)
+        ? audioBuffersRef.current.get(selectedStem.fileName)
+        : mixdownBuffer;
+
   if (authLoading) return <div className="h-screen bg-[#0f111a]"></div>;
 
   if (!user) {
@@ -795,9 +779,16 @@ export default function StudioPage() {
              <div className="flex-1 relative flex items-center justify-center p-10">
 
                  {/* Interactive Waveform Main Display */}
-                 <div ref={waveformRef} className="w-full h-[300px] opacity-80 cursor-pointer" />
+                 <div className="w-full h-[300px] opacity-80 cursor-pointer">
+                     <CanvasWaveform
+                        audioBuffer={currentVisualBuffer || null}
+                        currentTime={currentTime}
+                        duration={duration}
+                        onSeek={seek}
+                     />
+                 </div>
 
-                 {!selectedStem?.url && !mixdownUrl && (
+                 {!currentVisualBuffer && (
                      <div className="absolute inset-0 flex items-center justify-center text-slate-600 font-mono pointer-events-none">
                          {loadingStems ? "Loading..." : "Select a track to view waveform"}
                      </div>
@@ -843,7 +834,7 @@ export default function StudioPage() {
 
                      <div className="flex flex-col items-center gap-2">
                          <div className="flex items-center gap-4">
-                            <button onClick={() => { setIsPlaying(false); stopAllSources(); setCurrentTime(0); pauseTimeRef.current = 0; if(wavesurferRef.current) wavesurferRef.current.setTime(0); }} className="text-slate-500 hover:text-white transition-colors"><StopIcon className="w-4 h-4" /></button>
+                            <button onClick={() => { setIsPlaying(false); stopAllSources(); setCurrentTime(0); pauseTimeRef.current = 0; }} className="text-slate-500 hover:text-white transition-colors"><StopIcon className="w-4 h-4" /></button>
                             <button
                                 onClick={togglePlay}
                                 className="w-10 h-10 rounded-full bg-white text-black flex items-center justify-center hover:scale-105 transition-transform shadow-[0_0_15px_rgba(255,255,255,0.2)]"
