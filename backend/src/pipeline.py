@@ -263,7 +263,12 @@ def run_pipeline_for_job(
                 continue
             dst = s0_original_dir / src.name
             dst.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(src, dst)
+            try:
+                shutil.copy2(src, dst)
+            except FileNotFoundError:
+                # Copia sin metadatos como fallback robusto si el FS no soporta copystat
+                dst.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy(src, dst)
             logger.info("[pipeline] Copiado stem %s -> %s", src.name, dst)
             copied += 1
     else:
