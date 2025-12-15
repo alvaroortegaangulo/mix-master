@@ -337,7 +337,7 @@ export default function StudioPage() {
     }
 
     try {
-        wavesurferRef.current = WaveSurfer.create({
+        const wsOptions: any = {
           container: waveformRef.current,
           backend: "WebAudio",
           waveColor: '#334155',
@@ -349,8 +349,13 @@ export default function StudioPage() {
           height: 300,
           normalize: true,
           interact: true,
-          audioContext: audioContextRef.current || undefined,
-        });
+        };
+
+        if (audioContextRef.current) {
+          wsOptions.audioContext = audioContextRef.current;
+        }
+
+        wavesurferRef.current = WaveSurfer.create(wsOptions);
 
         if (waveformBuffer && wavesurferRef.current) {
             // Prefer direct buffer to avoid extra network fetch and blobs
