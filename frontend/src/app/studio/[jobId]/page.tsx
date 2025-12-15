@@ -6,6 +6,7 @@ import { useAuth } from "@/context/AuthContext";
 import { getBackendBaseUrl, getStudioToken, signFileUrl } from "@/lib/mixApi";
 import { AuthModal } from "@/components/AuthModal";
 import { CanvasWaveform } from "@/components/studio/CanvasWaveform";
+import { StudioCache, AudioBufferData } from "@/lib/studioCache";
 import {
   PlayIcon,
   PauseIcon,
@@ -71,6 +72,8 @@ export default function StudioPage() {
   const [downloadingStems, setDownloadingStems] = useState(false);
   const [downloadingMixdown, setDownloadingMixdown] = useState(false);
   const [studioToken, setStudioToken] = useState<string | null>(null);
+
+  const [visualBuffer, setVisualBuffer] = useState<AudioBuffer | null>(null);
 
   const selectedStem = stems[selectedStemIndex];
 
@@ -138,6 +141,56 @@ export default function StudioPage() {
         audioContextRef.current?.close();
     };
   }, []);
+
+  // Effect to load waveform data for selected stem
+  useEffect(() => {
+    if (!selectedStem || !audioContextRef.current) return;
+
+    // If we have valid peaks (sum > 0), use them
+    const hasPeaks = selectedStem.peaks && selectedStem.peaks.length > 0 && selectedStem.peaks.some(p => p > 0);
+    if (hasPeaks) {
+        setVisualBuffer(null);
+        return;
+    }
+
+    let active = true;
+    setVisualBuffer(null); // Clear while loading
+
+    const loadAudio = async () => {
+        try {
+            const cacheKey = `${jobId}/${selectedStem.fileName}`;
+            // Try cache first
+            const cachedData = await StudioCache.getAudioBufferData(cacheKey);
+            if (active && cachedData) {
+                const buffer = dataToAudioBuffer(audioContextRef.current!, cachedData);
+                setVisualBuffer(buffer);
+                return;
+            }
+
+            // Fetch and decode
+            if (!selectedStem.url) return;
+            const resp = await fetch(selectedStem.url);
+            if (!resp.ok) return;
+            const arrayBuffer = await resp.arrayBuffer();
+
+            if (active && audioContextRef.current) {
+                // Decode
+                const audioBuffer = await audioContextRef.current.decodeAudioData(arrayBuffer);
+                // Cache
+                await StudioCache.cacheAudioBufferData(cacheKey, audioBufferToData(audioBuffer));
+
+                if (active) {
+                    setVisualBuffer(audioBuffer);
+                }
+            }
+        } catch (e) {
+            console.warn("Waveform generation failed", e);
+        }
+    };
+
+    loadAudio();
+    return () => { active = false; };
+  }, [selectedStem, jobId]);
 
   useEffect(() => {
     if (!jobId || !user) return;
@@ -297,9 +350,8 @@ export default function StudioPage() {
                 const stemBase = stem.fileName.replace(/\.wav$/i, "");
                 const peakCandidates: string[] = [];
                 if (stem.stage) peakCandidates.push(`${stem.stage}/peaks/${stemBase}.peaks.json`);
-                // Solo un fallback ligero (primer stage de la lista) para evitar spam 404
-                const fallbackStage = stageFallbacks[0];
-                if (fallbackStage) peakCandidates.push(`${fallbackStage}/peaks/${stemBase}.peaks.json`);
+                // Removed aggressive fallback to S6_MANUAL_CORRECTION to prevent 404 console errors
+                // and defer to client-side generation logic
 
                 for (const rel of peakCandidates) {
                     try {
@@ -311,7 +363,6 @@ export default function StudioPage() {
                                 return { ...stem, peaks: data.map((x: any) => Number(x) || 0) };
                             }
                         }
-                        // Si 404/500, probamos siguiente, pero sin lanzar
                     } catch (_) {
                         // continuar con siguiente candidato
                     }
@@ -663,8 +714,8 @@ export default function StudioPage() {
       });
   };
 
-  // Waveform: usamos peaks del backend (no decodeAudioData)
-  const currentVisualBuffer = null;
+  // Waveform: use visualBuffer (client-side generated) or peaks (server-side)
+  const currentVisualBuffer = visualBuffer;
   const currentVisualPeaks = selectedStem?.peaks || null;
 
   if (authLoading) return <div className="h-screen bg-[#0f111a]"></div>;
@@ -1047,4 +1098,25 @@ function Knob({ label, value, min, max, step, onChange }: { label: string, value
             </div>
         </div>
     );
+}
+
+function audioBufferToData(buffer: AudioBuffer): AudioBufferData {
+  const channels: Float32Array[] = [];
+  for (let i = 0; i < buffer.numberOfChannels; i++) {
+    channels.push(buffer.getChannelData(i));
+  }
+  return {
+    sampleRate: buffer.sampleRate,
+    length: buffer.length,
+    numberOfChannels: buffer.numberOfChannels,
+    channels: channels
+  };
+}
+
+function dataToAudioBuffer(ctx: AudioContext, data: AudioBufferData): AudioBuffer {
+  const buffer = ctx.createBuffer(data.numberOfChannels, data.length, data.sampleRate);
+  for (let i = 0; i < data.numberOfChannels; i++) {
+    buffer.copyToChannel(data.channels[i], i);
+  }
+  return buffer;
 }
