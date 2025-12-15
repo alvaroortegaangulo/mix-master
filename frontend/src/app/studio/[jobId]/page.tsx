@@ -221,7 +221,6 @@ export default function StudioPage() {
         const stemFiles = finalStems.map((s) => s.fileName);
 
         setStems(finalStems);
-        setLoadingStems(false); // UI ready while descargas/decodificaciones siguen en background
 
         const loadAssets = async () => {
           if (!audioContextRef.current) return;
@@ -301,128 +300,119 @@ export default function StudioPage() {
               }
           }
 
-          if (!cancelled) {
-            setStudioReady(true);
-            setLoadingStems(false);
-          }
-        };
+          // Cargar y decodificar stems antes de marcar listo (concurrencia baja)
+          const metaByFile = new Map(finalStems.map((s) => [s.fileName, s]));
+          const queue: string[] = [...stemFiles];
+          const concurrency =
+            typeof navigator !== "undefined"
+              ? Math.min(3, Math.max(1, navigator.hardwareConcurrency || 3))
+              : 3;
 
-        loadAssets().catch(err => console.error("Studio: background load error", err));
+          const loadSingleStem = async (file: string) => {
+            if (cancelled || !audioContextRef.current) return;
+            try {
+                const cacheKey = `pirola-studio-cache-v1-${jobId}-${file}`;
+                const cacheKeyDecoded = `${cacheKey}-decoded`;
+                const meta = metaByFile.get(file);
 
-        // Lanzar en paralelo la carga/decodificación de stems (fondo, concurrencia baja)
-        const metaByFile = new Map(finalStems.map((s) => [s.fileName, s]));
-        const queue: string[] = [...stemFiles];
-        const concurrency =
-          typeof navigator !== "undefined"
-            ? Math.min(3, Math.max(1, navigator.hardwareConcurrency || 3))
-            : 3;
+                const cachedDecoded = await StudioCache.getAudioBufferData(cacheKeyDecoded);
+                if (cachedDecoded) {
+                    const buffer = audioContextRef.current.createBuffer(
+                        cachedDecoded.numberOfChannels,
+                        cachedDecoded.length,
+                        cachedDecoded.sampleRate
+                    );
+                    for (let i = 0; i < cachedDecoded.numberOfChannels; i++) {
+                        if (cachedDecoded.channels[i]) {
+                            buffer.getChannelData(i).set(cachedDecoded.channels[i]);
+                        }
+                    }
+                    audioBuffersRef.current.set(file, buffer);
+                    setStems(prev => prev.map(s => {
+                        if (s.fileName === file) return { ...s, url: "cached-decoded", status: "ready" };
+                        return s;
+                    }));
+                    setDuration(prev => Math.max(prev, buffer.duration));
+                    return;
+                }
 
-        const loadSingleStem = async (file: string) => {
-          if (cancelled || !audioContextRef.current) return;
-          try {
-              const cacheKey = `pirola-studio-cache-v1-${jobId}-${file}`;
-              const cacheKeyDecoded = `${cacheKey}-decoded`;
-              const meta = metaByFile.get(file);
+                let ab: ArrayBuffer | null = await StudioCache.getCachedArrayBuffer(cacheKey);
+                let usedUrl = meta?.signedUrl || meta?.url || "";
 
-              const cachedDecoded = await StudioCache.getAudioBufferData(cacheKeyDecoded);
-              if (cachedDecoded) {
-                  const buffer = audioContextRef.current.createBuffer(
-                      cachedDecoded.numberOfChannels,
-                      cachedDecoded.length,
-                      cachedDecoded.sampleRate
-                  );
-                  for (let i = 0; i < cachedDecoded.numberOfChannels; i++) {
-                      if (cachedDecoded.channels[i]) {
-                          buffer.getChannelData(i).set(cachedDecoded.channels[i]);
-                      }
-                  }
-                  audioBuffersRef.current.set(file, buffer);
-                  setStems(prev => prev.map(s => {
-                      if (s.fileName === file) return { ...s, url: "cached-decoded", status: "ready" };
-                      return s;
-                  }));
-                  setDuration(prev => Math.max(prev, buffer.duration));
-                  return;
-              }
+                if (!ab) {
+                    let resp: Response | null = null;
+                    if (usedUrl) {
+                        try {
+                            resp = await fetch(usedUrl);
+                        } catch (e) {
+                            resp = null;
+                        }
+                    }
 
-              let ab: ArrayBuffer | null = await StudioCache.getCachedArrayBuffer(cacheKey);
-              let usedUrl = meta?.signedUrl || meta?.url || "";
+                    const stageCandidates = [
+                        meta?.stage,
+                        "S6_MANUAL_CORRECTION",
+                        "S6_MANUAL_CORRECTION_ADJUSTMENT",
+                        "S12_SEPARATE_STEMS",
+                        "S5_LEADVOX_DYNAMICS",
+                        "S5_STEM_DYNAMICS_GENERIC",
+                        "S4_STEM_RESONANCE_CONTROL",
+                        "S0_SESSION_FORMAT",
+                        "S0_MIX_ORIGINAL"
+                    ].filter(Boolean) as string[];
 
-              if (!ab) {
-                  let resp: Response | null = null;
-                  if (usedUrl) {
-                      try {
-                          resp = await fetch(usedUrl);
-                      } catch (e) {
-                          resp = null;
-                      }
-                  }
+                    if (!resp || !resp.ok) {
+                        for (const stage of stageCandidates) {
+                            const candidate = await signFileUrl(jobId, `${stage}/${file}`);
+                            resp = await fetch(candidate);
+                            if (resp.ok) {
+                                usedUrl = candidate;
+                                break;
+                            }
+                        }
+                    }
 
-                  const stageCandidates = [
-                      meta?.stage,
-                      "S6_MANUAL_CORRECTION",
-                      "S6_MANUAL_CORRECTION_ADJUSTMENT",
-                      "S12_SEPARATE_STEMS",
-                      "S5_LEADVOX_DYNAMICS",
-                      "S5_STEM_DYNAMICS_GENERIC",
-                      "S4_STEM_RESONANCE_CONTROL",
-                      "S0_SESSION_FORMAT",
-                      "S0_MIX_ORIGINAL"
-                  ].filter(Boolean) as string[];
+                    if (!resp || !resp.ok) {
+                        throw new Error(`Failed to fetch stem ${file}`);
+                    }
 
-                  if (!resp || !resp.ok) {
-                      for (const stage of stageCandidates) {
-                          const candidate = await signFileUrl(jobId, `${stage}/${file}`);
-                          resp = await fetch(candidate);
-                          if (resp.ok) {
-                              usedUrl = candidate;
-                              break;
-                          }
-                      }
-                  }
+                    ab = await resp.arrayBuffer();
+                    StudioCache.cacheArrayBuffer(cacheKey, ab).catch(e => console.warn("Background cache error", e));
+                }
 
-                  if (!resp || !resp.ok) {
-                      throw new Error(`Failed to fetch stem ${file}`);
-                  }
+                if (ab && !cancelled) {
+                    const decoded = await audioContextRef.current.decodeAudioData(ab.slice(0));
+                    if (cancelled) return;
+                    audioBuffersRef.current.set(file, decoded);
 
-                  ab = await resp.arrayBuffer();
-                  StudioCache.cacheArrayBuffer(cacheKey, ab).catch(e => console.warn("Background cache error", e));
-              }
+                    const channels: Float32Array[] = [];
+                    for(let i=0; i<decoded.numberOfChannels; i++) {
+                       channels.push(decoded.getChannelData(i));
+                    }
+                    StudioCache.cacheAudioBufferData(cacheKeyDecoded, {
+                       sampleRate: decoded.sampleRate,
+                       length: decoded.length,
+                       numberOfChannels: decoded.numberOfChannels,
+                       channels
+                    }).catch(console.warn);
 
-              if (ab && !cancelled) {
-                  const decoded = await audioContextRef.current.decodeAudioData(ab.slice(0));
-                  if (cancelled) return;
-                  audioBuffersRef.current.set(file, decoded);
+                    setStems(prev => prev.map(s => {
+                        if (s.fileName === file) return { ...s, url: usedUrl || "cached", status: "ready" };
+                        return s;
+                    }));
+                    setDuration(prev => Math.max(prev, decoded.duration));
+                }
+            } catch (e) {
+                if (!cancelled) {
+                    console.error("Failed to load stem", file, e);
+                    setStems(prev => prev.map(s => {
+                        if (s.fileName === file) return { ...s, status: "error" };
+                        return s;
+                    }));
+                }
+            }
+          };
 
-                  const channels: Float32Array[] = [];
-                  for(let i=0; i<decoded.numberOfChannels; i++) {
-                     channels.push(decoded.getChannelData(i));
-                  }
-                  StudioCache.cacheAudioBufferData(cacheKeyDecoded, {
-                     sampleRate: decoded.sampleRate,
-                     length: decoded.length,
-                     numberOfChannels: decoded.numberOfChannels,
-                     channels
-                  }).catch(console.warn);
-
-                  setStems(prev => prev.map(s => {
-                      if (s.fileName === file) return { ...s, url: usedUrl || "cached", status: "ready" };
-                      return s;
-                  }));
-                  setDuration(prev => Math.max(prev, decoded.duration));
-              }
-          } catch (e) {
-              if (!cancelled) {
-                  console.error("Failed to load stem", file, e);
-                  setStems(prev => prev.map(s => {
-                      if (s.fileName === file) return { ...s, status: "error" };
-                      return s;
-                  }));
-              }
-          }
-        };
-
-        (async () => {
           const workers = Array.from({ length: Math.min(concurrency, queue.length) }, async () => {
             while (!cancelled && queue.length > 0) {
                 const next = queue.shift();
@@ -431,7 +421,15 @@ export default function StudioPage() {
             }
           });
           await Promise.all(workers);
-        })().catch((e) => console.error("Background stems load error", e));
+
+          if (!cancelled) {
+            setStudioReady(true);
+            setLoadingStems(false);
+          }
+        };
+
+        // Cargar stems y mixdown antes de marcar studioReady para que todo sea reproducible al entrar
+        loadAssets().catch(err => console.error("Studio: background load error", err));
       } catch (err) {
         console.error("Error loading stems:", err);
         setStudioReady(true);
