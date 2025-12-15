@@ -1800,8 +1800,8 @@ async def get_job_file(
 @app.post("/jobs/{job_id}/studio-token")
 async def create_studio_token(
     job_id: str,
-    payload: Optional[Dict[str, Any]] = Body(None),
     request: Request,
+    payload: Optional[Dict[str, Any]] = Body(None),
     api_key: Optional[str] = Header(None, alias="X-API-Key"),
 ):
     """
