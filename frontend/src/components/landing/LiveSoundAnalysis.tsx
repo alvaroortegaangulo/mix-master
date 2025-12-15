@@ -100,7 +100,7 @@ export function LiveSoundAnalysis() {
                      </div>
                      <h3 className="text-lg font-semibold text-white">Frequency Spectrum</h3>
                  </div>
-                 <div className="text-xs font-mono text-slate-500 pt-2">20Hz - 20kHz</div>
+                 <div className="text-xs font-mono text-slate-300 pt-2">20Hz - 20kHz</div>
              </div>
 
              {/* Spectrum Visualizer */}
@@ -123,15 +123,15 @@ export function LiveSoundAnalysis() {
              {/* Bottom Metrics */}
              <div className="grid grid-cols-3 gap-4 border-t border-slate-800 pt-6 relative z-10">
                  <div>
-                     <div className="text-[10px] font-mono uppercase tracking-wider text-slate-500 mb-1">Low End (Sub)</div>
+                     <div className="text-[10px] font-mono uppercase tracking-wider text-slate-300 mb-1">Low End (Sub)</div>
                      <div className="text-white font-medium">Balanced</div>
                  </div>
                  <div>
-                     <div className="text-[10px] font-mono uppercase tracking-wider text-slate-500 mb-1">Vocal Presence</div>
+                     <div className="text-[10px] font-mono uppercase tracking-wider text-slate-300 mb-1">Vocal Presence</div>
                      <div className="text-teal-400 font-medium">Optimal</div>
                  </div>
                  <div className="text-right">
-                     <div className="text-[10px] font-mono uppercase tracking-wider text-slate-500 mb-1">Air / Shine</div>
+                     <div className="text-[10px] font-mono uppercase tracking-wider text-slate-300 mb-1">Air / Shine</div>
                      <div className="text-white font-medium">+1.2 dB</div>
                  </div>
              </div>
@@ -159,18 +159,18 @@ export function LiveSoundAnalysis() {
              {/* Card 1: Integrated Loudness */}
              <div className="bg-slate-900/50 rounded-2xl border border-slate-800 p-6 shadow-lg relative group overflow-hidden">
                 <div className="flex justify-between items-start mb-2">
-                    <div className="text-[10px] font-mono uppercase tracking-wider text-slate-500">Integrated Loudness</div>
+                    <div className="text-[10px] font-mono uppercase tracking-wider text-slate-300">Integrated Loudness</div>
                     <SpeakerWaveIcon className="w-4 h-4 text-teal-500/50" />
                 </div>
                 <div className="text-4xl font-bold text-white mb-1 tabular-nums tracking-tight">
-                    {lufs.toFixed(1)} <span className="text-lg font-normal text-slate-500">LUFS</span>
+                    {lufs.toFixed(1)} <span className="text-lg font-normal text-slate-200">LUFS</span>
                 </div>
 
                 {/* Progress Bar */}
                 <div className="mt-4 mb-2 relative h-1.5 bg-slate-800 rounded-full overflow-hidden">
                     <div className="absolute top-0 left-0 h-full bg-teal-400 w-[85%] rounded-full shadow-[0_0_10px_rgba(45,212,191,0.5)] transition-all duration-300" style={{ width: `${Math.min(100, ((-1 * lufs) / 14) * 85)}%` }}></div>
                 </div>
-                <div className="flex justify-between text-[10px] text-slate-600 font-mono mb-4">
+                <div className="flex justify-between text-[10px] text-slate-300 font-mono mb-4">
                     <span>-30</span>
                     <span>-14 (Target)</span>
                     <span>-8</span>
@@ -186,7 +186,7 @@ export function LiveSoundAnalysis() {
              <div className="bg-slate-900/50 rounded-2xl border border-slate-800 p-6 shadow-lg relative overflow-hidden">
                  <div className="flex justify-between items-start">
                      <div>
-                        <div className="text-[10px] font-mono uppercase tracking-wider text-slate-500 mb-1">Stereo Image</div>
+                        <div className="text-[10px] font-mono uppercase tracking-wider text-slate-300 mb-1">Stereo Image</div>
                         <div className="text-2xl font-bold text-white mb-1">Wide</div>
                         <div className="text-sm font-mono text-slate-400 mb-3 tabular-nums">Correlation: <span className="text-white">+{correlation.toFixed(2)}</span></div>
                      </div>
@@ -199,7 +199,7 @@ export function LiveSoundAnalysis() {
                      </div>
                  </div>
 
-                 <p className="text-xs text-slate-500 leading-relaxed border-t border-slate-800/50 pt-3 mt-1">
+                 <p className="text-xs text-slate-300 leading-relaxed border-t border-slate-800/50 pt-3 mt-1">
                      Excellent mono compatibility. No critical phase cancellations.
                  </p>
              </div>
@@ -207,8 +207,8 @@ export function LiveSoundAnalysis() {
              {/* Card 3: Dynamic Range */}
              <div className="bg-slate-900/50 rounded-2xl border border-slate-800 p-6 shadow-lg flex items-center justify-between">
                  <div>
-                    <div className="text-[10px] font-mono uppercase tracking-wider text-slate-500 mb-1">Dynamic Range</div>
-                    <div className="text-3xl font-bold text-white tabular-nums">{dynamicRange} <span className="text-lg font-normal text-slate-500">dB</span></div>
+                    <div className="text-[10px] font-mono uppercase tracking-wider text-slate-300 mb-1">Dynamic Range</div>
+                    <div className="text-3xl font-bold text-white tabular-nums">{dynamicRange} <span className="text-lg font-normal text-slate-200">dB</span></div>
                  </div>
 
                  {/* Mini Histogram */}

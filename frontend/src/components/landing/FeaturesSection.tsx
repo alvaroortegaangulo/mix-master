@@ -7,6 +7,7 @@ import {
   AdjustmentsHorizontalIcon,
   RocketLaunchIcon,
 } from "@heroicons/react/24/outline";
+import { LazyVideo } from "../LazyVideo";
 
 export function FeaturesSection() {
   const [activeStep, setActiveStep] = useState(0);
@@ -66,6 +67,8 @@ export function FeaturesSection() {
     },
   ];
 
+  const activeFeature = features[activeStep];
+
   return (
     <section className="py-24 bg-slate-950" id="features">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -107,7 +110,7 @@ export function FeaturesSection() {
                       className={`relative shrink-0 flex h-12 w-12 items-center justify-center rounded-full border transition-all duration-300 ${
                          isActive
                          ? `${feature.bgClass} ${feature.borderColor} ${feature.colorClass}`
-                         : "bg-slate-900 border-slate-800 text-slate-500 group-hover:border-slate-700 group-hover:text-slate-400"
+                         : "bg-slate-900 border-slate-800 text-slate-300 group-hover:border-slate-700 group-hover:text-slate-200"
                       }`}
                     >
                       <feature.icon className="h-6 w-6" />
@@ -116,14 +119,14 @@ export function FeaturesSection() {
                     <div className="pt-1">
                       <h3
                         className={`text-lg font-bold mb-2 transition-colors duration-300 ${
-                          isActive ? "text-white" : "text-slate-400 group-hover:text-slate-300"
+                          isActive ? "text-white" : "text-slate-300 group-hover:text-slate-200"
                         }`}
                       >
                         {idx + 1}. {feature.title}
                       </h3>
                       <p
                         className={`text-sm leading-relaxed transition-colors duration-300 ${
-                          isActive ? "text-slate-300" : "text-slate-500 group-hover:text-slate-400"
+                          isActive ? "text-slate-100" : "text-slate-300 group-hover:text-slate-200"
                         }`}
                       >
                         {feature.description}
@@ -137,32 +140,20 @@ export function FeaturesSection() {
 
           {/* Right Column: Dynamic Video Display */}
           <div className="relative aspect-[4/3] w-full rounded-2xl border border-slate-800 bg-slate-900 overflow-hidden shadow-2xl">
-            {features.map((feature, idx) => (
-                <div
-                    key={feature.id}
-                    className={`absolute inset-0 top-10 transition-all duration-500 ease-in-out transform ${
-                        activeStep === idx
-                            ? 'opacity-100 scale-100 z-10'
-                            : 'opacity-0 scale-95 z-0'
-                    }`}
-                >
-                     <video
-                        src={feature.videoUrl}
-                        autoPlay
-                        loop
-                        muted
-                        playsInline
-                        className="w-full h-full object-cover"
-                     />
-                </div>
-            ))}
+            <div className="absolute inset-0 top-10">
+              <LazyVideo
+                key={activeFeature.id}
+                src={activeFeature.videoUrl}
+                className="w-full h-full object-cover"
+              />
+            </div>
 
             {/* Top Bar Decoration for the "App Window" look */}
             <div className="absolute top-0 left-0 right-0 h-10 bg-slate-950 border-b border-slate-800 flex items-center px-4 gap-2 z-20">
                 <div className="w-3 h-3 rounded-full bg-slate-700"></div>
                 <div className="w-3 h-3 rounded-full bg-slate-700"></div>
                 <div className="w-3 h-3 rounded-full bg-slate-700"></div>
-                <div className="ml-auto text-[10px] text-slate-600 font-mono">piroola.ai/mix</div>
+                <div className="ml-auto text-[10px] text-slate-300 font-mono">piroola.ai/mix</div>
             </div>
           </div>
         </div>
