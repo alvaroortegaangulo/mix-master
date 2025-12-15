@@ -251,8 +251,8 @@ def run_pipeline_for_job(
         elif p.is_dir():
             shutil.rmtree(p, ignore_errors=True)
 
-    # Copiar stems desde media_dir a S0_MIX_ORIGINAL (solo WAV/AIF/FLAC)
-    audio_exts = {".wav", ".aif", ".aiff", ".flac"}
+    # Copiar stems desde media_dir a S0_MIX_ORIGINAL (admite formatos de entrada)
+    audio_exts = {".wav", ".aif", ".aiff", ".flac", ".mp3", ".m4a", ".ogg", ".aac"}
     for src in media_dir.iterdir():
         if not src.is_file():
             continue

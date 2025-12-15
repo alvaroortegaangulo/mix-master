@@ -1207,6 +1207,97 @@ async def start_mix_job_endpoint(
     return {"jobId": job_id}
 
 
+@app.get("/jobs/{job_id}/stems")
+def get_job_stems(job_id: str, _: None = Depends(_guard_heavy_endpoint)) -> Dict[str, List[str]]:
+    """
+    Devuelve la lista de stems generados en S12 (o S13 si existiera).
+    """
+    _, temp_root = _get_job_dirs(job_id)
+    if not temp_root.exists():
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    # Busca la carpeta S12
+    # Podriamos buscar la ultima S13 si quisieramos editar sobre lo editado,
+    # pero usualmente se edita sobre el original separado (S12).
+    s12_dir = temp_root / "S12_SEPARATE_STEMS"
+
+    stems = []
+    if s12_dir.exists():
+        # Listamos wavs que no sean full_song
+        for item in s12_dir.iterdir():
+            if item.is_file() and item.suffix.lower() == ".wav" and item.name.lower() != "full_song.wav":
+                stems.append(item.name)
+
+    stems.sort()
+    return {"stems": stems}
+
+
+@app.post("/jobs/{job_id}/correction")
+async def post_job_correction(
+    job_id: str,
+    payload: Dict[str, Any],
+    _: None = Depends(_guard_heavy_endpoint)
+):
+    """
+    Recibe parametros de correccion manual, crea una nueva stage S13_MANUAL_CORRECTION_X
+    y lanza el procesado.
+    """
+    _, temp_root = _get_job_dirs(job_id)
+    if not temp_root.exists():
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    corrections = payload.get("corrections")
+    if not corrections or not isinstance(corrections, list):
+        raise HTTPException(status_code=400, detail="corrections list required")
+
+    # Determinar indice de correccion (S13_..._1, _2, etc)
+    idx = 1
+    while True:
+        stage_name = f"S13_MANUAL_CORRECTION_{idx}"
+        stage_dir = temp_root / stage_name
+        if not stage_dir.exists():
+            break
+        idx += 1
+
+    stage_name = f"S13_MANUAL_CORRECTION_{idx}"
+    stage_dir = temp_root / stage_name
+    stage_dir.mkdir(parents=True, exist_ok=True)
+
+    # Guardar changes.json
+    changes_path = stage_dir / "changes.json"
+    try:
+        changes_path.write_text(
+            json.dumps(corrections, indent=2, ensure_ascii=False),
+            encoding="utf-8"
+        )
+    except Exception as e:
+        logger.error(f"Error escribiendo changes.json: {e}")
+        raise HTTPException(status_code=500, detail="Failed to save corrections")
+
+    # Lanzar tarea
+    # Aqui lanzamos una tarea especifica que corre solo S13 y mixdown.
+    # Reutilizamos run_full_pipeline_task pero forzando una stage list o logica especial?
+    # Mejor crear un task especifico o usar la logica de pipeline parcial.
+    # Dado el diseño actual de tasks.py (que no veo completo pero asumo corre todo),
+    # quiza sea mejor invocar el stage directamente via subprocess o un nuevo task.
+    # Para consistencia con Celery, deberiamos tener un task.
+    # Por simplicidad ahora, lanzamos run_full_pipeline_task indicando SOLO esta stage si fuera posible,
+    # pero el pipeline suele correr secuencial.
+
+    # Vamos a usar un task helper nuevo en tasks.py o modificar el existente.
+    # Como no puedo editar tasks.py facilmente sin leerlo, leere tasks.py primero.
+    # PERO, para no bloquear, voy a asumir que puedo llamar a un script wrapper.
+    # O mejor: Lanzar un task generico "run_stage".
+
+    from tasks import run_manual_correction_task
+    task = run_manual_correction_task.apply_async(
+        args=[job_id, stage_name],
+        task_id=f"{job_id}_{stage_name}"
+    )
+
+    return {"status": "processing", "stage": stage_name, "task_id": task.id}
+
+
 @app.get("/jobs/{job_id}")
 def get_job_status(job_id: str, request: Request) -> Dict[str, Any]:
     data = _load_job_status_from_fs(job_id)

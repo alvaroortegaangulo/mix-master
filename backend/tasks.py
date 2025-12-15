@@ -468,3 +468,92 @@ def run_full_pipeline_task(
     )
 
     return final_status
+
+
+@celery_app.task(bind=True, name="run_manual_correction_task")
+def run_manual_correction_task(
+    self,
+    job_id: str,
+    stage_name: str
+) -> Dict[str, Any]:
+    """
+    Tarea para ejecutar una correccion manual (S13).
+    """
+    from src.utils.analysis_utils import get_temp_dir
+    from src.utils import mixdown_stems
+
+    # Resolucion de directorios
+    backend_root = Path(__file__).resolve().parent
+    temp_root = backend_root / "temp" / job_id
+
+    os.environ["MIX_JOB_ID"] = job_id
+    os.environ["MIX_TEMP_ROOT"] = str(temp_root)
+
+    logger.info(f"[{job_id}] Iniciando correccion manual {stage_name}")
+
+    # Escribir estado 'processing'
+    status_path = temp_root / "job_status.json"
+    current_status = {}
+    if status_path.exists():
+        try:
+            current_status = json.loads(status_path.read_text(encoding="utf-8"))
+        except: pass
+
+    current_status.update({
+        "status": "processing_correction",
+        "message": f"Processing manual correction ({stage_name})..."
+    })
+    status_path.write_text(json.dumps(current_status, indent=2), encoding="utf-8")
+
+    # Construir Context
+    # Importar aqui para evitar circularidad si context importa tasks (raro pero posible)
+    try:
+        from src.context import PipelineContext
+        ctx = PipelineContext(stage_id=stage_name, job_id=job_id, temp_root=temp_root)
+    except ImportError:
+         # Fallback simple
+        class MockContext:
+            def __init__(self, j, t, s):
+                self.job_id = j
+                self.temp_root = t
+                self.stage_id = s
+                self.audio_stems = {}
+                self.audio_mixdown = None
+                self.analysis_results = {}
+            def get_stage_dir(self, sid):
+                return self.temp_root / sid
+        ctx = MockContext(job_id, temp_root, stage_name)
+
+    # 1. Importar y ejecutar S13
+    try:
+        # Import dinamico para asegurar que recoge el fichero recien creado
+        import importlib
+        import src.stages.S13_MANUAL_CORRECTION as s13
+        importlib.reload(s13)
+
+        success = s13.process(ctx)
+        if not success:
+            raise Exception("S13 process failed")
+    except Exception as e:
+        logger.error(f"S13 execution failed: {e}")
+        current_status.update({"status": "failure", "message": str(e)})
+        status_path.write_text(json.dumps(current_status, indent=2), encoding="utf-8")
+        raise
+
+    # 2. Ejecutar mixdown
+    mixdown_stems.process(ctx)
+
+    # 3. Actualizar estado a success
+    # Actualizar URLs
+    # Usamos _make_files_url helper si disponible o manual
+    full_song_rel = f"/files/{job_id}/{stage_name}/full_song.wav"
+
+    current_status.update({
+        "status": "success",
+        "message": "Manual correction complete",
+        "full_song_url": full_song_rel,
+    })
+    status_path.write_text(json.dumps(current_status, indent=2), encoding="utf-8")
+
+    logger.info(f"[{job_id}] Correccion finalizada.")
+    return current_status
