@@ -432,11 +432,12 @@ export function MixTool({ resumeJobId }: MixToolProps) {
 
 
 useEffect(() => {
-  // Limpiar temp siempre que se entra / recarga la página
+  // No limpiar si estamos reanudando un job, para no borrar correcciones guardadas
+  if (resumeJobId) return;
   cleanupTemp().catch((err) => {
     console.error("Error cleaning temp on page load", err);
   });
-}, []);
+}, [resumeJobId]);
 
 useEffect(() => {
   if (resumeJobId) {
