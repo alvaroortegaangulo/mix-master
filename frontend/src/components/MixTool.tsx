@@ -225,17 +225,6 @@ const STAGE_UI_INFO: Record<string, StageUiInfo> = {
 };
 
 
-
-const SONG_MODE_STAGE_PREFIXES = new Set(["S7", "S8", "S9", "S10", "S11"]);
-
-function getSongModeStages(stages: PipelineStage[]): string[] {
-  return stages
-    .filter((stage) =>
-      SONG_MODE_STAGE_PREFIXES.has(stage.key.split("_")[0] ?? ""),
-    )
-    .map((stage) => stage.key);
-}
-
 function mapStemProfileToBusKey(profile: string): string {
   switch (profile) {
     case "Kick":
