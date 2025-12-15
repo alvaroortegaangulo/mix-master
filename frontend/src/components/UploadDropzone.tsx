@@ -9,15 +9,7 @@ type UploadDropzoneProps = {
   onFilesSelected: (files: File[]) => void;
   disabled?: boolean;
   filesCount?: number;
-  /**
-   * Modo de subida controlado desde el padre (opcional).
-   * Si no se pasa, el componente gestionará el modo internamente.
-   */
-  uploadMode?: UploadMode;
-  /**
-   * Callback opcional para notificar al padre cambios de modo.
-   */
-  onUploadModeChange?: (mode: UploadMode) => void;
+  uploadMode: UploadMode;
 };
 
 export function UploadDropzone({
@@ -25,15 +17,11 @@ export function UploadDropzone({
   disabled,
   filesCount = 0,
   uploadMode,
-  onUploadModeChange,
 }: UploadDropzoneProps) {
   const [isDragging, setIsDragging] = useState(false);
-  const [localMode, setLocalMode] = useState<UploadMode>("song");
   const inputRef = useRef<HTMLInputElement | null>(null);
 
-  // Si el padre no controla el modo, usamos el interno
-  const effectiveMode: UploadMode = uploadMode ?? localMode;
-  const isSongUpload = effectiveMode === "song";
+  const isSongUpload = uploadMode === "song";
 
   const handleClick = () => {
     if (disabled) return;
@@ -71,20 +59,6 @@ export function UploadDropzone({
     setIsDragging(false);
   };
 
-  const handleModeChange = (mode: UploadMode) => {
-    if (disabled) return;
-
-    // Si el modo no está controlado desde fuera, actualizamos el local
-    if (!uploadMode) {
-      setLocalMode(mode);
-    }
-
-    // Notificamos al padre si quiere reaccionar (para mandar stems=true/false al backend)
-    if (onUploadModeChange) {
-      onUploadModeChange(mode);
-    }
-  };
-
   return (
     <div
       onClick={handleClick}
@@ -101,79 +75,16 @@ export function UploadDropzone({
           : "hover:border-teal-400/70 hover:bg-slate-900/70",
       ].join(" ")}
     >
-      {/* Cabecera: título + info + toggle Song / Stems */}
-      <div className="mb-4 flex w-full items-center justify-between gap-3">
-        <div className="flex flex-col">
-          <p className="text-base font-semibold text-slate-50">
-            {isSongUpload ? "Upload Your Song" : "Upload Your Stems"}
-          </p>
-        </div>
-
-        {/* Bloque info + toggle (evitamos que abra el file-picker) */}
-        <div
-          className="flex items-center gap-3"
-          onClick={(e) => {
-            e.stopPropagation();
-          }}
-        >
-          {/* Icono de información con tooltip */}
-          <div className="relative group">
-            <button
-              type="button"
-              disabled={disabled}
-              className={[
-                "flex h-7 w-7 items-center justify-center rounded-full border text-[11px] font-semibold",
-                "border-amber-300/70 bg-amber-300/15 text-amber-200 shadow-sm",
-                "transition-transform transition-colors duration-150",
-                "group-hover:bg-amber-300 group-hover:text-slate-950 group-hover:scale-110",
-                disabled ? "opacity-50 cursor-not-allowed" : "cursor-help",
-              ].join(" ")}
-            >
-              i
-            </button>
-
-            {/* Tooltip */}
-            <div className="pointer-events-none absolute -top-2 right-full z-20 hidden w-64 translate-y-[-50%] rounded-lg border border-slate-800/80 bg-slate-950/95 px-3 py-2 text-xs text-slate-100 shadow-xl group-hover:block">
-              <p>
-                Select{" "}
-                <span className="font-semibold text-amber-200">song</span> to
-                upload a single song file or{" "}
-                <span className="font-semibold text-amber-200">stems</span> to
-                upload multiple tracks.
-              </p>
-            </div>
-          </div>
-
-          {/* Toggle Song / Stems */}
-          <div className="inline-flex items-center gap-1 rounded-full bg-slate-800/80 p-1 text-xs">
-            <button
-              type="button"
-              className={[
-                "px-2 py-1 rounded-full font-medium transition",
-                !isSongUpload
-                  ? "text-slate-300"
-                  : "bg-teal-500 text-slate-900 shadow",
-              ].join(" ")}
-              disabled={disabled}
-              onClick={() => handleModeChange("song")}
-            >
-              Song
-            </button>
-            <button
-              type="button"
-              className={[
-                "px-2 py-1 rounded-full font-medium transition",
-                isSongUpload
-                  ? "text-slate-300"
-                  : "bg-teal-500 text-slate-900 shadow",
-              ].join(" ")}
-              disabled={disabled}
-              onClick={() => handleModeChange("stems")}
-            >
-              Stems
-            </button>
-          </div>
-        </div>
+      {/* Cabecera: título dinámico según modo */}
+      <div className="mb-4 w-full text-center">
+        <p className="text-base font-semibold text-slate-50">
+          {isSongUpload ? "Upload Your Song" : "Upload Your Stems"}
+        </p>
+        <p className="text-xs text-slate-400">
+          {isSongUpload
+            ? "Master a single stereo bounce."
+            : "Upload individual tracks for a full AI mix."}
+        </p>
       </div>
 
       <div className="mt-4 flex justify-center">

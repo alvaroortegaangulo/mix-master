@@ -274,7 +274,7 @@ function mapStemProfileToBusKey(profile: string): string {
 }
 
 export function MixTool() {
-  const [uploadMode, setUploadMode] = useState<"song" | "stems">("song");
+  const [uploadMode, setUploadMode] = useState<"song" | "stems">("stems");
   const [files, setFiles] = useState<File[]>([]);
   const [stemProfiles, setStemProfiles] = useState<StemProfile[]>([]);
 
@@ -444,14 +444,24 @@ useEffect(() => {
       try {
         const stages = await fetchPipelineStages();
         setAvailableStages(stages);
-        // Default to SONG mode logic: only S7-S11 enabled
-        setSelectedStageKeys(getSongModeStages(stages));
       } catch (err: any) {
         console.error("Error fetching pipeline stages", err);
       }
     }
     void loadStages();
   }, []);
+
+  // Sync default stage selection with the current upload mode
+  useEffect(() => {
+    if (!availableStages.length) return;
+
+    const nextKeys =
+      uploadMode === "song"
+        ? getSongModeStages(availableStages)
+        : availableStages.map((s) => s.key);
+
+    setSelectedStageKeys(nextKeys);
+  }, [availableStages, uploadMode]);
 
   const toggleStage = (key: string) => {
     setSelectedStageKeys((prev) =>
@@ -509,14 +519,6 @@ useEffect(() => {
     setError(null);
     setStemProfiles([]);
     setSpaceBusStyles({});
-
-    if (mode === "song") {
-      // Select S7-S11
-      setSelectedStageKeys(getSongModeStages(availableStages));
-    } else {
-      // Select All
-      setSelectedStageKeys(availableStages.map((s) => s.key));
-    }
   };
 
   const handleFilesSelected = (selected: File[]) => {
@@ -749,6 +751,7 @@ useEffect(() => {
                     onFilesSelected={handleFilesSelected}
                     disabled={loading}
                     filesCount={files.length}
+                    uploadMode={uploadMode}
                   />
                 </div>
 
