@@ -160,7 +160,7 @@ export default function StudioPage() {
         try {
             const cacheKey = `${jobId}/${selectedStem.fileName}`;
             // Try cache first
-            const cachedData = await studioCache.getAudioBuffer(selectedStem.fileName);
+            const cachedData = await studioCache.getAudioBuffer(cacheKey);
             if (active && cachedData) {
                 const buffer = dataToAudioBuffer(audioContextRef.current!, cachedData);
                 setVisualBuffer(buffer);
@@ -177,7 +177,7 @@ export default function StudioPage() {
                 // Decode
                 const audioBuffer = await audioContextRef.current.decodeAudioData(arrayBuffer);
                 // Cache
-                await studioCache.setAudioBuffer(selectedStem.fileName, audioBufferToData(audioBuffer));
+                await studioCache.setAudioBuffer(cacheKey, audioBufferToData(audioBuffer));
 
                 if (active) {
                     setVisualBuffer(audioBuffer);
@@ -1117,7 +1117,6 @@ function audioBufferToData(buffer: AudioBuffer): AudioBufferData {
 function dataToAudioBuffer(ctx: AudioContext, data: AudioBufferData): AudioBuffer {
   const buffer = ctx.createBuffer(data.numberOfChannels, data.length, data.sampleRate);
   for (let i = 0; i < data.numberOfChannels; i++) {
-    // Cast to any to bypass ArrayBuffer vs SharedArrayBuffer mismatch
     buffer.copyToChannel(data.channels[i] as any, i);
   }
   return buffer;
