@@ -15,8 +15,8 @@ if str(SRC_DIR) not in sys.path:
 
 from utils.analysis_utils import get_temp_dir  # type: ignore  # noqa: E402
 from utils.logger import logger  # type: ignore  # noqa: E402
-from utils.separation.demucs_ht import (  # type: ignore  # noqa: E402
-    separate_demucs_htdemucs_ft_to_dir,
+from utils.separation.spleeter_sep import (  # type: ignore  # noqa: E402
+    separate_spleeter_to_dir,
     copy_uploaded_stems_to_stage,
 )
 
@@ -325,13 +325,11 @@ def _process_impl(contract_id: str, context: Optional["PipelineContext"] = None)
     tmp_wav = input_dir / "work_in.wav"
     wav_path = _ensure_wav_44100_stereo(song_path, tmp_wav)
 
-    written = separate_demucs_htdemucs_ft_to_dir(
+    written = separate_spleeter_to_dir(
         wav_path,
         stage_dir,
-        model_name=os.environ.get("MIX_DEMUCS_MODEL", "htdemucs_ft"),
-        device=os.environ.get("MIX_DEMUCS_DEVICE") or None,
-        shifts=0,
-        overlap=0.1,
+        model_spec=os.environ.get("MIX_SPLEETER_MODEL", "spleeter:5stems"),
+        device=os.environ.get("MIX_SPLEETER_DEVICE") or None,
         write_manifest=True,
     )
 
@@ -340,7 +338,7 @@ def _process_impl(contract_id: str, context: Optional["PipelineContext"] = None)
     except Exception:
         pass
 
-    logger.info(f"[S0_SEPARATE_STEMS] Separacion completada. Stems: {list(written.keys())}")
+    logger.info(f"[S0_SEPARATE_STEMS] Separacion con Spleeter completada. Stems: {list(written.keys())}")
     return True
 
 

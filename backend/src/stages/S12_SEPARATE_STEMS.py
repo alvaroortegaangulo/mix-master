@@ -13,9 +13,7 @@ if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
 from utils.analysis_utils import get_temp_dir  # type: ignore  # noqa: E402
-from utils.separation.demucs_ht import (  # type: ignore  # noqa: E402
-    separate_demucs_htdemucs_ft_to_dir,
-)
+from utils.separation.spleeter_sep import separate_spleeter_to_dir  # type: ignore  # noqa: E402
 
 try:
     from context import PipelineContext  # type: ignore
@@ -34,7 +32,7 @@ def _stage_dir(contract_id: str, context: Optional["PipelineContext"] = None) ->
 
 def _ensure_wav_44100_stereo(src: Path, dst: Path) -> Path:
     """
-    Convierte a WAV 44.1kHz estéreo float32 usando ffmpeg si está disponible.
+    Convierte a WAV 44.1kHz estereo float32 usando ffmpeg si esta disponible.
     Si src ya es wav, copia.
     """
     dst.parent.mkdir(parents=True, exist_ok=True)
@@ -86,7 +84,7 @@ def _find_full_song(stage_dir: Path, job_root: Path) -> Optional[Path]:
         if c.exists() and c.is_file():
             return c
 
-    # fallback: busca el full_song más reciente en el job
+    # fallback: busca el full_song mas reciente en el job
     found: list[Path] = []
     for p in job_root.rglob("full_song.wav"):
         if p.is_file():
@@ -147,11 +145,11 @@ def _process_impl(contract_id: str, context: Optional["PipelineContext"] = None)
     tmp_wav = input_dir / "work_in.wav"
     wav_path = _ensure_wav_44100_stereo(target_full, tmp_wav)
 
-    written = separate_demucs_htdemucs_ft_to_dir(
+    written = separate_spleeter_to_dir(
         wav_path,
         stage_dir,
-        model_name=os.environ.get("MIX_DEMUCS_MODEL", "htdemucs_ft"),
-        device=os.environ.get("MIX_DEMUCS_DEVICE") or None,
+        model_spec=os.environ.get("MIX_SPLEETER_MODEL", "spleeter:5stems"),
+        device=os.environ.get("MIX_SPLEETER_DEVICE") or None,
         write_manifest=True,
     )
 
@@ -160,7 +158,7 @@ def _process_impl(contract_id: str, context: Optional["PipelineContext"] = None)
     except Exception:
         pass
 
-    print(f"[S12_SEPARATE_STEMS] Separación completada. Stems: {list(written.keys())}")
+    print(f"[S12_SEPARATE_STEMS] Separacion con Spleeter completada. Stems: {list(written.keys())}")
     return True
 
 
