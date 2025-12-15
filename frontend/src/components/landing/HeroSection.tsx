@@ -14,7 +14,7 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
         {/* Logo is kept as per previous design, though not explicitly mentioned in the image snippet, it's good for branding */}
         <div className="mx-auto flex justify-center mb-4">
           <Image
-            src="/logo.png"
+            src="/logo.webp"
             alt="Piroola logo"
             width={96}
             height={96}

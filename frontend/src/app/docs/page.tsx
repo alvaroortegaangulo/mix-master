@@ -112,7 +112,7 @@ export default function DocsPage() {
             </p>
             <div className="my-6 p-4 border border-dashed border-slate-700 rounded-lg bg-slate-900/50 flex items-center justify-center text-slate-500 h-120">
               <Image
-                src="/upload_dropzone.png"
+                src="/upload_dropzone.webp"
                 alt="Screenshot: Upload Dropzone with files"
                 width={832}          // ajusta según tu imagen
                 height={514}         // ajusta según tu imagen
@@ -126,7 +126,7 @@ export default function DocsPage() {
             </p>
             <div className="my-6 p-4 border border-dashed border-slate-700 rounded-lg bg-slate-900/50 flex items-center justify-center text-slate-500 h-120">
               <Image
-                src="/stems_profile.png"
+                src="/stems_profile.webp"
                 alt="Screenshot: Upload Dropzone with files"
                 width={358}          // ajusta según tu imagen
                 height={514}         // ajusta según tu imagen
@@ -140,7 +140,7 @@ export default function DocsPage() {
             </p>
             <div className="my-6 p-4 border border-dashed border-slate-700 rounded-lg bg-slate-900/50 flex items-center justify-center text-slate-500 h-120">
               <Image
-                src="/pipeline_steps.png"
+                src="/pipeline_steps.webp"
                 alt="Screenshot: Upload Dropzone with files"
                 width={736}          // ajusta según tu imagen
                 height={445}         // ajusta según tu imagen
@@ -154,7 +154,7 @@ export default function DocsPage() {
             </p>
             <div className="my-6 p-4 border border-dashed border-slate-700 rounded-lg bg-slate-900/50 flex items-center justify-center text-slate-500 h-120">
               <Image
-                src="/space_depth.png"
+                src="/space_depth.webp"
                 alt="Screenshot: Upload Dropzone with files"
                 width={355}          // ajusta según tu imagen
                 height={480}         // ajusta según tu imagen
@@ -197,7 +197,7 @@ export default function DocsPage() {
             </p>
             <div className="my-6 p-4 border border-dashed border-slate-700 rounded-lg bg-slate-900/50 flex items-center justify-center text-slate-500 h-120">
               <Image
-                src="/processing.png"
+                src="/processing.webp"
                 alt="Screenshot: Upload Dropzone with files"
                 width={439}          // ajusta según tu imagen
                 height={268}         // ajusta según tu imagen
@@ -357,7 +357,7 @@ export default function DocsPage() {
             </p>
             <div className="my-6 p-4 border border-dashed border-slate-700 rounded-lg bg-slate-900/50 flex items-center justify-center text-slate-500 h-120">
               <Image
-                src="/result.png"
+                src="/result.webp"
                 alt="Screenshot: Upload Dropzone with files"
                 width={802}          // ajusta según tu imagen
                 height={616}         // ajusta según tu imagen
@@ -376,7 +376,7 @@ export default function DocsPage() {
             </ul>
             <div className="my-6 p-4 border border-dashed border-slate-700 rounded-lg bg-slate-900/50 flex items-center justify-center text-slate-500 h-120">
               <Image
-                src="/report.png"
+                src="/report.webp"
                 alt="Screenshot: Upload Dropzone with files"
                 width={918}          // ajusta según tu imagen
                 height={949}         // ajusta según tu imagen

@@ -58,7 +58,7 @@ export function LandingPage({ onTryIt }: { onTryIt: () => void }) {
       <footer className="bg-slate-950 border-t border-slate-800 py-12 px-4">
           <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8 text-slate-400 text-sm">
               <div className="flex items-center gap-2">
-                 <img src="/logo.png" alt="Piroola Logo" className="h-6 w-6" />
+                 <img src="/logo.webp" alt="Piroola Logo" className="h-6 w-6" />
                  <span className="font-semibold text-slate-200">Piroola</span>
               </div>
               <div className="flex gap-6">

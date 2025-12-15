@@ -41,7 +41,7 @@ const organizationJsonLd = {
   "@type": "Organization",
   name: siteName,
   url: siteUrl,
-  logo: `${siteUrl}/logo.png`,
+  logo: `${siteUrl}/logo.webp`,
   contactPoint: [
     {
       "@type": "ContactPoint",
@@ -85,9 +85,9 @@ export const metadata: Metadata = {
     "Transform your tracks with Piroola. Our AI-powered mixing and mastering service delivers professional studio-quality results from your multi-track stems in minutes.",
   keywords: ["AI mixing", "AI mastering", "online audio mixing", "automated mixing service", "stem mastering", "Piroola"],
   icons: {
-    icon: "/logo.png",
-    shortcut: "/logo.png",
-    apple: "/logo.png",
+    icon: "/logo.webp",
+    shortcut: "/logo.webp",
+    apple: "/logo.webp",
   },
   alternates: {
     canonical: "/",
@@ -103,7 +103,7 @@ export const metadata: Metadata = {
     siteName,
     images: [
       {
-        url: "/logo.png",
+        url: "/logo.webp",
         width: 512,
         height: 512,
         alt: "Piroola Logo",
@@ -116,7 +116,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: `${siteName}: Professional AI Audio Mixing & Mastering Online`,
     description: "Transform your tracks with Piroola. Our AI-powered mixing and mastering service delivers professional studio-quality results from your multi-track stems in minutes.",
-    images: ["/logo.png"],
+    images: ["/logo.webp"],
   },
 };
 
