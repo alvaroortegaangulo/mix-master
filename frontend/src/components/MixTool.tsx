@@ -264,6 +264,7 @@ function mapStemProfileToBusKey(profile: string): string {
 }
 
 export function MixTool() {
+  const [uploadMode, setUploadMode] = useState<"song" | "stems">("song");
   const [files, setFiles] = useState<File[]>([]);
   const [stemProfiles, setStemProfiles] = useState<StemProfile[]>([]);
 
@@ -433,7 +434,8 @@ useEffect(() => {
       try {
         const stages = await fetchPipelineStages();
         setAvailableStages(stages);
-        setSelectedStageKeys(stages.map((s) => s.key));
+        // Default to SONG mode logic: only S7-S11 enabled
+        setSelectedStageKeys(getSongModeStages(stages));
       } catch (err: any) {
         console.error("Error fetching pipeline stages", err);
       }
@@ -490,7 +492,22 @@ useEffect(() => {
     });
   };
 
+  const handleModeChange = (mode: "song" | "stems") => {
+    setUploadMode(mode);
+    setFiles([]); // Reset files on mode change
+    setJobStatus(null);
+    setError(null);
+    setStemProfiles([]);
+    setSpaceBusStyles({});
 
+    if (mode === "song") {
+      // Select S7-S11
+      setSelectedStageKeys(getSongModeStages(availableStages));
+    } else {
+      // Select All
+      setSelectedStageKeys(availableStages.map((s) => s.key));
+    }
+  };
 
   const handleFilesSelected = (selected: File[]) => {
     setFiles(selected);
@@ -689,6 +706,33 @@ useEffect(() => {
                 className="rounded-2xl border border-slate-700/60 bg-slate-900/60 p-8 shadow-2xl shadow-slate-900/50"
               >
                 <h2 className="sr-only">Upload & Mix Configuration</h2>
+
+                <div className="mb-6 flex justify-center">
+                  <div className="inline-flex rounded-lg bg-slate-950 p-1 shadow-inner shadow-slate-900">
+                    <button
+                      type="button"
+                      onClick={() => handleModeChange("song")}
+                      className={`rounded-md px-6 py-2 text-sm font-semibold transition-colors ${
+                        uploadMode === "song"
+                          ? "bg-teal-500 text-slate-950 shadow-sm"
+                          : "text-slate-400 hover:text-slate-200"
+                      }`}
+                    >
+                      Song (Mastering)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleModeChange("stems")}
+                      className={`rounded-md px-6 py-2 text-sm font-semibold transition-colors ${
+                        uploadMode === "stems"
+                          ? "bg-teal-500 text-slate-950 shadow-sm"
+                          : "text-slate-400 hover:text-slate-200"
+                      }`}
+                    >
+                      Stems (Full Mix)
+                    </button>
+                  </div>
+                </div>
 
                 <div id="upload">
                   <UploadDropzone
