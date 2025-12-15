@@ -5,6 +5,7 @@ const nextConfig: NextConfig = {
   compress: true,
   experimental: {
     optimizePackageImports: ['@heroicons/react', 'lucide-react', 'date-fns', 'lodash'],
+    optimizeCss: true, // Enable CSS optimization (critters)
   },
 
   async headers() {
