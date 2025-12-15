@@ -45,3 +45,8 @@ email-validator
 aiofiles
 google-auth
 requests
+
+#Inteligencia musical
+splifft[config,inference]==0.0.3
+torch
+soundfile

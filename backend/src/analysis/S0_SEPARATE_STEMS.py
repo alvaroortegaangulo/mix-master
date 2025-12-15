@@ -1,5 +1,3 @@
-# backend/src/analysis/S0_SEPARATE_STEMS.py
-
 from __future__ import annotations
 
 import sys
@@ -7,9 +5,8 @@ from pathlib import Path
 from typing import Dict, Any
 import json
 
-# --- hack para importar utils ---
 THIS_DIR = Path(__file__).resolve().parent
-SRC_DIR = THIS_DIR.parent  # .../src
+SRC_DIR = THIS_DIR.parent
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
@@ -20,17 +17,7 @@ from utils.analysis_utils import (  # type: ignore  # noqa: E402
 
 
 def _load_upload_mode_from_job_root(temp_dir: Path) -> Dict[str, Any]:
-    """
-    Lee temp/<job_id>/work/upload_mode.json si existe y devuelve:
-
-      {
-        "upload_mode": "song" | "stems",
-        "is_stems_upload": bool
-      }
-
-    Si no existe, asume por defecto "song".
-    """
-    job_root = temp_dir.parent  # temp/<job_id>/<CONTRACT_ID> -> temp/<job_id>
+    job_root = temp_dir.parent
     work_dir = job_root / "work"
     info_path = work_dir / "upload_mode.json"
 
@@ -42,7 +29,6 @@ def _load_upload_mode_from_job_root(temp_dir: Path) -> Dict[str, Any]:
             with info_path.open("r", encoding="utf-8") as f:
                 data = json.load(f) or {}
 
-            # Admite tanto bandera booleana como string
             if isinstance(data, dict):
                 raw_mode = str(data.get("upload_mode", "")).strip().lower()
                 raw_stems = data.get("stems")
@@ -55,51 +41,68 @@ def _load_upload_mode_from_job_root(temp_dir: Path) -> Dict[str, Any]:
                     is_stems_upload = False
 
                 upload_mode = "stems" if is_stems_upload else "song"
-        except Exception as exc:  # pragma: no cover (defensivo)
+        except Exception as exc:  # pragma: no cover
             print(
                 f"[S0_SEPARATE_STEMS] Aviso: no se pudo leer {info_path}: {exc}. "
                 "Se asume upload_mode='song'."
             )
 
+    return {"upload_mode": upload_mode, "is_stems_upload": is_stems_upload}
+
+
+def _inspect_stage_stems(temp_dir: Path) -> Dict[str, Any]:
+    exts = {".wav", ".flac", ".aiff", ".aif", ".ogg", ".m4a", ".mp3"}
+    stems: list[dict[str, Any]] = []
+    seen_names: set[str] = set()
+
+    # Stems en el root del stage (layout actual)
+    for p in sorted(temp_dir.glob("*")):
+        if p.is_file() and p.suffix.lower() in exts and p.name.lower() != "full_song.wav":
+            stems.append({"name": p.name, "bytes": int(p.stat().st_size)})
+            seen_names.add(p.name)
+
+    # Compatibilidad: stems en temp/<stage>/stems
+    legacy_dir = temp_dir / "stems"
+    if legacy_dir.exists():
+        for p in sorted(legacy_dir.glob("*")):
+            if p.is_file() and p.suffix.lower() in exts and p.name not in seen_names:
+                stems.append({"name": p.name, "bytes": int(p.stat().st_size)})
+                seen_names.add(p.name)
+
     return {
-        "upload_mode": upload_mode,
-        "is_stems_upload": is_stems_upload,
+        "stems_dir": str(temp_dir),
+        "stems_dir_legacy": str(legacy_dir),
+        "stems_count": len(stems),
+        "stems_files": stems,
+        "stems_ready": len(stems) >= 2,  # umbral mínimo “defensivo”
     }
 
 
 def main() -> None:
-    """
-    Análisis para S0_SEPARATE_STEMS.
-
-    Uso desde stage.py:
-        python analysis/S0_SEPARATE_STEMS.py S0_SEPARATE_STEMS
-    """
     if len(sys.argv) < 2:
         print("Uso: python S0_SEPARATE_STEMS.py <CONTRACT_ID>")
         sys.exit(1)
 
-    contract_id = sys.argv[1]  # "S0_SEPARATE_STEMS"
+    contract_id = sys.argv[1]
 
-    # 1) Cargar contrato (por si en el futuro añadimos métricas / límites)
     contract = load_contract(contract_id)
     metrics: Dict[str, Any] = contract.get("metrics", {}) or {}
     limits: Dict[str, Any] = contract.get("limits", {}) or {}
     stage_id: str | None = contract.get("stage_id")
 
-    # 2) temp/<job_id>/<contract_id>
     temp_dir = get_temp_dir(contract_id, create=True)
 
-    # 3) Leer el modo de subida desde temp/<job_id>/work/upload_mode.json
     upload_info = _load_upload_mode_from_job_root(temp_dir)
     upload_mode = upload_info["upload_mode"]
     is_stems_upload = upload_info["is_stems_upload"]
 
+    stems_info = _inspect_stage_stems(temp_dir)
+
     print(
         f"[S0_SEPARATE_STEMS] Análisis: upload_mode={upload_mode}, "
-        f"is_stems_upload={is_stems_upload}."
+        f"is_stems_upload={is_stems_upload}, stems_ready={stems_info['stems_ready']}."
     )
 
-    # 4) Guardar analysis_<CONTRACT_ID>.json
     session_state: Dict[str, Any] = {
         "contract_id": contract_id,
         "stage_id": stage_id,
@@ -108,6 +111,7 @@ def main() -> None:
         "session": {
             "upload_mode": upload_mode,
             "is_stems_upload": is_stems_upload,
+            **stems_info,
         },
     }
 
@@ -115,9 +119,7 @@ def main() -> None:
     with output_path.open("w", encoding="utf-8") as f:
         json.dump(session_state, f, indent=2, ensure_ascii=False)
 
-    print(
-        f"[S0_SEPARATE_STEMS] Análisis completado. JSON: {output_path}"
-    )
+    print(f"[S0_SEPARATE_STEMS] Análisis completado. JSON: {output_path}")
 
 
 if __name__ == "__main__":
