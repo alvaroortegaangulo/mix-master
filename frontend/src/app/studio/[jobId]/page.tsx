@@ -63,6 +63,10 @@ export default function StudioPage() {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [masterVolume, setMasterVolume] = useState(0.8);
+  const [downloadingStems, setDownloadingStems] = useState(false);
+  const [downloadingMixdown, setDownloadingMixdown] = useState(false);
+  const [mixdownUrl, setMixdownUrl] = useState<string | null>(null);
+
   const selectedStem = stems[selectedStemIndex];
 
   const waveformRef = useRef<HTMLDivElement>(null);
@@ -153,14 +157,16 @@ export default function StudioPage() {
           eq: { low: 0, mid: 0, high: 0, enabled: false },
           compression: { threshold: -20, ratio: 2, enabled: false },
           reverb: { amount: 0, enabled: false },
-          url: undefined
+          url: undefined,
+          status: "loading"
         }));
 
         setStems(newStems);
 
         if (audioContextRef.current) {
-            for (const file of stemFiles) {
-                if (cancelled) break;
+            // Parallel loading of stems for faster startup
+            await Promise.all(stemFiles.map(async (file) => {
+                if (cancelled) return;
                 try {
                     let signedUrl = await signFileUrl(jobId, `S5_LEADVOX_DYNAMICS/${file}`);
                     let resp = await fetch(signedUrl);
@@ -183,9 +189,11 @@ export default function StudioPage() {
 
                     if (resp.ok) {
                         const ab = await resp.arrayBuffer();
-                        const decodePromise = audioContextRef.current.decodeAudioData(ab);
+                        if (cancelled) return;
+
+                        const decodePromise = audioContextRef.current!.decodeAudioData(ab);
                         const timeoutPromise = new Promise<AudioBuffer>((_, reject) =>
-                            setTimeout(() => reject(new Error("Audio decoding timed out")), 10000)
+                            setTimeout(() => reject(new Error("Audio decoding timed out")), 15000)
                         );
 
                         const decoded = await Promise.race([decodePromise, timeoutPromise]);
@@ -195,11 +203,11 @@ export default function StudioPage() {
                         const blobUrl = URL.createObjectURL(blob);
 
                         setStems(prev => prev.map(s => {
-                            if (s.fileName === file) return { ...s, url: blobUrl };
+                            if (s.fileName === file) return { ...s, url: blobUrl, status: "ready" };
                             return s;
                         }));
 
-                        if (!duration && decoded) setDuration(decoded.duration);
+                        setDuration(prev => prev || decoded.duration);
 
                     } else {
                         console.warn("Studio: Fetch failed for", file);
@@ -215,6 +223,24 @@ export default function StudioPage() {
                         return s;
                     }));
                 }
+            }));
+
+            // Attempt to load mixdown for waveform visualization
+            try {
+                let mixSignedUrl = await signFileUrl(jobId, `S9_MASTER_GENERIC/mixdown.wav`);
+                let mixResp = await fetch(mixSignedUrl);
+                if (!mixResp.ok) {
+                     mixSignedUrl = await signFileUrl(jobId, `S0_MIX_ORIGINAL/full_song.wav`);
+                     mixResp = await fetch(mixSignedUrl);
+                }
+
+                if (mixResp.ok) {
+                    const mixBlob = await mixResp.blob();
+                    const mixUrl = URL.createObjectURL(mixBlob);
+                    setMixdownUrl(mixUrl);
+                }
+            } catch (e) {
+                console.warn("Could not load reference mixdown for waveform", e);
             }
         }
       } catch (err) {
@@ -229,58 +255,21 @@ export default function StudioPage() {
   }, [jobId, user]);
 
   useEffect(() => {
+    // Re-initializes specific stem if selected and missing (fallback)
     const ctx = audioContextRef.current;
     const stem = selectedStem;
     if (!ctx || !jobId || !user || !stem) return;
     if (stem.status === "loading" || stem.status === "error") return;
-    if (stem.url && audioBuffersRef.current.has(stem.fileName)) {
-        const buf = audioBuffersRef.current.get(stem.fileName);
-        if (buf && !duration) setDuration(buf.duration);
-        return;
-    }
-
-    let cancelled = false;
-
-    const loadStem = async () => {
-        try {
-            setStems(prev => prev.map((s, i) => i === selectedStemIndex ? { ...s, status: "loading" } : s));
-
-            let signedUrl = await signFileUrl(jobId, `S12_SEPARATE_STEMS/${stem.fileName}`);
-            let resp = await fetch(signedUrl);
-            if (!resp.ok) {
-                signedUrl = await signFileUrl(jobId, `S0_SESSION_FORMAT/${stem.fileName}`);
-                resp = await fetch(signedUrl);
-            }
-
-            if (!resp.ok) {
-                throw new Error(`Failed to fetch stem ${stem.fileName}: ${resp.status} ${resp.statusText}`);
-            }
-
-            const ab = await resp.arrayBuffer();
-            const decoded = await ctx.decodeAudioData(ab.slice(0));
-            if (cancelled) return;
-
-            audioBuffersRef.current.set(stem.fileName, decoded);
-            const blob = new Blob([ab], { type: "audio/wav" });
-            const blobUrl = URL.createObjectURL(blob);
-
-            setStems(prev => prev.map((s, i) => i === selectedStemIndex ? { ...s, url: blobUrl, status: "ready" } : s));
-            if (!duration) setDuration(decoded.duration);
-        } catch (err) {
-            if (!cancelled) {
-                console.error("Failed to load stem", stem.fileName, err);
-                setStems(prev => prev.map((s, i) => i === selectedStemIndex ? { ...s, status: "error" } : s));
-            }
-        }
-    };
-
-    loadStem();
-    return () => { cancelled = true; };
-  }, [jobId, user, selectedStemIndex, selectedStem?.fileName, selectedStem?.status, selectedStem?.url]);
+    if (stem.url && audioBuffersRef.current.has(stem.fileName)) return;
+  }, [jobId, user, selectedStemIndex]);
 
   useEffect(() => {
-    if (!waveformRef.current || stems.length === 0) return;
-    if (!selectedStem?.url) return;
+    if (!waveformRef.current) return;
+
+    // Priority: Mixdown URL -> Selected Stem URL
+    const urlToLoad = mixdownUrl || selectedStem?.url;
+
+    if (!urlToLoad) return;
 
     if (wavesurferRef.current) {
         wavesurferRef.current.destroy();
@@ -297,8 +286,8 @@ export default function StudioPage() {
           barRadius: 3,
           height: 300,
           normalize: true,
-          url: selectedStem.url,
-          interact: false,
+          url: urlToLoad,
+          interact: true, // Made interactive
         });
 
         wavesurferRef.current.on('ready', () => {
@@ -306,6 +295,11 @@ export default function StudioPage() {
                wavesurferRef.current.setTime(currentTime);
            }
         });
+
+        wavesurferRef.current.on('interaction', (newTime) => {
+            seek(newTime);
+        });
+
     } catch (e) {
         console.error("WaveSurfer init error", e);
     }
@@ -313,7 +307,7 @@ export default function StudioPage() {
     return () => {
         wavesurferRef.current?.destroy();
     };
-  }, [selectedStemIndex, selectedStem?.url]);
+  }, [mixdownUrl, selectedStem?.url]);
 
   useEffect(() => {
      if (wavesurferRef.current) {
@@ -323,7 +317,7 @@ export default function StudioPage() {
 
   const togglePlay = async () => {
       const ctx = audioContextRef.current;
-      if (!ctx || !selectedStem) return;
+      if (!ctx || stems.length === 0) return;
 
       if (ctx.state === 'suspended') await ctx.resume();
 
@@ -334,7 +328,6 @@ export default function StudioPage() {
           return;
       }
 
-      // Play ALL loaded stems
       const activeStems = stems.filter(s => audioBuffersRef.current.has(s.fileName));
       if (activeStems.length === 0) return;
 
@@ -378,6 +371,7 @@ export default function StudioPage() {
       });
 
       setIsPlaying(true);
+      if(wavesurferRef.current) wavesurferRef.current.play();
   };
 
   const seek = (time: number) => {
@@ -393,14 +387,48 @@ export default function StudioPage() {
 
       pauseTimeRef.current = t;
       setCurrentTime(t);
-      if (wavesurferRef.current) {
+
+      if (wavesurferRef.current && Math.abs(wavesurferRef.current.getCurrentTime() - t) > 0.1) {
           wavesurferRef.current.setTime(t);
       }
 
       if (wasPlaying) {
           setIsPlaying(false);
           setTimeout(() => {
-              togglePlay();
+             if (ctx.state === 'suspended') ctx.resume();
+
+             const activeStems = stems.filter(s => audioBuffersRef.current.has(s.fileName));
+             if (activeStems.length === 0) {
+                 setIsPlaying(true);
+                 return;
+             }
+
+             const offset = t;
+             startTimeRef.current = ctx.currentTime - offset;
+             const anySolo = stems.some(s => s.solo);
+
+             activeStems.forEach(stem => {
+                const buffer = audioBuffersRef.current.get(stem.fileName);
+                if (!buffer) return;
+                const source = ctx.createBufferSource();
+                source.buffer = buffer;
+                const gain = ctx.createGain();
+                let shouldMute = stem.mute;
+                if (anySolo) shouldMute = !stem.solo;
+                const vol = Math.pow(10, stem.volume / 20) * masterVolume;
+                gain.gain.value = shouldMute ? 0 : vol;
+                const panner = ctx.createStereoPanner();
+                panner.pan.value = stem.pan.enabled ? stem.pan.value : 0;
+                source.connect(gain);
+                gain.connect(panner);
+                panner.connect(ctx.destination);
+                source.start(0, offset);
+                sourceNodesRef.current.set(stem.fileName, source);
+                gainNodesRef.current.set(stem.fileName, gain);
+                pannerNodesRef.current.set(stem.fileName, panner);
+             });
+             setIsPlaying(true);
+             if(wavesurferRef.current) wavesurferRef.current.play();
           }, 0);
       }
   };
@@ -421,10 +449,15 @@ export default function StudioPage() {
                   stopAllSources();
                   pauseTimeRef.current = 0;
                   setCurrentTime(0);
-                  if (wavesurferRef.current) wavesurferRef.current.setTime(0);
+                  if (wavesurferRef.current) {
+                      wavesurferRef.current.setTime(0);
+                      wavesurferRef.current.pause();
+                  }
               } else {
                   setCurrentTime(now);
-                  if (wavesurferRef.current) wavesurferRef.current.setTime(now);
+                   if (wavesurferRef.current && Math.abs(wavesurferRef.current.getCurrentTime() - now) > 0.2) {
+                       wavesurferRef.current.setTime(now);
+                   }
                   raf = requestAnimationFrame(update);
               }
           }
@@ -511,6 +544,7 @@ export default function StudioPage() {
   };
 
   const downloadStems = async () => {
+      setDownloadingStems(true);
       try {
           const baseUrl = getBackendBaseUrl();
           const url = `${baseUrl}/jobs/${jobId}/download-stems-zip`;
@@ -529,10 +563,13 @@ export default function StudioPage() {
       } catch (e) {
           console.error(e);
           alert("Failed to download stems");
+      } finally {
+          setDownloadingStems(false);
       }
   };
 
   const downloadMixdown = async () => {
+       setDownloadingMixdown(true);
        try {
           const baseUrl = getBackendBaseUrl();
           const url = `${baseUrl}/jobs/${jobId}/download-mixdown`;
@@ -551,6 +588,8 @@ export default function StudioPage() {
        } catch (e) {
            console.error(e);
            alert("Failed to download mixdown");
+       } finally {
+           setDownloadingMixdown(false);
        }
   };
 
@@ -590,12 +629,19 @@ export default function StudioPage() {
              </div>
          </div>
          <div className="flex items-center gap-4">
-             <button onClick={downloadStems} className="px-3 py-1.5 text-xs font-medium text-slate-400 hover:text-white border border-white/10 rounded hover:bg-white/5 transition-colors flex items-center gap-2">
-                 <ArrowDownTrayIcon className="w-3 h-3" /> Stems (ZIP)
-             </button>
-             <button onClick={downloadMixdown} className="px-3 py-1.5 text-xs font-medium text-slate-400 hover:text-white border border-white/10 rounded hover:bg-white/5 transition-colors flex items-center gap-2">
-                 <ArrowDownTrayIcon className="w-3 h-3" /> Mixdown
-             </button>
+             <div className="flex flex-col items-end">
+                 <button onClick={downloadStems} disabled={downloadingStems} className="px-3 py-1.5 text-xs font-medium text-slate-400 hover:text-white border border-white/10 rounded hover:bg-white/5 transition-colors flex items-center gap-2">
+                     <ArrowDownTrayIcon className="w-3 h-3" /> Stems (ZIP)
+                 </button>
+                 {downloadingStems && <span className="text-[10px] text-emerald-500 animate-pulse mt-1">Descargando...</span>}
+             </div>
+
+             <div className="flex flex-col items-end">
+                 <button onClick={downloadMixdown} disabled={downloadingMixdown} className="px-3 py-1.5 text-xs font-medium text-slate-400 hover:text-white border border-white/10 rounded hover:bg-white/5 transition-colors flex items-center gap-2">
+                     <ArrowDownTrayIcon className="w-3 h-3" /> Mixdown
+                 </button>
+                 {downloadingMixdown && <span className="text-[10px] text-emerald-500 animate-pulse mt-1">Descargando...</span>}
+             </div>
 
              <div className="h-6 w-px bg-white/10 mx-2"></div>
 
@@ -676,64 +722,76 @@ export default function StudioPage() {
                 }}>
              </div>
 
-             {/* Scrubber / Timeline Bar */}
-             <div
-                 className="h-6 bg-[#161b2e] border-b border-white/5 relative cursor-pointer group select-none"
-                 onClick={handleTimelineClick}
-             >
-                 {Array.from({length: 40}).map((_, i) => (
-                     <div key={i} className="absolute top-0 bottom-0 border-l border-white/5" style={{ left: `${(i/40)*100}%` }}></div>
-                 ))}
-                 <div className="absolute top-0 left-0 bottom-0 bg-emerald-500/20 pointer-events-none" style={{ width: `${duration ? (currentTime / duration) * 100 : 0}%` }}></div>
-                 <div className="absolute top-0 bottom-0 w-0.5 bg-yellow-400 z-10 pointer-events-none shadow-[0_0_10px_rgba(250,204,21,0.5)]" style={{ left: `${duration ? (currentTime / duration) * 100 : 0}%` }}></div>
-             </div>
-
              <div className="flex-1 relative flex items-center justify-center p-10">
 
-                 <div ref={waveformRef} className="w-full h-[300px] opacity-80" />
+                 {/* Interactive Waveform Main Display */}
+                 <div ref={waveformRef} className="w-full h-[300px] opacity-80 cursor-pointer" />
 
-                 {!selectedStem?.url && (
+                 {!selectedStem?.url && !mixdownUrl && (
                      <div className="absolute inset-0 flex items-center justify-center text-slate-600 font-mono pointer-events-none">
                          {loadingStems ? "Loading..." : "Select a track to view waveform"}
                      </div>
                  )}
              </div>
 
-             <div className="h-20 bg-[#11131f] border-t border-white/5 px-6 flex items-center justify-between shrink-0 z-20">
+             {/* Footer Transport Section */}
+             <div className="h-28 bg-[#11131f] border-t border-white/5 flex flex-col shrink-0 z-20">
 
-                 <div className="flex flex-col gap-1 w-48">
-                     <div className="flex justify-between text-[10px] text-slate-500 font-mono">
-                         <span>MASTER OUT</span>
-                         <span>{(masterVolume * 20 - 20).toFixed(1)} dB</span>
+                 {/* New Timeline Bar placement */}
+                 <div
+                     className="h-6 w-full bg-[#0f111a] border-b border-white/5 relative cursor-pointer group select-none hover:bg-[#161b2e] transition-colors"
+                     onClick={handleTimelineClick}
+                 >
+                     {/* Background Grid */}
+                     <div className="absolute inset-0 opacity-20 flex justify-between px-2">
+                         {Array.from({length: 40}).map((_, i) => (
+                             <div key={i} className="w-px h-full bg-white/20"></div>
+                         ))}
                      </div>
-                     <div className="h-2 bg-slate-800 rounded-full overflow-hidden relative">
-                         <div className="absolute top-0 left-0 bottom-0 bg-gradient-to-r from-emerald-600 to-emerald-400" style={{ width: `${masterVolume * 100}%` }}></div>
+
+                     {/* Progress Fill */}
+                     <div className="absolute top-0 left-0 bottom-0 bg-emerald-500/20 pointer-events-none transition-all duration-75" style={{ width: `${duration ? (currentTime / duration) * 100 : 0}%` }}></div>
+
+                     {/* Playhead */}
+                     <div className="absolute top-0 bottom-0 w-0.5 bg-yellow-400 z-10 pointer-events-none shadow-[0_0_10px_rgba(250,204,21,0.5)] transition-all duration-75" style={{ left: `${duration ? (currentTime / duration) * 100 : 0}%` }}></div>
+
+                     <div className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-mono text-emerald-500">
+                         {formatTime(currentTime)} / {formatTime(duration)}
                      </div>
                  </div>
 
-                 <div className="flex flex-col items-center gap-2">
-                     <div className="text-xl font-mono text-slate-300 tabular-nums tracking-widest">
-                         {formatTime(currentTime)}
+                 <div className="flex-1 px-6 flex items-center justify-between">
+                     <div className="flex flex-col gap-1 w-48">
+                         <div className="flex justify-between text-[10px] text-slate-500 font-mono">
+                             <span>MASTER OUT</span>
+                             <span>{(masterVolume * 20 - 20).toFixed(1)} dB</span>
+                         </div>
+                         <div className="h-2 bg-slate-800 rounded-full overflow-hidden relative">
+                             <div className="absolute top-0 left-0 bottom-0 bg-gradient-to-r from-emerald-600 to-emerald-400" style={{ width: `${masterVolume * 100}%` }}></div>
+                         </div>
                      </div>
-                     <div className="flex items-center gap-4">
-                        <button onClick={() => { setIsPlaying(false); stopAllSources(); setCurrentTime(0); pauseTimeRef.current = 0; if(wavesurferRef.current) wavesurferRef.current.setTime(0); }} className="text-slate-500 hover:text-white transition-colors"><StopIcon className="w-4 h-4" /></button>
-                        <button
-                            onClick={togglePlay}
-                            className="w-10 h-10 rounded-full bg-white text-black flex items-center justify-center hover:scale-105 transition-transform shadow-[0_0_15px_rgba(255,255,255,0.2)]"
-                        >
-                            {isPlaying ? <PauseIcon className="w-5 h-5" /> : <PlayIcon className="w-5 h-5 ml-0.5" />}
-                        </button>
-                     </div>
-                 </div>
 
-                 <div className="w-48 flex items-center gap-3">
-                     <span className="text-[10px] text-slate-500 font-bold">MONITOR</span>
-                     <input
-                        type="range" min="0" max="1" step="0.01"
-                        value={masterVolume}
-                        onChange={(e) => setMasterVolume(parseFloat(e.target.value))}
-                        className="w-full h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-white"
-                     />
+                     <div className="flex flex-col items-center gap-2">
+                         <div className="flex items-center gap-4">
+                            <button onClick={() => { setIsPlaying(false); stopAllSources(); setCurrentTime(0); pauseTimeRef.current = 0; if(wavesurferRef.current) wavesurferRef.current.setTime(0); }} className="text-slate-500 hover:text-white transition-colors"><StopIcon className="w-4 h-4" /></button>
+                            <button
+                                onClick={togglePlay}
+                                className="w-10 h-10 rounded-full bg-white text-black flex items-center justify-center hover:scale-105 transition-transform shadow-[0_0_15px_rgba(255,255,255,0.2)]"
+                            >
+                                {isPlaying ? <PauseIcon className="w-5 h-5" /> : <PlayIcon className="w-5 h-5 ml-0.5" />}
+                            </button>
+                         </div>
+                     </div>
+
+                     <div className="w-48 flex items-center gap-3">
+                         <span className="text-[10px] text-slate-500 font-bold">MONITOR</span>
+                         <input
+                            type="range" min="0" max="1" step="0.01"
+                            value={masterVolume}
+                            onChange={(e) => setMasterVolume(parseFloat(e.target.value))}
+                            className="w-full h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-white"
+                         />
+                     </div>
                  </div>
              </div>
           </main>
