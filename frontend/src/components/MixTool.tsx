@@ -399,9 +399,9 @@ export function MixTool() {
       title: "Drum bus dynamics",
       description: "Bus compression on drums for punch and glue.",
     },
-    S6_BUS_REVERB_STYLE: {
-      title: "Space / reverb style",
-      description: "Assigns reverb/space styles per bus family.",
+    S6_MANUAL_CORRECTION: {
+      title: "Manual Correction",
+      description: "Manual adjustments in Piroola Studio.",
     },
     S7_MIXBUS_TONAL_BALANCE: {
       title: "Mixbus tonal balance",
@@ -651,6 +651,12 @@ useEffect(() => {
           setLoading(false);
           setError(status.error ?? "Error processing mix");
           break;
+        }
+
+        if (status.stageKey === "waiting_for_correction") {
+             // Redirect to studio
+             window.location.href = `/studio/${jobId}`;
+             return;
         }
 
         await new Promise((resolve) => setTimeout(resolve, 1000));

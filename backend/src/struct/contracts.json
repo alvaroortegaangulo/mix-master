@@ -222,6 +222,21 @@
         }
       ]
     },
+    "S6_MANUAL_CORRECTION": {
+      "id": "S6_MANUAL_CORRECTION",
+      "name": "Manual Correction",
+      "contracts": [
+        {
+          "id": "S6_MANUAL_CORRECTION",
+          "stage_id": "S6_MANUAL_CORRECTION",
+          "instrument_id": "*",
+          "style_id": "*",
+          "target_scope": "session",
+          "metrics": {},
+          "limits": {}
+        }
+      ]
+    },
     "S7_TONAL_BALANCE": {
       "id": "S7_TONAL_BALANCE",
       "name": "Multiband EQ / Tonal Balance",

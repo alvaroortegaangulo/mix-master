@@ -11,6 +11,7 @@ from typing import Callable, Dict, Any, List, Optional
 from .stages.stage import run_stage, set_active_contract_sequence
 from .utils.analysis_utils import get_temp_dir
 from .context import PipelineContext
+from .utils.job_store import update_job_status
 
 logger = logging.getLogger(__name__)
 
@@ -345,6 +346,35 @@ def run_pipeline_for_job(
     )
 
     for idx, contract_id in enumerate(contract_ids, start=1):
+        # Check for mandatory pause before S6 if we just finished S5
+        # The contract_id logic: we iterate. S5 finishes, loop continues to S6.
+        # But we want to PAUSE BEFORE S6 starts if manual correction is enabled.
+        # So we check if current contract_id is S6_MANUAL_CORRECTION.
+
+        if contract_id == "S6_MANUAL_CORRECTION":
+             logger.info("[pipeline] Pausing pipeline for Manual Correction (S6)...")
+
+             # Set status to waiting_for_correction
+             if progress_cb:
+                 progress_cb(
+                     idx,
+                     total_stages,
+                     "waiting_for_correction",
+                     "Waiting for manual correction in Studio..."
+                 )
+
+             # Update job status in persistent store so frontend picks it up even if progress_cb is async
+             # Note: run_pipeline_for_job is usually called from tasks.py which handles status updates via callbacks.
+             # But here we are deep in the loop.
+             # We need to signal the caller (Task) that we are pausing, NOT finishing.
+             # But run_pipeline_for_job returns None.
+
+             # HACK: We update status here directly using a helper if possible, or assume progress_cb handles it.
+             # The progress_cb provided by tasks.py updates Redis/File status.
+
+             # Stop execution of remaining stages
+             return
+
         logger.info(
             "[pipeline] Ejecutando contrato %s (%d/%d)",
             contract_id,
