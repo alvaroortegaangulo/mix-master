@@ -197,21 +197,26 @@ export default function StudioPage() {
           };
         });
 
-        const finalStems = newStems.length
-          ? newStems
-          : ["vocals.wav", "drums.wav", "bass.wav", "other.wav"].map((file) => ({
-              fileName: file,
-              name: file.replace(".wav", "").replace(/_/g, " ") || file,
-              volume: 0,
-              pan: { value: 0, enabled: false },
-              mute: false,
-              solo: false,
-              eq: { low: 0, mid: 0, high: 0, enabled: false },
-              compression: { threshold: -20, ratio: 2, enabled: false },
-              reverb: { amount: 0, enabled: false },
-              url: undefined,
-              status: "idle"
-            }));
+        const fallbackStems: StemControl[] = ["vocals.wav", "drums.wav", "bass.wav", "other.wav"].map(
+          (file) => ({
+            fileName: file,
+            name: file.replace(".wav", "").replace(/_/g, " ") || file,
+            volume: 0,
+            pan: { value: 0, enabled: false },
+            mute: false,
+            solo: false,
+            eq: { low: 0, mid: 0, high: 0, enabled: false },
+            compression: { threshold: -20, ratio: 2, enabled: false },
+            reverb: { amount: 0, enabled: false },
+            signedUrl: undefined,
+            previewUrl: null,
+            peaks: undefined,
+            url: undefined,
+            status: "idle" as const
+          }),
+        );
+
+        const finalStems: StemControl[] = newStems.length ? newStems : fallbackStems;
 
         const stemFiles = finalStems.map((s) => s.fileName);
 
