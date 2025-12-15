@@ -320,8 +320,9 @@ export default function StudioPage() {
 
         if (stemBuffer && wavesurferRef.current) {
             // Prefer direct buffer to avoid extra network fetch and blobs
-            if (typeof wavesurferRef.current.loadDecodedBuffer === "function") {
-                wavesurferRef.current.loadDecodedBuffer(stemBuffer);
+            const wsAny = wavesurferRef.current as any;
+            if (typeof wsAny.loadDecodedBuffer === "function") {
+                wsAny.loadDecodedBuffer(stemBuffer);
             } else if (urlToLoad) {
                 wavesurferRef.current.load(urlToLoad);
             }
