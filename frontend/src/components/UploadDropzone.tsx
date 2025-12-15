@@ -117,8 +117,12 @@ export function UploadDropzone({
         ref={inputRef}
         type="file"
         className="hidden"
-        multiple
-        accept="audio/*"
+        multiple={uploadMode === "stems"}
+        accept={
+          uploadMode === "song"
+            ? ".wav,audio/wav,audio/x-wav"
+            : "audio/*"
+        }
         onChange={handleInputChange}
         disabled={disabled}
       />

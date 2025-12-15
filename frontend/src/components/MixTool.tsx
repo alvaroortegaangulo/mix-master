@@ -277,6 +277,7 @@ export function MixTool() {
   const [uploadMode, setUploadMode] = useState<"song" | "stems">("stems");
   const [files, setFiles] = useState<File[]>([]);
   const [stemProfiles, setStemProfiles] = useState<StemProfile[]>([]);
+  const [selectionWarning, setSelectionWarning] = useState<string | null>(null);
 
   const [loading, setLoading] = useState(false);
   const [jobStatus, setJobStatus] = useState<JobStatus | null>(null);
@@ -286,6 +287,11 @@ export function MixTool() {
   const [selectedStageKeys, setSelectedStageKeys] = useState<string[]>([]);
   const [showStageSelector, setShowStageSelector] = useState(true);
   const [isPipelineCollapsed, setIsPipelineCollapsed] = useState(true);
+  const songModeStageKeys = useMemo(
+    () => getSongModeStages(availableStages),
+    [availableStages],
+  );
+  const isSongMode = uploadMode === "song";
 
   // UseAuth hook not used directly here for layout but context handles user state if needed for API calls implicitly if token is in storage.
   // Actually, we might need user info, but let's assume API handles it via token.
@@ -457,11 +463,11 @@ useEffect(() => {
 
     const nextKeys =
       uploadMode === "song"
-        ? getSongModeStages(availableStages)
+        ? songModeStageKeys
         : availableStages.map((s) => s.key);
 
     setSelectedStageKeys(nextKeys);
-  }, [availableStages, uploadMode]);
+  }, [availableStages, uploadMode, songModeStageKeys]);
 
   const toggleStage = (key: string) => {
     setSelectedStageKeys((prev) =>
@@ -470,6 +476,10 @@ useEffect(() => {
   };
 
   const selectAllStages = () => {
+    if (isSongMode) {
+      setSelectedStageKeys(songModeStageKeys);
+      return;
+    }
     setSelectedStageKeys(availableStages.map((s) => s.key));
   };
 
@@ -519,15 +529,48 @@ useEffect(() => {
     setError(null);
     setStemProfiles([]);
     setSpaceBusStyles({});
+    setSelectionWarning(null);
   };
 
   const handleFilesSelected = (selected: File[]) => {
-    setFiles(selected);
     setJobStatus(null);
     setError(null);
+    setSelectionWarning(null);
     setShowStageSelector(true);
     setIsPipelineCollapsed(true);
     setSpaceBusStyles({});
+    setFiles([]);
+    setStemProfiles([]);
+
+    if (isSongMode) {
+      if (selected.length !== 1) {
+        setError("Song mode requires exactly one WAV file.");
+        return;
+      }
+
+      const [file] = selected;
+      const name = file.name.toLowerCase();
+      const isWav =
+        name.endsWith(".wav") ||
+        file.type === "audio/wav" ||
+        file.type === "audio/x-wav";
+
+      if (!isWav) {
+        setError("Song mode requires exactly one WAV file.");
+        return;
+      }
+
+      setFiles([file]);
+      return;
+    }
+
+    if (selected.length === 1) {
+      setSelectionWarning(
+        "You have selected only one stem. If you want to master a song, select Song (Mastering).",
+      );
+    }
+
+    setFiles(selected);
 
     const newProfiles: StemProfile[] = selected.map((file, index) => {
       const dotIndex = file.name.lastIndexOf(".");
@@ -755,6 +798,12 @@ useEffect(() => {
                   />
                 </div>
 
+                {selectionWarning && (
+                  <div className="mt-3 rounded-md border border-amber-400/60 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">
+                    {selectionWarning}
+                  </div>
+                )}
+
                 {showStageSelector && availableStages.length > 0 && (
                   <section className="mt-6 rounded-2xl border border-amber-500/40 bg-amber-500/10 text-amber-50 shadow-lg shadow-amber-500/20">
                     {/* Cabecera plegable */}
@@ -817,10 +866,19 @@ useEffect(() => {
                                   {STAGE_GROUP_LABELS[groupKey] ?? groupKey}
                                 </span>
                                 <div className="space-y-2">
-                                  {stages.map((stage) => (
+                                  {stages.map((stage) => {
+                                    const isDisabledForSong =
+                                      isSongMode &&
+                                      !songModeStageKeys.includes(stage.key);
+                                    return (
                                     <label
                                       key={stage.key}
-                                      className="flex cursor-pointer items-start gap-2 rounded-lg bg-slate-950/70 px-3 py-2 text-xs text-amber-50 hover:bg-slate-900"
+                                      className={[
+                                        "flex items-start gap-2 rounded-lg bg-slate-950/70 px-3 py-2 text-xs text-amber-50",
+                                        isDisabledForSong
+                                          ? "cursor-not-allowed opacity-60"
+                                          : "cursor-pointer hover:bg-slate-900",
+                                      ].join(" ")}
                                     >
                                       <input
                                         type="checkbox"
@@ -829,6 +887,7 @@ useEffect(() => {
                                           stage.key,
                                         )}
                                         onChange={() => toggleStage(stage.key)}
+                                        disabled={isDisabledForSong}
                                       />
                                       <div>
                                         <span className="font-semibold">
@@ -842,7 +901,8 @@ useEffect(() => {
                                         </p>
                                       </div>
                                     </label>
-                                  ))}
+                                    );
+                                  })}
                                 </div>
                               </div>
                             );
