@@ -295,10 +295,10 @@ export default function StudioPage() {
   useEffect(() => {
     if (!waveformRef.current) return;
 
-    // Priority: Mixdown URL -> Selected Stem URL
+    const stemBuffer = selectedStem ? audioBuffersRef.current.get(selectedStem.fileName) : null;
     const urlToLoad = mixdownUrl || selectedStem?.url;
 
-    if (!urlToLoad) return;
+    if (!stemBuffer && !urlToLoad) return;
 
     if (wavesurferRef.current) {
         wavesurferRef.current.destroy();
@@ -315,9 +315,19 @@ export default function StudioPage() {
           barRadius: 3,
           height: 300,
           normalize: true,
-          url: urlToLoad,
-          interact: true, // Made interactive
+          interact: true,
         });
+
+        if (stemBuffer && wavesurferRef.current) {
+            // Prefer direct buffer to avoid extra network fetch and blobs
+            if (typeof wavesurferRef.current.loadDecodedBuffer === "function") {
+                wavesurferRef.current.loadDecodedBuffer(stemBuffer);
+            } else if (urlToLoad) {
+                wavesurferRef.current.load(urlToLoad);
+            }
+        } else if (urlToLoad && wavesurferRef.current) {
+            wavesurferRef.current.load(urlToLoad);
+        }
 
         wavesurferRef.current.on('ready', () => {
            if (wavesurferRef.current) {
@@ -336,7 +346,7 @@ export default function StudioPage() {
     return () => {
         wavesurferRef.current?.destroy();
     };
-  }, [mixdownUrl, selectedStem?.url]);
+  }, [mixdownUrl, selectedStem?.url, selectedStem?.fileName]);
 
   useEffect(() => {
      if (wavesurferRef.current) {
