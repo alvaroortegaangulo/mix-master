@@ -65,7 +65,7 @@ const stepsData = [
   }
 ];
 
-export default function PipelineInteractiveDiagram() {
+export function PipelineInteractiveDiagram({ className }: { className?: string }) {
   const [currentStep, setCurrentStep] = useState(0);
   const [isFadingOut, setIsFadingOut] = useState(false);
   // Separate state for display data to handle transition delay
@@ -89,7 +89,8 @@ export default function PipelineInteractiveDiagram() {
   const data = stepsData[displayStep];
 
   return (
-    <div className="w-full max-w-7xl mx-auto py-12 px-4 md:px-8 relative z-10">
+    <section className={`py-24 ${className || 'bg-slate-900'}`}>
+    <div className="w-full max-w-7xl mx-auto px-4 md:px-8 relative z-10">
       {/* Header */}
       <header className="text-center mx-auto mb-16 relative z-10 max-w-4xl">
         <div className="inline-block mb-4 px-4 py-1.5 rounded-full border border-cyan-500/30 bg-cyan-500/10 text-cyan-300 text-xs font-semibold tracking-wider uppercase">
@@ -224,5 +225,6 @@ export default function PipelineInteractiveDiagram() {
 
       </div>
     </div>
+    </section>
   );
 }

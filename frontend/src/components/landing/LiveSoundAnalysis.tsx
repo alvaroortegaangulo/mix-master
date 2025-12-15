@@ -7,7 +7,7 @@ import {
   CheckCircleIcon,
 } from "@heroicons/react/24/outline";
 
-export function LiveSoundAnalysis() {
+export function LiveSoundAnalysis({ className }: { className?: string }) {
   // State for animations
   const [spectrumData, setSpectrumData] = useState<number[]>([]);
   const [lufs, setLufs] = useState(-13.2);
@@ -60,7 +60,7 @@ export function LiveSoundAnalysis() {
   }, []);
 
   return (
-    <section className="py-24 bg-slate-950 border-t border-slate-900 relative overflow-hidden">
+    <section className={`py-24 border-t border-slate-900 relative overflow-hidden ${className || 'bg-slate-950'}`}>
         {/* Background Gradients */}
         <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
             <div className="absolute top-1/4 -left-64 w-96 h-96 bg-cyan-900/10 rounded-full blur-3xl"></div>
