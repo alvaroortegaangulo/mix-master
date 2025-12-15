@@ -422,6 +422,56 @@ def run_full_pipeline_task(
         _write_job_status(job_root_path, error_status)
         raise
 
+    # Si el pipeline se ha detenido para correcciones manuales (S6),
+    # mantenemos el estado de "waiting_for_correction" y NO marcamos éxito.
+    if progress_state.get("stage_key") == "waiting_for_correction":
+        logger.info(
+            "[%s] Pipeline pausado en S6 (waiting_for_correction); se omite finalización para que el frontend abra el Studio.",
+            job_id,
+        )
+        status_path = job_root_path / "job_status.json"
+        pause_status: Dict[str, Any] = {}
+        if status_path.exists():
+            try:
+                pause_status = json.loads(status_path.read_text(encoding="utf-8"))
+            except Exception as exc:  # pragma: no cover - lectura defensiva
+                logger.warning(
+                    "[%s] No se pudo leer job_status.json existente durante pausa: %s",
+                    job_id,
+                    exc,
+                )
+                pause_status = {}
+
+        if not isinstance(pause_status, dict):
+            pause_status = {}
+
+        pause_status.setdefault("jobId", job_id)
+        pause_status.setdefault("job_id", job_id)
+        # Aseguramos que no se marque como terminado
+        pause_status["status"] = "running"
+        pause_status["stage_index"] = progress_state.get(
+            "stage_index", pause_status.get("stage_index", 0)
+        )
+        pause_status["total_stages"] = progress_state.get(
+            "total_stages", pause_status.get("total_stages", 0)
+        )
+        pause_status["stage_key"] = "waiting_for_correction"
+        pause_status["message"] = pause_status.get("message") or "Waiting for manual correction in Studio..."
+        if "progress" not in pause_status:
+            try:
+                total = float(pause_status["total_stages"] or 0)
+                if total > 0:
+                    pause_status["progress"] = min(
+                        100.0, float(pause_status["stage_index"]) / total * 100.0
+                    )
+                else:
+                    pause_status["progress"] = 0.0
+            except Exception:
+                pause_status["progress"] = 0.0
+
+        _write_job_status(job_root_path, pause_status)
+        return pause_status
+
     logger.info(
         "[%s] Pipeline finalizado correctamente.",
         job_id,
