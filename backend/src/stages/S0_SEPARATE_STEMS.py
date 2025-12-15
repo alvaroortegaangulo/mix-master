@@ -136,7 +136,7 @@ def _find_uploaded_song(
     Prioriza carpeta del stage/input, luego media/, luego S0_MIX_ORIGINAL y
     finalmente heuristicas en work/.
     """
-    skip = {"full_song.wav"}
+    skip = set()
 
     stage_audio = _list_audio_files(stage_dir, skip_names=skip)
     if stage_audio:
@@ -262,7 +262,7 @@ def _process_impl(contract_id: str, context: Optional["PipelineContext"] = None)
         if s0_original.exists():
             seed_files = _list_audio_files(stage_dir, skip_names={"full_song.wav"})
             if not seed_files:
-                for p in _list_audio_files(s0_original, skip_names={"full_song.wav"}):
+                for p in _list_audio_files(s0_original, skip_names=set()):
                     target = stage_dir / p.name
                     target.parent.mkdir(parents=True, exist_ok=True)
                     shutil.copy2(p, target)

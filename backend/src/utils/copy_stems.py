@@ -49,12 +49,15 @@ def process(context: PipelineContext, *args) -> bool:
         )
         return True # No es error fatal, el pipeline continua
 
+    audio_exts = {".wav", ".aif", ".aiff", ".flac", ".mp3", ".m4a", ".ogg", ".aac"}
     count = 0
-    for wav_path in src_dir.glob("*.wav"):
-        # No copiar el mixdown
-        if wav_path.name.lower() == "full_song.wav":
+    for audio_path in src_dir.glob("*"):
+        if audio_path.suffix.lower() not in audio_exts:
             continue
-        shutil.copy2(wav_path, dst_dir / wav_path.name)
+        # No copiar el mixdown
+        if audio_path.name.lower() == "full_song.wav":
+            continue
+        shutil.copy2(audio_path, dst_dir / audio_path.name)
         count += 1
 
     # Copiar session_config.json si existe
