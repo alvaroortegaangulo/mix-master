@@ -89,26 +89,13 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
 
       const data = await res.json();
 
-      if (isLogin) {
+      if (data.access_token) {
         login(data.access_token);
         onClose();
       } else {
-        // After register, auto login or ask to login?
-        // Let's auto login for better UX if the backend returns token, but backend currently returns user on register.
-        // So we need to login separately.
-        const loginRes = await fetch(`${baseUrl}/auth/login`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email, password }),
-        });
-        if (loginRes.ok) {
-            const loginData = await loginRes.json();
-            login(loginData.access_token);
-            onClose();
-        } else {
-             setIsLogin(true); // Switch to login view
-             setError("Registration successful. Please log in.");
-        }
+        // Should not happen if backend returns token on register
+        setIsLogin(true);
+        setError("Registration successful. Please log in.");
       }
     } catch (err: any) {
       setError(err.message);

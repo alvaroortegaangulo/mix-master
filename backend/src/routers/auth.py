@@ -10,7 +10,7 @@ from google.auth.transport import requests as google_requests
 
 from ..database import get_db
 from ..models.user import User
-from ..schemas.auth import UserCreate, UserResponse, UserLogin, GoogleLogin, Token, TokenData, UserPasswordChange
+from ..schemas.auth import UserCreate, UserResponse, UserLogin, GoogleLogin, Token, TokenData, UserPasswordChange, UserRegisterResponse
 from ..utils.security import verify_password, get_password_hash, create_access_token, SECRET_KEY, ALGORITHM
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -37,7 +37,7 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
         raise credentials_exception
     return user
 
-@router.post("/register", response_model=UserResponse)
+@router.post("/register", response_model=UserRegisterResponse)
 def register(user: UserCreate, db: Session = Depends(get_db)):
     db_user = db.query(User).filter(User.email == user.email).first()
     if db_user:
@@ -48,7 +48,17 @@ def register(user: UserCreate, db: Session = Depends(get_db)):
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
-    return new_user
+
+    access_token = create_access_token(data={"sub": new_user.email})
+
+    # Use UserResponse (from_attributes=True) to dump the user model
+    user_data = UserResponse.model_validate(new_user).model_dump()
+
+    # Add token fields
+    user_data["access_token"] = access_token
+    user_data["token_type"] = "bearer"
+
+    return user_data
 
 @router.post("/login", response_model=Token)
 def login(user_credentials: UserLogin, db: Session = Depends(get_db)):
