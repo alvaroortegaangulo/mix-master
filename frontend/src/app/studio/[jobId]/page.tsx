@@ -15,14 +15,19 @@ import {
   StopIcon,
   ArrowDownTrayIcon,
   CheckIcon,
-  XMarkIcon
+  XMarkIcon,
+  SpeakerWaveIcon,
+  SparklesIcon
 } from "@heroicons/react/24/solid";
 
 interface StemControl {
   fileName: string;
   name: string;
   volume: number;
-  pan: number;
+  pan: {
+    value: number;
+    enabled: boolean;
+  };
   mute: boolean;
   solo: boolean;
   eq: {
@@ -66,6 +71,7 @@ export default function StudioPage() {
   const audioContextRef = useRef<AudioContext | null>(null);
   const sourceNodesRef = useRef<Map<string, AudioBufferSourceNode>>(new Map());
   const gainNodesRef = useRef<Map<string, GainNode>>(new Map());
+  const pannerNodesRef = useRef<Map<string, StereoPannerNode>>(new Map());
   const audioBuffersRef = useRef<Map<string, AudioBuffer>>(new Map());
   const startTimeRef = useRef<number>(0);
   const pauseTimeRef = useRef<number>(0);
@@ -75,6 +81,8 @@ export default function StudioPage() {
           try { node.stop(); } catch (e) { /* noop */ }
       });
       sourceNodesRef.current.clear();
+      gainNodesRef.current.clear();
+      pannerNodesRef.current.clear();
   };
 
   useEffect(() => {
@@ -103,24 +111,23 @@ export default function StudioPage() {
     let cancelled = false;
 
     async function load() {
-      console.log("Studio: Starting load stems (metadata only)...");
+      console.log("Studio: Starting load stems...");
       try {
         setLoadingStems(true);
         stopAllSources();
         audioBuffersRef.current.clear();
         gainNodesRef.current.clear();
+        pannerNodesRef.current.clear();
         pauseTimeRef.current = 0;
         setIsPlaying(false);
         setCurrentTime(0);
         const baseUrl = getBackendBaseUrl();
-        console.log("Studio: Fetching stems from", baseUrl);
 
         const res = await fetch(`${baseUrl}/jobs/${jobId}/stems`, {
           headers: {
             "X-API-Key": process.env.NEXT_PUBLIC_MIXMASTER_API_KEY || "",
           },
         });
-        console.log("Studio: Stems response", res.status);
 
         let stemFiles: string[] = [];
         if (res.ok) {
@@ -129,7 +136,6 @@ export default function StudioPage() {
         } else {
           stemFiles = ["vocals.wav", "drums.wav", "bass.wav", "other.wav"];
         }
-        console.log("Studio: Stems list", stemFiles);
 
         const newStems: StemControl[] = stemFiles.map((file) => ({
           fileName: file,
@@ -141,7 +147,7 @@ export default function StudioPage() {
               .replace("S10", "")
               .trim() || file,
           volume: 0,
-          pan: 0,
+          pan: { value: 0, enabled: false },
           mute: false,
           solo: false,
           eq: { low: 0, mid: 0, high: 0, enabled: false },
@@ -153,15 +159,10 @@ export default function StudioPage() {
         setStems(newStems);
 
         if (audioContextRef.current) {
-            console.log("Studio: Loading buffers...");
             for (const file of stemFiles) {
                 if (cancelled) break;
-                console.log("Studio: Processing file", file);
                 try {
-                    // Try loading from S5 output since we stop there
-
                     let signedUrl = await signFileUrl(jobId, `S5_LEADVOX_DYNAMICS/${file}`);
-                    // If not found (e.g. some stems didn't go through S5), try previous stages
                     let resp = await fetch(signedUrl);
                     if (!resp.ok) {
                          signedUrl = await signFileUrl(jobId, `S5_STEM_DYNAMICS_GENERIC/${file}`);
@@ -172,8 +173,6 @@ export default function StudioPage() {
                          resp = await fetch(signedUrl);
                     }
                     if (!resp.ok) {
-                        // Use default search
-                         console.log("Studio: Specific S5 fetch failed, trying generic sign");
                          const stages = ["S5_LEADVOX_DYNAMICS", "S5_STEM_DYNAMICS_GENERIC", "S4_SPECTRAL_CLEANUP", "S0_SESSION_FORMAT", "S0_MIX_ORIGINAL"];
                          for (const s of stages) {
                              signedUrl = await signFileUrl(jobId, `${s}/${file}`);
@@ -183,52 +182,44 @@ export default function StudioPage() {
                     }
 
                     if (resp.ok) {
-                        console.log("Studio: Fetch OK, reading buffer");
                         const ab = await resp.arrayBuffer();
-                        console.log("Studio: Decoding buffer", ab.byteLength);
+                        const decodePromise = audioContextRef.current.decodeAudioData(ab);
+                        const timeoutPromise = new Promise<AudioBuffer>((_, reject) =>
+                            setTimeout(() => reject(new Error("Audio decoding timed out")), 10000)
+                        );
 
-                        try {
-                            const decodePromise = audioContextRef.current.decodeAudioData(ab);
-                            const timeoutPromise = new Promise<AudioBuffer>((_, reject) =>
-                                setTimeout(() => reject(new Error("Audio decoding timed out")), 5000)
-                            );
+                        const decoded = await Promise.race([decodePromise, timeoutPromise]);
+                        audioBuffersRef.current.set(file, decoded);
 
-                            const decoded = await Promise.race([decodePromise, timeoutPromise]);
-                            console.log("Studio: Decoded OK");
-                            audioBuffersRef.current.set(newStems.find(s => s.name.includes(file.replace(".wav","")))?.name || file, decoded);
+                        const blob = new Blob([ab], { type: 'audio/wav' });
+                        const blobUrl = URL.createObjectURL(blob);
 
-                            const blob = new Blob([ab], { type: 'audio/wav' });
-                            const blobUrl = URL.createObjectURL(blob);
+                        setStems(prev => prev.map(s => {
+                            if (s.fileName === file) return { ...s, url: blobUrl };
+                            return s;
+                        }));
 
-                            setStems(prev => prev.map(s => {
-                                if (file.includes(s.name.replace(/ /g, "_"))) return { ...s, url: blobUrl };
-                                return s;
-                            }));
+                        if (!duration && decoded) setDuration(decoded.duration);
 
-                            if (!duration && decoded) setDuration(decoded.duration);
-
-                        } catch (decodeErr) {
-                            console.warn(`Failed to decode stem ${file}:`, decodeErr);
-                            // Set dummy URL to allow UI to show up
-                            setStems(prev => prev.map(s => {
-                                if (file.includes(s.name.replace(/ /g, "_"))) return { ...s, url: "mock-url-failed-decode" };
-                                return s;
-                            }));
-                        }
                     } else {
-                        console.log("Studio: Fetch failed for", file);
+                        console.warn("Studio: Fetch failed for", file);
+                        setStems(prev => prev.map(s => {
+                            if (s.fileName === file) return { ...s, status: "error" };
+                            return s;
+                        }));
                     }
                 } catch (e) {
                     console.error("Failed to load stem", file, e);
+                    setStems(prev => prev.map(s => {
+                        if (s.fileName === file) return { ...s, status: "error" };
+                        return s;
+                    }));
                 }
             }
-        } else {
-            console.warn("Studio: No AudioContext, skipping buffers");
         }
       } catch (err) {
         console.error("Error loading stems:", err);
       } finally {
-        console.log("Studio: Load complete, setting loadingStems false");
         setLoadingStems(false);
       }
     }
@@ -241,10 +232,10 @@ export default function StudioPage() {
     const ctx = audioContextRef.current;
     const stem = selectedStem;
     if (!ctx || !jobId || !user || !stem) return;
-    if (stem.status === "loading") return;
+    if (stem.status === "loading" || stem.status === "error") return;
     if (stem.url && audioBuffersRef.current.has(stem.fileName)) {
         const buf = audioBuffersRef.current.get(stem.fileName);
-        if (buf) setDuration(buf.duration);
+        if (buf && !duration) setDuration(buf.duration);
         return;
     }
 
@@ -257,7 +248,6 @@ export default function StudioPage() {
             let signedUrl = await signFileUrl(jobId, `S12_SEPARATE_STEMS/${stem.fileName}`);
             let resp = await fetch(signedUrl);
             if (!resp.ok) {
-                console.log("Studio: S12 fetch failed, trying S0", stem.fileName);
                 signedUrl = await signFileUrl(jobId, `S0_SESSION_FORMAT/${stem.fileName}`);
                 resp = await fetch(signedUrl);
             }
@@ -275,7 +265,7 @@ export default function StudioPage() {
             const blobUrl = URL.createObjectURL(blob);
 
             setStems(prev => prev.map((s, i) => i === selectedStemIndex ? { ...s, url: blobUrl, status: "ready" } : s));
-            setDuration(decoded.duration);
+            if (!duration) setDuration(decoded.duration);
         } catch (err) {
             if (!cancelled) {
                 console.error("Failed to load stem", stem.fileName, err);
@@ -289,16 +279,7 @@ export default function StudioPage() {
   }, [jobId, user, selectedStemIndex, selectedStem?.fileName, selectedStem?.status, selectedStem?.url]);
 
   useEffect(() => {
-      stopAllSources();
-      setIsPlaying(false);
-      setCurrentTime(0);
-      pauseTimeRef.current = 0;
-      startTimeRef.current = audioContextRef.current?.currentTime || 0;
-  }, [selectedStemIndex]);
-
-  useEffect(() => {
     if (!waveformRef.current || stems.length === 0) return;
-
     if (!selectedStem?.url) return;
 
     if (wavesurferRef.current) {
@@ -335,14 +316,8 @@ export default function StudioPage() {
   }, [selectedStemIndex, selectedStem?.url]);
 
   useEffect(() => {
-     if (wavesurferRef.current && isPlaying) {
+     if (wavesurferRef.current) {
          wavesurferRef.current.setVolume(0);
-         if (!wavesurferRef.current.isPlaying()) {
-             wavesurferRef.current.play();
-         }
-     } else if (wavesurferRef.current) {
-         wavesurferRef.current.pause();
-         wavesurferRef.current.setTime(currentTime);
      }
   }, [isPlaying]);
 
@@ -359,33 +334,81 @@ export default function StudioPage() {
           return;
       }
 
-      const buffer = audioBuffersRef.current.get(selectedStem.fileName);
-      if (!buffer) return;
+      // Play ALL loaded stems
+      const activeStems = stems.filter(s => audioBuffersRef.current.has(s.fileName));
+      if (activeStems.length === 0) return;
 
       stopAllSources();
 
-      const source = ctx.createBufferSource();
-      source.buffer = buffer;
+      if (duration > 0 && pauseTimeRef.current >= duration) {
+          pauseTimeRef.current = 0;
+      }
 
-      const gain = ctx.createGain();
-      const vol = Math.pow(10, selectedStem.volume / 20) * masterVolume;
-      gain.gain.value = selectedStem.mute ? 0 : vol;
-
-      source.connect(gain);
-      gain.connect(ctx.destination);
-
-      const offset = pauseTimeRef.current % buffer.duration;
+      const offset = pauseTimeRef.current;
       startTimeRef.current = ctx.currentTime - offset;
-      source.start(0, offset);
-      source.onended = () => {
-          sourceNodesRef.current.delete(selectedStem.fileName);
-          setIsPlaying(false);
-      };
 
-      sourceNodesRef.current.set(selectedStem.fileName, source);
-      gainNodesRef.current.set(selectedStem.fileName, gain);
+      const anySolo = stems.some(s => s.solo);
+
+      activeStems.forEach(stem => {
+          const buffer = audioBuffersRef.current.get(stem.fileName);
+          if (!buffer) return;
+
+          const source = ctx.createBufferSource();
+          source.buffer = buffer;
+
+          const gain = ctx.createGain();
+          let shouldMute = stem.mute;
+          if (anySolo) shouldMute = !stem.solo;
+
+          const vol = Math.pow(10, stem.volume / 20) * masterVolume;
+          gain.gain.value = shouldMute ? 0 : vol;
+
+          const panner = ctx.createStereoPanner();
+          panner.pan.value = stem.pan.enabled ? stem.pan.value : 0;
+
+          source.connect(gain);
+          gain.connect(panner);
+          panner.connect(ctx.destination);
+
+          source.start(0, offset);
+
+          sourceNodesRef.current.set(stem.fileName, source);
+          gainNodesRef.current.set(stem.fileName, gain);
+          pannerNodesRef.current.set(stem.fileName, panner);
+      });
 
       setIsPlaying(true);
+  };
+
+  const seek = (time: number) => {
+      const ctx = audioContextRef.current;
+      if (!ctx) return;
+
+      let t = Math.max(0, Math.min(time, duration));
+
+      const wasPlaying = isPlaying;
+      if (wasPlaying) {
+          stopAllSources();
+      }
+
+      pauseTimeRef.current = t;
+      setCurrentTime(t);
+      if (wavesurferRef.current) {
+          wavesurferRef.current.setTime(t);
+      }
+
+      if (wasPlaying) {
+          setIsPlaying(false);
+          setTimeout(() => {
+              togglePlay();
+          }, 0);
+      }
+  };
+
+  const handleTimelineClick = (e: React.MouseEvent<HTMLDivElement>) => {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const pct = (e.clientX - rect.left) / rect.width;
+      seek(pct * duration);
   };
 
   useEffect(() => {
@@ -393,24 +416,40 @@ export default function StudioPage() {
       const update = () => {
           if (isPlaying && audioContextRef.current) {
               const now = audioContextRef.current.currentTime - startTimeRef.current;
-              setCurrentTime(now);
-              raf = requestAnimationFrame(update);
+              if (duration > 0 && now >= duration) {
+                  setIsPlaying(false);
+                  stopAllSources();
+                  pauseTimeRef.current = 0;
+                  setCurrentTime(0);
+                  if (wavesurferRef.current) wavesurferRef.current.setTime(0);
+              } else {
+                  setCurrentTime(now);
+                  if (wavesurferRef.current) wavesurferRef.current.setTime(now);
+                  raf = requestAnimationFrame(update);
+              }
           }
       };
       if (isPlaying) update();
       return () => cancelAnimationFrame(raf);
-  }, [isPlaying]);
+  }, [isPlaying, duration]);
 
   useEffect(() => {
+      const anySolo = stems.some(s => s.solo);
       stems.forEach(stem => {
-          const node = gainNodesRef.current.get(stem.fileName);
-          if (node) {
+          const gainNode = gainNodesRef.current.get(stem.fileName);
+          const pannerNode = pannerNodesRef.current.get(stem.fileName);
+
+          if (gainNode) {
+              let shouldMute = stem.mute;
+              if (anySolo) shouldMute = !stem.solo;
               const vol = Math.pow(10, stem.volume / 20) * masterVolume;
-              node.gain.setTargetAtTime(stem.mute ? 0 : vol, audioContextRef.current!.currentTime, 0.05);
+              gainNode.gain.setTargetAtTime(shouldMute ? 0 : vol, audioContextRef.current!.currentTime, 0.05);
+          }
+          if (pannerNode) {
+               pannerNode.pan.setTargetAtTime(stem.pan.enabled ? stem.pan.value : 0, audioContextRef.current!.currentTime, 0.05);
           }
       });
   }, [stems, masterVolume]);
-
 
   const handleApplyCorrection = async (proceedToMastering: boolean) => {
       setRendering(true);
@@ -418,7 +457,7 @@ export default function StudioPage() {
           const corrections = stems.map(s => ({
               name: s.name,
               volume_db: s.volume,
-              pan: s.pan,
+              pan: s.pan.enabled ? s.pan.value : 0,
               eq: s.eq.enabled ? s.eq : undefined,
               compression: s.compression.enabled ? s.compression : undefined,
               reverb: s.reverb.enabled ? s.reverb : undefined,
@@ -427,7 +466,6 @@ export default function StudioPage() {
           }));
 
           const baseUrl = getBackendBaseUrl();
-          // 1. Send corrections
           await fetch(`${baseUrl}/jobs/${jobId}/correction`, {
               method: 'POST',
               headers: {
@@ -437,13 +475,8 @@ export default function StudioPage() {
               body: JSON.stringify({ corrections })
           });
 
-          // 2. Trigger Resume (Next stages)
-          // "Proceed to Mastering": Run S6 -> S7...S11
-          // "Finish Here": Run S6 -> S11 (skip S7-S10)
-
           let stages: string[] = [];
           if (proceedToMastering) {
-              // Full remainder
               stages = [
                   "S6_MANUAL_CORRECTION",
                   "S7_MIXBUS_TONAL_BALANCE",
@@ -453,14 +486,12 @@ export default function StudioPage() {
                   "S11_REPORT_GENERATION"
               ];
           } else {
-              // Skip mastering
               stages = [
                   "S6_MANUAL_CORRECTION",
                   "S11_REPORT_GENERATION"
               ];
           }
 
-          // Pass `stages` override to /start
           await fetch(`${baseUrl}/mix/${jobId}/start`, {
                method: 'POST',
                headers: {
@@ -483,21 +514,6 @@ export default function StudioPage() {
       try {
           const baseUrl = getBackendBaseUrl();
           const url = `${baseUrl}/jobs/${jobId}/download-stems-zip`;
-          // Trigger download by opening in new window or creating anchor
-          // New window/tab might be blocked if not user initiated click,
-          // but we are in click handler.
-
-          // Need to handle auth headers if endpoint is guarded.
-          // Download via anchor tag usually sends cookies but not headers.
-          // If our API requires X-API-Key, we might need a signed URL first.
-
-          // The endpoint uses `_guard_heavy_endpoint` which checks header or query param.
-          // Let's use `signFileUrl` helper logic? No, it's a dynamic endpoint.
-          // We can append ?api_key=... if we have it in env.
-
-          // For now, assuming user is authorized via session cookie or API key in query.
-          // We can use fetch to get blob and download.
-
           const res = await fetch(url, {
               headers: { "X-API-Key": process.env.NEXT_PUBLIC_MIXMASTER_API_KEY || "" }
           });
@@ -510,7 +526,6 @@ export default function StudioPage() {
           document.body.appendChild(a);
           a.click();
           a.remove();
-
       } catch (e) {
           console.error(e);
           alert("Failed to download stems");
@@ -521,7 +536,6 @@ export default function StudioPage() {
        try {
           const baseUrl = getBackendBaseUrl();
           const url = `${baseUrl}/jobs/${jobId}/download-mixdown`;
-
           const res = await fetch(url, {
               headers: { "X-API-Key": process.env.NEXT_PUBLIC_MIXMASTER_API_KEY || "" }
           });
@@ -662,19 +676,26 @@ export default function StudioPage() {
                 }}>
              </div>
 
-             <div className="h-8 border-b border-white/5 flex text-[10px] font-mono text-slate-600 items-center overflow-hidden select-none">
-                 {Array.from({length: 20}).map((_, i) => (
-                     <div key={i} className="flex-1 border-r border-white/5 pl-1">{i+1}.1</div>
+             {/* Scrubber / Timeline Bar */}
+             <div
+                 className="h-6 bg-[#161b2e] border-b border-white/5 relative cursor-pointer group select-none"
+                 onClick={handleTimelineClick}
+             >
+                 {Array.from({length: 40}).map((_, i) => (
+                     <div key={i} className="absolute top-0 bottom-0 border-l border-white/5" style={{ left: `${(i/40)*100}%` }}></div>
                  ))}
+                 <div className="absolute top-0 left-0 bottom-0 bg-emerald-500/20 pointer-events-none" style={{ width: `${duration ? (currentTime / duration) * 100 : 0}%` }}></div>
+                 <div className="absolute top-0 bottom-0 w-0.5 bg-yellow-400 z-10 pointer-events-none shadow-[0_0_10px_rgba(250,204,21,0.5)]" style={{ left: `${duration ? (currentTime / duration) * 100 : 0}%` }}></div>
              </div>
 
              <div className="flex-1 relative flex items-center justify-center p-10">
-                 <div className="absolute top-0 bottom-0 left-1/2 w-0.5 bg-yellow-400 z-10 shadow-[0_0_10px_rgba(250,204,21,0.5)]"></div>
 
-                 <div ref={waveformRef} className="w-full opacity-80" />
+                 <div ref={waveformRef} className="w-full h-[300px] opacity-80" />
 
                  {!selectedStem?.url && (
-                     <div className="text-slate-600 font-mono">Select a track to view waveform</div>
+                     <div className="absolute inset-0 flex items-center justify-center text-slate-600 font-mono pointer-events-none">
+                         {loadingStems ? "Loading..." : "Select a track to view waveform"}
+                     </div>
                  )}
              </div>
 
@@ -695,7 +716,7 @@ export default function StudioPage() {
                          {formatTime(currentTime)}
                      </div>
                      <div className="flex items-center gap-4">
-                        <button onClick={() => { setIsPlaying(false); setCurrentTime(0); startTimeRef.current = audioContextRef.current?.currentTime || 0; pauseTimeRef.current = 0; }} className="text-slate-500 hover:text-white transition-colors"><StopIcon className="w-4 h-4" /></button>
+                        <button onClick={() => { setIsPlaying(false); stopAllSources(); setCurrentTime(0); pauseTimeRef.current = 0; if(wavesurferRef.current) wavesurferRef.current.setTime(0); }} className="text-slate-500 hover:text-white transition-colors"><StopIcon className="w-4 h-4" /></button>
                         <button
                             onClick={togglePlay}
                             className="w-10 h-10 rounded-full bg-white text-black flex items-center justify-center hover:scale-105 transition-transform shadow-[0_0_15px_rgba(255,255,255,0.2)]"
@@ -731,6 +752,7 @@ export default function StudioPage() {
 
               {selectedStem && (
                   <>
+                    {/* EQ */}
                     <div className="bg-[#1e2336] rounded-xl p-4 border border-white/5 shadow-lg">
                         <div className="flex justify-between items-center mb-4">
                              <div className="flex items-center gap-2">
@@ -744,13 +766,13 @@ export default function StudioPage() {
                              </div>
                         </div>
                         <div className={`transition-opacity ${selectedStem.eq.enabled ? 'opacity-100' : 'opacity-40 pointer-events-none'}`}>
-                            <div className="h-20 bg-[#11131f] rounded-lg mb-4 border border-white/5 relative overflow-hidden">
+                             {/* ... visualizer placeholder ... */}
+                             <div className="h-20 bg-[#11131f] rounded-lg mb-4 border border-white/5 relative overflow-hidden">
                                 <div className="absolute inset-0 bg-gradient-to-t from-emerald-500/5 to-transparent"></div>
                                 <svg className="absolute inset-0 w-full h-full text-emerald-500/30" preserveAspectRatio="none">
                                     <path d="M0,80 C20,80 40,60 80,60 C120,60 140,80 160,80 C200,80 220,40 260,40 C300,40 320,80 320,80 L320,80 L0,80 Z" fill="currentColor" />
                                 </svg>
                             </div>
-
                             <div className="flex justify-between px-2">
                                 <Knob label="LOW" value={selectedStem.eq.low} min={-12} max={12} onChange={(v) => updateStem(selectedStemIndex, { eq: {...selectedStem.eq, low: v}})} />
                                 <Knob label="MID" value={selectedStem.eq.mid} min={-12} max={12} onChange={(v) => updateStem(selectedStemIndex, { eq: {...selectedStem.eq, mid: v}})} />
@@ -759,6 +781,7 @@ export default function StudioPage() {
                         </div>
                     </div>
 
+                    {/* Compressor */}
                     <div className="bg-[#1e2336] rounded-xl p-4 border border-white/5 shadow-lg">
                         <div className="flex justify-between items-center mb-4">
                             <div className="flex items-center gap-2">
@@ -778,28 +801,44 @@ export default function StudioPage() {
                         </div>
                     </div>
 
+                    {/* Pan */}
                     <div className="bg-[#1e2336] rounded-xl p-4 border border-white/5 shadow-lg">
                         <div className="flex justify-between items-center mb-4">
-                            <span className="text-xs font-bold text-slate-300">Spatial</span>
+                            <div className="flex items-center gap-2">
+                                <input
+                                    type="checkbox"
+                                    checked={selectedStem.pan.enabled}
+                                    onChange={(e) => updateStem(selectedStemIndex, { pan: {...selectedStem.pan, enabled: e.target.checked}})}
+                                    className="rounded border-slate-600 bg-slate-800 text-blue-500 focus:ring-blue-500"
+                                />
+                                <span className={`text-xs font-bold ${selectedStem.pan.enabled ? 'text-blue-400' : 'text-slate-500'}`}>Panning</span>
+                            </div>
+                            <SpeakerWaveIcon className="w-4 h-4 text-slate-600" />
                         </div>
-                        <div className="flex justify-around">
-                             <Knob label="PAN" value={selectedStem.pan} min={-1} max={1} step={0.1} onChange={(v) => updateStem(selectedStemIndex, { pan: v})} />
-                             <div className="flex flex-col items-center gap-2">
-                                 <div className="flex items-center gap-2 mb-1">
-                                     <input
-                                        type="checkbox"
-                                        checked={selectedStem.reverb.enabled}
-                                        onChange={(e) => updateStem(selectedStemIndex, { reverb: {...selectedStem.reverb, enabled: e.target.checked}})}
-                                        className="rounded border-slate-600 bg-slate-800 text-purple-500 focus:ring-purple-500 w-3 h-3"
-                                     />
-                                     <span className={`text-[10px] font-bold ${selectedStem.reverb.enabled ? 'text-purple-400' : 'text-slate-500'}`}>REVERB</span>
-                                 </div>
-                                 <div className={selectedStem.reverb.enabled ? 'opacity-100' : 'opacity-40 pointer-events-none'}>
-                                     <Knob label="AMT" value={selectedStem.reverb.amount} min={0} max={100} onChange={(v) => updateStem(selectedStemIndex, { reverb: {...selectedStem.reverb, amount: v}})} />
-                                 </div>
-                             </div>
+                        <div className={`flex justify-center transition-opacity ${selectedStem.pan.enabled ? 'opacity-100' : 'opacity-40 pointer-events-none'}`}>
+                             <Knob label="L / R" value={selectedStem.pan.value} min={-1} max={1} step={0.1} onChange={(v) => updateStem(selectedStemIndex, { pan: {...selectedStem.pan, value: v}})} />
                         </div>
                     </div>
+
+                    {/* Reverb */}
+                    <div className="bg-[#1e2336] rounded-xl p-4 border border-white/5 shadow-lg">
+                        <div className="flex justify-between items-center mb-4">
+                            <div className="flex items-center gap-2">
+                                <input
+                                    type="checkbox"
+                                    checked={selectedStem.reverb.enabled}
+                                    onChange={(e) => updateStem(selectedStemIndex, { reverb: {...selectedStem.reverb, enabled: e.target.checked}})}
+                                    className="rounded border-slate-600 bg-slate-800 text-purple-500 focus:ring-purple-500"
+                                />
+                                <span className={`text-xs font-bold ${selectedStem.reverb.enabled ? 'text-purple-400' : 'text-slate-500'}`}>Reverb</span>
+                            </div>
+                            <SparklesIcon className="w-4 h-4 text-slate-600" />
+                        </div>
+                        <div className={`flex justify-center transition-opacity ${selectedStem.reverb.enabled ? 'opacity-100' : 'opacity-40 pointer-events-none'}`}>
+                             <Knob label="AMOUNT" value={selectedStem.reverb.amount} min={0} max={100} onChange={(v) => updateStem(selectedStemIndex, { reverb: {...selectedStem.reverb, amount: v}})} />
+                        </div>
+                    </div>
+
                   </>
               )}
           </aside>
@@ -834,7 +873,6 @@ function Knob({ label, value, min, max, step, onChange }: { label: string, value
             let newVal = startValRef.current + delta;
             if (newVal < min) newVal = min;
             if (newVal > max) newVal = max;
-            // Snap to step
             if (step) {
                 newVal = Math.round(newVal / step) * step;
             }
