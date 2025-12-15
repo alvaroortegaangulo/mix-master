@@ -213,6 +213,8 @@ def run_pipeline_for_job(
     enabled_stage_keys: Optional[List[str]] = None,
     profiles_by_name: Optional[Dict[str, str]] = None,
     progress_cb: Optional[Callable[[int, int, str, str], None]] = None,
+    resume_stage_index_offset: int = 0,
+    resume_total_stages: Optional[int] = None,
 ) -> None:
     """
     Pipeline para un job concreto (usado por Celery):
@@ -345,6 +347,10 @@ def run_pipeline_for_job(
         contract_ids = all_contract_ids
 
     total_stages = len(contract_ids)
+    effective_total_stages = max(resume_total_stages or 0, resume_stage_index_offset + total_stages)
+    if effective_total_stages == 0:
+        effective_total_stages = total_stages
+
     if total_stages == 0:
         logger.warning(
             "[pipeline] No hay contratos a ejecutar (enabled_stage_keys=%s).",
@@ -408,8 +414,8 @@ def run_pipeline_for_job(
     # Callback inicial de progreso (antes de cualquier stage)
     if progress_cb is not None:
         progress_cb(
-            0,
-            total_stages,
+            resume_stage_index_offset,
+            effective_total_stages,
             "initializing",
             "Inicializando pipeline de mezcla...",
         )
@@ -425,6 +431,7 @@ def run_pipeline_for_job(
     )
 
     for idx, contract_id in enumerate(contract_ids, start=1):
+        current_stage_index = resume_stage_index_offset + idx
         # Check for mandatory pause before S6 if we just finished S5
         # The contract_id logic: we iterate. S5 finishes, loop continues to S6.
         # But we want to PAUSE BEFORE S6 starts if manual correction is enabled.
@@ -452,8 +459,8 @@ def run_pipeline_for_job(
                 # Set status to waiting_for_correction
                 if progress_cb:
                     progress_cb(
-                        idx,
-                        total_stages,
+                        current_stage_index,
+                        effective_total_stages,
                         "waiting_for_correction",
                         "Waiting for manual correction in Studio..."
                     )
@@ -477,8 +484,8 @@ def run_pipeline_for_job(
         # muestre el stage que está EN PROGRESO.
         if progress_cb is not None:
             progress_cb(
-                idx,
-                total_stages,
+                current_stage_index,
+                effective_total_stages,
                 contract_id,
                 f"Running stage {contract_id}...",
             )

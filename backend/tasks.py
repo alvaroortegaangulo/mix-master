@@ -302,15 +302,46 @@ def run_full_pipeline_task(
         "message": "Inicializando pipeline...",
     }
 
+    # Si estamos reanudando (enabled_stage_keys != None), intentamos leer el estado previo
+    # para mantener stage_index/total_stages coherentes (no reiniciar el progreso).
+    resume_stage_index_offset = 0
+    resume_total_stages: Optional[int] = None
+    status_path = job_root_path / "job_status.json"
+    if enabled_stage_keys:
+        try:
+            if status_path.exists():
+                prev = json.loads(status_path.read_text(encoding="utf-8"))
+                if isinstance(prev, dict):
+                    resume_stage_index_offset = int(prev.get("stage_index", 0) or 0)
+                    prev_total = int(prev.get("total_stages", 0) or 0)
+                    resume_total_stages = prev_total if prev_total > 0 else None
+                    logger.info(
+                        "[%s] Reanudando con offset stage_index=%d total_stages=%s",
+                        job_id,
+                        resume_stage_index_offset,
+                        resume_total_stages,
+                    )
+        except Exception:
+            logger.exception("[%s] No se pudo leer estado previo para reanudar progresos", job_id)
+
+    # Total inicial para status (usa total previo si existe, si no calcula aprox con stages habilitadas)
+    initial_total_guess = max(resume_total_stages or 0, resume_stage_index_offset + len(enabled_stage_keys or []))
+    initial_progress = 0.0
+    if initial_total_guess > 0:
+        initial_progress = min(100.0, float(resume_stage_index_offset) / initial_total_guess * 100.0)
+
+    progress_state["stage_index"] = resume_stage_index_offset
+    progress_state["total_stages"] = initial_total_guess
+
     initial_status = {
         "jobId": job_id,
         "job_id": job_id,
         "status": "running",
-        "stage_index": 0,
-        "total_stages": 0,
+        "stage_index": resume_stage_index_offset,
+        "total_stages": initial_total_guess,
         "stage_key": "initializing",
         "message": "Inicializando pipeline de mezcla...",
-        "progress": 0.0,
+        "progress": initial_progress,
     }
     _write_job_status(job_root_path, initial_status)
 
@@ -367,9 +398,11 @@ def run_full_pipeline_task(
     # ---------------------------
     try:
         logger.info(
-            "[%s] Llamando a run_pipeline_for_job (enabled_stage_keys=%s)",
+            "[%s] Llamando a run_pipeline_for_job (enabled_stage_keys=%s, resume_offset=%d, resume_total=%s)",
             job_id,
             enabled_stage_keys,
+            resume_stage_index_offset,
+            resume_total_stages,
         )
         t0 = time.time()
 
@@ -380,6 +413,8 @@ def run_full_pipeline_task(
             enabled_stage_keys=enabled_stage_keys,
             profiles_by_name=profiles_by_name,
             progress_cb=progress_cb,
+            resume_stage_index_offset=resume_stage_index_offset,
+            resume_total_stages=resume_total_stages,
         )
 
         t1 = time.time()
