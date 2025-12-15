@@ -199,11 +199,8 @@ export default function StudioPage() {
                         const decoded = await Promise.race([decodePromise, timeoutPromise]);
                         audioBuffersRef.current.set(file, decoded);
 
-                        const blob = new Blob([ab], { type: 'audio/wav' });
-                        const blobUrl = URL.createObjectURL(blob);
-
                         setStems(prev => prev.map(s => {
-                            if (s.fileName === file) return { ...s, url: blobUrl, status: "ready" };
+                            if (s.fileName === file) return { ...s, url: signedUrl, status: "ready" };
                             return s;
                         }));
 
@@ -235,9 +232,7 @@ export default function StudioPage() {
                 }
 
                 if (mixResp.ok) {
-                    const mixBlob = await mixResp.blob();
-                    const mixUrl = URL.createObjectURL(mixBlob);
-                    setMixdownUrl(mixUrl);
+                    setMixdownUrl(mixSignedUrl);
                 }
             } catch (e) {
                 console.warn("Could not load reference mixdown for waveform", e);
@@ -255,13 +250,47 @@ export default function StudioPage() {
   }, [jobId, user]);
 
   useEffect(() => {
-    // Re-initializes specific stem if selected and missing (fallback)
     const ctx = audioContextRef.current;
     const stem = selectedStem;
     if (!ctx || !jobId || !user || !stem) return;
     if (stem.status === "loading" || stem.status === "error") return;
     if (stem.url && audioBuffersRef.current.has(stem.fileName)) return;
-  }, [jobId, user, selectedStemIndex]);
+
+    let cancelled = false;
+
+    const loadStem = async () => {
+        try {
+            setStems(prev => prev.map((s, i) => i === selectedStemIndex ? { ...s, status: "loading" } : s));
+
+            let signedUrl = await signFileUrl(jobId, `S12_SEPARATE_STEMS/${stem.fileName}`);
+            let resp = await fetch(signedUrl);
+            if (!resp.ok) {
+                signedUrl = await signFileUrl(jobId, `S0_SESSION_FORMAT/${stem.fileName}`);
+                resp = await fetch(signedUrl);
+            }
+
+            if (!resp.ok) {
+                throw new Error(`Failed to fetch stem ${stem.fileName}: ${resp.status} ${resp.statusText}`);
+            }
+
+            const ab = await resp.arrayBuffer();
+            const decoded = await ctx.decodeAudioData(ab.slice(0));
+            if (cancelled) return;
+
+            audioBuffersRef.current.set(stem.fileName, decoded);
+            setStems(prev => prev.map((s, i) => i === selectedStemIndex ? { ...s, url: signedUrl, status: "ready" } : s));
+            if (!duration) setDuration(decoded.duration);
+        } catch (err) {
+            if (!cancelled) {
+                console.error("Failed to load stem", stem.fileName, err);
+                setStems(prev => prev.map((s, i) => i === selectedStemIndex ? { ...s, status: "error" } : s));
+            }
+        }
+    };
+
+    loadStem();
+    return () => { cancelled = true; };
+  }, [jobId, user, selectedStemIndex, selectedStem, duration]);
 
   useEffect(() => {
     if (!waveformRef.current) return;
