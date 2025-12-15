@@ -6,7 +6,7 @@ import { useAuth } from "@/context/AuthContext";
 import { getBackendBaseUrl, getStudioToken, signFileUrl } from "@/lib/mixApi";
 import { AuthModal } from "@/components/AuthModal";
 import { CanvasWaveform } from "@/components/studio/CanvasWaveform";
-import { StudioCache, AudioBufferData } from "@/lib/studioCache";
+import { studioCache, AudioBufferData } from "@/lib/studioCache";
 import {
   PlayIcon,
   PauseIcon,
@@ -160,7 +160,7 @@ export default function StudioPage() {
         try {
             const cacheKey = `${jobId}/${selectedStem.fileName}`;
             // Try cache first
-            const cachedData = await StudioCache.getAudioBufferData(cacheKey);
+            const cachedData = await studioCache.getAudioBuffer(cacheKey);
             if (active && cachedData) {
                 const buffer = dataToAudioBuffer(audioContextRef.current!, cachedData);
                 setVisualBuffer(buffer);
@@ -177,7 +177,7 @@ export default function StudioPage() {
                 // Decode
                 const audioBuffer = await audioContextRef.current.decodeAudioData(arrayBuffer);
                 // Cache
-                await StudioCache.cacheAudioBufferData(cacheKey, audioBufferToData(audioBuffer));
+                await studioCache.setAudioBuffer(cacheKey, audioBufferToData(audioBuffer));
 
                 if (active) {
                     setVisualBuffer(audioBuffer);
@@ -1108,6 +1108,7 @@ function audioBufferToData(buffer: AudioBuffer): AudioBufferData {
   return {
     sampleRate: buffer.sampleRate,
     length: buffer.length,
+    duration: buffer.duration,
     numberOfChannels: buffer.numberOfChannels,
     channels: channels
   };
@@ -1116,7 +1117,7 @@ function audioBufferToData(buffer: AudioBuffer): AudioBufferData {
 function dataToAudioBuffer(ctx: AudioContext, data: AudioBufferData): AudioBuffer {
   const buffer = ctx.createBuffer(data.numberOfChannels, data.length, data.sampleRate);
   for (let i = 0; i < data.numberOfChannels; i++) {
-    buffer.copyToChannel(data.channels[i], i);
+    buffer.copyToChannel(data.channels[i] as any, i);
   }
   return buffer;
 }
