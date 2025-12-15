@@ -290,6 +290,8 @@ export default function StudioPage() {
 
         if (cancelled) return;
         setStems(resolvedStems);
+        // Mostrar UI aunque sigamos preparando audio; waveform puede usar peaks ya.
+        setLoadingStems(false);
 
         const ensureAudioForStem = async (stem: StemControl) => {
             let audio = audioElsRef.current.get(stem.fileName);
@@ -374,7 +376,6 @@ export default function StudioPage() {
 
         if (!cancelled) {
             setStudioReady(true);
-            setLoadingStems(false);
         }
       } catch (err) {
         console.error("Error loading stems:", err);
