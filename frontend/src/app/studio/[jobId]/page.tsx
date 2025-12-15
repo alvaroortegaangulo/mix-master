@@ -225,223 +225,78 @@ export default function StudioPage() {
 
         const loadAssets = async () => {
           if (!audioContextRef.current) return;
-          const metaByFile = new Map(finalStems.map((s) => [s.fileName, s]));
 
-          const loadSingleStem = async (file: string) => {
-            if (cancelled) return;
-            try {
-                // Try cache first
-                const cacheKey = `pirola-studio-cache-v1-${jobId}-${file}`;
-                const cacheKeyDecoded = `${cacheKey}-decoded`;
+          // Solo cargar mixdown para fallback y marcar listo; los stems se cargan on-demand.
+          const preferredMixdownPaths = [
+              "S5_LEADVOX_DYNAMICS/full_song.wav",
+              "S5_STEM_DYNAMICS_GENERIC/full_song.wav",
+              "S4_STEM_RESONANCE_CONTROL/full_song.wav",
+              "S3_MIXBUS_HEADROOM/full_song.wav",
+              "S3_LEADVOX_AUDIBILITY/full_song.wav",
+              "S0_SESSION_FORMAT/full_song.wav",
+              "S0_MIX_ORIGINAL/full_song.wav"
+          ];
 
-                const meta = metaByFile.get(file);
+          const mixCacheKey = `pirola-studio-cache-v1-${jobId}-mixdown`;
+          const mixCacheKeyDecoded = `${mixCacheKey}-decoded`;
 
-                // Try loading decoded buffer directly
-                const cachedDecoded = await StudioCache.getAudioBufferData(cacheKeyDecoded);
+          let mixDecoded = await StudioCache.getAudioBufferData(mixCacheKeyDecoded);
+          let mixAb: ArrayBuffer | null = null;
 
-                if (cachedDecoded) {
-                  // Reconstruct AudioBuffer from cached PCM data
-                  const buffer = audioContextRef.current!.createBuffer(
-                      cachedDecoded.numberOfChannels,
-                      cachedDecoded.length,
-                      cachedDecoded.sampleRate
-                  );
-
-                  for (let i = 0; i < cachedDecoded.numberOfChannels; i++) {
-                      // Note: getChannelData returns a Float32Array, which we can set directly
-                      if (cachedDecoded.channels[i]) {
-                          buffer.getChannelData(i).set(cachedDecoded.channels[i]);
-                      }
+          if (mixDecoded && audioContextRef.current) {
+               const buffer = audioContextRef.current.createBuffer(
+                  mixDecoded.numberOfChannels,
+                  mixDecoded.length,
+                  mixDecoded.sampleRate
+              );
+              for (let i = 0; i < mixDecoded.numberOfChannels; i++) {
+                  if (mixDecoded.channels[i]) {
+                      buffer.getChannelData(i).set(mixDecoded.channels[i]);
                   }
+              }
+              setMixdownBuffer(buffer);
+              if (!duration) setDuration(buffer.duration);
+          } else {
+              // Fallback to file cache
+              mixAb = await StudioCache.getCachedArrayBuffer(mixCacheKey);
 
-                  audioBuffersRef.current.set(file, buffer);
-                  setStems(prev => prev.map(s => {
-                      if (s.fileName === file) return { ...s, url: "cached-decoded", status: "ready" };
-                      return s;
-                  }));
-                  setDuration(prev => Math.max(prev, buffer.duration));
-                  return; // Done
-                }
-
-                // If no decoded cache, try raw file cache or fetch
-                let ab: ArrayBuffer | null = await StudioCache.getCachedArrayBuffer(cacheKey);
-                let fetchUrl = meta?.signedUrl || meta?.url;
-                let usedUrl = fetchUrl || "";
-
-                if (!ab) {
-                    // Cache miss, fetch
-                    let resp: Response | null = null;
-                    if (fetchUrl) {
-                        try {
-                            resp = await fetch(fetchUrl);
-                        } catch (e) {
-                            resp = null;
+              if (!mixAb) {
+                 for (const relPath of preferredMixdownPaths) {
+                    if (cancelled) break;
+                    try {
+                        const signedUrl = await signFileUrl(jobId, relPath);
+                        const resp = await fetch(signedUrl);
+                        if (resp.ok) {
+                            mixAb = await resp.arrayBuffer();
+                            setMixdownUrl(signedUrl);
+                            StudioCache.cacheArrayBuffer(mixCacheKey, mixAb).catch(console.warn);
+                            break;
                         }
+                    } catch (e) {
+                         // continue
                     }
+                 }
+              }
 
-                    const stageCandidates = [
-                        meta?.stage,
-                        "S6_MANUAL_CORRECTION",
-                        "S6_MANUAL_CORRECTION_ADJUSTMENT",
-                        "S12_SEPARATE_STEMS",
-                        "S5_LEADVOX_DYNAMICS",
-                        "S5_STEM_DYNAMICS_GENERIC",
-                        "S4_STEM_RESONANCE_CONTROL",
-                        "S0_SESSION_FORMAT",
-                        "S0_MIX_ORIGINAL"
-                    ].filter(Boolean) as string[];
+              if (mixAb && audioContextRef.current) {
+                  try {
+                      const decoded = await audioContextRef.current.decodeAudioData(mixAb.slice(0));
+                      setMixdownBuffer(decoded);
 
-                    let fallbackSignedUrl = fetchUrl || "";
-
-                    if (!resp || !resp.ok) {
-                        for (const stage of stageCandidates) {
-                            fallbackSignedUrl = await signFileUrl(jobId, `${stage}/${file}`);
-                            resp = await fetch(fallbackSignedUrl);
-                            if (resp.ok) {
-                                usedUrl = fallbackSignedUrl;
-                                break;
-                            }
-                        }
-                    } else {
-                        usedUrl = fetchUrl || "";
-                    }
-
-                    if (resp && resp.ok) {
-                        ab = await resp.arrayBuffer();
-                        // Store in cache (background)
-                        StudioCache.cacheArrayBuffer(cacheKey, ab).catch(e => console.warn("Background cache error", e));
-                    } else {
-                        throw new Error(`Failed to fetch stem ${file}`);
-                    }
-                }
-
-                if (ab && !cancelled) {
-                    const decodePromise = audioContextRef.current!.decodeAudioData(ab.slice(0)); // slice to clone if needed
-                    const timeoutPromise = new Promise<AudioBuffer>((_, reject) =>
-                        setTimeout(() => reject(new Error("Audio decoding timed out")), 15000)
-                    );
-
-                    const decoded = await Promise.race([decodePromise, timeoutPromise]);
-                    audioBuffersRef.current.set(file, decoded);
-
-                    // Cache decoded data for next time
-                    const channels: Float32Array[] = [];
-                    for(let i=0; i<decoded.numberOfChannels; i++) {
-                        channels.push(decoded.getChannelData(i));
-                    }
-                    const decodedData: AudioBufferData = {
-                        sampleRate: decoded.sampleRate,
-                        length: decoded.length,
-                        numberOfChannels: decoded.numberOfChannels,
-                        channels: channels
-                    };
-                    StudioCache.cacheAudioBufferData(cacheKeyDecoded, decodedData).catch(e => console.warn("Background decoded cache error", e));
-
-                    setStems(prev => prev.map(s => {
-                        if (s.fileName === file) return { ...s, url: usedUrl || "cached", status: "ready" };
-                        return s;
-                    }));
-
-                    setDuration(prev => Math.max(prev, decoded.duration));
-                }
-            } catch (e) {
-                console.error("Failed to load stem", file, e);
-                setStems(prev => prev.map(s => {
-                    if (s.fileName === file) return { ...s, status: "error" };
-                    return s;
-                }));
-            }
-          };
-
-          const queue: string[] = [...stemFiles];
-          // Parallelism: use more workers
-          const concurrency =
-            typeof navigator !== "undefined"
-              ? Math.min(4, Math.max(1, navigator.hardwareConcurrency || 4))
-              : 4;
-          const workers = Array.from({ length: Math.min(concurrency, queue.length) }, async () => {
-            while (!cancelled && queue.length > 0) {
-                const next = queue.shift();
-                if (!next) break;
-                await loadSingleStem(next);
-            }
-          });
-          await Promise.all(workers);
-
-          // Load mixdown for fallback waveform
-          // Also try to cache mixdown buffer
-          if (!cancelled) {
-              const preferredMixdownPaths = [
-                  "S5_LEADVOX_DYNAMICS/full_song.wav",
-                  "S5_STEM_DYNAMICS_GENERIC/full_song.wav",
-                  "S4_STEM_RESONANCE_CONTROL/full_song.wav",
-                  "S3_MIXBUS_HEADROOM/full_song.wav",
-                  "S3_LEADVOX_AUDIBILITY/full_song.wav",
-                  "S0_SESSION_FORMAT/full_song.wav",
-                  "S0_MIX_ORIGINAL/full_song.wav"
-              ];
-
-              const mixCacheKey = `pirola-studio-cache-v1-${jobId}-mixdown`;
-              const mixCacheKeyDecoded = `${mixCacheKey}-decoded`;
-
-              let mixDecoded = await StudioCache.getAudioBufferData(mixCacheKeyDecoded);
-              let mixAb: ArrayBuffer | null = null;
-
-              if (mixDecoded && audioContextRef.current) {
-                   const buffer = audioContextRef.current.createBuffer(
-                      mixDecoded.numberOfChannels,
-                      mixDecoded.length,
-                      mixDecoded.sampleRate
-                  );
-                  for (let i = 0; i < mixDecoded.numberOfChannels; i++) {
-                      if (mixDecoded.channels[i]) {
-                          buffer.getChannelData(i).set(mixDecoded.channels[i]);
+                      const channels: Float32Array[] = [];
+                      for(let i=0; i<decoded.numberOfChannels; i++) {
+                         channels.push(decoded.getChannelData(i));
                       }
-                  }
-                  setMixdownBuffer(buffer);
-                  if (!duration) setDuration(buffer.duration);
-              } else {
-                  // Fallback to file cache
-                  mixAb = await StudioCache.getCachedArrayBuffer(mixCacheKey);
+                      StudioCache.cacheAudioBufferData(mixCacheKeyDecoded, {
+                         sampleRate: decoded.sampleRate,
+                         length: decoded.length,
+                         numberOfChannels: decoded.numberOfChannels,
+                         channels
+                      }).catch(console.warn);
 
-                  if (!mixAb) {
-                     for (const relPath of preferredMixdownPaths) {
-                        if (cancelled) break;
-                        try {
-                            const signedUrl = await signFileUrl(jobId, relPath);
-                            const resp = await fetch(signedUrl);
-                            if (resp.ok) {
-                                mixAb = await resp.arrayBuffer();
-                                setMixdownUrl(signedUrl);
-                                StudioCache.cacheArrayBuffer(mixCacheKey, mixAb).catch(console.warn);
-                                break;
-                            }
-                        } catch (e) {
-                             // continue
-                        }
-                     }
-                  }
-
-                  if (mixAb && audioContextRef.current) {
-                      try {
-                          const decoded = await audioContextRef.current.decodeAudioData(mixAb.slice(0));
-                          setMixdownBuffer(decoded);
-
-                          const channels: Float32Array[] = [];
-                          for(let i=0; i<decoded.numberOfChannels; i++) {
-                             channels.push(decoded.getChannelData(i));
-                          }
-                          StudioCache.cacheAudioBufferData(mixCacheKeyDecoded, {
-                             sampleRate: decoded.sampleRate,
-                             length: decoded.length,
-                             numberOfChannels: decoded.numberOfChannels,
-                             channels
-                          }).catch(console.warn);
-
-                          if (!duration) setDuration(decoded.duration);
-                      } catch (e) {
-                          console.warn("Failed to decode mixdown", e);
-                      }
+                      if (!duration) setDuration(decoded.duration);
+                  } catch (e) {
+                      console.warn("Failed to decode mixdown", e);
                   }
               }
           }
@@ -464,7 +319,7 @@ export default function StudioPage() {
     return () => { cancelled = true; };
   }, [jobId, user]);
 
-  // Load stem when selected if not loaded (same logic, add cache)
+  // Load stem when selected if not loaded (on-demand)
   useEffect(() => {
     const ctx = audioContextRef.current;
     const stem = selectedStem;

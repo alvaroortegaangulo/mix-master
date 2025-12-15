@@ -566,6 +566,7 @@ MAX_JOB_TOTAL_BYTES = 2 * 1024 * 1024 * 1024  # 2 GiB total por job
 SIGNED_URL_STEMS_TTL = int(os.environ.get("STEMS_SIGNED_URL_TTL", str(6 * 3600)))
 SIGNED_URL_STEMS_TTL = max(600, min(SIGNED_URL_STEMS_TTL, 24 * 3600))
 STEM_PEAKS_DESIRED_BARS = 800
+STEM_META_GENERATION_ENABLED = os.environ.get("STUDIO_GENERATE_WAVEFORM_META", "0") not in ("0", "false", "False", "", None)
 
 
 def _sanitize_filename(filename: str) -> str:
@@ -735,6 +736,8 @@ def _compute_and_cache_peaks(
                 return [float(x) for x in data]
         except Exception:
             logger.warning("No se pudo leer peaks cacheados en %s", peaks_path)
+    if not STEM_META_GENERATION_ENABLED:
+        return []
 
     try:
         audio, _ = sf.read(stem_path, dtype="float32", always_2d=True)
@@ -773,6 +776,8 @@ def _ensure_preview_wav(
     """
     if preview_path.exists():
         return True
+    if not STEM_META_GENERATION_ENABLED:
+        return False
     try:
         audio, sr = sf.read(stem_path, dtype="float32", always_2d=True)
         if audio.ndim == 2 and audio.shape[1] > 1:
