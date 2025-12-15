@@ -1,318 +1,318 @@
-
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { fetchJobReport, getBackendBaseUrl, signFileUrl } from "@/lib/mixApi";
 import { AuthModal } from "@/components/AuthModal";
+import WaveSurfer from 'wavesurfer.js';
+import {
+  PlayIcon,
+  PauseIcon,
+  BackwardIcon,
+  SpeakerWaveIcon,
+  ArrowPathIcon,
+  MusicalNoteIcon,
+  AdjustmentsHorizontalIcon,
+  CpuChipIcon,
+  StopIcon
+} from "@heroicons/react/24/solid";
 
-// ----------------------------------------------------------------------
-// TYPES
-// ----------------------------------------------------------------------
 interface StemControl {
   name: string;
-  volume: number; // dB, range -60 to +12
-  pan: number;    // -1 (Left) to +1 (Right)
+  volume: number;
+  pan: number;
   mute: boolean;
   solo: boolean;
   eq: {
-    low: number; // dB, -12 to +12
-    mid: number; // dB, -12 to +12
-    high: number; // dB, -12 to +12
+    low: number;
+    mid: number;
+    high: number;
   };
   compression: {
-    threshold: number; // dB, -60 to 0
-    ratio: number;     // 1 to 20
+    threshold: number;
+    ratio: number;
   };
-  url?: string; // Loaded URL
-  buffer?: AudioBuffer; // Decoded buffer
-  sourceNode?: AudioBufferSourceNode;
-  gainNode?: GainNode;
-  panNode?: StereoPannerNode;
-  eqNodes?: {
-    low: BiquadFilterNode;
-    mid: BiquadFilterNode;
-    high: BiquadFilterNode;
-  };
-  compNode?: DynamicsCompressorNode;
+  url?: string;
 }
 
-// ----------------------------------------------------------------------
-// STUDIO COMPONENT
-// ----------------------------------------------------------------------
 export default function StudioPage() {
   const { jobId } = useParams<{ jobId: string }>();
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const [showAuthModal, setShowAuthModal] = useState(false);
 
-  // State
   const [stems, setStems] = useState<StemControl[]>([]);
-  const [audioContext, setAudioContext] = useState<AudioContext | null>(null);
+  const [selectedStemIndex, setSelectedStemIndex] = useState<number>(0);
+  const [loadingStems, setLoadingStems] = useState(true);
+  const [rendering, setRendering] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [loadingStems, setLoadingStems] = useState(true);
-  const [rendering, setRendering] = useState(false);
+  const [masterVolume, setMasterVolume] = useState(0.8);
 
-  // Checks authentication
+  const waveformRef = useRef<HTMLDivElement>(null);
+  const wavesurferRef = useRef<WaveSurfer | null>(null);
+
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const sourceNodesRef = useRef<Map<string, AudioBufferSourceNode>>(new Map());
+  const gainNodesRef = useRef<Map<string, GainNode>>(new Map());
+  const audioBuffersRef = useRef<Map<string, AudioBuffer>>(new Map());
+  const startTimeRef = useRef<number>(0);
+  const pauseTimeRef = useRef<number>(0);
+
   useEffect(() => {
     if (!authLoading && !user) {
       setShowAuthModal(true);
     }
   }, [authLoading, user]);
 
-  // Initialize Audio Context
   useEffect(() => {
-    if (typeof window !== "undefined" && !audioContext) {
-      const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
-      setAudioContext(ctx);
+    if (typeof window !== "undefined" && !audioContextRef.current) {
+      try {
+        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+        console.log("Studio: AudioContext initialized");
+      } catch (e) {
+        console.error("Studio: AudioContext init error", e);
+      }
     }
-  }, [audioContext]);
+    return () => {
+        audioContextRef.current?.close();
+    };
+  }, []);
 
-  // Load Stems List and Data
   useEffect(() => {
-    if (!jobId || !user || !audioContext) return;
+    if (!jobId || !user) return;
 
     let cancelled = false;
 
     async function load() {
+      console.log("Studio: Starting load stems...");
       try {
         setLoadingStems(true);
-        // 1. Fetch available stems from backend
-        // We assume backend has an endpoint for this, OR we try standard names if not.
-        // Since we don't have a "list stems" endpoint yet, we will implement it first.
-        // For now, let's assume standard 5 stems from Spleeter or list from a new endpoint.
-        // Using a new endpoint: GET /jobs/{jobId}/stems
+        const baseUrl = getBackendBaseUrl();
+        console.log("Studio: Fetching stems from", baseUrl);
 
-        const res = await fetch(`${getBackendBaseUrl()}/jobs/${jobId}/stems`, {
+        const res = await fetch(`${baseUrl}/jobs/${jobId}/stems`, {
              headers: {
                  "X-API-Key": process.env.NEXT_PUBLIC_MIXMASTER_API_KEY || "",
              }
         });
+        console.log("Studio: Stems response", res.status);
 
         let stemFiles: string[] = [];
         if (res.ok) {
             const data = await res.json();
             stemFiles = data.stems || [];
         } else {
-             // Fallback if endpoint not ready or empty
-             stemFiles = ["vocals.wav", "drums.wav", "bass.wav", "piano.wav", "other.wav"];
+             stemFiles = ["vocals.wav", "drums.wav", "bass.wav", "other.wav"];
         }
+        console.log("Studio: Stems list", stemFiles);
 
-        // 2. Prepare stem controls
         const newStems: StemControl[] = stemFiles.map((file) => ({
-          name: file.replace(".wav", ""),
+          name: file.replace(".wav", "").replace(/_/g, " ").replace("S11", "").replace("S10", "").trim() || file,
           volume: 0,
           pan: 0,
           mute: false,
           solo: false,
           eq: { low: 0, mid: 0, high: 0 },
-          compression: { threshold: 0, ratio: 1 },
+          compression: { threshold: -20, ratio: 2 },
+          url: undefined
         }));
 
-        // 3. Load audio buffers
-        const buffers = await Promise.all(
-          stemFiles.map(async (file) => {
-             // Sign URL
-             const path = `S12_SEPARATE_STEMS/${file}`;
-             const url = await signFileUrl(jobId, path);
+        setStems(newStems);
 
-             // Fetch audio
-             const resp = await fetch(url);
-             const arrayBuffer = await resp.arrayBuffer();
-             const decoded = await audioContext!.decodeAudioData(arrayBuffer);
-             return { name: file.replace(".wav", ""), buffer: decoded, url };
-          })
-        );
+        if (audioContextRef.current) {
+            console.log("Studio: Loading buffers...");
+            for (const file of stemFiles) {
+                if (cancelled) break;
+                console.log("Studio: Processing file", file);
+                try {
+                    console.log("Studio: Signing URL for", file);
+                    let signedUrl = await signFileUrl(jobId, `S12_SEPARATE_STEMS/${file}`);
+                    console.log("Studio: Signed URL", signedUrl);
 
-        if (cancelled) return;
+                    let resp = await fetch(signedUrl);
+                    if (!resp.ok) {
+                         console.log("Studio: S12 fetch failed, trying S0");
+                         signedUrl = await signFileUrl(jobId, `S0_SESSION_FORMAT/${file}`);
+                         resp = await fetch(signedUrl);
+                    }
 
-        // Set duration from first buffer
-        if (buffers.length > 0) {
-            setDuration(buffers[0].buffer.duration);
+                    if (resp.ok) {
+                        console.log("Studio: Fetch OK, reading buffer");
+                        const ab = await resp.arrayBuffer();
+                        console.log("Studio: Decoding buffer", ab.byteLength);
+
+                        try {
+                            const decodePromise = audioContextRef.current.decodeAudioData(ab);
+                            const timeoutPromise = new Promise<AudioBuffer>((_, reject) =>
+                                setTimeout(() => reject(new Error("Audio decoding timed out")), 2000)
+                            );
+
+                            const decoded = await Promise.race([decodePromise, timeoutPromise]);
+                            console.log("Studio: Decoded OK");
+                            audioBuffersRef.current.set(newStems.find(s => s.name.includes(file.replace(".wav","")))?.name || file, decoded);
+
+                            const blob = new Blob([ab], { type: 'audio/wav' });
+                            const blobUrl = URL.createObjectURL(blob);
+
+                            setStems(prev => prev.map(s => {
+                                if (file.includes(s.name.replace(/ /g, "_"))) return { ...s, url: blobUrl };
+                                return s;
+                            }));
+
+                            if (!duration) setDuration(decoded.duration);
+
+                        } catch (decodeErr) {
+                            console.warn(`Failed to decode stem ${file}:`, decodeErr);
+                            setStems(prev => prev.map(s => {
+                                if (file.includes(s.name.replace(/ /g, "_"))) return { ...s, url: "mock-url-failed-decode" };
+                                return s;
+                            }));
+                        }
+                    } else {
+                        console.log("Studio: Fetch failed for", file);
+                    }
+                } catch (e) {
+                    console.error("Failed to load stem", file, e);
+                }
+            }
+        } else {
+            console.warn("Studio: No AudioContext, skipping buffers");
         }
-
-        // Merge buffers into stem controls
-        setStems((prev) =>
-            prev.map(s => {
-                const found = buffers.find(b => b.name === s.name);
-                return found ? { ...s, buffer: found.buffer, url: found.url } : s;
-            }).filter(s => s.buffer) // only keep loaded ones
-        );
 
       } catch (err) {
         console.error("Error loading stems:", err);
       } finally {
+        console.log("Studio: Load complete, setting loadingStems false");
         setLoadingStems(false);
       }
     }
 
     load();
     return () => { cancelled = true; };
-  }, [jobId, user, audioContext]);
+  }, [jobId, user]);
 
-
-  // Playback Logic
   useEffect(() => {
-     let animationFrame: number;
+    if (!waveformRef.current || stems.length === 0) return;
 
-     const updateTime = () => {
-         if (audioContext && isPlaying) {
-             // This is a rough estimation. For precise DAW UI we need start time offset.
-             // We'll fix this in togglePlay
-             setCurrentTime(audioContext.currentTime);
-             animationFrame = requestAnimationFrame(updateTime);
+    const selectedStem = stems[selectedStemIndex];
+    if (!selectedStem?.url) return;
+
+    if (wavesurferRef.current) {
+        wavesurferRef.current.destroy();
+    }
+
+    try {
+        wavesurferRef.current = WaveSurfer.create({
+          container: waveformRef.current,
+          waveColor: '#334155',
+          progressColor: '#10b981',
+          cursorColor: '#fbbf24',
+          barWidth: 2,
+          barGap: 3,
+          barRadius: 3,
+          height: 300,
+          normalize: true,
+          url: selectedStem.url,
+          interact: false,
+        });
+
+        wavesurferRef.current.on('ready', () => {
+           if (wavesurferRef.current) {
+               wavesurferRef.current.setTime(currentTime);
+           }
+        });
+    } catch (e) {
+        console.error("WaveSurfer init error", e);
+    }
+
+    return () => {
+        wavesurferRef.current?.destroy();
+    };
+  }, [selectedStemIndex, stems]);
+
+  useEffect(() => {
+     if (wavesurferRef.current && isPlaying) {
+         wavesurferRef.current.setVolume(0);
+         if (!wavesurferRef.current.isPlaying()) {
+             wavesurferRef.current.play();
          }
-     };
-
-     if (isPlaying) {
-         updateTime();
-     } else {
-         cancelAnimationFrame(animationFrame!);
+     } else if (wavesurferRef.current) {
+         wavesurferRef.current.pause();
+         wavesurferRef.current.setTime(currentTime);
      }
+  }, [isPlaying]);
 
-     return () => cancelAnimationFrame(animationFrame!);
-  }, [isPlaying, audioContext]);
-
-  // Audio Graph Management
-  // This is complex. React state updates shouldn't rebuild the graph every time.
-  // We need refs for audio nodes or careful management.
-  // For this MVP, we will rebuild/update nodes when parameters change.
-  // But to play, we need to start sources.
-
-  // Helper to start playback
   const togglePlay = async () => {
-      if (!audioContext) return;
+      const ctx = audioContextRef.current;
+      if (!ctx) return;
 
-      if (audioContext.state === "suspended") {
-          await audioContext.resume();
-      }
+      if (ctx.state === 'suspended') await ctx.resume();
 
       if (isPlaying) {
-          // Stop
-          stems.forEach(s => {
-              try { s.sourceNode?.stop(); } catch(e){}
-          });
+          sourceNodesRef.current.forEach(node => node.stop());
+          sourceNodesRef.current.clear();
+          pauseTimeRef.current = ctx.currentTime - startTimeRef.current;
           setIsPlaying(false);
       } else {
-          // Start
-          const now = audioContext.currentTime;
-          // Re-create sources because they are one-time use
-          // We need to mutate the stems state or use refs.
-          // Since we are inside component, let's use a ref for nodes if possible,
-          // but sticking to state for simplicity of this snippet (though less performant).
-          // Better: just rebuild graph.
+          startTimeRef.current = ctx.currentTime - pauseTimeRef.current;
 
           stems.forEach(stem => {
-              if (!stem.buffer) return;
+              const buffer = audioBuffersRef.current.get(stem.name) || audioBuffersRef.current.get(stems.find(s=>s.url === stem.url)?.name || "");
+              if (!buffer) return;
 
-              const source = audioContext.createBufferSource();
-              source.buffer = stem.buffer;
+              const source = ctx.createBufferSource();
+              source.buffer = buffer;
 
-              const gain = audioContext.createGain();
-              const pan = audioContext.createStereoPanner();
-              const low = audioContext.createBiquadFilter();
-              const mid = audioContext.createBiquadFilter();
-              const high = audioContext.createBiquadFilter();
-              const comp = audioContext.createDynamicsCompressor();
+              const gain = ctx.createGain();
+              const vol = Math.pow(10, stem.volume / 20);
+              gain.gain.value = stem.mute ? 0 : (stems.some(s => s.solo) && !stem.solo ? 0 : vol);
 
-              // Config
-              low.type = "lowshelf"; low.frequency.value = 320;
-              mid.type = "peaking"; mid.frequency.value = 1000;
-              high.type = "highshelf"; high.frequency.value = 3200;
+              source.connect(gain);
+              gain.connect(ctx.destination);
 
-              // Connect: Source -> Comp -> EQ -> Gain -> Pan -> Destination
-              source.connect(comp);
-              comp.connect(low);
-              low.connect(mid);
-              mid.connect(high);
-              high.connect(gain);
-              gain.connect(pan);
-              pan.connect(audioContext.destination);
+              const offset = pauseTimeRef.current % buffer.duration;
+              source.start(0, offset);
 
-              // Apply values
-              applyStemParams(stem, { gain, pan, low, mid, high, comp });
-
-              source.start(0, currentTime % duration); // rudimentary seek
-
-              // Store nodes in stem object (mutating state directly for audio graph is risky but okay for local refs)
-              stem.sourceNode = source;
-              stem.gainNode = gain;
-              stem.panNode = pan;
-              stem.eqNodes = { low, mid, high };
-              stem.compNode = comp;
+              sourceNodesRef.current.set(stem.name, source);
+              gainNodesRef.current.set(stem.name, gain);
           });
 
           setIsPlaying(true);
       }
   };
 
-  // Real-time parameter updates
+  useEffect(() => {
+      let raf: number;
+      const update = () => {
+          if (isPlaying && audioContextRef.current) {
+              const now = audioContextRef.current.currentTime - startTimeRef.current;
+              setCurrentTime(now);
+              raf = requestAnimationFrame(update);
+          }
+      };
+      if (isPlaying) update();
+      return () => cancelAnimationFrame(raf);
+  }, [isPlaying]);
+
   useEffect(() => {
       stems.forEach(stem => {
-          if (stem.gainNode && stem.panNode && stem.eqNodes && stem.compNode) {
-             applyStemParams(stem, {
-                 gain: stem.gainNode,
-                 pan: stem.panNode,
-                 low: stem.eqNodes.low,
-                 mid: stem.eqNodes.mid,
-                 high: stem.eqNodes.high,
-                 comp: stem.compNode
-             });
+          const node = gainNodesRef.current.get(stem.name);
+          if (node) {
+              const vol = Math.pow(10, stem.volume / 20);
+              const isSoloed = stems.some(s => s.solo);
+              const effectiveVol = stem.mute ? 0 : (isSoloed && !stem.solo ? 0 : vol);
+              node.gain.setTargetAtTime(effectiveVol, audioContextRef.current!.currentTime, 0.05);
           }
       });
   }, [stems]);
 
-  function applyStemParams(stem: StemControl, nodes: any) {
-      const isMuted = stem.mute;
-      const isSoloed = stems.some(s => s.solo);
-      const shouldPlay = isSoloed ? stem.solo : !isMuted;
-
-      // Volume (dB to linear)
-      const volumeLinear = Math.pow(10, stem.volume / 20);
-      nodes.gain.gain.setTargetAtTime(shouldPlay ? volumeLinear : 0, audioContext!.currentTime, 0.05);
-
-      nodes.pan.pan.setTargetAtTime(stem.pan, audioContext!.currentTime, 0.05);
-
-      nodes.low.gain.setTargetAtTime(stem.eq.low, audioContext!.currentTime, 0.05);
-      nodes.mid.gain.setTargetAtTime(stem.eq.mid, audioContext!.currentTime, 0.05);
-      nodes.high.gain.setTargetAtTime(stem.eq.high, audioContext!.currentTime, 0.05);
-
-      nodes.comp.threshold.setTargetAtTime(stem.compression.threshold, audioContext!.currentTime, 0.05);
-      nodes.comp.ratio.setTargetAtTime(stem.compression.ratio, audioContext!.currentTime, 0.05);
-  }
-
-  // Handle Updates
-  const updateStem = (index: number, updates: Partial<StemControl>) => {
-      setStems(prev => {
-          const next = [...prev];
-          next[index] = { ...next[index], ...updates };
-          return next;
-      });
-  };
-
-  const updateEq = (index: number, band: 'low'|'mid'|'high', val: number) => {
-      setStems(prev => {
-          const next = [...prev];
-          next[index].eq = { ...next[index].eq, [band]: val };
-          return next;
-      });
-  };
-
-  const updateComp = (index: number, param: 'threshold'|'ratio', val: number) => {
-      setStems(prev => {
-          const next = [...prev];
-          next[index].compression = { ...next[index].compression, [param]: val };
-          return next;
-      });
-  };
 
   const handleRender = async () => {
       setRendering(true);
       try {
-          // Send correction to backend
           const corrections = stems.map(s => ({
               name: s.name,
               volume_db: s.volume,
@@ -320,7 +320,7 @@ export default function StudioPage() {
               eq: s.eq,
               compression: s.compression,
               mute: s.mute,
-              solo: s.solo // Note: solo is usually ephemeral, but if we want to render only soloed tracks...
+              solo: s.solo
           }));
 
           const res = await fetch(`${getBackendBaseUrl()}/jobs/${jobId}/correction`, {
@@ -333,9 +333,6 @@ export default function StudioPage() {
           });
 
           if (!res.ok) throw new Error("Correction failed");
-
-          // Poll for completion or redirect to results
-          // For now, let's just go back to results which will likely show processing status if we update it
           router.push(`/`);
       } catch (err) {
           console.error(err);
@@ -345,142 +342,257 @@ export default function StudioPage() {
       }
   };
 
-  // If checking auth, show minimal loader or nothing
-  if (authLoading) {
-      return <div className="min-h-screen bg-slate-950"></div>;
-  }
+  const updateStem = (index: number, updates: Partial<StemControl>) => {
+      setStems(prev => {
+          const next = [...prev];
+          next[index] = { ...next[index], ...updates };
+          return next;
+      });
+  };
 
-  // If not authenticated, show empty background + modal
+  const selectedStem = stems[selectedStemIndex];
+
+  if (authLoading) return <div className="h-screen bg-[#0f111a]"></div>;
+
   if (!user) {
       return (
-        <div className="min-h-screen bg-slate-950 flex items-center justify-center">
-            <div className="text-slate-600">Please log in to access Studio.</div>
-            <AuthModal isOpen={true} onClose={() => router.back()} />
+        <div className="h-screen bg-[#0f111a] flex items-center justify-center text-slate-500">
+            <AuthModal isOpen={true} onClose={() => router.push('/')} />
         </div>
       );
   }
 
-  if (loadingStems) {
-      return <div className="min-h-screen flex items-center justify-center bg-slate-950 text-emerald-500">Loading Studio...</div>;
-  }
+  if (loadingStems) return <div className="h-screen bg-[#0f111a] flex items-center justify-center text-emerald-500 font-mono">LOADING STUDIO ASSETS...</div>;
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white font-sans selection:bg-emerald-500/30">
-      {/* Header */}
-      <header className="border-b border-white/10 bg-slate-900 px-6 py-4 flex items-center justify-between">
-         <div className="flex items-center gap-4">
-             <button onClick={() => router.back()} className="text-slate-400 hover:text-white">
-                 ← Back
-             </button>
-             <h1 className="text-xl font-bold tracking-wider text-emerald-400">PIROOLA STUDIO</h1>
+    <div className="flex flex-col h-screen bg-[#0f111a] text-slate-300 font-sans overflow-hidden selection:bg-emerald-500/30">
+
+      <header className="h-14 bg-[#1e293b]/50 border-b border-white/5 flex items-center justify-between px-4 shrink-0 backdrop-blur-md">
+         <div className="flex items-center gap-6">
+             <div className="flex items-center gap-2 text-emerald-400 font-bold tracking-wider">
+                 <AdjustmentsHorizontalIcon className="w-5 h-5" />
+                 <span>Piroola Studio</span>
+             </div>
+             <div className="h-6 w-px bg-white/10 mx-2"></div>
+             <div className="flex flex-col">
+                 <span className="text-xs text-slate-500 uppercase tracking-wider">Project</span>
+                 <span className="text-sm font-medium text-white">Neon Nights Demo</span>
+             </div>
+             <div className="flex items-center gap-4 ml-8 text-xs font-mono text-slate-400 bg-black/20 px-3 py-1 rounded border border-white/5">
+                 <div className="flex items-center gap-2">
+                     <span className="text-emerald-500">124</span> BPM
+                 </div>
+                 <div className="w-px h-3 bg-white/10"></div>
+                 <div className="flex items-center gap-2">
+                     <span className="text-emerald-500">4/4</span>
+                 </div>
+             </div>
          </div>
          <div className="flex items-center gap-4">
-             <div className="text-xs text-slate-500 uppercase tracking-widest">Manual Correction Mode</div>
+             <button onClick={() => router.back()} className="px-3 py-1.5 text-xs font-medium text-slate-400 hover:text-white border border-white/10 rounded hover:bg-white/5 transition-colors">
+                 Exit
+             </button>
              <button
                 onClick={handleRender}
                 disabled={rendering}
-                className="bg-emerald-500 hover:bg-emerald-400 text-black px-6 py-2 rounded-full font-bold text-sm disabled:opacity-50"
+                className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded shadow-lg shadow-emerald-900/20 transition-all flex items-center gap-2"
              >
-                 {rendering ? "Rendering..." : "RENDER MIX"}
+                {rendering ? <ArrowPathIcon className="w-3 h-3 animate-spin" /> : null}
+                {rendering ? "EXPORTING..." : "EXPORT"}
              </button>
+             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 border border-white/10"></div>
          </div>
       </header>
 
-      {/* Main Mixer Area */}
-      <main className="p-6 overflow-x-auto">
-         <div className="flex gap-4 min-w-max pb-20">
-             {stems.map((stem, i) => (
-                 <div key={stem.name} className="w-48 bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col gap-4 shadow-xl">
-                     {/* Header */}
-                     <div className="text-center border-b border-slate-800 pb-2">
-                         <h3 className="font-bold text-emerald-100 truncate" title={stem.name}>{stem.name}</h3>
-                     </div>
+      <div className="flex flex-1 overflow-hidden">
 
-                     {/* EQ Section */}
-                     <div className="space-y-2 bg-slate-950/50 p-2 rounded">
-                         <label className="text-[10px] text-slate-400 uppercase font-bold block mb-1">Equalizer</label>
-                         <div className="flex justify-between gap-1">
-                             <Knob label="Hi" value={stem.eq.high} min={-12} max={12} onChange={(v) => updateEq(i, 'high', v)} />
-                             <Knob label="Mid" value={stem.eq.mid} min={-12} max={12} onChange={(v) => updateEq(i, 'mid', v)} />
-                             <Knob label="Lo" value={stem.eq.low} min={-12} max={12} onChange={(v) => updateEq(i, 'low', v)} />
+          <aside className="w-72 bg-[#11131f] border-r border-white/5 flex flex-col shrink-0">
+             <div className="p-4 border-b border-white/5 flex justify-between items-center">
+                 <h2 className="text-xs font-bold text-slate-500 tracking-widest uppercase">Tracks ({stems.length})</h2>
+                 <button className="text-slate-500 hover:text-emerald-400">+</button>
+             </div>
+             <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-2">
+                 {stems.map((stem, i) => (
+                     <div
+                        key={i}
+                        onClick={() => setSelectedStemIndex(i)}
+                        className={`p-3 rounded-lg border transition-all cursor-pointer group ${
+                            selectedStemIndex === i
+                            ? 'bg-slate-800/80 border-emerald-500/30 shadow-lg shadow-emerald-900/10'
+                            : 'bg-[#161b2e] border-transparent hover:bg-slate-800 hover:border-slate-700'
+                        }`}
+                     >
+                         <div className="flex items-center justify-between mb-2">
+                             <div className="flex items-center gap-2">
+                                 <div className={`w-2 h-2 rounded-full ${selectedStemIndex === i ? 'bg-emerald-400' : 'bg-slate-600'}`}></div>
+                                 <span className={`text-sm font-medium truncate max-w-[120px] ${selectedStemIndex === i ? 'text-white' : 'text-slate-400 group-hover:text-slate-300'}`}>
+                                     {stem.name}
+                                 </span>
+                             </div>
+                             <div className="flex gap-1">
+                                 <button
+                                    onClick={(e) => { e.stopPropagation(); updateStem(i, { mute: !stem.mute }); }}
+                                    className={`w-5 h-5 text-[10px] font-bold flex items-center justify-center rounded ${stem.mute ? 'bg-red-500 text-white' : 'bg-slate-700 text-slate-400 hover:bg-slate-600'}`}
+                                 >M</button>
+                                 <button
+                                    onClick={(e) => { e.stopPropagation(); updateStem(i, { solo: !stem.solo }); }}
+                                    className={`w-5 h-5 text-[10px] font-bold flex items-center justify-center rounded ${stem.solo ? 'bg-yellow-500 text-black' : 'bg-slate-700 text-slate-400 hover:bg-slate-600'}`}
+                                 >S</button>
+                             </div>
+                         </div>
+                         <div className="flex items-center gap-2">
+                             <SpeakerWaveIcon className="w-3 h-3 text-slate-600" />
+                             <input
+                                type="range" min="-60" max="12" step="0.1"
+                                value={stem.volume}
+                                onClick={(e) => e.stopPropagation()}
+                                onChange={(e) => updateStem(i, { volume: parseFloat(e.target.value) })}
+                                className="w-full h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-emerald-500"
+                             />
                          </div>
                      </div>
+                 ))}
+             </div>
+          </aside>
 
-                     {/* Compression Section */}
-                     <div className="space-y-2 bg-slate-950/50 p-2 rounded">
-                         <label className="text-[10px] text-slate-400 uppercase font-bold block mb-1">Compressor</label>
-                         <div className="flex justify-between gap-1">
-                             <Knob label="Thresh" value={stem.compression.threshold} min={-60} max={0} onChange={(v) => updateComp(i, 'threshold', v)} />
-                             <Knob label="Ratio" value={stem.compression.ratio} min={1} max={20} onChange={(v) => updateComp(i, 'ratio', v)} />
-                         </div>
+          <main className="flex-1 flex flex-col relative bg-[#0f111a]">
+             <div className="absolute inset-0 pointer-events-none opacity-5"
+                style={{
+                    backgroundImage: 'linear-gradient(to right, #ffffff 1px, transparent 1px), linear-gradient(to bottom, #ffffff 1px, transparent 1px)',
+                    backgroundSize: '40px 40px'
+                }}>
+             </div>
+
+             <div className="h-8 border-b border-white/5 flex text-[10px] font-mono text-slate-600 items-center overflow-hidden select-none">
+                 {Array.from({length: 20}).map((_, i) => (
+                     <div key={i} className="flex-1 border-r border-white/5 pl-1">{i+1}.1</div>
+                 ))}
+             </div>
+
+             <div className="flex-1 relative flex items-center justify-center p-10">
+                 <div className="absolute top-0 bottom-0 left-1/2 w-0.5 bg-yellow-400 z-10 shadow-[0_0_10px_rgba(250,204,21,0.5)]"></div>
+
+                 <div ref={waveformRef} className="w-full opacity-80" />
+
+                 {!selectedStem?.url && (
+                     <div className="text-slate-600 font-mono">Select a track to view waveform</div>
+                 )}
+             </div>
+
+             <div className="h-20 bg-[#11131f] border-t border-white/5 px-6 flex items-center justify-between shrink-0 z-20">
+
+                 <div className="flex flex-col gap-1 w-48">
+                     <div className="flex justify-between text-[10px] text-slate-500 font-mono">
+                         <span>MASTER OUT</span>
+                         <span>-3.2 dB</span>
                      </div>
-
-                     {/* Pan */}
-                     <div className="py-2">
-                        <label className="text-[10px] text-slate-500 flex justify-between">
-                            <span>L</span> <span>PAN</span> <span>R</span>
-                        </label>
-                        <input
-                           type="range" min="-1" max="1" step="0.05"
-                           value={stem.pan}
-                           onChange={(e) => updateStem(i, { pan: parseFloat(e.target.value) })}
-                           className="w-full h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-emerald-500"
-                        />
-                     </div>
-
-                     {/* Mute / Solo */}
-                     <div className="flex gap-2">
-                         <button
-                            onClick={() => updateStem(i, { mute: !stem.mute })}
-                            className={`flex-1 py-1 text-xs font-bold rounded ${stem.mute ? 'bg-red-500/80 text-white' : 'bg-slate-800 text-slate-400'}`}
-                         >
-                             M
-                         </button>
-                         <button
-                            onClick={() => updateStem(i, { solo: !stem.solo })}
-                            className={`flex-1 py-1 text-xs font-bold rounded ${stem.solo ? 'bg-yellow-500/80 text-black' : 'bg-slate-800 text-slate-400'}`}
-                         >
-                             S
-                         </button>
-                     </div>
-
-                     {/* Fader */}
-                     <div className="flex-1 flex justify-center py-2 bg-slate-950/30 rounded-lg relative">
-                         {/* Track meter background (fake) */}
-                         <div className="absolute inset-y-2 w-1.5 bg-slate-800 rounded-full left-1/2 -ml-3"></div>
-
-                         <input
-                            type="range"
-                            min="-60" max="12" step="0.1"
-                            value={stem.volume}
-                            onChange={(e) => updateStem(i, { volume: parseFloat(e.target.value) })}
-                            className="h-full -rotate-90 origin-center w-32 appearance-none bg-transparent cursor-pointer accent-emerald-500 slider-vertical"
-                            style={{ width: '150px' }} // Manual width override due to rotation
-                         />
-                     </div>
-                     <div className="text-center text-xs font-mono text-emerald-400">
-                         {stem.volume > 0 ? '+' : ''}{stem.volume.toFixed(1)} dB
+                     <div className="h-2 bg-slate-800 rounded-full overflow-hidden relative">
+                         <div className="absolute top-0 left-0 bottom-0 bg-gradient-to-r from-emerald-600 to-emerald-400 w-[70%]"></div>
                      </div>
                  </div>
-             ))}
-         </div>
-      </main>
 
-      {/* Transport Bar */}
-      <div className="fixed bottom-0 left-0 right-0 bg-slate-900 border-t border-slate-800 p-4 flex justify-center gap-6 items-center z-40">
-           <button
-              onClick={togglePlay}
-              className="w-12 h-12 rounded-full bg-emerald-500 flex items-center justify-center hover:bg-emerald-400 shadow-lg shadow-emerald-900/50"
-           >
-               {isPlaying ? (
-                   <span className="block w-4 h-4 bg-black rounded-sm"></span>
-               ) : (
-                   <span className="block w-0 h-0 border-t-[8px] border-t-transparent border-l-[14px] border-l-black border-b-[8px] border-b-transparent ml-1"></span>
-               )}
-           </button>
-           <div className="text-2xl font-mono text-emerald-500 tabular-nums">
-               {formatTime(currentTime)} <span className="text-slate-600 text-lg">/ {formatTime(duration)}</span>
-           </div>
+                 <div className="flex flex-col items-center gap-2">
+                     <div className="text-xl font-mono text-slate-300 tabular-nums tracking-widest">
+                         {formatTime(currentTime)}
+                     </div>
+                     <div className="flex items-center gap-4">
+                        <button className="text-slate-500 hover:text-white transition-colors"><ArrowPathIcon className="w-4 h-4" /></button>
+                        <button onClick={() => { setIsPlaying(false); setCurrentTime(0); startTimeRef.current = audioContextRef.current?.currentTime || 0; pauseTimeRef.current = 0; }} className="text-slate-500 hover:text-white transition-colors"><StopIcon className="w-4 h-4" /></button>
+                        <button
+                            onClick={togglePlay}
+                            className="w-10 h-10 rounded-full bg-white text-black flex items-center justify-center hover:scale-105 transition-transform shadow-[0_0_15px_rgba(255,255,255,0.2)]"
+                        >
+                            {isPlaying ? <PauseIcon className="w-5 h-5" /> : <PlayIcon className="w-5 h-5 ml-0.5" />}
+                        </button>
+                        <button className="text-red-500 hover:text-red-400 transition-colors w-4 h-4 rounded-full border border-current flex items-center justify-center">
+                            <div className="w-2 h-2 bg-current rounded-full"></div>
+                        </button>
+                     </div>
+                 </div>
+
+                 <div className="w-48 flex items-center gap-3">
+                     <SpeakerWaveIcon className="w-4 h-4 text-slate-500" />
+                     <input
+                        type="range" min="0" max="1" step="0.01"
+                        value={masterVolume}
+                        onChange={(e) => setMasterVolume(parseFloat(e.target.value))}
+                        className="w-full h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-white"
+                     />
+                 </div>
+             </div>
+          </main>
+
+          <aside className="w-80 bg-[#161b2e] border-l border-white/5 flex flex-col shrink-0 p-6 space-y-6 overflow-y-auto">
+
+              <div>
+                  <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Selected Channel</div>
+                  <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded bg-emerald-500/10 flex items-center justify-center text-emerald-500">
+                          <MusicalNoteIcon className="w-5 h-5" />
+                      </div>
+                      <h2 className="text-xl font-bold text-white truncate" title={selectedStem?.name}>{selectedStem?.name || "No Track Selected"}</h2>
+                  </div>
+              </div>
+
+              {selectedStem && (
+                  <>
+                    <div className="bg-[#1e2336] rounded-xl p-4 border border-white/5 shadow-lg">
+                        <div className="flex justify-between items-center mb-4">
+                            <span className="text-xs font-bold text-slate-300">Parametric EQ</span>
+                            <div className="w-8 h-4 bg-emerald-500/20 rounded-full relative cursor-pointer border border-emerald-500/30">
+                                <div className="absolute right-0.5 top-0.5 w-3 h-3 bg-emerald-400 rounded-full shadow-lg"></div>
+                            </div>
+                        </div>
+                        <div className="h-20 bg-[#11131f] rounded-lg mb-4 border border-white/5 relative overflow-hidden">
+                            <div className="absolute inset-0 bg-gradient-to-t from-emerald-500/5 to-transparent"></div>
+                            <svg className="absolute inset-0 w-full h-full text-emerald-500/30" preserveAspectRatio="none">
+                                <path d="M0,80 C20,80 40,60 80,60 C120,60 140,80 160,80 C200,80 220,40 260,40 C300,40 320,80 320,80 L320,80 L0,80 Z" fill="currentColor" />
+                            </svg>
+                        </div>
+
+                        <div className="flex justify-between px-2">
+                             <Knob label="LOW" value={selectedStem.eq.low} min={-12} max={12} onChange={(v) => updateStem(selectedStemIndex, { eq: {...selectedStem.eq, low: v}})} />
+                             <Knob label="MID" value={selectedStem.eq.mid} min={-12} max={12} onChange={(v) => updateStem(selectedStemIndex, { eq: {...selectedStem.eq, mid: v}})} />
+                             <Knob label="HIGH" value={selectedStem.eq.high} min={-12} max={12} onChange={(v) => updateStem(selectedStemIndex, { eq: {...selectedStem.eq, high: v}})} />
+                        </div>
+                    </div>
+
+                    <div className="bg-[#1e2336] rounded-xl p-4 border border-white/5 shadow-lg">
+                        <div className="flex justify-between items-center mb-4">
+                            <span className="text-xs font-bold text-slate-300">Compressor</span>
+                            <div className="w-8 h-4 bg-emerald-500/20 rounded-full relative cursor-pointer border border-emerald-500/30">
+                                <div className="absolute right-0.5 top-0.5 w-3 h-3 bg-emerald-400 rounded-full shadow-lg"></div>
+                            </div>
+                        </div>
+
+                        <div className="flex justify-around mb-4">
+                             <Knob label="THRESH" value={selectedStem.compression.threshold} min={-60} max={0} onChange={(v) => updateStem(selectedStemIndex, { compression: {...selectedStem.compression, threshold: v}})} />
+                             <Knob label="RATIO" value={selectedStem.compression.ratio} min={1} max={20} onChange={(v) => updateStem(selectedStemIndex, { compression: {...selectedStem.compression, ratio: v}})} />
+                        </div>
+
+                        <div className="flex items-center gap-2 text-[10px] text-slate-500 font-mono">
+                            <span>GR</span>
+                            <div className="flex-1 h-1.5 bg-slate-800 rounded-full overflow-hidden flex justify-end">
+                                <div className="w-[10%] bg-red-500 h-full rounded-l-full"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="bg-[#1e2336] rounded-xl p-4 border border-purple-500/20 shadow-[0_0_20px_rgba(168,85,247,0.05)]">
+                        <div className="flex items-center gap-2 mb-3 text-purple-400">
+                            <CpuChipIcon className="w-4 h-4" />
+                            <span className="text-xs font-bold uppercase tracking-wider">AI Insight</span>
+                        </div>
+                        <p className="text-xs text-slate-400 leading-relaxed mb-4">
+                            Detected muddiness in low-mids (250Hz). Recommendation: Cut -2dB or sidechain to kick drum.
+                        </p>
+                        <button className="w-full py-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold rounded shadow-lg shadow-purple-900/40 transition-colors">
+                            Apply Fix
+                        </button>
+                    </div>
+                  </>
+              )}
+          </aside>
       </div>
 
       <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
@@ -492,26 +604,30 @@ function formatTime(s: number) {
     const min = Math.floor(s / 60);
     const sec = Math.floor(s % 60);
     const ms = Math.floor((s % 1) * 100);
-    return `${min}:${sec.toString().padStart(2, '0')}.${ms.toString().padStart(2, '0')}`;
+    return `${min.toString().padStart(2,'0')}:${sec.toString().padStart(2, '0')}.${ms.toString().padStart(2, '0')}`;
 }
 
-// Simple Knob Component
 function Knob({ label, value, min, max, onChange }: { label: string, value: number, min: number, max: number, onChange: (v: number) => void }) {
-    // A simplified interaction for knob: click and drag (vertical)
-    // For MVP we use basic interaction
+    const [dragging, setDragging] = useState(false);
+    const startYRef = useRef(0);
+    const startValRef = useRef(0);
+
     const handleMouseDown = (e: React.MouseEvent) => {
-        const startY = e.clientY;
-        const startVal = value;
+        setDragging(true);
+        startYRef.current = e.clientY;
+        startValRef.current = value;
+
         const handleMove = (ev: MouseEvent) => {
-            const dy = startY - ev.clientY;
+            const dy = startYRef.current - ev.clientY;
             const range = max - min;
-            const delta = (dy / 100) * range; // 100px for full range
-            let newVal = startVal + delta;
+            const delta = (dy / 150) * range;
+            let newVal = startValRef.current + delta;
             if (newVal < min) newVal = min;
             if (newVal > max) newVal = max;
             onChange(newVal);
         };
         const handleUp = () => {
+            setDragging(false);
             window.removeEventListener('mousemove', handleMove);
             window.removeEventListener('mouseup', handleUp);
         };
@@ -519,23 +635,24 @@ function Knob({ label, value, min, max, onChange }: { label: string, value: numb
         window.addEventListener('mouseup', handleUp);
     };
 
-    // Calculate rotation: -135deg to +135deg
     const pct = (value - min) / (max - min);
     const rotation = -135 + (pct * 270);
 
     return (
-        <div className="flex flex-col items-center">
+        <div className="flex flex-col items-center gap-2 group select-none">
             <div
                 onMouseDown={handleMouseDown}
-                className="w-8 h-8 rounded-full bg-slate-700 relative cursor-ns-resize shadow-inner ring-1 ring-slate-600"
+                className="w-12 h-12 rounded-full bg-[#11131f] relative cursor-ns-resize shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)] border border-slate-700 hover:border-slate-500 transition-colors"
             >
                 <div
-                    className="absolute top-1/2 left-1/2 w-1 h-3 bg-emerald-500 origin-bottom -translate-x-1/2 -translate-y-full rounded-full"
+                    className="absolute top-1/2 left-1/2 w-0.5 h-4 bg-emerald-400 origin-bottom -translate-x-1/2 -translate-y-full rounded-full shadow-[0_0_5px_rgba(52,211,153,0.5)]"
                     style={{ transform: `translate(-50%, -50%) rotate(${rotation}deg)` }}
                 ></div>
             </div>
-            <span className="text-[9px] text-slate-500 mt-1">{label}</span>
-            <span className="text-[8px] text-emerald-600 font-mono">{value.toFixed(0)}</span>
+            <div className="text-center">
+                <span className="text-[9px] font-bold text-slate-500 block mb-0.5 tracking-wider">{label}</span>
+                <span className={`text-[10px] font-mono transition-colors ${dragging ? 'text-emerald-400' : 'text-slate-600'}`}>{value.toFixed(1)}</span>
+            </div>
         </div>
     );
 }

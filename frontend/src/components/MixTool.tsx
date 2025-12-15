@@ -10,6 +10,7 @@ import {
   type StemProfilePayload,
   cleanupTemp,
 } from "../lib/mixApi";
+import { getSongModeStages } from "../lib/mixUtils";
 import dynamic from "next/dynamic";
 import Script from "next/script";
 import { UploadDropzone } from "./UploadDropzone";
