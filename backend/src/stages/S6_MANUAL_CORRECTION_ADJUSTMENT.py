@@ -30,13 +30,16 @@ from utils.logger import logger
 try:
     from context import PipelineContext
 except ImportError:
-    PipelineContext = None # type: ignore
+    PipelineContext = None  # type: ignore
+
+
+STAGE_ID = "S6_MANUAL_CORRECTION_ADJUSTMENT"
 
 
 def _load_corrections(stage_dir: Path) -> List[Dict[str, Any]]:
     json_path = stage_dir / "changes.json"
     if not json_path.exists():
-        logger.logger.warning(f"[S13] No se encontró changes.json en {stage_dir}")
+        logger.logger.warning(f"[{STAGE_ID}] No se encontró changes.json en {stage_dir}")
         return []
     try:
         with json_path.open("r", encoding="utf-8") as f:
@@ -49,30 +52,36 @@ def _load_corrections(stage_dir: Path) -> List[Dict[str, Any]]:
                 return data["corrections"]
             return []
     except Exception as e:
-        logger.logger.error(f"[S13] Error leyendo changes.json: {e}")
+        logger.logger.error(f"[{STAGE_ID}] Error leyendo changes.json: {e}")
         return []
 
 
 def process(context: PipelineContext) -> bool:
     """
-    S13_MANUAL_CORRECTION:
+    S6_MANUAL_CORRECTION_ADJUSTMENT:
     1. Lee changes.json del stage_dir actual.
-    2. Busca stems finales disponibles (prioriza S11_REPORT_GENERATION).
+    2. Busca stems finales disponibles (prioriza S6_MANUAL_CORRECTION -> S11_REPORT_GENERATION).
     3. Aplica efectos (EQ, Comp, Gain, Pan) a cada stem.
     4. Guarda los stems procesados en stage_dir.
     5. mixdown_stems.py se encargará (llamado externamente) de sumarlos.
     """
-    stage_dir = context.get_stage_dir(context.stage_id)
+    stage_id = STAGE_ID
+    try:
+        context.stage_id = STAGE_ID
+    except Exception:
+        pass
+    stage_dir = context.get_stage_dir(stage_id)
     temp_root = context.temp_root
 
     # 1. Correcciones
     corrections = _load_corrections(stage_dir)
     if not corrections:
-        logger.logger.info("[S13] Sin correcciones definidas. Saliendo.")
+        logger.logger.info(f"[{stage_id}] Sin correcciones definidas. Saliendo.")
         return False
 
-    # 2. Origen: stems finales disponibles (S11 -> S10 -> S0 fallback)
+    # 2. Origen: stems finales disponibles (S6 -> S11 -> S10 -> S0 fallback)
     candidate_sources = [
+        temp_root / "S6_MANUAL_CORRECTION",
         temp_root / "S11_REPORT_GENERATION",
         temp_root / "S10_MASTER_FINAL_LIMITS",
         temp_root / "S0_SESSION_FORMAT",
@@ -88,7 +97,7 @@ def process(context: PipelineContext) -> bool:
                 break
 
     if source_dir is None:
-        logger.logger.error(f"[S13] No se encontraron stems fuente en {temp_root}")
+        logger.logger.error(f"[{stage_id}] No se encontraron stems fuente en {temp_root}")
         return False
 
     # Mapa de correcciones por nombre de stem
@@ -98,7 +107,7 @@ def process(context: PipelineContext) -> bool:
     # Si hay algun stem en SOLO, muteamos el resto.
     solo_active = any(c.get("solo", False) for c in corrections)
 
-    logger.logger.info(f"[S13] Procesando correcciones para {len(corrections)} stems. Solo Mode: {solo_active}")
+    logger.logger.info(f"[{stage_id}] Procesando correcciones para {len(corrections)} stems. Solo Mode: {solo_active}")
 
     # Procesar cada stem
     stems_found = list(source_dir.glob("*.wav"))
@@ -140,7 +149,7 @@ def process(context: PipelineContext) -> bool:
         try:
             audio, sr = sf.read(str(stem_path))
         except Exception as e:
-            logger.logger.warning(f"[S13] Error leyendo stem {stem_name}: {e}")
+            logger.logger.warning(f"[{stage_id}] Error leyendo stem {stem_name}: {e}")
             continue
 
         # Asegurar stereo (Pedalboard trabaja mejor asi, o manejamos mono)
@@ -192,7 +201,7 @@ def process(context: PipelineContext) -> bool:
                 output_audio = board(input_audio, sr)
                 audio = output_audio.T
             except Exception as e:
-                logger.logger.error(f"[S13] Error aplicando efectos a {stem_name}: {e}")
+                logger.logger.error(f"[{stage_id}] Error aplicando efectos a {stem_name}: {e}")
 
             # 4. Pan (manual con numpy)
             pan = float(corr.get("pan", 0))
@@ -214,5 +223,5 @@ def process(context: PipelineContext) -> bool:
         sf.write(str(out_path), audio, sr)
         processed_count += 1
 
-    logger.logger.info(f"[S13] Procesados {processed_count} stems.")
+    logger.logger.info(f"[{stage_id}] Procesados {processed_count} stems.")
     return True

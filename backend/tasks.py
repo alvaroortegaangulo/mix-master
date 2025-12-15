@@ -561,13 +561,22 @@ def run_full_pipeline_task(
 def run_manual_correction_task(
     self,
     job_id: str,
-    stage_name: str
+    stage_name: str = "S6_MANUAL_CORRECTION_ADJUSTMENT",
 ) -> Dict[str, Any]:
     """
-    Tarea para ejecutar una correccion manual (S13).
+    Tarea para ejecutar una correccion manual (S6_MANUAL_CORRECTION_ADJUSTMENT).
     """
-    from src.utils.analysis_utils import get_temp_dir
     from src.utils import mixdown_stems
+
+    target_stage = "S6_MANUAL_CORRECTION_ADJUSTMENT"
+    if stage_name != target_stage:
+        logger.info(
+            "[%s] Normalizando stage_name %s -> %s para correccion manual",
+            job_id,
+            stage_name,
+            target_stage,
+        )
+    stage_name = target_stage
 
     # Resolucion de directorios
     backend_root = Path(__file__).resolve().parent
@@ -588,7 +597,7 @@ def run_manual_correction_task(
 
     current_status.update({
         "status": "processing_correction",
-        "message": f"Processing manual correction ({stage_name})..."
+        "message": f"Processing manual correction adjustment ({stage_name})..."
     })
     status_path.write_text(json.dumps(current_status, indent=2), encoding="utf-8")
 
@@ -611,18 +620,18 @@ def run_manual_correction_task(
                 return self.temp_root / sid
         ctx = MockContext(job_id, temp_root, stage_name)
 
-    # 1. Importar y ejecutar S13
+    # 1. Importar y ejecutar stage de correcciones manuales
     try:
         # Import dinamico para asegurar que recoge el fichero recien creado
         import importlib
-        import src.stages.S13_MANUAL_CORRECTION as s13
-        importlib.reload(s13)
+        import src.stages.S6_MANUAL_CORRECTION_ADJUSTMENT as s6_adjustment
+        importlib.reload(s6_adjustment)
 
-        success = s13.process(ctx)
+        success = s6_adjustment.process(ctx)
         if not success:
-            raise Exception("S13 process failed")
+            raise Exception(f"{stage_name} process failed")
     except Exception as e:
-        logger.error(f"S13 execution failed: {e}")
+        logger.error(f"{stage_name} execution failed: {e}")
         current_status.update({"status": "failure", "message": str(e)})
         status_path.write_text(json.dumps(current_status, indent=2), encoding="utf-8")
         raise
@@ -637,7 +646,7 @@ def run_manual_correction_task(
 
     current_status.update({
         "status": "success",
-        "message": "Manual correction complete",
+        "message": "Manual correction adjustment complete",
         "full_song_url": full_song_rel,
     })
     status_path.write_text(json.dumps(current_status, indent=2), encoding="utf-8")
