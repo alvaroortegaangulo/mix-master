@@ -1131,123 +1131,6 @@ def _check_S5_BUS_DYNAMICS_DRUMS(data: Dict[str, Any]) -> bool:
     return ok
 
 
-def _check_S6_BUS_REVERB_STYLE(data: Dict[str, Any]) -> bool:
-    """
-    Valida S6_BUS_REVERB_STYLE usando:
-
-      - analysis_S6_BUS_REVERB_STYLE.json (para contrato / sesión).
-      - space_depth_metrics_S6_BUS_REVERB_STYLE.json (métricas reales del stage).
-
-    Reglas:
-
-      - reverb_return_offset_db (reverb_LUFS - dry_LUFS)
-          ∈ [reverb_return_lufs_offset_min_db, reverb_return_lufs_offset_max_db] ± MARGIN.
-      - |applied_offset_delta_db| <= max_send_level_change_db_per_pass + MARGIN_DELTA.
-      - Si hay returns, reverb_return_lufs < dry_mix_lufs (ambiente, no más fuerte que el dry).
-    """
-    contract_id = data.get("contract_id", "S6_BUS_REVERB_STYLE")
-    metrics_from_contract = data.get("metrics_from_contract", {}) or {}
-    session = data.get("session", {}) or {}
-
-    # Valores objetivo desde contrato / sesión
-    try:
-        offset_min_contract = float(
-            metrics_from_contract.get("reverb_return_lufs_offset_min_db", -24.0)
-        )
-        offset_max_contract = float(
-            metrics_from_contract.get("reverb_return_lufs_offset_max_db", -8.0)
-        )
-    except (TypeError, ValueError):
-        print(f"[{contract_id}] Métricas inválidas en metrics_from_contract; fracaso.")
-        return False
-
-    try:
-        max_send_change_contract = float(
-            session.get("max_send_level_change_db_per_pass")
-            or data.get("limits", {}).get("max_send_level_change_db_per_pass")
-            or 2.0
-        )
-    except (TypeError, ValueError):
-        max_send_change_contract = 2.0
-
-    # Cargar métricas del stage
-    temp_dir = get_temp_dir(contract_id, create=False)
-    metrics_path = temp_dir / "space_depth_metrics_S6_BUS_REVERB_STYLE.json"
-
-    if not metrics_path.exists():
-        print(
-            f"[S6_BUS_REVERB_STYLE] ERROR: no se encuentra {metrics_path}. "
-            f"Asegúrate de que el stage guarda métricas de espacio/profundidad."
-        )
-        return False
-
-    with metrics_path.open("r", encoding="utf-8") as f:
-        m = json.load(f)
-
-    num_returns = int(m.get("num_returns", 0))
-
-    # Si no se han generado returns, consideramos éxito suave:
-    # no hay reverb en este stage (o no aplica).
-    if num_returns == 0:
-        print(
-            "[S6_BUS_REVERB_STYLE] Sin returns de reverb generados; "
-            "se asume mezcla seca o sin necesidad de ambiente. Éxito suave."
-        )
-        return True
-
-    dry_lufs = m.get("dry_mix_lufs")
-    rev_lufs = m.get("reverb_return_lufs")
-    offset_now = m.get("reverb_return_offset_db")
-    target_min = m.get("target_offset_min_db", offset_min_contract)
-    target_max = m.get("target_offset_max_db", offset_max_contract)
-    applied_delta = m.get("applied_offset_delta_db")
-    max_send_change_recorded = m.get("max_send_level_change_db_per_pass", max_send_change_contract)
-
-    try:
-        dry_lufs = float(dry_lufs)
-        rev_lufs = float(rev_lufs)
-        offset_now = float(offset_now)
-        target_min = float(target_min)
-        target_max = float(target_max)
-        applied_delta = float(applied_delta)
-        max_send_change_recorded = float(max_send_change_recorded)
-    except (TypeError, ValueError):
-        print("[S6_BUS_REVERB_STYLE] Métricas de LUFS/offset inválidas; fracaso.")
-        return False
-
-    # Tolerancias
-    MARGIN_OFFSET_DB = 1.0
-    MARGIN_DELTA_DB = 0.1
-
-    ok = True
-
-    # 1) Offset dentro de rango objetivo (10–20 dB por debajo, p.ej. [-24, -8] dB)
-    if offset_now < target_min - MARGIN_OFFSET_DB:
-        logger.print_metric("Reverb Offset", offset_now, target=f">= {target_min}", status="FAIL", details="Too buried")
-        ok = False
-
-    if offset_now > target_max + MARGIN_OFFSET_DB:
-        logger.print_metric("Reverb Offset", offset_now, target=f"<= {target_max}", status="FAIL", details="Too wet")
-        ok = False
-
-    # 2) Nivel global de reverb siempre por debajo del mix dry
-    if rev_lufs >= dry_lufs:
-        logger.print_metric("Reverb Level", rev_lufs, target=f"< {dry_lufs} (Dry)", status="FAIL", details="Reverb louder than Dry")
-        ok = False
-
-    # 3) Idempotencia: no subir/bajar más de max_send_change_db por pasada
-    max_allowed_delta = max_send_change_recorded + MARGIN_DELTA_DB
-    if abs(applied_delta) > max_allowed_delta:
-        logger.print_metric("Offset Delta", applied_delta, target=f"<= {max_send_change_recorded}", status="FAIL")
-        ok = False
-
-    if ok:
-        logger.print_metric("Reverb Check", "OK", status="PASS", details=f"Offset: {offset_now:.2f}")
-
-    return ok
-
-
-
 def _check_S7_MIXBUS_TONAL_BALANCE(data: Dict[str, Any]) -> bool:
     """
     Valida S7_MIXBUS_TONAL_BALANCE usando:
@@ -2082,8 +1965,6 @@ def process(context: PipelineContext, *args) -> bool:
         ok = _check_S5_LEADVOX_DYNAMICS(analysis)
     elif contract_id == "S5_BUS_DYNAMICS_DRUMS":
         ok = _check_S5_BUS_DYNAMICS_DRUMS(analysis)
-    elif contract_id == "S6_BUS_REVERB_STYLE":
-        ok = _check_S6_BUS_REVERB_STYLE(analysis)
     elif contract_id == "S7_MIXBUS_TONAL_BALANCE":
         ok = _check_S7_MIXBUS_TONAL_BALANCE(analysis)
     elif contract_id == "S8_MIXBUS_COLOR_GENERIC":
@@ -2134,7 +2015,6 @@ def main() -> None:
         elif contract_id == "S5_STEM_DYNAMICS_GENERIC": ok = _check_S5_STEM_DYNAMICS_GENERIC(analysis)
         elif contract_id == "S5_LEADVOX_DYNAMICS": ok = _check_S5_LEADVOX_DYNAMICS(analysis)
         elif contract_id == "S5_BUS_DYNAMICS_DRUMS": ok = _check_S5_BUS_DYNAMICS_DRUMS(analysis)
-        elif contract_id == "S6_BUS_REVERB_STYLE": ok = _check_S6_BUS_REVERB_STYLE(analysis)
         elif contract_id == "S7_MIXBUS_TONAL_BALANCE": ok = _check_S7_MIXBUS_TONAL_BALANCE(analysis)
         elif contract_id == "S8_MIXBUS_COLOR_GENERIC": ok = _check_S8_MIXBUS_COLOR_GENERIC(analysis)
         elif contract_id == "S9_MASTER_GENERIC": ok = _check_S9_MASTER_GENERIC(analysis)

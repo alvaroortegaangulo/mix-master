@@ -299,7 +299,6 @@ def run_stage(stage_id: str, context: Optional[PipelineContext] = None) -> None:
     check_script = base_dir / "utils" / "check_metrics_limits.py"
     mixdown_script = base_dir / "utils" / "mixdown_stems.py"
     copy_script = base_dir / "utils" / "copy_stems.py"
-    cleanup_stems_script = base_dir / "utils" / "cleanup_stage_stems.py"
 
     logger.print_header(f"Running stage: {stage_id}", color="\033[34m")
     stage_start = time.perf_counter()
@@ -382,10 +381,7 @@ def run_stage(stage_id: str, context: Optional[PipelineContext] = None) -> None:
     next_contract_id = _get_next_contract_id(base_dir, stage_id)
     if next_contract_id is not None:
         # Copy script toma src_stage, dst_stage
-        copy_ret = _run_script(copy_script, context, stage_id, next_contract_id)
-        # Borrar stems del stage actual una vez copiados (conserva full_song.wav)
-        if copy_ret == 0:
-            _run_script(cleanup_stems_script, context, stage_id)
+        _run_script(copy_script, context, stage_id, next_contract_id)
 
     # --- Generate Images ---
     # Attempt to generate images if we have a "pre" and "post" audio.
@@ -394,9 +390,6 @@ def run_stage(stage_id: str, context: Optional[PipelineContext] = None) -> None:
     # - "Pre": we need to have saved it.
     # We will implement the saving of 'pre' audio in the next step by wrapping the execution.
     # For now, let's just create the hook.
-
-    # Limpiar (desactivado para preservar stems entre stages)
-    # _run_script(cleanup_stems_script, context, stage_id)
 
     # Asegurar análisis
     _ensure_analysis_file(stage_id, analysis_script, context)

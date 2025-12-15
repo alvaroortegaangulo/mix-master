@@ -222,27 +222,6 @@
         }
       ]
     },
-    "S6_SPACE_DEPTH": {
-      "id": "S6_SPACE_DEPTH",
-      "name": "Space / Depth by Buses",
-      "contracts": [
-        {
-          "id": "S6_BUS_REVERB_STYLE",
-          "stage_id": "S6_SPACE_DEPTH",
-          "instrument_id": "*",
-          "style_id": "*",
-          "target_scope": "bus",
-          "metrics": {
-            "use_style_profile_reverb": true,
-            "reverb_return_lufs_offset_min_db": -24.0,
-            "reverb_return_lufs_offset_max_db": -6.0
-          },
-          "limits": {
-            "max_send_level_change_db_per_pass": 2.0
-          }
-        }
-      ]
-    },
     "S7_TONAL_BALANCE": {
       "id": "S7_TONAL_BALANCE",
       "name": "Multiband EQ / Tonal Balance",
