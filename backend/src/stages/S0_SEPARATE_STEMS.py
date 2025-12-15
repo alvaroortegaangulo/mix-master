@@ -256,6 +256,17 @@ def _process_impl(contract_id: str, context: Optional["PipelineContext"] = None)
                 target.parent.mkdir(parents=True, exist_ok=True)
                 shutil.move(str(p), target)
 
+    # Bootstrap defensivo: si no hay nada aún, copia audio desde S0_MIX_ORIGINAL (job_root)
+    if not is_stems_upload:
+        s0_original = job_root / "S0_MIX_ORIGINAL"
+        if s0_original.exists():
+            seed_files = _list_audio_files(stage_dir, skip_names={"full_song.wav"})
+            if not seed_files:
+                for p in _list_audio_files(s0_original, skip_names={"full_song.wav"}):
+                    target = stage_dir / p.name
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(p, target)
+
     # Idempotencia: si ya hay stems en el root del stage, listo.
     existing = _list_audio_files(stage_dir, skip_names={"full_song.wav"})
     if len(existing) >= 2 or (is_stems_upload and existing):
