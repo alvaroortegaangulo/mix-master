@@ -213,15 +213,29 @@ def separate_bs_roformer_to_dir(
         with assets.config_path.open("r", encoding="utf-8") as f:
             raw_cfg = json.load(f)
         config = Config.model_construct(**raw_cfg)  # type: ignore[arg-type]
-    # Compatibilidad: ModelMetadata puede usar firma (model_type, params, model) o (model_type, model, params=None)
-    try:
-        metadata = ModelMetadata(model_type="bs_roformer", params=BSRoformerParams, model=BSRoformer)
-        model_params = config.model.to_concrete(metadata.params)
-    except TypeError:
-        metadata = ModelMetadata(model_type="bs_roformer", model=BSRoformer, params=BSRoformerParams)
-        model_params = config.model.to_concrete(BSRoformerParams)
+    # Compatibilidad: hay versiones de ModelMetadata que no aceptan el keyword params ni el orden params/model.
+    metadata = None
+    metadata_exc = None
+    for builder in (
+        lambda: ModelMetadata(model_type="bs_roformer", params=BSRoformerParams, model=BSRoformer),
+        lambda: ModelMetadata(model_type="bs_roformer", model=BSRoformer, params=BSRoformerParams),
+        lambda: ModelMetadata("bs_roformer", BSRoformer, BSRoformerParams),
+        lambda: ModelMetadata("bs_roformer", BSRoformer),
+    ):
+        try:
+            metadata = builder()
+            break
+        except TypeError as exc:
+            metadata_exc = exc
 
-    model = metadata.model(model_params)
+    if metadata is None:
+        raise metadata_exc or TypeError("No se pudo construir ModelMetadata para bs_roformer")
+
+    params_cls = getattr(metadata, "params", BSRoformerParams)
+    model_cls = getattr(metadata, "model", BSRoformer)
+    model_params = config.model.to_concrete(params_cls)
+
+    model = model_cls(model_params)
     model = _load_weights(model, assets.checkpoint_path, device=device)
 
     if device == "cpu":
