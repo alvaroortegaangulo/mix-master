@@ -47,5 +47,5 @@ google-auth
 requests
 
 #Inteligencia musical
-spleeter>=2.4.0
-tensorflow>=2.12,<2.17
+spleeter==2.4.0
+tensorflow==2.9.3
