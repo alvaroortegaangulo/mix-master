@@ -238,12 +238,6 @@ export default function StudioPage() {
 
           // Attempt to load mixdown for waveform visualization (URL only to avoid heavy decode)
           const preferredMixdownPaths = [
-              "S11_REPORT_GENERATION/full_song.wav",
-              "S10_MASTER_FINAL_LIMITS/full_song.wav",
-              "S9_MASTER_GENERIC/full_song.wav",
-              "S8_MIXBUS_COLOR_GENERIC/full_song.wav",
-              "S7_MIXBUS_TONAL_BALANCE/full_song.wav",
-              "S6_MANUAL_CORRECTION/full_song.wav",
               "S5_LEADVOX_DYNAMICS/full_song.wav",
               "S5_STEM_DYNAMICS_GENERIC/full_song.wav",
               "S4_STEM_RESONANCE_CONTROL/full_song.wav",
