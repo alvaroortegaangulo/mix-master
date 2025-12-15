@@ -166,9 +166,34 @@ def separate_bs_roformer_to_dir(
     import torch
     from splifft.config import Config
     from splifft.models import ModelMetadata
-    from splifft.models.bs_roformer import BSRoformer, BSRoformerParams
     from splifft.io import load_weights
     from splifft.inference import separate as splifft_separate
+
+    # Compatibilidad: algunas versiones de splifft no exponen BSRoformerParams.
+    try:  # Preferido
+        from splifft.models.bs_roformer import BSRoformer, BSRoformerParams  # type: ignore
+    except Exception:
+        from importlib import import_module
+
+        mod = import_module("splifft.models.bs_roformer")
+        BSRoformer = getattr(mod, "BSRoformer")
+        # Intenta varias alternativas habituales de nombre
+        param_candidates = [
+            "BSRoformerParams",
+            "BSRoformerConfig",
+            "BSRoformerModelParams",
+            "BSRoformerConfiguration",
+        ]
+        BSRoformerParams = None
+        for name in param_candidates:
+            BSRoformerParams = getattr(mod, name, None)
+            if BSRoformerParams is not None:
+                break
+        if BSRoformerParams is None:
+            raise ImportError(
+                "No se encontró BSRoformerParams en splifft.models.bs_roformer. "
+                "Actualiza splifft a una versión que lo incluya."
+            )
 
     # 1) Config + modelo
     config = Config.from_file(assets.config_path)
