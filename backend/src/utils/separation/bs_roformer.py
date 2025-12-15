@@ -213,8 +213,13 @@ def separate_bs_roformer_to_dir(
         with assets.config_path.open("r", encoding="utf-8") as f:
             raw_cfg = json.load(f)
         config = Config.model_construct(**raw_cfg)  # type: ignore[arg-type]
-    metadata = ModelMetadata(model_type="bs_roformer", params=BSRoformerParams, model=BSRoformer)
-    model_params = config.model.to_concrete(metadata.params)
+    # Compatibilidad: ModelMetadata puede usar firma (model_type, params, model) o (model_type, model, params=None)
+    try:
+        metadata = ModelMetadata(model_type="bs_roformer", params=BSRoformerParams, model=BSRoformer)
+        model_params = config.model.to_concrete(metadata.params)
+    except TypeError:
+        metadata = ModelMetadata(model_type="bs_roformer", model=BSRoformer, params=BSRoformerParams)
+        model_params = config.model.to_concrete(BSRoformerParams)
 
     model = metadata.model(model_params)
     model = _load_weights(model, assets.checkpoint_path, device=device)
