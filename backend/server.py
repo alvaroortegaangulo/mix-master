@@ -567,7 +567,8 @@ SIGNED_URL_STEMS_TTL = int(os.environ.get("STEMS_SIGNED_URL_TTL", str(6 * 3600))
 SIGNED_URL_STEMS_TTL = max(600, min(SIGNED_URL_STEMS_TTL, 24 * 3600))
 STEM_PEAKS_DESIRED_BARS = 800
 # Por defecto generamos meta (peaks/preview); se puede desactivar con STUDIO_GENERATE_WAVEFORM_META=0
-STEM_META_GENERATION_ENABLED = os.environ.get("STUDIO_GENERATE_WAVEFORM_META", "1") not in (
+# [OPTIMIZATION] Defaults to "0" (False) to speed up studio loading. Frontend calculates waveforms.
+STEM_META_GENERATION_ENABLED = os.environ.get("STUDIO_GENERATE_WAVEFORM_META", "0") not in (
     "0",
     "false",
     "False",

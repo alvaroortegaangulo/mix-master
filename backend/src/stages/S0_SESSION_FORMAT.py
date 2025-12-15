@@ -168,10 +168,21 @@ def main() -> None:
         logger.logger.info("[S0_SESSION_FORMAT] No hay stems en el análisis; nada que procesar.")
         return
 
-    # Procesar stems en serie
+    # Procesar stems en paralelo
     args_list = [(stem_info, metrics) for stem_info in stems]
-    for args in args_list:
-        _process_stem_worker(args)
+
+    # Usar ProcessPoolExecutor para paralelizar el re-muestreo y conversión
+    import concurrent.futures
+    import os
+
+    max_workers = min(len(stems), os.cpu_count() or 1)
+    if max_workers < 1:
+        max_workers = 1
+
+    logger.logger.info(f"[S0_SESSION_FORMAT] Procesando {len(stems)} stems con {max_workers} workers.")
+
+    with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as executor:
+        list(executor.map(_process_stem_worker, args_list))
 
     logger.logger.info(f"[S0_SESSION_FORMAT] Conversión de formato completada para {len(stems)} stems.")
 
