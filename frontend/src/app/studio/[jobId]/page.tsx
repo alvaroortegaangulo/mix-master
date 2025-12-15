@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, useMemo } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { fetchJobReport, getBackendBaseUrl, signFileUrl } from "@/lib/mixApi";
@@ -19,6 +19,7 @@ import {
 } from "@heroicons/react/24/solid";
 
 interface StemControl {
+  fileName: string;
   name: string;
   volume: number;
   pan: number;
@@ -34,6 +35,7 @@ interface StemControl {
     ratio: number;
   };
   url?: string;
+  status?: "idle" | "loading" | "ready" | "error";
 }
 
 export default function StudioPage() {
@@ -50,6 +52,7 @@ export default function StudioPage() {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [masterVolume, setMasterVolume] = useState(0.8);
+  const selectedStem = stems[selectedStemIndex];
 
   const waveformRef = useRef<HTMLDivElement>(null);
   const wavesurferRef = useRef<WaveSurfer | null>(null);
@@ -60,6 +63,13 @@ export default function StudioPage() {
   const audioBuffersRef = useRef<Map<string, AudioBuffer>>(new Map());
   const startTimeRef = useRef<number>(0);
   const pauseTimeRef = useRef<number>(0);
+
+  const stopAllSources = () => {
+      sourceNodesRef.current.forEach((node) => {
+          try { node.stop(); } catch (e) { /* noop */ }
+      });
+      sourceNodesRef.current.clear();
+  };
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -87,101 +97,59 @@ export default function StudioPage() {
     let cancelled = false;
 
     async function load() {
-      console.log("Studio: Starting load stems...");
+      console.log("Studio: Starting load stems (metadata only)...");
       try {
         setLoadingStems(true);
+        stopAllSources();
+        audioBuffersRef.current.clear();
+        gainNodesRef.current.clear();
+        pauseTimeRef.current = 0;
+        setIsPlaying(false);
+        setCurrentTime(0);
         const baseUrl = getBackendBaseUrl();
         console.log("Studio: Fetching stems from", baseUrl);
 
         const res = await fetch(`${baseUrl}/jobs/${jobId}/stems`, {
-             headers: {
-                 "X-API-Key": process.env.NEXT_PUBLIC_MIXMASTER_API_KEY || "",
-             }
+          headers: {
+            "X-API-Key": process.env.NEXT_PUBLIC_MIXMASTER_API_KEY || "",
+          },
         });
         console.log("Studio: Stems response", res.status);
 
         let stemFiles: string[] = [];
         if (res.ok) {
-            const data = await res.json();
-            stemFiles = data.stems || [];
+          const data = await res.json();
+          stemFiles = Array.isArray(data.stems) ? data.stems : [];
         } else {
-             stemFiles = ["vocals.wav", "drums.wav", "bass.wav", "other.wav"];
+          stemFiles = ["vocals.wav", "drums.wav", "bass.wav", "other.wav"];
         }
         console.log("Studio: Stems list", stemFiles);
 
         const newStems: StemControl[] = stemFiles.map((file) => ({
-          name: file.replace(".wav", "").replace(/_/g, " ").replace("S11", "").replace("S10", "").trim() || file,
+          fileName: file,
+          name:
+            file
+              .replace(".wav", "")
+              .replace(/_/g, " ")
+              .replace("S11", "")
+              .replace("S10", "")
+              .trim() || file,
           volume: 0,
           pan: 0,
           mute: false,
           solo: false,
           eq: { low: 0, mid: 0, high: 0 },
           compression: { threshold: -20, ratio: 2 },
-          url: undefined
+          url: undefined,
+          status: "idle",
         }));
 
-        setStems(newStems);
-
-        if (audioContextRef.current) {
-            console.log("Studio: Loading buffers...");
-            for (const file of stemFiles) {
-                if (cancelled) break;
-                console.log("Studio: Processing file", file);
-                try {
-                    console.log("Studio: Signing URL for", file);
-                    let signedUrl = await signFileUrl(jobId, `S12_SEPARATE_STEMS/${file}`);
-                    console.log("Studio: Signed URL", signedUrl);
-
-                    let resp = await fetch(signedUrl);
-                    if (!resp.ok) {
-                         console.log("Studio: S12 fetch failed, trying S0");
-                         signedUrl = await signFileUrl(jobId, `S0_SESSION_FORMAT/${file}`);
-                         resp = await fetch(signedUrl);
-                    }
-
-                    if (resp.ok) {
-                        console.log("Studio: Fetch OK, reading buffer");
-                        const ab = await resp.arrayBuffer();
-                        console.log("Studio: Decoding buffer", ab.byteLength);
-
-                        try {
-                            const decodePromise = audioContextRef.current.decodeAudioData(ab);
-                            const timeoutPromise = new Promise<AudioBuffer>((_, reject) =>
-                                setTimeout(() => reject(new Error("Audio decoding timed out")), 2000)
-                            );
-
-                            const decoded = await Promise.race([decodePromise, timeoutPromise]);
-                            console.log("Studio: Decoded OK");
-                            audioBuffersRef.current.set(newStems.find(s => s.name.includes(file.replace(".wav","")))?.name || file, decoded);
-
-                            const blob = new Blob([ab], { type: 'audio/wav' });
-                            const blobUrl = URL.createObjectURL(blob);
-
-                            setStems(prev => prev.map(s => {
-                                if (file.includes(s.name.replace(/ /g, "_"))) return { ...s, url: blobUrl };
-                                return s;
-                            }));
-
-                            if (!duration) setDuration(decoded.duration);
-
-                        } catch (decodeErr) {
-                            console.warn(`Failed to decode stem ${file}:`, decodeErr);
-                            setStems(prev => prev.map(s => {
-                                if (file.includes(s.name.replace(/ /g, "_"))) return { ...s, url: "mock-url-failed-decode" };
-                                return s;
-                            }));
-                        }
-                    } else {
-                        console.log("Studio: Fetch failed for", file);
-                    }
-                } catch (e) {
-                    console.error("Failed to load stem", file, e);
-                }
-            }
-        } else {
-            console.warn("Studio: No AudioContext, skipping buffers");
+        if (!cancelled) {
+          setStems(newStems);
+          setSelectedStemIndex((idx) =>
+            Math.min(Math.max(idx, 0), Math.max(newStems.length - 1, 0)),
+          );
         }
-
       } catch (err) {
         console.error("Error loading stems:", err);
       } finally {
@@ -195,9 +163,67 @@ export default function StudioPage() {
   }, [jobId, user]);
 
   useEffect(() => {
+    const ctx = audioContextRef.current;
+    const stem = selectedStem;
+    if (!ctx || !jobId || !user || !stem) return;
+    if (stem.status === "loading") return;
+    if (stem.url && audioBuffersRef.current.has(stem.fileName)) {
+        const buf = audioBuffersRef.current.get(stem.fileName);
+        if (buf) setDuration(buf.duration);
+        return;
+    }
+
+    let cancelled = false;
+
+    const loadStem = async () => {
+        try {
+            setStems(prev => prev.map((s, i) => i === selectedStemIndex ? { ...s, status: "loading" } : s));
+
+            let signedUrl = await signFileUrl(jobId, `S12_SEPARATE_STEMS/${stem.fileName}`);
+            let resp = await fetch(signedUrl);
+            if (!resp.ok) {
+                console.log("Studio: S12 fetch failed, trying S0", stem.fileName);
+                signedUrl = await signFileUrl(jobId, `S0_SESSION_FORMAT/${stem.fileName}`);
+                resp = await fetch(signedUrl);
+            }
+
+            if (!resp.ok) {
+                throw new Error(`Failed to fetch stem ${stem.fileName}: ${resp.status} ${resp.statusText}`);
+            }
+
+            const ab = await resp.arrayBuffer();
+            const decoded = await ctx.decodeAudioData(ab.slice(0));
+            if (cancelled) return;
+
+            audioBuffersRef.current.set(stem.fileName, decoded);
+            const blob = new Blob([ab], { type: "audio/wav" });
+            const blobUrl = URL.createObjectURL(blob);
+
+            setStems(prev => prev.map((s, i) => i === selectedStemIndex ? { ...s, url: blobUrl, status: "ready" } : s));
+            setDuration(decoded.duration);
+        } catch (err) {
+            if (!cancelled) {
+                console.error("Failed to load stem", stem.fileName, err);
+                setStems(prev => prev.map((s, i) => i === selectedStemIndex ? { ...s, status: "error" } : s));
+            }
+        }
+    };
+
+    loadStem();
+    return () => { cancelled = true; };
+  }, [jobId, user, selectedStemIndex, selectedStem?.fileName, selectedStem?.status, selectedStem?.url]);
+
+  useEffect(() => {
+      stopAllSources();
+      setIsPlaying(false);
+      setCurrentTime(0);
+      pauseTimeRef.current = 0;
+      startTimeRef.current = audioContextRef.current?.currentTime || 0;
+  }, [selectedStemIndex]);
+
+  useEffect(() => {
     if (!waveformRef.current || stems.length === 0) return;
 
-    const selectedStem = stems[selectedStemIndex];
     if (!selectedStem?.url) return;
 
     if (wavesurferRef.current) {
@@ -231,7 +257,7 @@ export default function StudioPage() {
     return () => {
         wavesurferRef.current?.destroy();
     };
-  }, [selectedStemIndex, stems]);
+  }, [selectedStemIndex, selectedStem?.url]);
 
   useEffect(() => {
      if (wavesurferRef.current && isPlaying) {
@@ -247,41 +273,44 @@ export default function StudioPage() {
 
   const togglePlay = async () => {
       const ctx = audioContextRef.current;
-      if (!ctx) return;
+      if (!ctx || !selectedStem) return;
 
       if (ctx.state === 'suspended') await ctx.resume();
 
       if (isPlaying) {
-          sourceNodesRef.current.forEach(node => node.stop());
-          sourceNodesRef.current.clear();
+          stopAllSources();
           pauseTimeRef.current = ctx.currentTime - startTimeRef.current;
           setIsPlaying(false);
-      } else {
-          startTimeRef.current = ctx.currentTime - pauseTimeRef.current;
-
-          stems.forEach(stem => {
-              const buffer = audioBuffersRef.current.get(stem.name) || audioBuffersRef.current.get(stems.find(s=>s.url === stem.url)?.name || "");
-              if (!buffer) return;
-
-              const source = ctx.createBufferSource();
-              source.buffer = buffer;
-
-              const gain = ctx.createGain();
-              const vol = Math.pow(10, stem.volume / 20);
-              gain.gain.value = stem.mute ? 0 : (stems.some(s => s.solo) && !stem.solo ? 0 : vol);
-
-              source.connect(gain);
-              gain.connect(ctx.destination);
-
-              const offset = pauseTimeRef.current % buffer.duration;
-              source.start(0, offset);
-
-              sourceNodesRef.current.set(stem.name, source);
-              gainNodesRef.current.set(stem.name, gain);
-          });
-
-          setIsPlaying(true);
+          return;
       }
+
+      const buffer = audioBuffersRef.current.get(selectedStem.fileName);
+      if (!buffer) return;
+
+      stopAllSources();
+
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+
+      const gain = ctx.createGain();
+      const vol = Math.pow(10, selectedStem.volume / 20) * masterVolume;
+      gain.gain.value = selectedStem.mute ? 0 : vol;
+
+      source.connect(gain);
+      gain.connect(ctx.destination);
+
+      const offset = pauseTimeRef.current % buffer.duration;
+      startTimeRef.current = ctx.currentTime - offset;
+      source.start(0, offset);
+      source.onended = () => {
+          sourceNodesRef.current.delete(selectedStem.fileName);
+          setIsPlaying(false);
+      };
+
+      sourceNodesRef.current.set(selectedStem.fileName, source);
+      gainNodesRef.current.set(selectedStem.fileName, gain);
+
+      setIsPlaying(true);
   };
 
   useEffect(() => {
@@ -299,15 +328,13 @@ export default function StudioPage() {
 
   useEffect(() => {
       stems.forEach(stem => {
-          const node = gainNodesRef.current.get(stem.name);
+          const node = gainNodesRef.current.get(stem.fileName);
           if (node) {
-              const vol = Math.pow(10, stem.volume / 20);
-              const isSoloed = stems.some(s => s.solo);
-              const effectiveVol = stem.mute ? 0 : (isSoloed && !stem.solo ? 0 : vol);
-              node.gain.setTargetAtTime(effectiveVol, audioContextRef.current!.currentTime, 0.05);
+              const vol = Math.pow(10, stem.volume / 20) * masterVolume;
+              node.gain.setTargetAtTime(stem.mute ? 0 : vol, audioContextRef.current!.currentTime, 0.05);
           }
       });
-  }, [stems]);
+  }, [stems, masterVolume]);
 
 
   const handleRender = async () => {
@@ -349,8 +376,6 @@ export default function StudioPage() {
           return next;
       });
   };
-
-  const selectedStem = stems[selectedStemIndex];
 
   if (authLoading) return <div className="h-screen bg-[#0f111a]"></div>;
 
@@ -495,9 +520,9 @@ export default function StudioPage() {
                      <div className="text-xl font-mono text-slate-300 tabular-nums tracking-widest">
                          {formatTime(currentTime)}
                      </div>
-                     <div className="flex items-center gap-4">
-                        <button className="text-slate-500 hover:text-white transition-colors"><ArrowPathIcon className="w-4 h-4" /></button>
-                        <button onClick={() => { setIsPlaying(false); setCurrentTime(0); startTimeRef.current = audioContextRef.current?.currentTime || 0; pauseTimeRef.current = 0; }} className="text-slate-500 hover:text-white transition-colors"><StopIcon className="w-4 h-4" /></button>
+                    <div className="flex items-center gap-4">
+                       <button className="text-slate-500 hover:text-white transition-colors"><ArrowPathIcon className="w-4 h-4" /></button>
+                        <button onClick={() => { stopAllSources(); setIsPlaying(false); setCurrentTime(0); startTimeRef.current = audioContextRef.current?.currentTime || 0; pauseTimeRef.current = 0; }} className="text-slate-500 hover:text-white transition-colors"><StopIcon className="w-4 h-4" /></button>
                         <button
                             onClick={togglePlay}
                             className="w-10 h-10 rounded-full bg-white text-black flex items-center justify-center hover:scale-105 transition-transform shadow-[0_0_15px_rgba(255,255,255,0.2)]"
