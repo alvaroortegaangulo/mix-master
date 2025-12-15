@@ -13,7 +13,7 @@ const nextConfig: NextConfig = {
           {
             key: "Cache-Control",
             value:
-              "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0",
+              "no-cache, must-revalidate, proxy-revalidate, max-age=0",
           },
           {
             key: "Pragma",
