@@ -179,6 +179,12 @@ class PipelineLogger:
                     self.logger.info(row)
 
 
+    def log_stage_start(self, stage_id: str):
+        self.print_header(f"Running stage: {stage_id}", color=BLUE)
+
+    def log_stage_success(self, stage_id: str):
+        self.log_stage_result(stage_id, True)
+
     def log_stage_result(self, stage_id: str, success: bool):
         color = GREEN if success else RED
         res = "SUCCESS" if success else "FAILURE"

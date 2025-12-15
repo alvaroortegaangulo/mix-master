@@ -1,21 +1,21 @@
 "use client";
 
-import { useEffect, useState, useRef, useMemo } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
-import { fetchJobReport, getBackendBaseUrl, signFileUrl } from "@/lib/mixApi";
+import { getBackendBaseUrl, signFileUrl } from "@/lib/mixApi";
 import { AuthModal } from "@/components/AuthModal";
 import WaveSurfer from 'wavesurfer.js';
 import {
   PlayIcon,
   PauseIcon,
-  BackwardIcon,
-  SpeakerWaveIcon,
   ArrowPathIcon,
   MusicalNoteIcon,
   AdjustmentsHorizontalIcon,
-  CpuChipIcon,
-  StopIcon
+  StopIcon,
+  ArrowDownTrayIcon,
+  CheckIcon,
+  XMarkIcon
 } from "@heroicons/react/24/solid";
 
 interface StemControl {
@@ -28,10 +28,16 @@ interface StemControl {
     low: number;
     mid: number;
     high: number;
+    enabled: boolean;
   };
   compression: {
     threshold: number;
     ratio: number;
+    enabled: boolean;
+  };
+  reverb: {
+    amount: number;
+    enabled: boolean;
   };
   url?: string;
 }
@@ -115,8 +121,9 @@ export default function StudioPage() {
           pan: 0,
           mute: false,
           solo: false,
-          eq: { low: 0, mid: 0, high: 0 },
-          compression: { threshold: -20, ratio: 2 },
+          eq: { low: 0, mid: 0, high: 0, enabled: false },
+          compression: { threshold: -20, ratio: 2, enabled: false },
+          reverb: { amount: 0, enabled: false },
           url: undefined
         }));
 
@@ -128,15 +135,28 @@ export default function StudioPage() {
                 if (cancelled) break;
                 console.log("Studio: Processing file", file);
                 try {
-                    console.log("Studio: Signing URL for", file);
-                    let signedUrl = await signFileUrl(jobId, `S12_SEPARATE_STEMS/${file}`);
-                    console.log("Studio: Signed URL", signedUrl);
+                    // Try loading from S5 output since we stop there
 
+                    let signedUrl = await signFileUrl(jobId, `S5_LEADVOX_DYNAMICS/${file}`);
+                    // If not found (e.g. some stems didn't go through S5), try previous stages
                     let resp = await fetch(signedUrl);
                     if (!resp.ok) {
-                         console.log("Studio: S12 fetch failed, trying S0");
-                         signedUrl = await signFileUrl(jobId, `S0_SESSION_FORMAT/${file}`);
+                         signedUrl = await signFileUrl(jobId, `S5_STEM_DYNAMICS_GENERIC/${file}`);
                          resp = await fetch(signedUrl);
+                    }
+                     if (!resp.ok) {
+                         signedUrl = await signFileUrl(jobId, `S12_SEPARATE_STEMS/${file}`);
+                         resp = await fetch(signedUrl);
+                    }
+                    if (!resp.ok) {
+                        // Use default search
+                         console.log("Studio: Specific S5 fetch failed, trying generic sign");
+                         const stages = ["S5_LEADVOX_DYNAMICS", "S5_STEM_DYNAMICS_GENERIC", "S4_SPECTRAL_CLEANUP", "S0_SESSION_FORMAT", "S0_MIX_ORIGINAL"];
+                         for (const s of stages) {
+                             signedUrl = await signFileUrl(jobId, `${s}/${file}`);
+                             resp = await fetch(signedUrl);
+                             if (resp.ok) break;
+                         }
                     }
 
                     if (resp.ok) {
@@ -147,7 +167,7 @@ export default function StudioPage() {
                         try {
                             const decodePromise = audioContextRef.current.decodeAudioData(ab);
                             const timeoutPromise = new Promise<AudioBuffer>((_, reject) =>
-                                setTimeout(() => reject(new Error("Audio decoding timed out")), 2000)
+                                setTimeout(() => reject(new Error("Audio decoding timed out")), 5000)
                             );
 
                             const decoded = await Promise.race([decodePromise, timeoutPromise]);
@@ -162,10 +182,11 @@ export default function StudioPage() {
                                 return s;
                             }));
 
-                            if (!duration) setDuration(decoded.duration);
+                            if (!duration && decoded) setDuration(decoded.duration);
 
                         } catch (decodeErr) {
                             console.warn(`Failed to decode stem ${file}:`, decodeErr);
+                            // Set dummy URL to allow UI to show up
                             setStems(prev => prev.map(s => {
                                 if (file.includes(s.name.replace(/ /g, "_"))) return { ...s, url: "mock-url-failed-decode" };
                                 return s;
@@ -310,20 +331,23 @@ export default function StudioPage() {
   }, [stems]);
 
 
-  const handleRender = async () => {
+  const handleApplyCorrection = async (proceedToMastering: boolean) => {
       setRendering(true);
       try {
           const corrections = stems.map(s => ({
               name: s.name,
               volume_db: s.volume,
               pan: s.pan,
-              eq: s.eq,
-              compression: s.compression,
+              eq: s.eq.enabled ? s.eq : undefined,
+              compression: s.compression.enabled ? s.compression : undefined,
+              reverb: s.reverb.enabled ? s.reverb : undefined,
               mute: s.mute,
               solo: s.solo
           }));
 
-          const res = await fetch(`${getBackendBaseUrl()}/jobs/${jobId}/correction`, {
+          const baseUrl = getBackendBaseUrl();
+          // 1. Send corrections
+          await fetch(`${baseUrl}/jobs/${jobId}/correction`, {
               method: 'POST',
               headers: {
                   'Content-Type': 'application/json',
@@ -332,7 +356,39 @@ export default function StudioPage() {
               body: JSON.stringify({ corrections })
           });
 
-          if (!res.ok) throw new Error("Correction failed");
+          // 2. Trigger Resume (Next stages)
+          // "Proceed to Mastering": Run S6 -> S7...S11
+          // "Finish Here": Run S6 -> S11 (skip S7-S10)
+
+          let stages: string[] = [];
+          if (proceedToMastering) {
+              // Full remainder
+              stages = [
+                  "S6_MANUAL_CORRECTION",
+                  "S7_MIXBUS_TONAL_BALANCE",
+                  "S8_MIXBUS_COLOR_GENERIC",
+                  "S9_MASTER_GENERIC",
+                  "S10_MASTER_FINAL_LIMITS",
+                  "S11_REPORT_GENERATION"
+              ];
+          } else {
+              // Skip mastering
+              stages = [
+                  "S6_MANUAL_CORRECTION",
+                  "S11_REPORT_GENERATION"
+              ];
+          }
+
+          // Pass `stages` override to /start
+          await fetch(`${baseUrl}/mix/${jobId}/start`, {
+               method: 'POST',
+               headers: {
+                   'Content-Type': 'application/json',
+                   "X-API-Key": process.env.NEXT_PUBLIC_MIXMASTER_API_KEY || ""
+               },
+               body: JSON.stringify({ stages })
+          });
+
           router.push(`/`);
       } catch (err) {
           console.error(err);
@@ -340,6 +396,67 @@ export default function StudioPage() {
       } finally {
           setRendering(false);
       }
+  };
+
+  const downloadStems = async () => {
+      try {
+          const baseUrl = getBackendBaseUrl();
+          const url = `${baseUrl}/jobs/${jobId}/download-stems-zip`;
+          // Trigger download by opening in new window or creating anchor
+          // New window/tab might be blocked if not user initiated click,
+          // but we are in click handler.
+
+          // Need to handle auth headers if endpoint is guarded.
+          // Download via anchor tag usually sends cookies but not headers.
+          // If our API requires X-API-Key, we might need a signed URL first.
+
+          // The endpoint uses `_guard_heavy_endpoint` which checks header or query param.
+          // Let's use `signFileUrl` helper logic? No, it's a dynamic endpoint.
+          // We can append ?api_key=... if we have it in env.
+
+          // For now, assuming user is authorized via session cookie or API key in query.
+          // We can use fetch to get blob and download.
+
+          const res = await fetch(url, {
+              headers: { "X-API-Key": process.env.NEXT_PUBLIC_MIXMASTER_API_KEY || "" }
+          });
+          if (!res.ok) throw new Error("Download failed");
+          const blob = await res.blob();
+          const blobUrl = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = blobUrl;
+          a.download = `${jobId}_stems.zip`;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+
+      } catch (e) {
+          console.error(e);
+          alert("Failed to download stems");
+      }
+  };
+
+  const downloadMixdown = async () => {
+       try {
+          const baseUrl = getBackendBaseUrl();
+          const url = `${baseUrl}/jobs/${jobId}/download-mixdown`;
+
+          const res = await fetch(url, {
+              headers: { "X-API-Key": process.env.NEXT_PUBLIC_MIXMASTER_API_KEY || "" }
+          });
+          if (!res.ok) throw new Error("Download failed");
+          const blob = await res.blob();
+          const blobUrl = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = blobUrl;
+          a.download = `${jobId}_mixdown.wav`;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+       } catch (e) {
+           console.error(e);
+           alert("Failed to download mixdown");
+       }
   };
 
   const updateStem = (index: number, updates: Partial<StemControl>) => {
@@ -376,31 +493,35 @@ export default function StudioPage() {
              <div className="h-6 w-px bg-white/10 mx-2"></div>
              <div className="flex flex-col">
                  <span className="text-xs text-slate-500 uppercase tracking-wider">Project</span>
-                 <span className="text-sm font-medium text-white">Neon Nights Demo</span>
-             </div>
-             <div className="flex items-center gap-4 ml-8 text-xs font-mono text-slate-400 bg-black/20 px-3 py-1 rounded border border-white/5">
-                 <div className="flex items-center gap-2">
-                     <span className="text-emerald-500">124</span> BPM
-                 </div>
-                 <div className="w-px h-3 bg-white/10"></div>
-                 <div className="flex items-center gap-2">
-                     <span className="text-emerald-500">4/4</span>
-                 </div>
+                 <span className="text-sm font-medium text-white">{jobId.substring(0,8)}...</span>
              </div>
          </div>
          <div className="flex items-center gap-4">
-             <button onClick={() => router.back()} className="px-3 py-1.5 text-xs font-medium text-slate-400 hover:text-white border border-white/10 rounded hover:bg-white/5 transition-colors">
-                 Exit
+             <button onClick={downloadStems} className="px-3 py-1.5 text-xs font-medium text-slate-400 hover:text-white border border-white/10 rounded hover:bg-white/5 transition-colors flex items-center gap-2">
+                 <ArrowDownTrayIcon className="w-3 h-3" /> Stems (ZIP)
+             </button>
+             <button onClick={downloadMixdown} className="px-3 py-1.5 text-xs font-medium text-slate-400 hover:text-white border border-white/10 rounded hover:bg-white/5 transition-colors flex items-center gap-2">
+                 <ArrowDownTrayIcon className="w-3 h-3" /> Mixdown
+             </button>
+
+             <div className="h-6 w-px bg-white/10 mx-2"></div>
+
+             <button
+                onClick={() => handleApplyCorrection(false)}
+                disabled={rendering}
+                className="px-4 py-1.5 bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold rounded shadow-lg transition-all flex items-center gap-2"
+             >
+                <XMarkIcon className="w-3 h-3" />
+                Finish here (not Mastering)
              </button>
              <button
-                onClick={handleRender}
+                onClick={() => handleApplyCorrection(true)}
                 disabled={rendering}
                 className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded shadow-lg shadow-emerald-900/20 transition-all flex items-center gap-2"
              >
-                {rendering ? <ArrowPathIcon className="w-3 h-3 animate-spin" /> : null}
-                {rendering ? "EXPORTING..." : "EXPORT"}
+                {rendering ? <ArrowPathIcon className="w-3 h-3 animate-spin" /> : <CheckIcon className="w-3 h-3" />}
+                Proceed to Mastering
              </button>
-             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 border border-white/10"></div>
          </div>
       </header>
 
@@ -409,7 +530,6 @@ export default function StudioPage() {
           <aside className="w-72 bg-[#11131f] border-r border-white/5 flex flex-col shrink-0">
              <div className="p-4 border-b border-white/5 flex justify-between items-center">
                  <h2 className="text-xs font-bold text-slate-500 tracking-widest uppercase">Tracks ({stems.length})</h2>
-                 <button className="text-slate-500 hover:text-emerald-400">+</button>
              </div>
              <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-2">
                  {stems.map((stem, i) => (
@@ -441,7 +561,7 @@ export default function StudioPage() {
                              </div>
                          </div>
                          <div className="flex items-center gap-2">
-                             <SpeakerWaveIcon className="w-3 h-3 text-slate-600" />
+                             <span className="text-[9px] font-mono w-6 text-right">{stem.volume > 0 ? '+' : ''}{stem.volume.toFixed(1)}</span>
                              <input
                                 type="range" min="-60" max="12" step="0.1"
                                 value={stem.volume}
@@ -484,10 +604,10 @@ export default function StudioPage() {
                  <div className="flex flex-col gap-1 w-48">
                      <div className="flex justify-between text-[10px] text-slate-500 font-mono">
                          <span>MASTER OUT</span>
-                         <span>-3.2 dB</span>
+                         <span>{(masterVolume * 20 - 20).toFixed(1)} dB</span>
                      </div>
                      <div className="h-2 bg-slate-800 rounded-full overflow-hidden relative">
-                         <div className="absolute top-0 left-0 bottom-0 bg-gradient-to-r from-emerald-600 to-emerald-400 w-[70%]"></div>
+                         <div className="absolute top-0 left-0 bottom-0 bg-gradient-to-r from-emerald-600 to-emerald-400" style={{ width: `${masterVolume * 100}%` }}></div>
                      </div>
                  </div>
 
@@ -496,7 +616,6 @@ export default function StudioPage() {
                          {formatTime(currentTime)}
                      </div>
                      <div className="flex items-center gap-4">
-                        <button className="text-slate-500 hover:text-white transition-colors"><ArrowPathIcon className="w-4 h-4" /></button>
                         <button onClick={() => { setIsPlaying(false); setCurrentTime(0); startTimeRef.current = audioContextRef.current?.currentTime || 0; pauseTimeRef.current = 0; }} className="text-slate-500 hover:text-white transition-colors"><StopIcon className="w-4 h-4" /></button>
                         <button
                             onClick={togglePlay}
@@ -504,14 +623,11 @@ export default function StudioPage() {
                         >
                             {isPlaying ? <PauseIcon className="w-5 h-5" /> : <PlayIcon className="w-5 h-5 ml-0.5" />}
                         </button>
-                        <button className="text-red-500 hover:text-red-400 transition-colors w-4 h-4 rounded-full border border-current flex items-center justify-center">
-                            <div className="w-2 h-2 bg-current rounded-full"></div>
-                        </button>
                      </div>
                  </div>
 
                  <div className="w-48 flex items-center gap-3">
-                     <SpeakerWaveIcon className="w-4 h-4 text-slate-500" />
+                     <span className="text-[10px] text-slate-500 font-bold">MONITOR</span>
                      <input
                         type="range" min="0" max="1" step="0.01"
                         value={masterVolume}
@@ -538,57 +654,72 @@ export default function StudioPage() {
                   <>
                     <div className="bg-[#1e2336] rounded-xl p-4 border border-white/5 shadow-lg">
                         <div className="flex justify-between items-center mb-4">
-                            <span className="text-xs font-bold text-slate-300">Parametric EQ</span>
-                            <div className="w-8 h-4 bg-emerald-500/20 rounded-full relative cursor-pointer border border-emerald-500/30">
-                                <div className="absolute right-0.5 top-0.5 w-3 h-3 bg-emerald-400 rounded-full shadow-lg"></div>
+                             <div className="flex items-center gap-2">
+                                <input
+                                    type="checkbox"
+                                    checked={selectedStem.eq.enabled}
+                                    onChange={(e) => updateStem(selectedStemIndex, { eq: {...selectedStem.eq, enabled: e.target.checked}})}
+                                    className="rounded border-slate-600 bg-slate-800 text-emerald-500 focus:ring-emerald-500"
+                                />
+                                <span className={`text-xs font-bold ${selectedStem.eq.enabled ? 'text-emerald-400' : 'text-slate-500'}`}>Parametric EQ</span>
+                             </div>
+                        </div>
+                        <div className={`transition-opacity ${selectedStem.eq.enabled ? 'opacity-100' : 'opacity-40 pointer-events-none'}`}>
+                            <div className="h-20 bg-[#11131f] rounded-lg mb-4 border border-white/5 relative overflow-hidden">
+                                <div className="absolute inset-0 bg-gradient-to-t from-emerald-500/5 to-transparent"></div>
+                                <svg className="absolute inset-0 w-full h-full text-emerald-500/30" preserveAspectRatio="none">
+                                    <path d="M0,80 C20,80 40,60 80,60 C120,60 140,80 160,80 C200,80 220,40 260,40 C300,40 320,80 320,80 L320,80 L0,80 Z" fill="currentColor" />
+                                </svg>
                             </div>
-                        </div>
-                        <div className="h-20 bg-[#11131f] rounded-lg mb-4 border border-white/5 relative overflow-hidden">
-                            <div className="absolute inset-0 bg-gradient-to-t from-emerald-500/5 to-transparent"></div>
-                            <svg className="absolute inset-0 w-full h-full text-emerald-500/30" preserveAspectRatio="none">
-                                <path d="M0,80 C20,80 40,60 80,60 C120,60 140,80 160,80 C200,80 220,40 260,40 C300,40 320,80 320,80 L320,80 L0,80 Z" fill="currentColor" />
-                            </svg>
-                        </div>
 
-                        <div className="flex justify-between px-2">
-                             <Knob label="LOW" value={selectedStem.eq.low} min={-12} max={12} onChange={(v) => updateStem(selectedStemIndex, { eq: {...selectedStem.eq, low: v}})} />
-                             <Knob label="MID" value={selectedStem.eq.mid} min={-12} max={12} onChange={(v) => updateStem(selectedStemIndex, { eq: {...selectedStem.eq, mid: v}})} />
-                             <Knob label="HIGH" value={selectedStem.eq.high} min={-12} max={12} onChange={(v) => updateStem(selectedStemIndex, { eq: {...selectedStem.eq, high: v}})} />
+                            <div className="flex justify-between px-2">
+                                <Knob label="LOW" value={selectedStem.eq.low} min={-12} max={12} onChange={(v) => updateStem(selectedStemIndex, { eq: {...selectedStem.eq, low: v}})} />
+                                <Knob label="MID" value={selectedStem.eq.mid} min={-12} max={12} onChange={(v) => updateStem(selectedStemIndex, { eq: {...selectedStem.eq, mid: v}})} />
+                                <Knob label="HIGH" value={selectedStem.eq.high} min={-12} max={12} onChange={(v) => updateStem(selectedStemIndex, { eq: {...selectedStem.eq, high: v}})} />
+                            </div>
                         </div>
                     </div>
 
                     <div className="bg-[#1e2336] rounded-xl p-4 border border-white/5 shadow-lg">
                         <div className="flex justify-between items-center mb-4">
-                            <span className="text-xs font-bold text-slate-300">Compressor</span>
-                            <div className="w-8 h-4 bg-emerald-500/20 rounded-full relative cursor-pointer border border-emerald-500/30">
-                                <div className="absolute right-0.5 top-0.5 w-3 h-3 bg-emerald-400 rounded-full shadow-lg"></div>
-                            </div>
+                            <div className="flex items-center gap-2">
+                                <input
+                                    type="checkbox"
+                                    checked={selectedStem.compression.enabled}
+                                    onChange={(e) => updateStem(selectedStemIndex, { compression: {...selectedStem.compression, enabled: e.target.checked}})}
+                                    className="rounded border-slate-600 bg-slate-800 text-emerald-500 focus:ring-emerald-500"
+                                />
+                                <span className={`text-xs font-bold ${selectedStem.compression.enabled ? 'text-emerald-400' : 'text-slate-500'}`}>Compressor</span>
+                             </div>
                         </div>
 
-                        <div className="flex justify-around mb-4">
+                        <div className={`flex justify-around mb-4 transition-opacity ${selectedStem.compression.enabled ? 'opacity-100' : 'opacity-40 pointer-events-none'}`}>
                              <Knob label="THRESH" value={selectedStem.compression.threshold} min={-60} max={0} onChange={(v) => updateStem(selectedStemIndex, { compression: {...selectedStem.compression, threshold: v}})} />
                              <Knob label="RATIO" value={selectedStem.compression.ratio} min={1} max={20} onChange={(v) => updateStem(selectedStemIndex, { compression: {...selectedStem.compression, ratio: v}})} />
                         </div>
-
-                        <div className="flex items-center gap-2 text-[10px] text-slate-500 font-mono">
-                            <span>GR</span>
-                            <div className="flex-1 h-1.5 bg-slate-800 rounded-full overflow-hidden flex justify-end">
-                                <div className="w-[10%] bg-red-500 h-full rounded-l-full"></div>
-                            </div>
-                        </div>
                     </div>
 
-                    <div className="bg-[#1e2336] rounded-xl p-4 border border-purple-500/20 shadow-[0_0_20px_rgba(168,85,247,0.05)]">
-                        <div className="flex items-center gap-2 mb-3 text-purple-400">
-                            <CpuChipIcon className="w-4 h-4" />
-                            <span className="text-xs font-bold uppercase tracking-wider">AI Insight</span>
+                    <div className="bg-[#1e2336] rounded-xl p-4 border border-white/5 shadow-lg">
+                        <div className="flex justify-between items-center mb-4">
+                            <span className="text-xs font-bold text-slate-300">Spatial</span>
                         </div>
-                        <p className="text-xs text-slate-400 leading-relaxed mb-4">
-                            Detected muddiness in low-mids (250Hz). Recommendation: Cut -2dB or sidechain to kick drum.
-                        </p>
-                        <button className="w-full py-2 bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold rounded shadow-lg shadow-purple-900/40 transition-colors">
-                            Apply Fix
-                        </button>
+                        <div className="flex justify-around">
+                             <Knob label="PAN" value={selectedStem.pan} min={-1} max={1} step={0.1} onChange={(v) => updateStem(selectedStemIndex, { pan: v})} />
+                             <div className="flex flex-col items-center gap-2">
+                                 <div className="flex items-center gap-2 mb-1">
+                                     <input
+                                        type="checkbox"
+                                        checked={selectedStem.reverb.enabled}
+                                        onChange={(e) => updateStem(selectedStemIndex, { reverb: {...selectedStem.reverb, enabled: e.target.checked}})}
+                                        className="rounded border-slate-600 bg-slate-800 text-purple-500 focus:ring-purple-500 w-3 h-3"
+                                     />
+                                     <span className={`text-[10px] font-bold ${selectedStem.reverb.enabled ? 'text-purple-400' : 'text-slate-500'}`}>REVERB</span>
+                                 </div>
+                                 <div className={selectedStem.reverb.enabled ? 'opacity-100' : 'opacity-40 pointer-events-none'}>
+                                     <Knob label="AMT" value={selectedStem.reverb.amount} min={0} max={100} onChange={(v) => updateStem(selectedStemIndex, { reverb: {...selectedStem.reverb, amount: v}})} />
+                                 </div>
+                             </div>
+                        </div>
                     </div>
                   </>
               )}
@@ -607,7 +738,7 @@ function formatTime(s: number) {
     return `${min.toString().padStart(2,'0')}:${sec.toString().padStart(2, '0')}.${ms.toString().padStart(2, '0')}`;
 }
 
-function Knob({ label, value, min, max, onChange }: { label: string, value: number, min: number, max: number, onChange: (v: number) => void }) {
+function Knob({ label, value, min, max, step, onChange }: { label: string, value: number, min: number, max: number, step?: number, onChange: (v: number) => void }) {
     const [dragging, setDragging] = useState(false);
     const startYRef = useRef(0);
     const startValRef = useRef(0);
@@ -624,6 +755,10 @@ function Knob({ label, value, min, max, onChange }: { label: string, value: numb
             let newVal = startValRef.current + delta;
             if (newVal < min) newVal = min;
             if (newVal > max) newVal = max;
+            // Snap to step
+            if (step) {
+                newVal = Math.round(newVal / step) * step;
+            }
             onChange(newVal);
         };
         const handleUp = () => {
@@ -651,7 +786,7 @@ function Knob({ label, value, min, max, onChange }: { label: string, value: numb
             </div>
             <div className="text-center">
                 <span className="text-[9px] font-bold text-slate-500 block mb-0.5 tracking-wider">{label}</span>
-                <span className={`text-[10px] font-mono transition-colors ${dragging ? 'text-emerald-400' : 'text-slate-600'}`}>{value.toFixed(1)}</span>
+                <span className={`text-[10px] font-mono transition-colors ${dragging ? 'text-emerald-400' : 'text-slate-600'}`}>{value.toFixed(step && step < 1 ? 2 : 1)}</span>
             </div>
         </div>
     );

@@ -12,6 +12,7 @@ import shutil
 import uuid
 import time
 import re
+import zipfile
 from collections import deque
 from datetime import datetime
 from pathlib import Path
@@ -1111,10 +1112,13 @@ async def upload_file_for_job(
 
 @app.post("/mix/{job_id}/start")
 async def start_mix_job_endpoint(
-    job_id: str, _: None = Depends(_guard_heavy_endpoint)
+    job_id: str,
+    stages_override: Optional[Dict[str, List[str]]] = None,
+    _: None = Depends(_guard_heavy_endpoint)
 ):
     """
     Lanza la tarea Celery para un job ya inicializado y con WAVs subidos.
+    Allows passing 'stages' list in body to override enabled_stages.
     """
     request_start_ts = time.time()
 
@@ -1127,23 +1131,34 @@ async def start_mix_job_endpoint(
 
     # Stages habilitadas
     enabled_stage_keys: Optional[List[str]] = None
-    enabled_path = work_dir / "enabled_stages.json"
-    if enabled_path.exists():
-        try:
-            parsed = json.loads(enabled_path.read_text(encoding="utf-8"))
-            if isinstance(parsed, list):
-                enabled_stage_keys = [str(k) for k in parsed]
-            logger.info(
-                "[/mix/%s/start] enabled_stages.json cargado con %d entradas",
-                job_id,
-                len(enabled_stage_keys or []),
-            )
-        except Exception as exc:
-            logger.warning(
-                "[/mix/%s/start] No se pudo leer enabled_stages.json: %s",
-                job_id,
-                exc,
-            )
+
+    # Check if we have an override in the body
+    if stages_override and "stages" in stages_override and isinstance(stages_override["stages"], list):
+        enabled_stage_keys = stages_override["stages"]
+        logger.info(
+            "[/mix/%s/start] Usando override de stages desde body: %s",
+            job_id,
+            enabled_stage_keys
+        )
+    else:
+        # Fallback to enabled_stages.json
+        enabled_path = work_dir / "enabled_stages.json"
+        if enabled_path.exists():
+            try:
+                parsed = json.loads(enabled_path.read_text(encoding="utf-8"))
+                if isinstance(parsed, list):
+                    enabled_stage_keys = [str(k) for k in parsed]
+                logger.info(
+                    "[/mix/%s/start] enabled_stages.json cargado con %d entradas",
+                    job_id,
+                    len(enabled_stage_keys or []),
+                )
+            except Exception as exc:
+                logger.warning(
+                    "[/mix/%s/start] No se pudo leer enabled_stages.json: %s",
+                    job_id,
+                    exc,
+                )
 
     # Perfiles de stems
     profiles_by_name: Dict[str, str] = {}
@@ -1226,9 +1241,11 @@ def get_job_stems(job_id: str, _: None = Depends(_guard_heavy_endpoint)) -> Dict
         return wavs
 
     stems = []
+    # Include S6_MANUAL_CORRECTION in preferred order
     preferred_order = [
         temp_root / "S11_REPORT_GENERATION",
         temp_root / "S10_MASTER_FINAL_LIMITS",
+        temp_root / "S6_MANUAL_CORRECTION",
         temp_root / "S0_SESSION_FORMAT",
         temp_root / "S0_MIX_ORIGINAL",
     ]
@@ -1250,6 +1267,118 @@ def get_job_stems(job_id: str, _: None = Depends(_guard_heavy_endpoint)) -> Dict
     stems.sort()
     return {"stems": stems}
 
+@app.get("/jobs/{job_id}/download-stems-zip")
+async def download_stems_zip(job_id: str, _: None = Depends(_guard_heavy_endpoint)):
+    """
+    Zips current stems and returns file.
+    """
+    _, temp_root = _get_job_dirs(job_id)
+    if not temp_root.exists():
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    # Reuse logic to find best stems
+    def _get_best_stage_dir() -> Optional[Path]:
+        preferred_order = [
+            temp_root / "S11_REPORT_GENERATION",
+            temp_root / "S10_MASTER_FINAL_LIMITS",
+            temp_root / "S6_MANUAL_CORRECTION",
+            temp_root / "S0_SESSION_FORMAT",
+            temp_root / "S0_MIX_ORIGINAL",
+        ]
+        for stage_dir in preferred_order:
+            if stage_dir.exists() and any(f.suffix == '.wav' and f.name != 'full_song.wav' for f in stage_dir.iterdir()):
+                return stage_dir
+        return None
+
+    stage_dir = _get_best_stage_dir()
+    if not stage_dir:
+        raise HTTPException(status_code=404, detail="No stems found to zip")
+
+    zip_filename = f"{job_id}_stems.zip"
+    zip_path = temp_root / zip_filename
+
+    # Create zip if not exists or return existing? Better recreate to ensure freshness if resumed.
+    # Note: blocking IO in async def, but zip can be heavy. Should run in threadpool.
+    from fastapi.concurrency import run_in_threadpool
+
+    def _create_zip():
+        with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zf:
+            for item in stage_dir.iterdir():
+                if item.is_file() and item.suffix.lower() == ".wav" and item.name.lower() != "full_song.wav":
+                    zf.write(item, arcname=item.name)
+
+    await run_in_threadpool(_create_zip)
+
+    return FileResponse(zip_path, filename=zip_filename, media_type='application/zip')
+
+@app.get("/jobs/{job_id}/download-mixdown")
+async def download_mixdown_endpoint(job_id: str, _: None = Depends(_guard_heavy_endpoint)):
+    """
+    Runs mixdown_stems and downloads the result.
+    """
+    _, temp_root = _get_job_dirs(job_id)
+    if not temp_root.exists():
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    # Determine best stage to mixdown
+    best_stage_dir = None
+    preferred_order = [
+        temp_root / "S11_REPORT_GENERATION",
+        temp_root / "S10_MASTER_FINAL_LIMITS",
+        temp_root / "S6_MANUAL_CORRECTION",
+        temp_root / "S5_LEADVOX_DYNAMICS",
+        temp_root / "S0_SESSION_FORMAT",
+    ]
+    for d in preferred_order:
+        if d.exists() and any(f.suffix == '.wav' for f in d.iterdir()):
+            best_stage_dir = d
+            break
+
+    if not best_stage_dir:
+        raise HTTPException(status_code=404, detail="No audio to mixdown")
+
+    # Run mixdown script on this folder
+    # We call mixdown_stems.py
+
+    from src.utils import mixdown_stems
+    # We need a context
+    from src.context import PipelineContext
+    # Mock context or real?
+    # Mixdown stems uses context.get_stage_dir() mainly or arguments.
+    # It seems to take context and use `context.get_stage_dir(stage_id)`.
+    # Wait, mixdown_stems.process(context) uses context.audio_stems if available, or loads from disk?
+
+    # Let's inspect mixdown_stems.py usage in stage.py: `_run_script(mixdown_script, context, stage_id)`
+    # This implies it uses sys.argv if not process()?
+    # stage.py tries process(context) first.
+
+    # We can create a context for this stage.
+    stage_id = best_stage_dir.name
+    context = PipelineContext(stage_id=stage_id, job_id=job_id, temp_root=temp_root)
+
+    # Run in threadpool
+    from fastapi.concurrency import run_in_threadpool
+
+    def _run_mixdown():
+        try:
+            # We might need to ensure stems are loaded into context if mixdown relies on it,
+            # or if mixdown reads from disk.
+            # Assuming mixdown reads from disk if context.audio_stems is empty.
+            # Let's import mixdown_stems directly.
+            import src.utils.mixdown_stems as md
+            md.process(context)
+        except Exception as e:
+            logger.error(f"Mixdown failed: {e}")
+            raise HTTPException(status_code=500, detail=f"Mixdown failed: {e}")
+
+    await run_in_threadpool(_run_mixdown)
+
+    full_song = best_stage_dir / "full_song.wav"
+    if not full_song.exists():
+        raise HTTPException(status_code=500, detail="Mixdown failed to generate file")
+
+    return FileResponse(full_song, filename=f"{job_id}_mixdown.wav", media_type="audio/wav")
+
 
 @app.post("/jobs/{job_id}/correction")
 async def post_job_correction(
@@ -1258,63 +1387,35 @@ async def post_job_correction(
     _: None = Depends(_guard_heavy_endpoint)
 ):
     """
-    Recibe parametros de correccion manual, crea una nueva stage S13_MANUAL_CORRECTION_X
-    y lanza el procesado.
+    Recibe parametros de correccion manual y los guarda en work/manual_corrections.json
+    para que el pipeline (S6) los consuma al reanudarse.
     """
     _, temp_root = _get_job_dirs(job_id)
     if not temp_root.exists():
         raise HTTPException(status_code=404, detail="Job not found")
 
     corrections = payload.get("corrections")
-    if not corrections or not isinstance(corrections, list):
+    # Allow empty list (no corrections)
+    if corrections is None or not isinstance(corrections, list):
         raise HTTPException(status_code=400, detail="corrections list required")
 
-    # Determinar indice de correccion (S13_..._1, _2, etc)
-    idx = 1
-    while True:
-        stage_name = f"S13_MANUAL_CORRECTION_{idx}"
-        stage_dir = temp_root / stage_name
-        if not stage_dir.exists():
-            break
-        idx += 1
+    work_dir = temp_root / "work"
+    work_dir.mkdir(parents=True, exist_ok=True)
 
-    stage_name = f"S13_MANUAL_CORRECTION_{idx}"
-    stage_dir = temp_root / stage_name
-    stage_dir.mkdir(parents=True, exist_ok=True)
-
-    # Guardar changes.json
-    changes_path = stage_dir / "changes.json"
+    # Guardar manual_corrections.json
+    corrections_path = work_dir / "manual_corrections.json"
     try:
-        changes_path.write_text(
-            json.dumps(corrections, indent=2, ensure_ascii=False),
+        # Wrap in "corrections" key to match S6 expectations
+        data = {"corrections": corrections}
+        corrections_path.write_text(
+            json.dumps(data, indent=2, ensure_ascii=False),
             encoding="utf-8"
         )
     except Exception as e:
-        logger.error(f"Error escribiendo changes.json: {e}")
+        logger.error(f"Error escribiendo manual_corrections.json: {e}")
         raise HTTPException(status_code=500, detail="Failed to save corrections")
 
-    # Lanzar tarea
-    # Aqui lanzamos una tarea especifica que corre solo S13 y mixdown.
-    # Reutilizamos run_full_pipeline_task pero forzando una stage list o logica especial?
-    # Mejor crear un task especifico o usar la logica de pipeline parcial.
-    # Dado el diseño actual de tasks.py (que no veo completo pero asumo corre todo),
-    # quiza sea mejor invocar el stage directamente via subprocess o un nuevo task.
-    # Para consistencia con Celery, deberiamos tener un task.
-    # Por simplicidad ahora, lanzamos run_full_pipeline_task indicando SOLO esta stage si fuera posible,
-    # pero el pipeline suele correr secuencial.
-
-    # Vamos a usar un task helper nuevo en tasks.py o modificar el existente.
-    # Como no puedo editar tasks.py facilmente sin leerlo, leere tasks.py primero.
-    # PERO, para no bloquear, voy a asumir que puedo llamar a un script wrapper.
-    # O mejor: Lanzar un task generico "run_stage".
-
-    from tasks import run_manual_correction_task
-    task = run_manual_correction_task.apply_async(
-        args=[job_id, stage_name],
-        task_id=f"{job_id}_{stage_name}"
-    )
-
-    return {"status": "processing", "stage": stage_name, "task_id": task.id}
+    return {"status": "saved", "message": "Corrections saved. Call /start to resume pipeline."}
 
 
 @app.get("/jobs/{job_id}")
