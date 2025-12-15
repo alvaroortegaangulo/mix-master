@@ -392,8 +392,8 @@ def run_stage(stage_id: str, context: Optional[PipelineContext] = None) -> None:
     # We will implement the saving of 'pre' audio in the next step by wrapping the execution.
     # For now, let's just create the hook.
 
-    # Limpiar
-    _run_script(cleanup_stems_script, context, stage_id)
+    # Limpiar (desactivado para preservar stems entre stages)
+    # _run_script(cleanup_stems_script, context, stage_id)
 
     # Asegurar análisis
     _ensure_analysis_file(stage_id, analysis_script, context)

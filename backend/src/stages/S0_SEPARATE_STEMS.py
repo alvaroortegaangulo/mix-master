@@ -159,6 +159,14 @@ def _find_uploaded_song(
         if original_audio:
             return original_audio[0]
 
+    # Exploracion defensiva por todo el job (excluyendo stage_dir y carpetas stems)
+    for p in _list_audio_files(job_root, recursive=True, skip_names=skip):
+        if stage_dir in p.parents:
+            continue
+        if "stems" in {part.lower() for part in p.parts}:
+            continue
+        return p
+
     preferred = [
         work_dir / "song.wav",
         work_dir / "song.flac",
@@ -281,7 +289,7 @@ def _process_impl(contract_id: str, context: Optional["PipelineContext"] = None)
     song_path = _find_uploaded_song(work_dir, stage_dir, job_root, media_dir)
     if not song_path:
         raise FileNotFoundError(
-            f"[S0_SEPARATE_STEMS] No encuentro cancion subida en {stage_dir} ni en {work_dir}"
+            f"[S0_SEPARATE_STEMS] No encuentro cancion subida en {stage_dir} ni en {work_dir} (job_root={job_root})"
         )
 
     if song_path.parent == stage_dir:
