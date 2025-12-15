@@ -133,22 +133,19 @@ export default function RootLayout({
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <GoogleOAuthProvider clientId={googleClientId}>
         <AuthProvider>
-        <Script
+        <script
           id="ld-organization"
           type="application/ld+json"
-          strategy="beforeInteractive"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
         />
-        <Script
+        <script
           id="ld-website"
           type="application/ld+json"
-          strategy="beforeInteractive"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }}
         />
-        <Script
+        <script
           id="ld-site-navigation"
           type="application/ld+json"
-          strategy="beforeInteractive"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(siteNavigationJsonLd) }}
         />
 
@@ -161,7 +158,7 @@ export default function RootLayout({
         <Script
           id="cookie-script"
           src="https://cdn.cookie-script.com/s/ae74c6bd8d098a84d8017855c6fba2af.js"
-          strategy="beforeInteractive"
+          strategy="afterInteractive"
           charSet="UTF-8"
         />
         </AuthProvider>

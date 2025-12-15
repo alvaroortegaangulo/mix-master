@@ -8,7 +8,7 @@ const nextConfig: NextConfig = {
     return [
       {
         // Aplica a TODO: páginas, API routes y estáticos de Next
-        source: "/:path*",
+        source: "/((?!_next/|favicon.ico).*)",
         headers: [
           {
             key: "Cache-Control",
