@@ -166,8 +166,17 @@ def separate_bs_roformer_to_dir(
     import torch
     from splifft.config import Config
     from splifft.models import ModelMetadata
-    from splifft.io import load_weights
     from splifft.inference import separate as splifft_separate
+    try:
+        from splifft.io import load_weights as _load_weights
+    except Exception:
+        # Fallback: cargar pesos con torch.load si splifft.io depende de torchcodec/ffmpeg.
+        def _load_weights(model, ckpt_path, device=None):
+            state = torch.load(ckpt_path, map_location=device or "cpu")
+            if isinstance(state, dict) and "state_dict" in state:
+                state = state["state_dict"]
+            model.load_state_dict(state, strict=False)
+            return model
 
     # Compatibilidad: algunas versiones de splifft no exponen BSRoformerParams.
     try:  # Preferido
@@ -201,7 +210,7 @@ def separate_bs_roformer_to_dir(
     model_params = config.model.to_concrete(metadata.params)
 
     model = metadata.model(model_params)
-    model = load_weights(model, assets.checkpoint_path, device=device)
+    model = _load_weights(model, assets.checkpoint_path, device=device)
 
     if device == "cpu":
         # checkpoint fp16 -> CPU suele ir mejor forzando float32
