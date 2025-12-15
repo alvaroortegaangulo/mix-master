@@ -160,94 +160,38 @@ export default function StudioPage() {
           compression: { threshold: -20, ratio: 2, enabled: false },
           reverb: { amount: 0, enabled: false },
           url: undefined,
-          status: "loading"
+          status: "idle"
         }));
 
         setStems(newStems);
+        setLoadingStems(false); // liberar UI; audio se carga en background
 
-        if (audioContextRef.current) {
-            // Parallel loading of stems for faster startup
-            await Promise.all(stemFiles.map(async (file) => {
-                if (cancelled) return;
-                try {
-                    let signedUrl = await signFileUrl(jobId, `S5_LEADVOX_DYNAMICS/${file}`);
-                    let resp = await fetch(signedUrl);
-                    if (!resp.ok) {
-                         signedUrl = await signFileUrl(jobId, `S5_STEM_DYNAMICS_GENERIC/${file}`);
-                         resp = await fetch(signedUrl);
-                    }
-                     if (!resp.ok) {
-                         signedUrl = await signFileUrl(jobId, `S12_SEPARATE_STEMS/${file}`);
-                         resp = await fetch(signedUrl);
-                    }
-                    if (!resp.ok) {
-                         const stages = ["S5_LEADVOX_DYNAMICS", "S5_STEM_DYNAMICS_GENERIC", "S4_SPECTRAL_CLEANUP", "S0_SESSION_FORMAT", "S0_MIX_ORIGINAL"];
-                         for (const s of stages) {
-                             signedUrl = await signFileUrl(jobId, `${s}/${file}`);
-                             resp = await fetch(signedUrl);
-                             if (resp.ok) break;
-                         }
-                    }
+        const loadAssets = async () => {
+          if (!audioContextRef.current) return;
 
-                    if (resp.ok) {
-                        const ab = await resp.arrayBuffer();
-                        if (cancelled) return;
-
-                        const decodePromise = audioContextRef.current!.decodeAudioData(ab);
-                        const timeoutPromise = new Promise<AudioBuffer>((_, reject) =>
-                            setTimeout(() => reject(new Error("Audio decoding timed out")), 15000)
-                        );
-
-                        const decoded = await Promise.race([decodePromise, timeoutPromise]);
-                        audioBuffersRef.current.set(file, decoded);
-
-                        setStems(prev => prev.map(s => {
-                            if (s.fileName === file) return { ...s, url: signedUrl, status: "ready" };
-                            return s;
-                        }));
-
-                        setDuration(prev => Math.max(prev, decoded.duration));
-
-                    } else {
-                        console.warn("Studio: Fetch failed for", file);
-                        setStems(prev => prev.map(s => {
-                            if (s.fileName === file) return { ...s, status: "error" };
-                            return s;
-                        }));
-                    }
-                } catch (e) {
-                    console.error("Failed to load stem", file, e);
-                    setStems(prev => prev.map(s => {
-                        if (s.fileName === file) return { ...s, status: "error" };
-                        return s;
-                    }));
+          const loadSingleStem = async (file: string) => {
+            if (cancelled) return;
+            try {
+                let signedUrl = await signFileUrl(jobId, `S5_LEADVOX_DYNAMICS/${file}`);
+                let resp = await fetch(signedUrl);
+                if (!resp.ok) {
+                     signedUrl = await signFileUrl(jobId, `S5_STEM_DYNAMICS_GENERIC/${file}`);
+                     resp = await fetch(signedUrl);
                 }
-            }));
+                 if (!resp.ok) {
+                     signedUrl = await signFileUrl(jobId, `S12_SEPARATE_STEMS/${file}`);
+                     resp = await fetch(signedUrl);
+                }
+                if (!resp.ok) {
+                     const stages = ["S5_LEADVOX_DYNAMICS", "S5_STEM_DYNAMICS_GENERIC", "S4_SPECTRAL_CLEANUP", "S0_SESSION_FORMAT", "S0_MIX_ORIGINAL"];
+                     for (const s of stages) {
+                         signedUrl = await signFileUrl(jobId, `${s}/${file}`);
+                         resp = await fetch(signedUrl);
+                         if (resp.ok) break;
+                     }
+                }
 
-            // Attempt to load mixdown for waveform visualization
-            const preferredMixdownPaths = [
-                "S11_REPORT_GENERATION/full_song.wav",
-                "S10_MASTER_FINAL_LIMITS/full_song.wav",
-                "S9_MASTER_GENERIC/full_song.wav",
-                "S8_MIXBUS_COLOR_GENERIC/full_song.wav",
-                "S7_MIXBUS_TONAL_BALANCE/full_song.wav",
-                "S6_MANUAL_CORRECTION/full_song.wav",
-                "S5_LEADVOX_DYNAMICS/full_song.wav",
-                "S5_STEM_DYNAMICS_GENERIC/full_song.wav",
-                "S4_STEM_RESONANCE_CONTROL/full_song.wav",
-                "S3_MIXBUS_HEADROOM/full_song.wav",
-                "S3_LEADVOX_AUDIBILITY/full_song.wav",
-                "S0_SESSION_FORMAT/full_song.wav",
-                "S0_MIX_ORIGINAL/full_song.wav"
-            ];
-
-            for (const relPath of preferredMixdownPaths) {
-                if (cancelled) return;
-                try {
-                    const signedUrl = await signFileUrl(jobId, relPath);
-                    const resp = await fetch(signedUrl);
-                    if (!resp.ok) continue;
-
+                if (resp.ok) {
                     const ab = await resp.arrayBuffer();
                     if (cancelled) return;
 
@@ -255,21 +199,78 @@ export default function StudioPage() {
                     const timeoutPromise = new Promise<AudioBuffer>((_, reject) =>
                         setTimeout(() => reject(new Error("Audio decoding timed out")), 15000)
                     );
-                    const decoded = await Promise.race([decodePromise, timeoutPromise]);
-                    if (cancelled) return;
 
-                    setMixdownBuffer(decoded);
-                    setMixdownUrl(signedUrl);
+                    const decoded = await Promise.race([decodePromise, timeoutPromise]);
+                    audioBuffersRef.current.set(file, decoded);
+
+                    setStems(prev => prev.map(s => {
+                        if (s.fileName === file) return { ...s, url: signedUrl, status: "ready" };
+                        return s;
+                    }));
+
                     setDuration(prev => Math.max(prev, decoded.duration));
-                    break;
-                } catch (e) {
-                    console.warn("Could not load reference mixdown for waveform", relPath, e);
+
+                } else {
+                    console.warn("Studio: Fetch failed for", file);
+                    setStems(prev => prev.map(s => {
+                        if (s.fileName === file) return { ...s, status: "error" };
+                        return s;
+                    }));
                 }
+            } catch (e) {
+                console.error("Failed to load stem", file, e);
+                setStems(prev => prev.map(s => {
+                    if (s.fileName === file) return { ...s, status: "error" };
+                    return s;
+                }));
             }
-        }
+          };
+
+          const queue: string[] = [...stemFiles];
+          const workers = Array.from({ length: Math.min(3, queue.length) }, async () => {
+            while (!cancelled && queue.length > 0) {
+                const next = queue.shift();
+                if (!next) break;
+                await loadSingleStem(next);
+            }
+          });
+          await Promise.all(workers);
+
+          // Attempt to load mixdown for waveform visualization (URL only to avoid heavy decode)
+          const preferredMixdownPaths = [
+              "S11_REPORT_GENERATION/full_song.wav",
+              "S10_MASTER_FINAL_LIMITS/full_song.wav",
+              "S9_MASTER_GENERIC/full_song.wav",
+              "S8_MIXBUS_COLOR_GENERIC/full_song.wav",
+              "S7_MIXBUS_TONAL_BALANCE/full_song.wav",
+              "S6_MANUAL_CORRECTION/full_song.wav",
+              "S5_LEADVOX_DYNAMICS/full_song.wav",
+              "S5_STEM_DYNAMICS_GENERIC/full_song.wav",
+              "S4_STEM_RESONANCE_CONTROL/full_song.wav",
+              "S3_MIXBUS_HEADROOM/full_song.wav",
+              "S3_LEADVOX_AUDIBILITY/full_song.wav",
+              "S0_SESSION_FORMAT/full_song.wav",
+              "S0_MIX_ORIGINAL/full_song.wav"
+          ];
+
+          for (const relPath of preferredMixdownPaths) {
+              if (cancelled) return;
+              try {
+                  const signedUrl = await signFileUrl(jobId, relPath);
+                  const resp = await fetch(signedUrl, { method: "HEAD" });
+                  if (!resp.ok) continue;
+                  setMixdownUrl(signedUrl);
+                  break;
+              } catch (e) {
+                  console.warn("Could not load reference mixdown for waveform", relPath, e);
+              }
+          }
+        };
+
+        // Fire-and-forget para que la UI aparezca antes
+        loadAssets().catch(err => console.error("Studio: background load error", err));
       } catch (err) {
         console.error("Error loading stems:", err);
-      } finally {
         setLoadingStems(false);
       }
     }
