@@ -324,11 +324,10 @@ export default function StudioPage() {
   useEffect(() => {
     if (!waveformRef.current) return;
 
-    const stemBuffer = selectedStem ? audioBuffersRef.current.get(selectedStem.fileName) : null;
-    const waveformBuffer = mixdownBuffer || stemBuffer;
-    const urlToLoad = waveformBuffer ? null : (mixdownUrl || selectedStem?.url);
+    // Prioritize selected stem, fallback to mixdown if stem not ready or available
+    const urlToLoad = selectedStem?.url || mixdownUrl;
 
-    if (!waveformBuffer && !urlToLoad) return;
+    if (!urlToLoad) return;
 
     if (wavesurferRef.current) {
         wavesurferRef.current.destroy();
@@ -337,7 +336,6 @@ export default function StudioPage() {
     try {
         const wsOptions: any = {
           container: waveformRef.current,
-          backend: "WebAudio",
           waveColor: '#334155',
           progressColor: '#10b981',
           cursorColor: '#fbbf24',
@@ -349,23 +347,8 @@ export default function StudioPage() {
           interact: true,
         };
 
-        if (audioContextRef.current) {
-          wsOptions.audioContext = audioContextRef.current;
-        }
-
         wavesurferRef.current = WaveSurfer.create(wsOptions);
-
-        if (waveformBuffer && wavesurferRef.current) {
-            // Prefer direct buffer to avoid extra network fetch and blobs
-            const wsAny = wavesurferRef.current as any;
-            if (typeof wsAny.loadDecodedBuffer === "function") {
-                wsAny.loadDecodedBuffer(waveformBuffer);
-            } else if (urlToLoad) {
-                wavesurferRef.current.load(urlToLoad);
-            }
-        } else if (urlToLoad && wavesurferRef.current) {
-            wavesurferRef.current.load(urlToLoad);
-        }
+        wavesurferRef.current.load(urlToLoad);
 
         wavesurferRef.current.on('ready', () => {
            if (wavesurferRef.current) {
@@ -384,7 +367,7 @@ export default function StudioPage() {
     return () => {
         wavesurferRef.current?.destroy();
     };
-  }, [mixdownBuffer, mixdownUrl, selectedStem?.url, selectedStem?.fileName]);
+  }, [mixdownUrl, selectedStem?.url]);
 
   useEffect(() => {
      if (wavesurferRef.current) {
