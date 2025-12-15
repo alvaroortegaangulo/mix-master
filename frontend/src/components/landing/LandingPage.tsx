@@ -1,9 +1,19 @@
 import { HeroSection } from "./HeroSection";
-import { FeaturesSection } from "./FeaturesSection";
-import { LiveSoundAnalysis } from "./LiveSoundAnalysis";
-import { BenefitsSection } from "./BenefitsSection";
-import { TechSpecsSection } from "./TechSpecsSection";
+import dynamic from "next/dynamic";
 import Link from "next/link";
+
+const FeaturesSection = dynamic(() => import("./FeaturesSection").then(mod => mod.FeaturesSection), {
+  loading: () => <div className="h-96 bg-slate-950" />
+});
+const LiveSoundAnalysis = dynamic(() => import("./LiveSoundAnalysis").then(mod => mod.LiveSoundAnalysis), {
+  loading: () => <div className="h-96 bg-slate-950" />
+});
+const BenefitsSection = dynamic(() => import("./BenefitsSection").then(mod => mod.BenefitsSection), {
+  loading: () => <div className="h-96 bg-slate-950" />
+});
+const TechSpecsSection = dynamic(() => import("./TechSpecsSection").then(mod => mod.TechSpecsSection), {
+  loading: () => <div className="h-96 bg-slate-950" />
+});
 
 export function LandingPage({ onTryIt }: { onTryIt: () => void }) {
   return (
