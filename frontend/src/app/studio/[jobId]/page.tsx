@@ -23,6 +23,7 @@ import {
 
 interface StemControl {
   fileName: string;
+  stage?: string;
   name: string;
   volume: number;
   pan: {
@@ -46,6 +47,9 @@ interface StemControl {
     amount: number;
     enabled: boolean;
   };
+  signedUrl?: string;
+  previewUrl?: string | null;
+  peaks?: number[];
   url?: string;
   status?: "idle" | "loading" | "ready" | "error";
 }
@@ -141,38 +145,82 @@ export default function StudioPage() {
           },
         });
 
-        let stemFiles: string[] = [];
+        let stemsFromApi: any[] = [];
         if (res.ok) {
           const data = await res.json();
-          stemFiles = Array.isArray(data.stems) ? data.stems : [];
+          if (Array.isArray(data.stems)) {
+            stemsFromApi = data.stems;
+          }
         } else {
-          stemFiles = ["vocals.wav", "drums.wav", "bass.wav", "other.wav"];
+          stemsFromApi = ["vocals.wav", "drums.wav", "bass.wav", "other.wav"];
         }
 
-        const newStems: StemControl[] = stemFiles.map((file) => ({
-          fileName: file,
-          name:
-            file
-              .replace(".wav", "")
-              .replace(/_/g, " ")
-              .replace("S11", "")
-              .replace("S10", "")
-              .trim() || file,
-          volume: 0,
-          pan: { value: 0, enabled: false },
-          mute: false,
-          solo: false,
-          eq: { low: 0, mid: 0, high: 0, enabled: false },
-          compression: { threshold: -20, ratio: 2, enabled: false },
-          reverb: { amount: 0, enabled: false },
-          url: undefined,
-          status: "idle"
-        }));
+        const newStems: StemControl[] = stemsFromApi.map((entry: any) => {
+          const file =
+            (typeof entry === "string" ? entry : entry?.file || entry?.fileName || entry?.name) ||
+            "stem.wav";
+          const signedUrl =
+            (typeof entry === "object" && entry
+              ? entry.url || entry.signedUrl || entry.signed_url
+              : undefined) || undefined;
+          const previewUrl =
+            typeof entry === "object" && entry
+              ? entry.preview_url || entry.previewUrl || null
+              : null;
+          const peaks =
+            typeof entry === "object" && Array.isArray(entry?.peaks)
+              ? entry.peaks.map((p: any) => Number(p) || 0)
+              : undefined;
 
-        setStems(newStems);
+          return {
+            fileName: file,
+            stage: typeof entry === "object" && entry?.stage ? entry.stage : undefined,
+            name:
+              file
+                .replace(".wav", "")
+                .replace(/_/g, " ")
+                .replace("S11", "")
+                .replace("S10", "")
+                .trim() || file,
+            volume: 0,
+            pan: { value: 0, enabled: false },
+            mute: false,
+            solo: false,
+            eq: { low: 0, mid: 0, high: 0, enabled: false },
+            compression: { threshold: -20, ratio: 2, enabled: false },
+            reverb: { amount: 0, enabled: false },
+            signedUrl,
+            previewUrl,
+            peaks,
+            url: undefined,
+            status: "idle"
+          };
+        });
+
+        const finalStems = newStems.length
+          ? newStems
+          : ["vocals.wav", "drums.wav", "bass.wav", "other.wav"].map((file) => ({
+              fileName: file,
+              name: file.replace(".wav", "").replace(/_/g, " ") || file,
+              volume: 0,
+              pan: { value: 0, enabled: false },
+              mute: false,
+              solo: false,
+              eq: { low: 0, mid: 0, high: 0, enabled: false },
+              compression: { threshold: -20, ratio: 2, enabled: false },
+              reverb: { amount: 0, enabled: false },
+              url: undefined,
+              status: "idle"
+            }));
+
+        const stemFiles = finalStems.map((s) => s.fileName);
+
+        setStems(finalStems);
+        setLoadingStems(false); // UI ready while descargas/decodificaciones siguen en background
 
         const loadAssets = async () => {
           if (!audioContextRef.current) return;
+          const metaByFile = new Map(finalStems.map((s) => [s.fileName, s]));
 
           const loadSingleStem = async (file: string) => {
             if (cancelled) return;
@@ -180,6 +228,8 @@ export default function StudioPage() {
                 // Try cache first
                 const cacheKey = `pirola-studio-cache-v1-${jobId}-${file}`;
                 const cacheKeyDecoded = `${cacheKey}-decoded`;
+
+                const meta = metaByFile.get(file);
 
                 // Try loading decoded buffer directly
                 const cachedDecoded = await StudioCache.getAudioBufferData(cacheKeyDecoded);
@@ -210,30 +260,48 @@ export default function StudioPage() {
 
                 // If no decoded cache, try raw file cache or fetch
                 let ab: ArrayBuffer | null = await StudioCache.getCachedArrayBuffer(cacheKey);
-                let signedUrl = "";
+                let fetchUrl = meta?.signedUrl || meta?.url;
+                let usedUrl = fetchUrl || "";
 
                 if (!ab) {
                     // Cache miss, fetch
-                    signedUrl = await signFileUrl(jobId, `S5_LEADVOX_DYNAMICS/${file}`);
-                    let resp = await fetch(signedUrl);
-                    if (!resp.ok) {
-                        signedUrl = await signFileUrl(jobId, `S5_STEM_DYNAMICS_GENERIC/${file}`);
-                        resp = await fetch(signedUrl);
-                    }
-                    if (!resp.ok) {
-                        signedUrl = await signFileUrl(jobId, `S12_SEPARATE_STEMS/${file}`);
-                        resp = await fetch(signedUrl);
-                    }
-                    if (!resp.ok) {
-                        const stages = ["S5_LEADVOX_DYNAMICS", "S5_STEM_DYNAMICS_GENERIC", "S4_SPECTRAL_CLEANUP", "S0_SESSION_FORMAT", "S0_MIX_ORIGINAL"];
-                        for (const s of stages) {
-                            signedUrl = await signFileUrl(jobId, `${s}/${file}`);
-                            resp = await fetch(signedUrl);
-                            if (resp.ok) break;
+                    let resp: Response | null = null;
+                    if (fetchUrl) {
+                        try {
+                            resp = await fetch(fetchUrl);
+                        } catch (e) {
+                            resp = null;
                         }
                     }
 
-                    if (resp.ok) {
+                    const stageCandidates = [
+                        meta?.stage,
+                        "S6_MANUAL_CORRECTION",
+                        "S6_MANUAL_CORRECTION_ADJUSTMENT",
+                        "S12_SEPARATE_STEMS",
+                        "S5_LEADVOX_DYNAMICS",
+                        "S5_STEM_DYNAMICS_GENERIC",
+                        "S4_STEM_RESONANCE_CONTROL",
+                        "S0_SESSION_FORMAT",
+                        "S0_MIX_ORIGINAL"
+                    ].filter(Boolean) as string[];
+
+                    let fallbackSignedUrl = fetchUrl || "";
+
+                    if (!resp || !resp.ok) {
+                        for (const stage of stageCandidates) {
+                            fallbackSignedUrl = await signFileUrl(jobId, `${stage}/${file}`);
+                            resp = await fetch(fallbackSignedUrl);
+                            if (resp.ok) {
+                                usedUrl = fallbackSignedUrl;
+                                break;
+                            }
+                        }
+                    } else {
+                        usedUrl = fetchUrl || "";
+                    }
+
+                    if (resp && resp.ok) {
                         ab = await resp.arrayBuffer();
                         // Store in cache (background)
                         StudioCache.cacheArrayBuffer(cacheKey, ab).catch(e => console.warn("Background cache error", e));
@@ -265,7 +333,7 @@ export default function StudioPage() {
                     StudioCache.cacheAudioBufferData(cacheKeyDecoded, decodedData).catch(e => console.warn("Background decoded cache error", e));
 
                     setStems(prev => prev.map(s => {
-                        if (s.fileName === file) return { ...s, url: signedUrl || "cached", status: "ready" };
+                        if (s.fileName === file) return { ...s, url: usedUrl || "cached", status: "ready" };
                         return s;
                     }));
 
@@ -282,7 +350,10 @@ export default function StudioPage() {
 
           const queue: string[] = [...stemFiles];
           // Parallelism: use more workers
-          const concurrency = typeof navigator !== "undefined" ? (navigator.hardwareConcurrency || 6) : 6;
+          const concurrency =
+            typeof navigator !== "undefined"
+              ? Math.min(4, Math.max(1, navigator.hardwareConcurrency || 4))
+              : 4;
           const workers = Array.from({ length: Math.min(concurrency, queue.length) }, async () => {
             while (!cancelled && queue.length > 0) {
                 const next = queue.shift();
@@ -426,19 +497,46 @@ export default function StudioPage() {
             }
 
             let ab: ArrayBuffer | null = await StudioCache.getCachedArrayBuffer(cacheKey);
-            let signedUrl = "";
+            let usedUrl = stem.signedUrl || stem.url || "";
 
             if (!ab) {
-                signedUrl = await signFileUrl(jobId, `S12_SEPARATE_STEMS/${stem.fileName}`);
-                let resp = await fetch(signedUrl);
-                if (!resp.ok) {
-                    signedUrl = await signFileUrl(jobId, `S0_SESSION_FORMAT/${stem.fileName}`);
-                    resp = await fetch(signedUrl);
+                let resp: Response | null = null;
+                if (stem.signedUrl) {
+                    try {
+                        resp = await fetch(stem.signedUrl);
+                        usedUrl = stem.signedUrl;
+                    } catch (e) {
+                        resp = null;
+                    }
                 }
 
-                if (!resp.ok) {
-                    throw new Error(`Failed to fetch stem ${stem.fileName}: ${resp.status} ${resp.statusText}`);
+                const stageCandidates = [
+                    stem.stage,
+                    "S6_MANUAL_CORRECTION",
+                    "S6_MANUAL_CORRECTION_ADJUSTMENT",
+                    "S12_SEPARATE_STEMS",
+                    "S5_LEADVOX_DYNAMICS",
+                    "S5_STEM_DYNAMICS_GENERIC",
+                    "S4_STEM_RESONANCE_CONTROL",
+                    "S0_SESSION_FORMAT",
+                    "S0_MIX_ORIGINAL"
+                ].filter(Boolean) as string[];
+
+                if (!resp || !resp.ok) {
+                    for (const stage of stageCandidates) {
+                        const candidateUrl = await signFileUrl(jobId, `${stage}/${stem.fileName}`);
+                        resp = await fetch(candidateUrl);
+                        if (resp.ok) {
+                            usedUrl = candidateUrl;
+                            break;
+                        }
+                    }
                 }
+
+                if (!resp || !resp.ok) {
+                    throw new Error(`Failed to fetch stem ${stem.fileName}`);
+                }
+
                 ab = await resp.arrayBuffer();
                 StudioCache.cacheArrayBuffer(cacheKey, ab).catch(console.warn);
             }
@@ -461,7 +559,7 @@ export default function StudioPage() {
                      channels
                 }).catch(console.warn);
 
-                setStems(prev => prev.map((s, i) => i === selectedStemIndex ? { ...s, url: signedUrl || "cached", status: "ready" } : s));
+                setStems(prev => prev.map((s, i) => i === selectedStemIndex ? { ...s, url: usedUrl || "cached", status: "ready" } : s));
                 setDuration(prev => Math.max(prev, decoded.duration));
             }
         } catch (err) {
@@ -757,6 +855,7 @@ export default function StudioPage() {
   const currentVisualBuffer = selectedStem && audioBuffersRef.current.get(selectedStem.fileName)
         ? audioBuffersRef.current.get(selectedStem.fileName)
         : mixdownBuffer;
+  const currentVisualPeaks = selectedStem?.peaks;
 
   if (authLoading) return <div className="h-screen bg-[#0f111a]"></div>;
 
@@ -891,15 +990,16 @@ export default function StudioPage() {
 
                  {/* Interactive Waveform Main Display */}
                  <div className="w-full h-[300px] opacity-80 cursor-pointer">
-                     <CanvasWaveform
-                        audioBuffer={currentVisualBuffer || null}
-                        currentTime={currentTime}
-                        duration={duration}
-                        onSeek={seek}
-                     />
+                 <CanvasWaveform
+                    audioBuffer={currentVisualBuffer || null}
+                    peaksData={currentVisualPeaks || null}
+                    currentTime={currentTime}
+                    duration={duration}
+                    onSeek={seek}
+                 />
                  </div>
 
-                 {!currentVisualBuffer && (
+                 {!currentVisualBuffer && !currentVisualPeaks && (
                      <div className="absolute inset-0 flex items-center justify-center text-slate-600 font-mono pointer-events-none">
                          {loadingStems ? "Loading..." : "Select a track to view waveform"}
                      </div>

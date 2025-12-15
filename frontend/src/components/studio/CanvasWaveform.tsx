@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from "react";
 
 type CanvasWaveformProps = {
   audioBuffer: AudioBuffer | null;
+  peaksData?: number[] | null;
   currentTime: number;
   duration: number;
   onSeek: (time: number) => void;
@@ -15,6 +16,7 @@ type CanvasWaveformProps = {
 
 export const CanvasWaveform: React.FC<CanvasWaveformProps> = ({
   audioBuffer,
+  peaksData,
   currentTime,
   duration,
   onSeek,
@@ -26,8 +28,13 @@ export const CanvasWaveform: React.FC<CanvasWaveformProps> = ({
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [peaks, setPeaks] = useState<number[]>([]);
 
-  // Calculate peaks when audioBuffer changes
+  // Calculate peaks when audioBuffer changes (unless provided)
   useEffect(() => {
+    if (peaksData && peaksData.length > 0) {
+      setPeaks(peaksData);
+      return;
+    }
+
     if (!audioBuffer) {
       setPeaks([]);
       return;
@@ -65,8 +72,7 @@ export const CanvasWaveform: React.FC<CanvasWaveformProps> = ({
     }
 
     setPeaks(newPeaks);
-
-  }, [audioBuffer]);
+  }, [audioBuffer, peaksData]);
 
   // Draw the waveform
   useEffect(() => {

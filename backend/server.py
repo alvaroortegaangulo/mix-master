@@ -20,6 +20,8 @@ from urllib.parse import urlparse
 from typing import List, Dict, Optional, Any
 
 import aiofiles
+import numpy as np
+import soundfile as sf
 from sqlalchemy import text
 try:
     import redis.asyncio as aioredis
@@ -552,6 +554,9 @@ ALLOWED_UPLOAD_MIME_TYPES = {
 }
 MAX_UPLOAD_SIZE_BYTES = 512 * 1024 * 1024  # 512 MiB
 MAX_JOB_TOTAL_BYTES = 2 * 1024 * 1024 * 1024  # 2 GiB total por job
+SIGNED_URL_STEMS_TTL = int(os.environ.get("STEMS_SIGNED_URL_TTL", str(6 * 3600)))
+SIGNED_URL_STEMS_TTL = max(600, min(SIGNED_URL_STEMS_TTL, 24 * 3600))
+STEM_PEAKS_DESIRED_BARS = 800
 
 
 def _sanitize_filename(filename: str) -> str:
@@ -689,6 +694,98 @@ async def _stream_upload_file(
 # ---------------------------------------------------------
 # Endpoints
 # ---------------------------------------------------------
+
+
+def _collect_stem_paths(stage_dir: Path) -> List[Path]:
+    """
+    Devuelve la lista de rutas .wav (excluyendo full_song.wav) en un stage.
+    """
+    wavs: List[Path] = []
+    if not stage_dir.exists():
+        return wavs
+    for item in stage_dir.iterdir():
+        if (
+            item.is_file()
+            and item.suffix.lower() == ".wav"
+            and item.name.lower() != "full_song.wav"
+        ):
+            wavs.append(item)
+    return sorted(wavs)
+
+
+def _compute_and_cache_peaks(
+    stem_path: Path, peaks_path: Path, desired_bars: int = STEM_PEAKS_DESIRED_BARS
+) -> List[float]:
+    """
+    Devuelve una lista de peaks RMS normalizados. Si existe un fichero cacheado, lo usa.
+    """
+    if peaks_path.exists():
+        try:
+            data = json.loads(peaks_path.read_text(encoding="utf-8"))
+            if isinstance(data, list) and data:
+                return [float(x) for x in data]
+        except Exception:
+            logger.warning("No se pudo leer peaks cacheados en %s", peaks_path)
+
+    try:
+        audio, _ = sf.read(stem_path, dtype="float32", always_2d=True)
+        if audio.ndim == 2 and audio.shape[1] > 1:
+            audio_mono = audio.mean(axis=1)
+        else:
+            audio_mono = audio.squeeze()
+
+        total_samples = len(audio_mono)
+        if total_samples == 0:
+            return []
+
+        bars = max(10, desired_bars)
+        samples_per_bar = max(1, total_samples // bars)
+        trim = (total_samples // samples_per_bar) * samples_per_bar
+        window = audio_mono[:trim].reshape(-1, samples_per_bar)
+        rms = np.sqrt(np.mean(np.square(window), axis=1))
+
+        max_peak = float(np.max(rms)) if rms.size else 1.0
+        norm = max_peak if max_peak > 0 else 1.0
+        peaks = (rms / norm).tolist()
+
+        peaks_path.parent.mkdir(parents=True, exist_ok=True)
+        peaks_path.write_text(json.dumps(peaks), encoding="utf-8")
+        return peaks
+    except Exception as exc:
+        logger.warning("No se pudo calcular peaks para %s: %s", stem_path.name, exc)
+        return []
+
+
+def _ensure_preview_wav(
+    stem_path: Path, preview_path: Path, target_sr: int = 32000
+) -> bool:
+    """
+    Genera un wav de preview mono/downsampleado si no existe.
+    """
+    if preview_path.exists():
+        return True
+    try:
+        audio, sr = sf.read(stem_path, dtype="float32", always_2d=True)
+        if audio.ndim == 2 and audio.shape[1] > 1:
+            mono = audio.mean(axis=1)
+        else:
+            mono = audio.squeeze()
+
+        if sr != target_sr and len(mono) > 0:
+            # Reescalar simple via interpolación lineal para evitar dependencias extra.
+            new_len = max(1, int(len(mono) * (target_sr / sr)))
+            x_old = np.linspace(0, 1, num=len(mono), endpoint=False)
+            x_new = np.linspace(0, 1, num=new_len, endpoint=False)
+            mono = np.interp(x_new, x_old, mono).astype("float32")
+        else:
+            mono = mono.astype("float32")
+
+        preview_path.parent.mkdir(parents=True, exist_ok=True)
+        sf.write(preview_path, mono, target_sr)
+        return True
+    except Exception as exc:
+        logger.warning("No se pudo generar preview para %s: %s", stem_path.name, exc)
+        return False
 
 
 @app.post("/mix")
@@ -1223,49 +1320,83 @@ async def start_mix_job_endpoint(
 
 
 @app.get("/jobs/{job_id}/stems")
-def get_job_stems(job_id: str, _: None = Depends(_guard_heavy_endpoint)) -> Dict[str, List[str]]:
+def get_job_stems(
+    job_id: str, request: Request, _: None = Depends(_guard_heavy_endpoint)
+) -> Dict[str, Any]:
     """
-    Devuelve la lista de stems disponibles tras el pipeline.
+    Devuelve stems con URL firmada + preview + peaks, priorizando S6_MANUAL_CORRECTION.
     """
     _, temp_root = _get_job_dirs(job_id)
     if not temp_root.exists():
         raise HTTPException(status_code=404, detail="Job not found")
 
-    def _collect_stems(stage_dir: Path) -> List[str]:
-        wavs: List[str] = []
-        if not stage_dir.exists():
-            return wavs
-        for item in stage_dir.iterdir():
-            if item.is_file() and item.suffix.lower() == ".wav" and item.name.lower() != "full_song.wav":
-                wavs.append(item.name)
-        return wavs
-
-    stems = []
-    # Include S6_MANUAL_CORRECTION in preferred order
-    preferred_order = [
-        temp_root / "S11_REPORT_GENERATION",
-        temp_root / "S10_MASTER_FINAL_LIMITS",
-        temp_root / "S6_MANUAL_CORRECTION",
-        temp_root / "S0_SESSION_FORMAT",
-        temp_root / "S0_MIX_ORIGINAL",
+    preferred_stage_ids = [
+        "S6_MANUAL_CORRECTION",
+        "S6_MANUAL_CORRECTION_ADJUSTMENT",
+        "S5_LEADVOX_DYNAMICS",
+        "S5_STEM_DYNAMICS_GENERIC",
+        "S4_STEM_RESONANCE_CONTROL",
+        "S0_SESSION_FORMAT",
+        "S0_MIX_ORIGINAL",
     ]
 
-    for stage_dir in preferred_order:
-        stems = _collect_stems(stage_dir)
-        if stems:
+    selected_stage: Optional[Path] = None
+    stem_paths: List[Path] = []
+
+    for stage_id in preferred_stage_ids:
+        candidate = temp_root / stage_id
+        stem_paths = _collect_stem_paths(candidate)
+        if stem_paths:
+            selected_stage = candidate
             break
 
-    if not stems:
+    if not selected_stage:
         # Fallback: busca cualquier stage con stems wav
         for stage_dir in sorted(temp_root.iterdir()):
             if not stage_dir.is_dir():
                 continue
-            stems = _collect_stems(stage_dir)
-            if stems:
+            stem_paths = _collect_stem_paths(stage_dir)
+            if stem_paths:
+                selected_stage = stage_dir
                 break
 
-    stems.sort()
-    return {"stems": stems}
+    if not selected_stage or not stem_paths:
+        raise HTTPException(status_code=404, detail="No stems found")
+
+    payload: List[Dict[str, Any]] = []
+
+    for stem_path in stem_paths:
+        rel_path = f"{selected_stage.name}/{stem_path.name}"
+        signed_url = _build_signed_url(
+            request, job_id, rel_path, expires_in=SIGNED_URL_STEMS_TTL
+        )
+
+        peaks_path = selected_stage / "peaks" / f"{stem_path.stem}.peaks.json"
+        peaks = _compute_and_cache_peaks(stem_path, peaks_path)
+
+        preview_url = None
+        preview_rel = f"{selected_stage.name}/previews/{stem_path.stem}_preview.wav"
+        preview_path = selected_stage / "previews" / f"{stem_path.stem}_preview.wav"
+        if _ensure_preview_wav(stem_path, preview_path):
+            preview_url = _build_signed_url(
+                request, job_id, preview_rel, expires_in=SIGNED_URL_STEMS_TTL
+            )
+
+        payload.append(
+            {
+                "file": stem_path.name,
+                "stage": selected_stage.name,
+                "url": signed_url,
+                "preview_url": preview_url,
+                "peaks": peaks,
+            }
+        )
+
+    return {
+        "stage": selected_stage.name,
+        "count": len(payload),
+        "stems": payload,
+    }
 
 @app.get("/jobs/{job_id}/download-stems-zip")
 async def download_stems_zip(job_id: str, _: None = Depends(_guard_heavy_endpoint)):
