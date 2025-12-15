@@ -14,6 +14,7 @@ if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
 from utils.analysis_utils import get_temp_dir  # type: ignore  # noqa: E402
+from utils.logger import logger  # type: ignore  # noqa: E402
 from utils.separation.demucs_ht import (  # type: ignore  # noqa: E402
     separate_demucs_htdemucs_ft_to_dir,
     copy_uploaded_stems_to_stage,
@@ -270,7 +271,7 @@ def _process_impl(contract_id: str, context: Optional["PipelineContext"] = None)
     # Idempotencia: si ya hay stems en el root del stage, listo.
     existing = _list_audio_files(stage_dir, skip_names={"full_song.wav"})
     if len(existing) >= 2 or (is_stems_upload and existing):
-        print(f"[S0_SEPARATE_STEMS] Stems ya presentes en {stage_dir}. Skip.")
+        logger.info(f"[S0_SEPARATE_STEMS] Stems ya presentes en {stage_dir}. Skip.")
         return True
 
     if is_stems_upload:
@@ -293,7 +294,7 @@ def _process_impl(contract_id: str, context: Optional["PipelineContext"] = None)
             raise FileNotFoundError(
                 f"[S0_SEPARATE_STEMS] upload_mode=stems pero no encuentro stems en {stage_dir}"
             )
-        print(f"[S0_SEPARATE_STEMS] Stems listos en {stage_dir} (copiados {copied_total}).")
+        logger.info(f"[S0_SEPARATE_STEMS] Stems listos en {stage_dir} (copiados {copied_total}).")
         return True
 
     # upload_mode = song -> separar
@@ -329,6 +330,8 @@ def _process_impl(contract_id: str, context: Optional["PipelineContext"] = None)
         stage_dir,
         model_name=os.environ.get("MIX_DEMUCS_MODEL", "htdemucs_ft"),
         device=os.environ.get("MIX_DEMUCS_DEVICE") or None,
+        shifts=2,
+        overlap=0.5,
         write_manifest=True,
     )
 
@@ -337,13 +340,13 @@ def _process_impl(contract_id: str, context: Optional["PipelineContext"] = None)
     except Exception:
         pass
 
-    print(f"[S0_SEPARATE_STEMS] Separacion completada. Stems: {list(written.keys())}")
+    logger.info(f"[S0_SEPARATE_STEMS] Separacion completada. Stems: {list(written.keys())}")
     return True
 
 
 def main() -> None:
     if len(sys.argv) < 2:
-        print("Uso: python S0_SEPARATE_STEMS.py <CONTRACT_ID>")
+        logger.info("Uso: python S0_SEPARATE_STEMS.py <CONTRACT_ID>")
         sys.exit(1)
     contract_id = sys.argv[1]
     ok = _process_impl(contract_id, context=None)
