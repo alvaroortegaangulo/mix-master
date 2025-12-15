@@ -499,6 +499,15 @@ def _verify_signed_download(path: str, sig: Optional[str], exp: Optional[str]) -
         return False
 
 
+def _get_effective_base_url(request: Request) -> str:
+    """
+    Devuelve base_url respetando X-Forwarded-Proto/Host para evitar http:// en proxys.
+    """
+    proto = request.headers.get("x-forwarded-proto") or request.url.scheme
+    host = request.headers.get("host") or request.url.netloc
+    return f"{proto}://{host}".rstrip("/")
+
+
 def _build_signed_url(request: Request, job_id: str, relative_path: str, expires_in: int = 900) -> str:
     """
     Construye una URL firmada para /files/{job_id}/<path>.
@@ -528,7 +537,7 @@ def _build_signed_url(request: Request, job_id: str, relative_path: str, expires
     exp_ts = int(time.time()) + expires_in
     rel_path = f"/files/{job_id}/{clean_rel}"
     sig = _sign_download_path(rel_path, exp_ts)
-    base_url = str(request.base_url).rstrip("/")
+    base_url = _get_effective_base_url(request)
     return f"{base_url}{rel_path}?exp={exp_ts}&sig={sig}"
 
 
@@ -1689,7 +1698,7 @@ async def sign_job_file(
     exp_ts = int(time.time()) + expires_in
     rel_path = f"/files/{job_id}/{file_path}"
     sig = _sign_download_path(rel_path, exp_ts)
-    base_url = str(request.base_url).rstrip("/")
+    base_url = _get_effective_base_url(request)
     signed_url = f"{base_url}{rel_path}?exp={exp_ts}&sig={sig}"
 
     return {"url": signed_url, "expires": exp_ts}
