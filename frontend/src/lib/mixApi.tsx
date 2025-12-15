@@ -558,3 +558,24 @@ export async function fetchJobReport(jobId: string): Promise<any> {
   }
   return await res.json();
 }
+
+export async function applyManualCorrection(
+    jobId: string,
+    changes: Record<string, any>
+): Promise<any> {
+    const baseUrl = getBackendBaseUrl();
+    const formData = new FormData();
+    formData.append("changes_json", JSON.stringify(changes));
+
+    const res = await fetch(`${baseUrl}/mix/${encodeURIComponent(jobId)}/correction`, {
+        method: "POST",
+        headers: authHeaders(),
+        body: formData
+    });
+
+    if(!res.ok) {
+        throw new Error(`Correction failed: ${res.status} ${res.statusText}`);
+    }
+
+    return await res.json();
+}

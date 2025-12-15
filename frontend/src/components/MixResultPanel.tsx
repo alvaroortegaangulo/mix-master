@@ -143,6 +143,24 @@ export function MixResultPanel({
           >
             {loadingReport ? "Loading Report..." : "View Full Report"}
           </button>
+
+          {hasStems && (
+            <div className="flex w-full flex-col items-center pt-4">
+                <button
+                    onClick={() => router.push(`/studio/${jobId}`)}
+                    className="group relative inline-flex items-center justify-center overflow-hidden rounded-full bg-gradient-to-r from-emerald-600 to-teal-500 px-8 py-3 font-bold text-white shadow-lg transition-all hover:from-emerald-500 hover:to-teal-400 hover:shadow-emerald-500/50 focus:outline-none focus:ring-4 focus:ring-emerald-500/30"
+                >
+                    <span className="relative flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5">
+                            <path d="M11.645 20.91l-.007-.003-.022-.012a15.247 15.247 0 01-.383-.218 25.18 25.18 0 01-4.244-3.17C4.688 15.36 2.25 12.174 2.25 8.25 2.25 5.322 4.714 3 7.688 3A5.5 5.5 0 0112 5.052 5.5 5.5 0 0116.313 3c2.973 0 5.437 2.322 5.437 5.25 0 3.925-2.438 7.111-4.739 9.256a25.175 25.175 0 01-4.244 3.17 15.247 15.247 0 01-.383.219l-.022.012-.007.004-.003.001a.752.752 0 01-.704 0l-.003-.001z" />
+                        </svg>
+                        PIROOLA STUDIO
+                    </span>
+                    <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition-transform duration-1000 group-hover:translate-x-full" />
+                </button>
+                <p className="mt-2 text-xs text-emerald-300/70">Manual correction & Remixing</p>
+            </div>
+          )}
         </div>
       </div>
 
