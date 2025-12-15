@@ -107,7 +107,7 @@ export function FeaturesSection() {
                       className={`relative shrink-0 flex h-12 w-12 items-center justify-center rounded-full border transition-all duration-300 ${
                          isActive
                          ? `${feature.bgClass} ${feature.borderColor} ${feature.colorClass}`
-                         : "bg-slate-900 border-slate-800 text-slate-500 group-hover:border-slate-700 group-hover:text-slate-400"
+                         : "bg-slate-900 border-slate-800 text-slate-400 group-hover:border-slate-700 group-hover:text-slate-300"
                       }`}
                     >
                       <feature.icon className="h-6 w-6" />
@@ -116,14 +116,14 @@ export function FeaturesSection() {
                     <div className="pt-1">
                       <h3
                         className={`text-lg font-bold mb-2 transition-colors duration-300 ${
-                          isActive ? "text-white" : "text-slate-400 group-hover:text-slate-300"
+                          isActive ? "text-white" : "text-slate-300 group-hover:text-slate-200"
                         }`}
                       >
                         {idx + 1}. {feature.title}
                       </h3>
                       <p
                         className={`text-sm leading-relaxed transition-colors duration-300 ${
-                          isActive ? "text-slate-300" : "text-slate-500 group-hover:text-slate-400"
+                          isActive ? "text-slate-300" : "text-slate-400 group-hover:text-slate-300"
                         }`}
                       >
                         {feature.description}
@@ -162,7 +162,7 @@ export function FeaturesSection() {
                 <div className="w-3 h-3 rounded-full bg-slate-700"></div>
                 <div className="w-3 h-3 rounded-full bg-slate-700"></div>
                 <div className="w-3 h-3 rounded-full bg-slate-700"></div>
-                <div className="ml-auto text-[10px] text-slate-600 font-mono">piroola.ai/mix</div>
+                <div className="ml-auto text-[10px] text-slate-400 font-mono">piroola.ai/mix</div>
             </div>
           </div>
         </div>
