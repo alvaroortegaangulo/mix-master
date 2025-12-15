@@ -100,7 +100,6 @@ export default function StudioPage() {
     if (typeof window !== "undefined" && !audioContextRef.current) {
       try {
         audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
-        console.log("Studio: AudioContext initialized");
       } catch (e) {
         console.error("Studio: AudioContext init error", e);
       }
@@ -116,7 +115,6 @@ export default function StudioPage() {
     let cancelled = false;
 
     async function load() {
-      console.log("Studio: Starting load stems...");
       try {
         setLoadingStems(true);
         setMixdownUrl(null);

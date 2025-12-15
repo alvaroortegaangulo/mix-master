@@ -1,11 +1,9 @@
 from utils.logger import logger
-# C:\mix-master\backend\src\stages\S0_SESSION_FORMAT.py
 
 import json
 import sys
 from pathlib import Path
 from typing import Dict, Any, Tuple
-import os
 
 import numpy as np
 import soundfile as sf
@@ -18,12 +16,8 @@ except ImportError:
 
 from utils.analysis_utils import get_temp_dir
 
-def load_analysis(project_root: Path, contract_id: str) -> Dict[str, Any]:
-    """
-    Carga el JSON de análisis generado por analysis\\S0_SESSION_FORMAT.py.
-    Ruta esperada:
-        <project_root>/temp/<contract_id>/analysis_<contract_id>.json
-    """
+def load_analysis(contract_id: str) -> Dict[str, Any]:
+    """Carga el JSON de análisis de analysis\\S0_SESSION_FORMAT.py en temp/<contract_id>."""
     temp_dir = get_temp_dir(contract_id, create=False)
     analysis_path = temp_dir / f"analysis_{contract_id}.json"
 
@@ -165,11 +159,7 @@ def main() -> None:
 
     contract_id = sys.argv[1]  # "S0_SESSION_FORMAT"
 
-    # base_dir = .../src ; project_root = .../backend
-    base_dir = Path(__file__).resolve().parent.parent
-    project_root = base_dir.parent
-
-    analysis = load_analysis(project_root, contract_id)
+    analysis = load_analysis(contract_id)
 
     metrics = analysis.get("metrics_from_contract", {})
     stems = analysis.get("stems", [])

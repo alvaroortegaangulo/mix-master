@@ -1,25 +1,18 @@
 from __future__ import annotations
 
-import logging
 import json
 import numpy as np
-import soundfile as sf
-from pathlib import Path
-from typing import Dict, Any, List
 
 from ..context import PipelineContext
-from ..utils.logger import PipelineLogger
 from ..utils.audio_utils import save_audio_stems, load_audio_stems
+from ..utils.logger import logger as pipeline_logger
 
 # Try importing pedalboard for DSP
 try:
     from pedalboard import Pedalboard, Compressor, HighShelfFilter, LowShelfFilter, PeakingFilter, Reverb, Gain
-    from pedalboard.io import AudioFile
     HAS_PEDALBOARD = True
 except ImportError:
     HAS_PEDALBOARD = False
-
-logger = logging.getLogger(__name__)
 
 def process(context: PipelineContext) -> bool:
     """
@@ -27,12 +20,6 @@ def process(context: PipelineContext) -> bool:
     Uses pedalboard if available for high quality processing.
     """
     stage_id = "S6_MANUAL_CORRECTION"
-    # PipelineLogger is a class, not an instance in this scope, but logger.py exports `logger` instance.
-    # We should use `logger.log_stage_start(stage_id)`.
-    # But `logger` here is `logging.getLogger(__name__)`.
-    # Let's import the global logger instance as `pipeline_logger`.
-    from ..utils.logger import logger as pipeline_logger
-
     pipeline_logger.log_stage_start(stage_id)
 
     # 1. Setup directories
@@ -53,31 +40,19 @@ def process(context: PipelineContext) -> bool:
             pipeline_logger.info(f"[{stage_id}] Failed to load corrections: {e}")
             return False
 
-    # 3. Load input stems
-    # Ensure inputs are available. If pipeline was paused, stems should be in S5 output or similar.
-    # The pipeline architecture usually copies previous stage output to current stage dir before running.
-    # So we check current_dir for inputs.
-
-    # However, since we might be resuming, the `copy_stems` might have run before the pause?
-    # Or `run_pipeline_for_job` re-runs copy logic.
-    # We will assume stems are in `current_dir` (copied from S5) OR we check context.
-
+    # 3. Load input stems (prefer cached context; fallback to disk when resuming)
     stems_map = context.audio_stems
     if not stems_map:
         stems_map = load_audio_stems(current_dir)
         if not stems_map:
-             # Fallback: Check S5 directory if S6 dir is empty (maybe copy didn't happen on resume?)
-             # In standard pipeline, `run_stage` calls `_run_script(copy_script)` at the END of previous stage.
-             # If we paused, copy might have happened.
-             # Let's try loading from S6 dir. If empty, fail/warn.
-             pipeline_logger.info(f"[{stage_id}] No stems in memory or {current_dir}. Checking S5...")
-             s5_dir = context.temp_root / "S5_LEADVOX_DYNAMICS" # Assuming this is the predecessor
-             if s5_dir.exists():
-                 stems_map = load_audio_stems(s5_dir)
+            pipeline_logger.info(f"[{stage_id}] No stems in memory or {current_dir}. Checking S5...")
+            s5_dir = context.temp_root / "S5_LEADVOX_DYNAMICS"  # Predecessor output
+            if s5_dir.exists():
+                stems_map = load_audio_stems(s5_dir)
 
-             if not stems_map:
-                  pipeline_logger.info(f"[{stage_id}] No input stems found.")
-                  return False
+            if not stems_map:
+                pipeline_logger.info(f"[{stage_id}] No input stems found.")
+                return False
 
     # 4. Apply corrections
     corr_map = {c['name']: c for c in corrections}
