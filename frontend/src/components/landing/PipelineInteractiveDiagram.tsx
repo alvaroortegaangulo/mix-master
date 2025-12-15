@@ -187,7 +187,7 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
               </p>
 
               <div className="bg-slate-800/50 rounded-xl p-5 border border-slate-700">
-                <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">
+                <h3 className="text-xs font-bold uppercase tracking-widest text-slate-300 mb-3">
                   Key Tools
                 </h3>
                 <div className="flex flex-wrap gap-2">

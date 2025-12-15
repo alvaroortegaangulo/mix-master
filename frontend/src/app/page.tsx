@@ -2,11 +2,23 @@
 
 import { Suspense, useState, useEffect } from "react";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import { LandingPage } from "../components/landing/LandingPage";
-import { MixTool } from "../components/MixTool";
 import { AuthModal } from "../components/AuthModal";
 import { useAuth } from "../context/AuthContext";
+
+const MixTool = dynamic(
+  () => import("../components/MixTool").then((mod) => mod.MixTool),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex min-h-[60vh] items-center justify-center text-slate-300">
+        Loading studio...
+      </div>
+    ),
+  }
+);
 
 const NAV_LINKS = [
   { label: "Examples", href: "/examples" },
