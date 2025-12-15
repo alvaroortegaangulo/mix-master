@@ -316,15 +316,48 @@ def run_pipeline_for_job(
     # para "arrancar" la cadena.
     if contract_ids and contract_ids[0] != "S0_SESSION_FORMAT":
         first_stage = contract_ids[0]
-        logger.info(
-            "[pipeline] Stage inicial es %s (no S0). Copiando S0_SESSION_FORMAT -> %s...",
-            first_stage,
-            first_stage,
+        first_stage_dir = get_temp_dir(first_stage, create=True)
+
+        # Si ya hay stems en la carpeta destino (p.ej. del pipeline previo),
+        # no los sobreescribimos para poder reanudar donde se quedo el Mix Tool.
+        has_existing_audio = any(
+            p.suffix.lower() == ".wav" and p.name.lower() != "full_song.wav"
+            for p in first_stage_dir.glob("*")
         )
-        subprocess.run(
-            [sys.executable, str(copy_script), "S0_SESSION_FORMAT", first_stage],
-            check=False,
-        )
+
+        if has_existing_audio:
+            logger.info(
+                "[pipeline] Detectados stems previos en %s; se omite copia inicial.",
+                first_stage_dir,
+            )
+        else:
+            # Intentamos arrancar desde el contrato anterior si existe salida
+            source_stage = "S0_SESSION_FORMAT"
+            try:
+                idx_first = all_contract_ids.index(first_stage)
+                if idx_first > 0:
+                    prev_stage = all_contract_ids[idx_first - 1]
+                    prev_dir = get_temp_dir(prev_stage, create=False)
+                    prev_has_audio = prev_dir.exists() and any(
+                        p.suffix.lower() == ".wav" and p.name.lower() != "full_song.wav"
+                        for p in prev_dir.glob("*")
+                    )
+                    if prev_has_audio:
+                        source_stage = prev_stage
+            except ValueError:
+                # first_stage no esta en contracts; usamos fallback S0
+                pass
+
+            logger.info(
+                "[pipeline] Stage inicial es %s (no S0). Copiando %s -> %s...",
+                first_stage,
+                source_stage,
+                first_stage,
+            )
+            subprocess.run(
+                [sys.executable, str(copy_script), source_stage, first_stage],
+                check=False,
+            )
 
     # Callback inicial de progreso (antes de cualquier stage)
     if progress_cb is not None:
@@ -352,28 +385,40 @@ def run_pipeline_for_job(
         # So we check if current contract_id is S6_MANUAL_CORRECTION.
 
         if contract_id == "S6_MANUAL_CORRECTION":
-             logger.info("[pipeline] Pausing pipeline for Manual Correction (S6)...")
+            # Solo pausamos si AUN no hay correcciones guardadas. Si el usuario ya
+            # enviAІ ajustes desde Studio, debemos continuar con S6 y el resto del pipeline.
+            corrections_path = temp_root / "work" / "manual_corrections.json"
+            has_corrections = False
+            try:
+                if corrections_path.exists():
+                    raw = json.loads(corrections_path.read_text(encoding="utf-8"))
+                    if isinstance(raw, dict) and isinstance(raw.get("corrections"), list):
+                        has_corrections = True
+            except Exception:
+                logger.warning(
+                    "[pipeline] No se pudo leer manual_corrections.json en %s",
+                    corrections_path,
+                )
 
-             # Set status to waiting_for_correction
-             if progress_cb:
-                 progress_cb(
-                     idx,
-                     total_stages,
-                     "waiting_for_correction",
-                     "Waiting for manual correction in Studio..."
-                 )
+            if not has_corrections:
+                logger.info("[pipeline] Pausing pipeline for Manual Correction (S6)...")
 
-             # Update job status in persistent store so frontend picks it up even if progress_cb is async
-             # Note: run_pipeline_for_job is usually called from tasks.py which handles status updates via callbacks.
-             # But here we are deep in the loop.
-             # We need to signal the caller (Task) that we are pausing, NOT finishing.
-             # But run_pipeline_for_job returns None.
+                # Set status to waiting_for_correction
+                if progress_cb:
+                    progress_cb(
+                        idx,
+                        total_stages,
+                        "waiting_for_correction",
+                        "Waiting for manual correction in Studio..."
+                    )
 
-             # HACK: We update status here directly using a helper if possible, or assume progress_cb handles it.
-             # The progress_cb provided by tasks.py updates Redis/File status.
-
-             # Stop execution of remaining stages
-             return
+                # Detenemos ejecuciИn del resto de stages hasta que lleguen correcciones.
+                return
+            else:
+                logger.info(
+                    "[pipeline] Correcciones manuales encontradas (%s); continuando con S6 y mastering.",
+                    corrections_path,
+                )
 
         logger.info(
             "[pipeline] Ejecutando contrato %s (%d/%d)",
