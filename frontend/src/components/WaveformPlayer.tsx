@@ -35,6 +35,7 @@ export const WaveformPlayer: React.FC<WaveformPlayerProps> = ({
   const [peaks, setPeaks] = useState<PeakArray>([]);
   const [isLoadingPeaks, setIsLoadingPeaks] = useState(false);
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
+  const [isDownloading, setIsDownloading] = useState(false);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -302,8 +303,8 @@ export const WaveformPlayer: React.FC<WaveformPlayerProps> = ({
     setCurrentTime(newTime);
   };
 
-  const handleDownload = () => {
-    if (!src) return;
+  const handleDownload = async () => {
+    if (!src || isDownloading) return;
 
     // Track download
     gaEvent("download_result", {
@@ -311,12 +312,35 @@ export const WaveformPlayer: React.FC<WaveformPlayerProps> = ({
       url: src,
     });
 
-    const a = document.createElement("a");
-    a.href = src;
-    a.download = downloadFileName || "mix.wav";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    setIsDownloading(true);
+    try {
+      const response = await fetch(src);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+
+      const a = document.createElement("a");
+      a.style.display = "none";
+      a.href = url;
+      a.download = downloadFileName || "mix.wav";
+      document.body.appendChild(a);
+      a.click();
+
+      // Cleanup
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error("Download failed:", error);
+      // Fallback: intentar navegación directa si falla el fetch (ej. CORS estricto)
+      const a = document.createElement("a");
+      a.href = src;
+      a.download = downloadFileName || "mix.wav";
+      a.target = "_blank";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   return (
@@ -333,7 +357,7 @@ export const WaveformPlayer: React.FC<WaveformPlayerProps> = ({
       <button
         type="button"
         onClick={togglePlay}
-        className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-400 text-slate-950 shadow hover:bg-emerald-300 transition"
+        className="flex h-9 w-9 items-center justify-center rounded-full bg-amber-500 text-slate-950 shadow hover:bg-amber-400 transition"
       >
         {isPlaying ? (
           <span className="h-3 w-3 flex items-center justify-between">
@@ -366,12 +390,17 @@ export const WaveformPlayer: React.FC<WaveformPlayerProps> = ({
       <button
         type="button"
         onClick={handleDownload}
-        className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-600 bg-slate-900 text-slate-100 hover:bg-slate-800 transition"
+        disabled={isDownloading}
+        className={`flex h-9 w-9 items-center justify-center rounded-full bg-amber-500 text-slate-950 shadow hover:bg-amber-400 transition disabled:opacity-50 ${isDownloading ? "cursor-wait" : ""}`}
         title="Download"
       >
-        <span className="block h-3 w-[2px] bg-slate-100 relative">
-          <span className="absolute bottom-[-4px] left-1/2 h-0 w-0 -translate-x-1/2 border-x-4 border-t-4 border-x-transparent border-t-slate-100" />
-        </span>
+        {isDownloading ? (
+           <span className="block h-3 w-3 animate-spin rounded-full border-2 border-slate-950 border-t-transparent"></span>
+        ) : (
+          <span className="block h-3 w-[2px] bg-slate-950 relative">
+            <span className="absolute bottom-[-4px] left-1/2 h-0 w-0 -translate-x-1/2 border-x-4 border-t-4 border-x-transparent border-t-slate-950" />
+          </span>
+        )}
       </button>
     </div>
   );
