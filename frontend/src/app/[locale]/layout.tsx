@@ -9,9 +9,13 @@ import { AuthProvider } from "../../context/AuthContext";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import { GlobalLayoutClient } from "../../components/GlobalLayoutClient";
 import { NextIntlClientProvider } from 'next-intl';
-import { getMessages, getTranslations } from 'next-intl/server';
+import { getMessages, getTranslations, setRequestLocale } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { routing } from '../../i18n/routing';
+
+export function generateStaticParams() {
+  return routing.locales.map((locale) => ({locale}));
+}
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -162,7 +166,10 @@ export default async function LocaleLayout({
 }) {
   const { locale } = await params;
 
-  if (!routing.locales.includes(locale as any)) {
+  // Enable static rendering
+  if (routing.locales.includes(locale as any)) {
+    setRequestLocale(locale);
+  } else {
     notFound();
   }
 
