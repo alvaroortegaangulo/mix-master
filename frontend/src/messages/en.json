@@ -806,5 +806,72 @@
         "content": "If you have any questions about this cookie policy, please contact us at: <br /><span class='text-teal-400'>privacy@audioalchemy.com</span>"
       }
     }
+  },
+  "UploadDropzone": {
+    "uploadSong": "Upload Your Song",
+    "uploadStems": "Upload Your Stems",
+    "songModeDesc": "Master a single stereo bounce.",
+    "stemsModeDesc": "Upload individual tracks for a full AI mix.",
+    "dragDropSong": "Drag & drop your song here, or click to select a file",
+    "dragDropStems": "Drag & drop stems here, or click to select files",
+    "supportedFormats": "Supported formats: WAV",
+    "filesSelected": "{count} audio file{count, plural, =1 {} other {s}} selected"
+  },
+  "PipelinePhases": {
+    "inputMetadata": {
+      "title": "Input & Metadata",
+      "body": "We prepare your session by organizing all uploaded files and normalizing formats, sample rates and basic metadata so the rest of the pipeline can work consistently."
+    },
+    "technicalPreparation": {
+      "title": "Technical Preparation",
+      "body": "We fix basic technical issues on each stem: DC offset, working loudness and initial headroom to ensure a clean, reliable starting point for mixing."
+    },
+    "phasePolarityAlignment": {
+      "title": "Phase & Polarity Alignment",
+      "body": "We analyze multi-mic groups (like drums) to align phase and correct polarity, avoiding cancellations and restoring impact and low-end clarity."
+    },
+    "staticMixRouting": {
+      "title": "Static Mix & Routing",
+      "body": "We build a static balance and bus routing, placing faders and pan positions so that all elements are heard clearly before any heavy processing."
+    },
+    "spectralCleanup": {
+      "title": "Spectral Cleanup",
+      "body": "We clean each stem using high-pass filters and gentle notch filters to remove rumble and harsh resonances, freeing up space in the mix."
+    },
+    "dynamicsLevelAutomation": {
+      "title": "Dynamics & Level Automation",
+      "body": "We control dynamics using compression, limiting and level automation, keeping performances expressive but preventing peaks from jumping out of the mix."
+    },
+    "spaceDepthByBuses": {
+      "title": "Space & Depth by Buses",
+      "body": "We send instruments to dedicated reverb and ambience buses, placing them closer or farther in the soundstage to create a sense of depth and space."
+    },
+    "multibandEqTonalBalance": {
+      "title": "Multiband EQ & Tonal Balance",
+      "body": "We fine-tune the overall spectral balance so the mix feels natural and translates well across different playback systems."
+    },
+    "mixBusColor": {
+      "title": "Mix Bus Color",
+      "body": "We add gentle saturation and bus processing to glue the mix together, enhancing warmth, punch and perceived loudness without destroying dynamics."
+    },
+    "mastering": {
+      "title": "Mastering",
+      "body": "We bring the track up to its target loudness, adjust final EQ, stereo width and limiting so it is ready for release on streaming platforms."
+    },
+    "masterStereoQc": {
+      "title": "Master Stereo QC",
+      "body": "We run final quality checks (true peak, loudness, stereo image and balance) to ensure the master meets the technical targets."
+    },
+    "reporting": {
+      "title": "Reporting",
+      "body": "We generate a technical report and export the final master so you can review what was done at each stage of the pipeline."
+    }
+  },
+  "MixPipelinePanel": {
+    "title": "Pipeline",
+    "description": "Explore how the mix evolves at each phase by listening to the cumulative result after every major processing block.",
+    "loading": "Loading pipeline definition...",
+    "error": "Error loading the pipeline definition.",
+    "activeContract": "Active contract:"
   }
 }

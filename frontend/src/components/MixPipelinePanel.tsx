@@ -1,10 +1,10 @@
-// frontend/src/components/MixPipelinePanel.tsx
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
 import type { MixResult } from "../lib/mixApi";
 import { getBackendBaseUrl } from "../lib/mixApi";
 import { WaveformPlayer } from "./WaveformPlayer";
+import { useTranslations } from "next-intl";
 
 type Props = {
   result: MixResult;
@@ -25,62 +25,20 @@ export type PipelineStage = {
   previewMixRelPath: string | null;
 };
 
-/**
- * Descriptive info per phase (stage group).
- * Keyed by backend "description" (stage group name from contracts.json).
- */
-const PIPELINE_PHASE_INFO: Record<
-  string,
-  { title: string; body: string }
-> = {
-  "Input & Metadata": {
-    title: "Input & Metadata",
-    body: "We prepare your session by organizing all uploaded files and normalizing formats, sample rates and basic metadata so the rest of the pipeline can work consistently.",
-  },
-  "Technical Preparation": {
-    title: "Technical Preparation",
-    body: "We fix basic technical issues on each stem: DC offset, working loudness and initial headroom to ensure a clean, reliable starting point for mixing.",
-  },
-  "Phase & Polarity Alignment": {
-    title: "Phase & Polarity Alignment",
-    body: "We analyze multi-mic groups (like drums) to align phase and correct polarity, avoiding cancellations and restoring impact and low-end clarity.",
-  },
-  "Static Mix & Routing": {
-    title: "Static Mix & Routing",
-    body: "We build a static balance and bus routing, placing faders and pan positions so that all elements are heard clearly before any heavy processing.",
-  },
-  "Spectral Cleanup": {
-    title: "Spectral Cleanup",
-    body: "We clean each stem using high-pass filters and gentle notch filters to remove rumble and harsh resonances, freeing up space in the mix.",
-  },
-  "Dynamics & Level Automation": {
-    title: "Dynamics & Level Automation",
-    body: "We control dynamics using compression, limiting and level automation, keeping performances expressive but preventing peaks from jumping out of the mix.",
-  },
-  "Space / Depth by Buses": {
-    title: "Space & Depth by Buses",
-    body: "We send instruments to dedicated reverb and ambience buses, placing them closer or farther in the soundstage to create a sense of depth and space.",
-  },
-  "Multiband EQ / Tonal Balance": {
-    title: "Multiband EQ & Tonal Balance",
-    body: "We fine-tune the overall spectral balance so the mix feels natural and translates well across different playback systems.",
-  },
-  "Mix Bus Color": {
-    title: "Mix Bus Color",
-    body: "We add gentle saturation and bus processing to glue the mix together, enhancing warmth, punch and perceived loudness without destroying dynamics.",
-  },
-  Mastering: {
-    title: "Mastering",
-    body: "We bring the track up to its target loudness, adjust final EQ, stereo width and limiting so it is ready for release on streaming platforms.",
-  },
-  "Master Stereo QC": {
-    title: "Master Stereo QC",
-    body: "We run final quality checks (true peak, loudness, stereo image and balance) to ensure the master meets the technical targets.",
-  },
-  Reporting: {
-    title: "Reporting",
-    body: "We generate a technical report and export the final master so you can review what was done at each stage of the pipeline.",
-  },
+// Map backend description strings to translation keys
+const PHASE_KEY_MAP: Record<string, string> = {
+  "Input & Metadata": "inputMetadata",
+  "Technical Preparation": "technicalPreparation",
+  "Phase & Polarity Alignment": "phasePolarityAlignment",
+  "Static Mix & Routing": "staticMixRouting",
+  "Spectral Cleanup": "spectralCleanup",
+  "Dynamics & Level Automation": "dynamicsLevelAutomation",
+  "Space / Depth by Buses": "spaceDepthByBuses",
+  "Multiband EQ / Tonal Balance": "multibandEqTonalBalance",
+  "Mix Bus Color": "mixBusColor",
+  "Mastering": "mastering",
+  "Master Stereo QC": "masterStereoQc",
+  "Reporting": "reporting"
 };
 
 export function MixPipelinePanel({
@@ -94,6 +52,9 @@ export function MixPipelinePanel({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeKey, setActiveKey] = useState<string>("");
+
+  const tPhases = useTranslations("PipelinePhases");
+  const tPanel = useTranslations("MixPipelinePanel");
 
   // Load pipeline definition from the backend
   useEffect(() => {
@@ -136,7 +97,7 @@ export function MixPipelinePanel({
       } catch (err: any) {
         if (err?.name === "AbortError") return;
         console.error("Error loading pipeline stages", err);
-        setError(err?.message ?? "Error loading the pipeline definition.");
+        setError(err?.message ?? tPanel("error"));
       } finally {
         setLoading(false);
       }
@@ -229,13 +190,21 @@ export function MixPipelinePanel({
   const phaseInfo = useMemo(() => {
     if (!activeStage) return null;
     const key = activeStage.description;
-    return (
-      PIPELINE_PHASE_INFO[key] ?? {
+    const mappedKey = PHASE_KEY_MAP[key];
+
+    if (mappedKey) {
+        return {
+            title: tPhases(`${mappedKey}.title`),
+            body: tPhases(`${mappedKey}.body`)
+        };
+    }
+
+    // Fallback if mapping fails or translation missing
+    return {
         title: activeStage.description || "Pipeline stage",
         body: "This stage applies incremental processing to refine the mix.",
-      }
-    );
-  }, [activeStage]);
+    };
+  }, [activeStage, tPhases]);
 
   return (
     <section className="mt-6 rounded-2xl border border-emerald-500/40 bg-emerald-500/10 p-4 text-emerald-50 shadow-inner shadow-emerald-500/20">
@@ -243,11 +212,10 @@ export function MixPipelinePanel({
         <summary className="flex cursor-pointer list-none items-center justify-between gap-2 md:flex-row md:items-center md:justify-between [&::-webkit-details-marker]:hidden">
           <div className="flex-1">
             <h3 className="text-sm font-semibold uppercase tracking-wide text-emerald-100">
-              Pipeline
+              {tPanel("title")}
             </h3>
             <p className="mt-1 text-xs text-emerald-200/90">
-              Explore how the mix evolves at each phase by listening to the
-              cumulative result after every major processing block.
+              {tPanel("description")}
             </p>
           </div>
           <span
@@ -260,7 +228,7 @@ export function MixPipelinePanel({
 
         {loading && !stages.length && (
           <p className="mt-3 text-xs text-emerald-200/80">
-            Loading pipeline definition...
+            {tPanel("loading")}
           </p>
         )}
 
@@ -308,7 +276,7 @@ export function MixPipelinePanel({
 
               {/* Info pequeña de contrato activo */}
               <p className="mt-2 text-[11px] text-emerald-300/80">
-                Active contract:{" "}
+                {tPanel("activeContract")}{" "}
                 <span className="font-mono text-emerald-200">
                   {activeStage.key}
                 </span>
