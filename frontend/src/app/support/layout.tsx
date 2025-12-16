@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Support | Piroola",
-  description: "Get help with Piroola. Browse docs, FAQ, or contact support for AI mixing and mastering questions.",
+  title: "Support - Piroola",
+  description: "Get help with Piroola's AI mixing and mastering service. Contact support or find answers in our documentation.",
   alternates: {
     canonical: "/support",
   },

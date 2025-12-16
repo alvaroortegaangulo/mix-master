@@ -59,6 +59,34 @@ const organizationJsonLd = {
   ],
 };
 
+const softwareApplicationJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  name: "Piroola",
+  applicationCategory: "MultimediaApplication",
+  operatingSystem: "Web",
+  offers: [
+    {
+      "@type": "Offer",
+      price: "0",
+      priceCurrency: "USD",
+      name: "Free",
+    },
+    {
+      "@type": "Offer",
+      price: "19",
+      priceCurrency: "USD",
+      name: "Plus Monthly",
+    },
+    {
+      "@type": "Offer",
+      price: "49",
+      priceCurrency: "USD",
+      name: "Pro Monthly",
+    },
+  ],
+};
+
 const websiteJsonLd = {
   "@context": "https://schema.org",
   "@type": "WebSite",
@@ -86,14 +114,25 @@ export const metadata: Metadata = {
   },
   description:
     "Transform your tracks with Piroola. Our AI-powered mixing and mastering service delivers professional studio-quality results from your multi-track stems in minutes.",
-  keywords: ["AI mixing", "AI mastering", "online audio mixing", "automated mixing service", "stem mastering", "Piroola"],
+  keywords: [
+    "AI mixing",
+    "AI mastering",
+    "online audio mixing",
+    "automated mixing service",
+    "stem mastering",
+    "Piroola",
+    "online vocal tuner",
+    "free stem mastering",
+    "audio post-production AI",
+    "best ai mixing service for logic pro users",
+    "automatic mixing",
+    "music mastering online",
+    "vocal mixing",
+  ],
   icons: {
     icon: "/logo.webp",
     shortcut: "/logo.webp",
     apple: "/logo.webp",
-  },
-  alternates: {
-    canonical: "/",
   },
   robots: {
     index: true,
@@ -135,26 +174,31 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <GoogleOAuthProvider clientId={googleClientId}>
-        <AuthProvider>
-        <script
-          id="ld-organization"
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
-        />
-        <script
-          id="ld-website"
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }}
-        />
-        <script
-          id="ld-site-navigation"
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(siteNavigationJsonLd) }}
-        />
+          <AuthProvider>
+            <script
+              id="ld-organization"
+              type="application/ld+json"
+              dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
+            />
+            <script
+              id="ld-software-app"
+              type="application/ld+json"
+              dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareApplicationJsonLd) }}
+            />
+            <script
+              id="ld-website"
+              type="application/ld+json"
+              dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }}
+            />
+            <script
+              id="ld-site-navigation"
+              type="application/ld+json"
+              dangerouslySetInnerHTML={{ __html: JSON.stringify(siteNavigationJsonLd) }}
+            />
 
-        <GlobalLayoutClient>
-          {children}
-        </GlobalLayoutClient>
+            <GlobalLayoutClient>
+              {children}
+            </GlobalLayoutClient>
 
         {/* Google Analytics: solo si hay ID */}
         {gaId && (
@@ -166,14 +210,14 @@ export default function RootLayout({
           </>
         )}
 
-        {/* CookieScript / Cookie CMP */}
-        <Script
-          id="cookie-script"
-          src="https://cdn.cookie-script.com/s/ae74c6bd8d098a84d8017855c6fba2af.js"
-          strategy="afterInteractive"
-          charSet="UTF-8"
-        />
-        </AuthProvider>
+            {/* CookieScript / Cookie CMP */}
+            <Script
+              id="cookie-script"
+              src="https://cdn.cookie-script.com/s/ae74c6bd8d098a84d8017855c6fba2af.js"
+              strategy="afterInteractive"
+              charSet="UTF-8"
+            />
+          </AuthProvider>
         </GoogleOAuthProvider>
       </body>
     </html>

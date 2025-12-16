@@ -4,6 +4,9 @@ import Script from "next/script";
 export const metadata = {
   title: "FAQ - Piroola",
   description: "Frequently Asked Questions about Piroola's AI Mixing & Mastering service.",
+  alternates: {
+    canonical: "/faq",
+  },
 };
 
 const FAQ_ITEMS = [
