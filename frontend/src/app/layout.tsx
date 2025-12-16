@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { GoogleAnalytics } from "@next/third-parties/google";
@@ -156,8 +157,14 @@ export default function RootLayout({
         </GlobalLayoutClient>
 
         {/* Google Analytics: solo si hay ID */}
-        {gaId && <GoogleAnalytics gaId={gaId} />}
-        {gaId && <GARouteTracker gaId={gaId} />}
+        {gaId && (
+          <>
+            <GoogleAnalytics gaId={gaId} />
+            <Suspense fallback={null}>
+              <GARouteTracker gaId={gaId} />
+            </Suspense>
+          </>
+        )}
 
         {/* CookieScript / Cookie CMP */}
         <Script
