@@ -43,7 +43,7 @@ def _detect_sample_rate(*directories: Path) -> int | None:
     return None
 
 
-def process(context: PipelineContext) -> bool:
+def process(context: PipelineContext, *args) -> bool:
     """
     Applies manual corrections (volume, pan, eq, comp, reverb, mute, solo) to stems.
     Uses pedalboard if available for high quality processing.

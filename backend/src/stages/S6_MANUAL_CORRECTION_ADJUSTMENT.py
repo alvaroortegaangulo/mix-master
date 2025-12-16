@@ -56,7 +56,7 @@ def _load_corrections(stage_dir: Path) -> List[Dict[str, Any]]:
         return []
 
 
-def process(context: PipelineContext) -> bool:
+def process(context: PipelineContext, *args) -> bool:
     """
     S6_MANUAL_CORRECTION_ADJUSTMENT:
     1. Lee changes.json del stage_dir actual.
