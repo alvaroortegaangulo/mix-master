@@ -1,6 +1,9 @@
+"use client";
+
 import { HeroSection } from "./HeroSection";
 import dynamic from "next/dynamic";
 import { useTranslations } from 'next-intl';
+import { useHomeView } from "../../context/HomeViewContext";
 
 const PipelineInteractiveDiagram = dynamic(() => import("./PipelineInteractiveDiagram").then(mod => mod.PipelineInteractiveDiagram), {
   loading: () => <div className="h-96 bg-slate-900" />
@@ -25,11 +28,12 @@ export function LandingPage() {
   // "Dark" = bg-slate-950
 
   const t = useTranslations('LandingPage');
+  const { handleTryIt } = useHomeView();
 
   return (
     <div className="flex-1 flex flex-col bg-slate-950">
       {/* 1. Hero: Dark (bg-slate-950) - Default */}
-      <HeroSection />
+      <HeroSection onTryIt={handleTryIt} />
 
       {/* 2. Features: Light (bg-slate-900) */}
       <FeaturesSection className="bg-slate-900" />
@@ -52,7 +56,7 @@ export function LandingPage() {
           {t('readyToElevate')}
         </h2>
         <button
-          onClick={onTryIt}
+          onClick={handleTryIt}
           className="bg-white text-slate-950 px-10 py-4 rounded-full text-lg font-bold hover:bg-teal-50 transition shadow-xl shadow-teal-500/10"
         >
           {t('startMixing')}
