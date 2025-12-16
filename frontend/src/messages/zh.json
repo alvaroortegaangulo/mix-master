@@ -1,0 +1,41 @@
+{
+  "Metadata": {
+    "title": "Piroola: 专业AI音频混音与母带处理在线服务",
+    "description": "使用Piroola改变您的曲目。我们的AI驱动混音和母带处理服务可在几分钟内从您的多轨分轨中提供专业录音室质量的结果。"
+  },
+  "Navigation": {
+    "examples": "示例",
+    "pricing": "定价",
+    "faq": "常见问题",
+    "howItWorks": "工作原理",
+    "support": "支持"
+  },
+  "LandingPage": {
+    "readyToElevate": "准备好提升你的音质了吗？",
+    "startMixing": "免费开始混音"
+  },
+  "HeroSection": {
+    "alertConstruction": "警报：网站正在建设中！",
+    "studioSound": "录音室音质。",
+    "perfectedByAI": "由AI完美呈现。",
+    "description": "在几分钟内将您的家庭录音（分轨）转化为专业的、适合Spotify发布的混音。Piroola处理技术工程，让您专注于音乐。",
+    "mixMyTracks": "混合我的轨道",
+    "listenToDemos": "试听演示",
+    "rating": "评分 4.9/5",
+    "tracksMastered": "+1万首曲目已母带处理"
+  },
+  "Pricing": {
+    "title": "定价",
+    "subtitle": "为您旅程的每个阶段提供定价计划",
+    "description": "选择适合您音频制作需求的完美计划。从演示到专业发布，我们都能满足您的需求。",
+    "monthlyBilling": "按月计费",
+    "yearlyBilling": "按年计费",
+    "save20": "节省约20%",
+    "month": "月",
+    "billedYearly": "按年计费",
+    "mostPopular": "最受欢迎",
+    "startForFree": "免费开始",
+    "getPlus": "获取Plus版",
+    "getPro": "获取Pro版"
+  }
+}

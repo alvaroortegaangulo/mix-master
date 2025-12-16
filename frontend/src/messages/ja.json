@@ -1,0 +1,41 @@
+{
+  "Metadata": {
+    "title": "Piroola: プロフェッショナルなAIオーディオミキシング＆マスタリングオンライン",
+    "description": "Piroolaでトラックを変身させましょう。当社のAI搭載ミキシングおよびマスタリングサービスは、マルチトラックステムから数分でプロフェッショナルなスタジオ品質の結果を提供します。"
+  },
+  "Navigation": {
+    "examples": "例",
+    "pricing": "価格",
+    "faq": "よくある質問",
+    "howItWorks": "仕組み",
+    "support": "サポート"
+  },
+  "LandingPage": {
+    "readyToElevate": "サウンドを向上させる準備はできましたか？",
+    "startMixing": "無料でミキシングを開始"
+  },
+  "HeroSection": {
+    "alertConstruction": "警告：ウェブサイト構築中！",
+    "studioSound": "スタジオサウンド。",
+    "perfectedByAI": "AIによって完成。",
+    "description": "ホームレコーディング（ステム）を数分でプロフェッショナルなSpotify対応のミックスに変換します。Piroolaが技術的なエンジニアリングを担当するので、あなたは音楽に集中できます。",
+    "mixMyTracks": "トラックをミックス",
+    "listenToDemos": "デモを聴く",
+    "rating": "評価 4.9/5",
+    "tracksMastered": "+1万曲のマスタリング実績"
+  },
+  "Pricing": {
+    "title": "価格",
+    "subtitle": "あなたの旅のあらゆる段階のための価格プラン",
+    "description": "あなたのオーディオ制作のニーズに最適なプランを選択してください。デモからプロフェッショナルなリリースまで、私たちはあなたをカバーします。",
+    "monthlyBilling": "月額請求",
+    "yearlyBilling": "年額請求",
+    "save20": "約20％節約",
+    "month": "月",
+    "billedYearly": "年払い",
+    "mostPopular": "一番人気",
+    "startForFree": "無料で始める",
+    "getPlus": "Plusを入手",
+    "getPro": "Proを入手"
+  }
+}

@@ -1,0 +1,41 @@
+{
+  "Metadata": {
+    "title": "Piroola: Professional AI Audio Mixing & Mastering Online",
+    "description": "Transform your tracks with Piroola. Our AI-powered mixing and mastering service delivers professional studio-quality results from your multi-track stems in minutes."
+  },
+  "Navigation": {
+    "examples": "Examples",
+    "pricing": "Pricing",
+    "faq": "FAQ",
+    "howItWorks": "How it works",
+    "support": "Support"
+  },
+  "LandingPage": {
+    "readyToElevate": "Ready to elevate your sound?",
+    "startMixing": "Start Mixing for Free"
+  },
+  "HeroSection": {
+    "alertConstruction": "ALERT: Website under construction!",
+    "studioSound": "Studio Sound.",
+    "perfectedByAI": "Perfected by AI.",
+    "description": "Transform your home recordings (stems) into professional, Spotify-ready mixes in minutes. Piroola handles the technical engineering so you can focus on the music.",
+    "mixMyTracks": "Mix my Tracks",
+    "listenToDemos": "Listen to Demos",
+    "rating": "4.9/5 Rating",
+    "tracksMastered": "+10k Tracks Mastered"
+  },
+  "Pricing": {
+    "title": "Pricing",
+    "subtitle": "Pricing plans for every stage of your journey",
+    "description": "Choose the perfect plan for your audio production needs. From demos to professional releases, we have you covered.",
+    "monthlyBilling": "Monthly billing",
+    "yearlyBilling": "Yearly billing",
+    "save20": "Save ~20%",
+    "month": "month",
+    "billedYearly": "Billed yearly",
+    "mostPopular": "Most Popular",
+    "startForFree": "Start for Free",
+    "getPlus": "Get Plus",
+    "getPro": "Get Pro"
+  }
+}

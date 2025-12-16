@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import { Link } from "../../../i18n/routing";
 import Script from "next/script";
 
 const fallbackSiteUrl = "https://music-mix-master.com";

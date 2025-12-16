@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
-import { HomeClient } from "../components/HomeClient";
-import { LandingPage } from "../components/landing/LandingPage";
+import { HomeClient } from "../../components/HomeClient";
 
 export const metadata: Metadata = {
   alternates: {

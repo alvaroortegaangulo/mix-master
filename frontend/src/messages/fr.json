@@ -1,0 +1,41 @@
+{
+  "Metadata": {
+    "title": "Piroola: Mixage et Mastering Audio IA Professionnel en Ligne",
+    "description": "Transformez vos pistes avec Piroola. Notre service de mixage et de mastering alimenté par l'IA offre des résultats de qualité studio professionnelle à partir de vos stems multipistes en quelques minutes."
+  },
+  "Navigation": {
+    "examples": "Exemples",
+    "pricing": "Tarifs",
+    "faq": "FAQ",
+    "howItWorks": "Comment ça marche",
+    "support": "Support"
+  },
+  "LandingPage": {
+    "readyToElevate": "Prêt à élever votre son ?",
+    "startMixing": "Commencez à mixer gratuitement"
+  },
+  "HeroSection": {
+    "alertConstruction": "ALERTE : Site web en construction !",
+    "studioSound": "Son Studio.",
+    "perfectedByAI": "Perfectionné par l'IA.",
+    "description": "Transformez vos enregistrements maison (stems) en mixages professionnels prêts pour Spotify en quelques minutes. Piroola s'occupe de l'ingénierie technique pour que vous puissiez vous concentrer sur la musique.",
+    "mixMyTracks": "Mixer mes pistes",
+    "listenToDemos": "Écouter des démos",
+    "rating": "Note 4.9/5",
+    "tracksMastered": "+10k Pistes Masterisées"
+  },
+  "Pricing": {
+    "title": "Tarifs",
+    "subtitle": "Des plans tarifaires pour chaque étape de votre parcours",
+    "description": "Choisissez le plan parfait pour vos besoins de production audio. Des démos aux sorties professionnelles, nous avons ce qu'il vous faut.",
+    "monthlyBilling": "Facturation mensuelle",
+    "yearlyBilling": "Facturation annuelle",
+    "save20": "Économisez ~20%",
+    "month": "mois",
+    "billedYearly": "Facturé annuellement",
+    "mostPopular": "Le plus populaire",
+    "startForFree": "Commencez gratuitement",
+    "getPlus": "Obtenir Plus",
+    "getPro": "Obtenir Pro"
+  }
+}

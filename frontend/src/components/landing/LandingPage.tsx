@@ -1,6 +1,6 @@
 import { HeroSection } from "./HeroSection";
 import dynamic from "next/dynamic";
-import { BottomTryItButton } from "./LandingButtons";
+import { useTranslations } from 'next-intl';
 
 const PipelineInteractiveDiagram = dynamic(() => import("./PipelineInteractiveDiagram").then(mod => mod.PipelineInteractiveDiagram), {
   loading: () => <div className="h-96 bg-slate-900" />
@@ -23,6 +23,8 @@ export function LandingPage() {
   // Alternating pattern: Dark (Hero) -> Light -> Dark -> Light -> Dark -> Light
   // "Light" in this dark theme context = bg-slate-900
   // "Dark" = bg-slate-950
+
+  const t = useTranslations('LandingPage');
 
   return (
     <div className="flex-1 flex flex-col bg-slate-950">
@@ -47,9 +49,14 @@ export function LandingPage() {
       {/* Bottom CTA */}
       <section className="py-24 bg-gradient-to-t from-teal-900/20 to-slate-950 text-center px-4">
         <h2 className="text-3xl md:text-5xl font-bold text-white mb-8">
-          Ready to elevate your sound?
+          {t('readyToElevate')}
         </h2>
-        <BottomTryItButton />
+        <button
+          onClick={onTryIt}
+          className="bg-white text-slate-950 px-10 py-4 rounded-full text-lg font-bold hover:bg-teal-50 transition shadow-xl shadow-teal-500/10"
+        >
+          {t('startMixing')}
+        </button>
       </section>
 
       {/* Footer removed from here, now in GlobalLayout */}
