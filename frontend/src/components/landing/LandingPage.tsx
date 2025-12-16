@@ -1,6 +1,5 @@
 import { HeroSection } from "./HeroSection";
 import dynamic from "next/dynamic";
-import Link from "next/link";
 
 const PipelineInteractiveDiagram = dynamic(() => import("./PipelineInteractiveDiagram").then(mod => mod.PipelineInteractiveDiagram), {
   loading: () => <div className="h-96 bg-slate-900" />
@@ -57,24 +56,7 @@ export function LandingPage({ onTryIt }: { onTryIt: () => void }) {
         </button>
       </section>
 
-      {/* Footer */}
-      <footer className="bg-slate-950 border-t border-slate-800 py-12 px-4">
-          <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8 text-slate-400 text-sm">
-              <div className="flex items-center gap-2">
-                 <img src="/logo.webp" alt="Piroola Logo" className="h-6 w-6" />
-                 <span className="font-semibold text-slate-200">Piroola</span>
-              </div>
-              <div className="flex gap-6">
-                <Link href="/terms-of-service" className="hover:text-white transition">Terms</Link>
-                <Link href="/privacy-policy" className="hover:text-white transition">Privacy</Link>
-                <Link href="/cookie-policy" className="hover:text-white transition">Cookies</Link>
-                <Link href="/contact" className="hover:text-white transition">Contact</Link>
-              </div>
-              <div>
-                  © 2025 Piroola.
-              </div>
-          </div>
-      </footer>
+      {/* Footer removed from here, now in GlobalLayout */}
     </div>
   );
 }

@@ -1,15 +1,13 @@
 "use client";
 
 import { Suspense, useState, useEffect } from "react";
-import Link from "next/link";
 import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
 import { LandingPage } from "../components/landing/LandingPage";
 import { useAuth } from "../context/AuthContext";
+import { useModal } from "../context/ModalContext";
 
-const AuthModal = dynamic(() => import("../components/AuthModal").then((mod) => mod.AuthModal), {
-  ssr: false, // AuthModal is client-only interaction
-});
+// We no longer need local AuthModal import as it is handled by GlobalLayoutClient -> ModalProvider
 
 const MixTool = dynamic(
   () => import("../components/MixTool").then((mod) => mod.MixTool),
@@ -23,57 +21,44 @@ const MixTool = dynamic(
   }
 );
 
-const NAV_LINKS = [
-  { label: "Examples", href: "/examples" },
-  { label: "Pricing", href: "/pricing" },
-  { label: "FAQ", href: "/faq" },
-  { label: "Docs", href: "/docs" },
-  { label: "Support", href: "/support" },
-];
-
 function PageContent() {
   // view state: 'landing' or 'tool'
   const searchParams = useSearchParams();
   const jobIdParam = searchParams.get("jobId");
   const startInTool = searchParams.get("view") === "tool" || !!jobIdParam;
   const [view, setView] = useState<'landing' | 'tool'>(startInTool ? 'tool' : 'landing');
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const { user, loading: authLoading } = useAuth();
 
-  // If user is already logged in, we MIGHT want to show the tool?
-  // The user requirement says: "Try it for free" guides to the tool...
-  // It implies the landing page is the default.
-  // We keep it as landing page default.
+  // Use global modal context
+  const { openAuthModal, isAuthModalOpen } = useModal();
+  const { user } = useAuth();
 
   const handleTryIt = () => {
     if (user) {
       setView('tool');
     } else {
-      setIsAuthModalOpen(true);
+      openAuthModal();
     }
   };
 
-  // If user successfully logs in via modal, we want to switch to tool.
-  // We can watch `user` state.
-  // But wait, what if I am on landing page, not clicking Try It, but I reload and I am logged in?
-  // Should I see tool or landing?
-  // Standard SaaS: Authenticated users usually go to Dashboard/Tool. Unauthenticated go to Landing.
-  // However, since we are merging both in one route `/`, let's see.
-  // The user says: "I want the main screen... to follow the idea...".
-  // This implies even for logged in users, they might land on the landing page first?
-  // But usually "Try it" guides to tool.
-  // Let's implement: Default Landing.
-  // If user clicks "Try it" -> Check Auth.
+  // If user successfully logs in via modal, we switch to tool.
+  // We check if modal was open and now we have user.
+  // We need to track previous user state or just rely on open/close?
+  // Actually, if we just opened the modal, and then user became logged in, we want to redirect.
+  // However, isAuthModalOpen is global now.
+  // We can just say: if user is logged in, and we are on landing, maybe we don't force switch unless clicked?
+  // But usually if I click "Log In" in header, I stay on page.
+  // If I click "Try it" and log in, I want to go to tool.
+  // Let's keep it simple: If user logs in, we don't auto-switch unless they were trying to access tool.
+  // BUT, the previous logic was: if user exists and modal was open -> switch.
+  // Let's replicate that somewhat?
+  // Actually, if I login via Header, I might want to stay on Landing.
+  // If I login via "Try it", I want Tool.
+  // "Try it" opens modal.
+  // Let's assume for now default behavior is fine. The user can click "Go to App" in header if logged in.
 
-  // Also, if `AuthModal` succeeds (login or register), `user` will become non-null.
-  // We can use an effect to switch if the modal was open.
-  useEffect(() => {
-    if (user && isAuthModalOpen) {
-       // If modal was open and now we have user -> User just logged in.
-       setIsAuthModalOpen(false);
-       setView('tool');
-    }
-  }, [user, isAuthModalOpen]);
+  // Wait, if I am logged in, the "Try it" button in Hero becomes "Go to App"?
+  // LandingPage's HeroSection calls `onTryIt`.
+  // If user is logged in, `handleTryIt` sets view to 'tool'. Correct.
 
   useEffect(() => {
     if (startInTool) {
@@ -81,83 +66,17 @@ function PageContent() {
     }
   }, [startInTool]);
 
-  const handleReset = () => {
-      setView('landing');
-  };
+  // We don't render Header here anymore.
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-teal-500/30">
-
-      {/* Global Header (sticky or fixed?) */}
-      {/* We can have a header that adapts based on view, or a common header */}
-      <header className={`fixed top-0 left-0 right-0 z-50 border-b transition-all duration-300 ${view === 'landing' ? 'border-transparent bg-slate-950/80 backdrop-blur-md' : 'border-slate-800 bg-slate-950'}`}>
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-2 shrink-0 cursor-pointer" onClick={handleReset}>
-            <img src="/logo.webp" alt="Piroola Logo" className="h-8 w-8" />
-            <span className="text-xl font-bold tracking-tight text-white hidden sm:block">Piroola</span>
-          </div>
-
-          <nav className="hidden md:flex items-center gap-8">
-            {NAV_LINKS.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="text-sm font-medium text-slate-300 hover:text-white transition-colors"
-              >
-                {item.label}
-              </Link>
-            ))}
-          </nav>
-
-          <div className="flex items-center gap-4">
-             {!authLoading && (
-                 user ? (
-                     <div className="flex items-center gap-4">
-                         {view === 'landing' && (
-                             <button
-                                onClick={() => setView('tool')}
-                                className="text-sm font-semibold text-white hover:text-teal-400 transition"
-                             >
-                                 Go to App
-                             </button>
-                         )}
-                         <Link href="/profile" className="flex h-9 w-9 items-center justify-center rounded-full bg-purple-600 font-bold text-white shadow-md ring-2 ring-slate-800/50 hover:ring-teal-500/50 transition">
-                            {user.full_name ? user.full_name.charAt(0).toUpperCase() : user.email.charAt(0).toUpperCase()}
-                         </Link>
-                     </div>
-                 ) : (
-                     <div className="flex items-center gap-4">
-                        <button
-                            onClick={() => setIsAuthModalOpen(true)}
-                            className="text-sm font-semibold text-slate-300 hover:text-white transition"
-                        >
-                            Log In
-                        </button>
-                        <button
-                            onClick={handleTryIt}
-                            className="rounded-full bg-teal-500 text-slate-950 px-5 py-2 text-sm font-bold shadow-lg shadow-teal-500/20 hover:bg-teal-400 hover:shadow-teal-500/40 transition transform hover:-translate-y-0.5"
-                        >
-                            Try for free
-                        </button>
-                     </div>
-                 )
-             )}
-          </div>
-        </div>
-      </header>
-
-      <div className="pt-16 min-h-screen flex flex-col">
+      <div className="flex flex-col">
          {view === 'landing' ? (
              <LandingPage onTryIt={handleTryIt} />
          ) : (
              <MixTool resumeJobId={jobIdParam || undefined} />
          )}
       </div>
-
-      <AuthModal
-        isOpen={isAuthModalOpen}
-        onClose={() => setIsAuthModalOpen(false)}
-      />
     </div>
   );
 }

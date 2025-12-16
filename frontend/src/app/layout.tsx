@@ -5,6 +5,7 @@ import { GoogleAnalytics } from "@next/third-parties/google";
 import Script from "next/script";
 import { AuthProvider } from "../context/AuthContext";
 import { GoogleOAuthProvider } from "@react-oauth/google";
+import { GlobalLayoutClient } from "../components/GlobalLayoutClient";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -149,7 +150,9 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(siteNavigationJsonLd) }}
         />
 
-        {children}
+        <GlobalLayoutClient>
+          {children}
+        </GlobalLayoutClient>
 
         {/* Google Analytics: solo si hay ID */}
         {gaId && <GoogleAnalytics gaId={gaId} />}

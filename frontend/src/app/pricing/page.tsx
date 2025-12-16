@@ -105,30 +105,6 @@ export default function PricingPage() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-teal-500/30">
-      {/* Header / Nav */}
-      <header className="border-b border-slate-800/80">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-2">
-            <Link href="/" className="flex items-center gap-2 group">
-              <div className="h-8 w-8 rounded-full bg-teal-400/90 flex items-center justify-center text-slate-950 text-lg font-bold transition group-hover:bg-teal-300" aria-hidden="true">
-                A
-              </div>
-              <span className="text-xl font-bold tracking-tight text-slate-100 group-hover:text-teal-300 transition">
-                Piroola
-              </span>
-            </Link>
-          </div>
-          <nav className="flex gap-4">
-            <Link href="/" className="text-sm font-medium text-slate-300 hover:text-teal-300 transition">
-              Home
-            </Link>
-            <Link href="/pricing" className="text-sm font-medium text-teal-400">
-              Pricing
-            </Link>
-          </nav>
-        </div>
-      </header>
-
       <main className="py-24 sm:py-32">
         <div className="mx-auto max-w-7xl px-6 lg:px-8">
           <div className="mx-auto max-w-4xl text-center">
@@ -231,16 +207,6 @@ export default function PricingPage() {
           </div>
         </div>
       </main>
-
-      {/* Footer */}
-      <footer className="border-t border-slate-800/80 py-8 text-center text-xs text-slate-400">
-        <p>© 2025 Piroola. All Rights Reserved.</p>
-        <div className="mt-4 flex justify-center gap-6">
-          <Link href="/terms-of-service" className="hover:text-teal-400 transition">Terms of Service</Link>
-          <Link href="/privacy-policy" className="hover:text-teal-400 transition">Privacy Policy</Link>
-          <Link href="/cookie-policy" className="hover:text-teal-400 transition">Cookie Policy</Link>
-        </div>
-      </footer>
       <Script
         id="ld-breadcrumbs-pricing"
         type="application/ld+json"

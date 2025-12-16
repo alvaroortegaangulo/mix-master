@@ -79,24 +79,6 @@ export default function FAQPage() {
         }}
       />
 
-      {/* Header matching the main page style */}
-      <header className="border-b border-slate-800/80">
-        <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-4">
-          <div className="flex items-center gap-2">
-             <div className="h-7 w-7 rounded-full bg-teal-400/90 flex items-center justify-center text-slate-950 text-lg font-bold" aria-hidden="true">
-              A
-            </div>
-            <Link href="/" className="text-lg font-semibold tracking-tight text-slate-100 hover:text-teal-400 transition">
-              Piroola
-            </Link>
-          </div>
-          <nav className="hidden md:flex gap-6 text-sm">
-            <Link href="/" className="hover:text-teal-400 transition">Home</Link>
-            <Link href="/docs" className="hover:text-teal-400 transition">Docs</Link>
-          </nav>
-        </div>
-      </header>
-
       <main className="flex-1 px-4 py-12">
         <div className="mx-auto max-w-3xl">
           <h1 className="mb-8 text-4xl font-bold tracking-tight text-teal-400 text-center">
@@ -123,10 +105,6 @@ export default function FAQPage() {
           </div>
         </div>
       </main>
-
-      <footer className="border-t border-slate-800/80 py-8 text-center text-sm text-slate-500">
-        <p>© 2025 Piroola. All Rights Reserved.</p>
-      </footer>
     </div>
   );
 }

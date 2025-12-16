@@ -42,24 +42,7 @@ const breadcrumbsJsonLd = {
 export default function DocsPage() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
-      {/* Header */}
-      <header className="border-b border-slate-800/80 sticky top-0 bg-slate-950/90 backdrop-blur z-20">
-        <div className="mx-auto flex h-16 max-w-7xl items-center px-4 justify-between">
-          <div className="flex items-center gap-2">
-            <Link href="/" className="flex items-center gap-2 no-underline text-inherit hover:opacity-80 transition">
-              <div className="h-7 w-7 rounded-full bg-teal-400/90 flex items-center justify-center text-slate-950 text-lg font-bold">
-                A
-              </div>
-              <span className="text-lg font-semibold tracking-tight">Piroola</span>
-            </Link>
-          </div>
-          <div className="flex items-center gap-4">
-            <Link href="/" className="text-sm font-medium text-teal-400 hover:text-teal-300">
-              ← Back to App
-            </Link>
-          </div>
-        </div>
-      </header>
+      {/* Header removed: using global header */}
 
       <div className="flex flex-1 mx-auto max-w-7xl w-full">
         {/* Sidebar Navigation */}
@@ -406,9 +389,7 @@ export default function DocsPage() {
         </main>
       </div>
 
-      <footer className="border-t border-slate-800/80 py-6 text-center text-xs text-slate-400 bg-slate-950">
-        <p>© 2025 Piroola. All Rights Reserved.</p>
-      </footer>
+      {/* Footer removed: using global footer */}
       <Script
         id="ld-breadcrumbs-docs"
         type="application/ld+json"
