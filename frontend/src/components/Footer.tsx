@@ -1,7 +1,10 @@
 import { Link } from "../i18n/routing";
 import Image from "next/image";
+import { useTranslations } from "next-intl";
 
 export function Footer() {
+  const t = useTranslations('Footer');
+
   return (
     <footer className="bg-slate-950 border-t border-slate-800 py-12 px-4 z-10 relative">
       <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8 text-slate-400 text-sm">
@@ -10,13 +13,13 @@ export function Footer() {
            <span className="font-semibold text-slate-200">Piroola</span>
         </div>
         <div className="flex gap-6">
-          <Link href="/terms-of-service" className="hover:text-white transition">Terms</Link>
-          <Link href="/privacy-policy" className="hover:text-white transition">Privacy</Link>
-          <Link href="/cookie-policy" className="hover:text-white transition">Cookies</Link>
-          <Link href="/support" className="hover:text-white transition">Contact</Link>
+          <Link href="/terms-of-service" className="hover:text-white transition">{t('terms')}</Link>
+          <Link href="/privacy-policy" className="hover:text-white transition">{t('privacy')}</Link>
+          <Link href="/cookie-policy" className="hover:text-white transition">{t('cookies')}</Link>
+          <Link href="/support" className="hover:text-white transition">{t('contact')}</Link>
         </div>
         <div>
-            © 2025 Piroola.
+            {t('copyright')}
         </div>
       </div>
     </footer>

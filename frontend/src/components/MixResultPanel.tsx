@@ -11,6 +11,7 @@ import {
 import { MixPipelinePanel } from "./MixPipelinePanel";
 import { WaveformPlayer } from "./WaveformPlayer";
 import { ReportViewer } from "./ReportViewer";
+import { useTranslations } from "next-intl";
 
 type Props = {
   result: MixResult;
@@ -29,6 +30,7 @@ export function MixResultPanel({
   const [report, setReport] = useState<any>(null);
   const [loadingReport, setLoadingReport] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false);
+  const t = useTranslations('MixTool.result');
 
   const { originalFullSongUrl, fullSongUrl, jobId } = result;
   const [signedOriginalUrl, setSignedOriginalUrl] = useState(originalFullSongUrl);
@@ -116,12 +118,12 @@ export function MixResultPanel({
       <div className="space-y-3">
         <div>
           <h2 className="text-sm font-semibold uppercase tracking-wide text-emerald-100">
-            {showOriginal ? "Original mix" : "AI mix & mastering (result)"}
+            {showOriginal ? t('originalMix') : t('aiMix')}
           </h2>
           <p className="mt-1 text-xs text-emerald-200/90">
             {showOriginal
-              ? "Original mix (before processing)."
-              : "AI mix & mastering (result). Listen to the final mix after processing."}
+              ? t('originalDesc')
+              : t('aiDesc')}
           </p>
         </div>
 
@@ -133,7 +135,7 @@ export function MixResultPanel({
             onClick={() => setShowOriginal((v) => !v)}
             className="inline-flex min-w-[200px] items-center justify-center rounded-full bg-emerald-400 px-6 py-2 text-sm font-semibold text-emerald-950 shadow-md shadow-emerald-900/40 transition hover:bg-emerald-300"
           >
-            {showOriginal ? "Back to Result" : "Listen to Original"}
+            {showOriginal ? t('backToResult') : t('listenOriginal')}
           </button>
 
           <button
@@ -142,7 +144,7 @@ export function MixResultPanel({
             className="inline-flex min-w-[200px] items-center justify-center rounded-full border border-emerald-500/50 bg-emerald-900/50 px-6 py-2 text-sm font-semibold text-emerald-100 shadow-md shadow-emerald-900/40 transition hover:bg-emerald-800 hover:text-white disabled:opacity-50"
             disabled={loadingReport}
           >
-            {loadingReport ? "Loading Report..." : "View Full Report"}
+            {loadingReport ? t('loadingReport') : t('viewReport')}
           </button>
         </div>
       </div>
@@ -160,7 +162,7 @@ export function MixResultPanel({
 
             {/* Modal Header */}
             <div className="flex items-center justify-between border-b border-emerald-500/20 bg-emerald-950/30 px-6 py-4">
-               <h3 className="text-xl font-bold text-emerald-100">Final Mix Report</h3>
+               <h3 className="text-xl font-bold text-emerald-100">{t('finalReport')}</h3>
                <button
                  onClick={() => setIsReportOpen(false)}
                  className="rounded-full bg-emerald-900/50 p-2 text-emerald-400 transition hover:bg-emerald-500 hover:text-emerald-950"
@@ -187,14 +189,14 @@ export function MixResultPanel({
 
                {!loadingReport && !report && (
                  <div className="py-10 text-center text-slate-500">
-                    Report data is not available.
+                    {t('unavailable')}
                     <div className="mt-3">
                       <button
                         type="button"
                         onClick={loadReport}
                         className="rounded-full border border-emerald-600 px-4 py-2 text-xs font-semibold text-emerald-100 hover:bg-emerald-800"
                       >
-                        Retry loading report
+                        {t('retry')}
                       </button>
                     </div>
                  </div>
@@ -207,7 +209,7 @@ export function MixResultPanel({
                   onClick={() => setIsReportOpen(false)}
                   className="rounded-lg bg-emerald-600 px-5 py-2 text-sm font-bold text-white shadow-lg transition hover:bg-emerald-500"
                >
-                  Close
+                  {t('close')}
                </button>
             </div>
 

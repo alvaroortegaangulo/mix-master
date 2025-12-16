@@ -1,6 +1,8 @@
 // frontend/src/components/StemsProfilePanel.tsx
 "use client";
 
+import { useTranslations } from "next-intl";
+
 type StemProfile = {
   id: string;
   fileName: string;
@@ -13,43 +15,44 @@ type Props = {
   onChangeProfile: (id: string, profile: string) => void;
 };
 
-const STEM_PROFILE_OPTIONS: { value: string; label: string }[] = [
-  { value: "auto", label: "Auto-detect (recommended)" },
-
-  { value: "Kick", label: "Kick (main kick drum)" },
-  { value: "Snare", label: "Snare (main snare)" },
-  { value: "Percussion", label: "Percussion (palmas, bongos, shakers…)" },
-
-  { value: "Bass_Electric", label: "Electric / synth bass" },
-
-  { value: "Acoustic_Guitar", label: "Acoustic guitar (rhythm)" },
-  { value: "Electric_Guitar_Rhythm", label: "Electric guitar (rhythm)" },
-
-  { value: "Keys_Piano", label: "Piano / keys" },
-  { value: "Synth_Pads", label: "Synth pads / textures" },
-
-  { value: "Lead_Vocal_Melodic", label: "Lead vocal (melodic)" },
-  { value: "Lead_Vocal_Rap", label: "Lead vocal (rap / spoken)" },
-  { value: "Backing_Vocals", label: "Backing vocals / doubles" },
-
-  { value: "FX_EarCandy", label: "FX / ear candy" },
-  { value: "Ambience_Atmos", label: "Ambience / atmos" },
-
-  { value: "Other", label: "Other / unclassified" },
-];
-
 export function StemsProfilePanel({ stems, onChangeProfile }: Props) {
+  const t = useTranslations('MixTool');
+
+  // We need to fetch options inside the component to use translations
+  const STEM_PROFILE_OPTIONS: { value: string; label: string }[] = [
+    { value: "auto", label: t('autoRecommended') },
+
+    { value: "Kick", label: t('profileOptions.Kick') },
+    { value: "Snare", label: t('profileOptions.Snare') },
+    { value: "Percussion", label: t('profileOptions.Percussion') },
+
+    { value: "Bass_Electric", label: t('profileOptions.Bass_Electric') },
+
+    { value: "Acoustic_Guitar", label: t('profileOptions.Acoustic_Guitar') },
+    { value: "Electric_Guitar_Rhythm", label: t('profileOptions.Electric_Guitar_Rhythm') },
+
+    { value: "Keys_Piano", label: t('profileOptions.Keys_Piano') },
+    { value: "Synth_Pads", label: t('profileOptions.Synth_Pads') },
+
+    { value: "Lead_Vocal_Melodic", label: t('profileOptions.Lead_Vocal_Melodic') },
+    { value: "Lead_Vocal_Rap", label: t('profileOptions.Lead_Vocal_Rap') },
+    { value: "Backing_Vocals", label: t('profileOptions.Backing_Vocals') },
+
+    { value: "FX_EarCandy", label: t('profileOptions.FX_EarCandy') },
+    { value: "Ambience_Atmos", label: t('profileOptions.Ambience_Atmos') },
+
+    { value: "Other", label: t('profileOptions.Other') },
+  ];
+
   if (!stems.length) return null;
 
   return (
     <aside className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 text-xs shadow-lg shadow-amber-500/20 text-amber-50">
       <h3 className="text-sm font-semibold uppercase tracking-wide text-amber-100">
-        Select stems profile
+        {t('stemsProfile')}
       </h3>
       <p className="mt-1 text-[11px] text-amber-200">
-        Label each stem with its function in the mix. 
-        Later we will use these profiles to route buses 
-        (drums, bass, guitars, vocals, FX, etc.).
+        {t('stemsProfileDesc')}
       </p>
 
       {/* SIN scroll interno: el alto se adapta a la lista */}

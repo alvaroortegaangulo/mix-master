@@ -17,6 +17,7 @@ import { UploadDropzone } from "./UploadDropzone";
 import { type SpaceBus } from "./SpaceDepthStylePanel";
 import { useAuth } from "../context/AuthContext";
 import { gaEvent } from "../lib/ga";
+import { useTranslations } from "next-intl";
 
 const siteName = "Piroola";
 const fallbackSiteUrl = "https://music-mix-master.com";
@@ -63,167 +64,12 @@ type StemProfile = {
 
 type SpaceDepthBus = SpaceBus;
 
-const SPACE_DEPTH_BUSES: SpaceDepthBus[] = [
-  {
-    key: "drums",
-    label: "Drums bus",
-    description: "Drum kit, programmed drums, loops, etc.",
-  },
-  {
-    key: "percussion",
-    label: "Percussion bus",
-    description: "Additional percussion, claps, shakers, etc.",
-  },
-  {
-    key: "bass",
-    label: "Bass bus",
-    description: "Electric bass, synth bass, sub-bass.",
-  },
-  {
-    key: "guitars",
-    label: "Guitars bus",
-    description: "Acoustic and electric guitars.",
-  },
-  {
-    key: "keys_synths",
-    label: "Keys / Synths bus",
-    description: "Pianos, Rhodes, pads, synthesizers.",
-  },
-  {
-    key: "lead_vocal",
-    label: "Lead vocal bus",
-    description: "Lead vocal.",
-  },
-  {
-    key: "backing_vocals",
-    label: "Backing vocals bus",
-    description: "Backing vocals, doubles, harmonies.",
-  },
-  {
-    key: "fx",
-    label: "FX / Ear candy bus",
-    description: "Risers, impacts, vocal chops, creative FX.",
-  },
-  {
-    key: "ambience",
-    label: "Ambience / Atmos bus",
-    description: "Ambiences, atmospheres, room mics, background FX.",
-  },
-  {
-    key: "other",
-    label: "Other bus",
-    description: "Any stem not classified in the previous categories.",
-  },
-];
-
 
 type StageUiInfo = {
   label: string;
   description: string;
 };
 
-const STAGE_UI_INFO: Record<string, StageUiInfo> = {
-  S0_SESSION_FORMAT: {
-    label: "SESSION FORMAT",
-    description:
-      "Session format normalization (samplerate, bit depth, headroom and bus routing).",
-  },
-  S1_STEM_DC_OFFSET: {
-    label: "STEM DC OFFSET",
-    description:
-      "DC offset detection and correction on each stem.",
-  },
-  S1_STEM_WORKING_LOUDNESS: {
-    label: "STEM WORKING LOUDNESS",
-    description:
-      "Per-stem working loudness normalization based on the detected instrument profile.",
-  },
-  S1_KEY_DETECTION: {
-    label: "GLOBAL KEY DETECTION",
-    description:
-      "Global key and scale detection for the song.",
-  },
-  S1_VOX_TUNING: {
-    label: "VOCAL TUNING",
-    description:
-      "Pitch-correction of vocal tracks using the detected key, within natural pitch and retune-speed limits.",
-  },
-  S1_MIXBUS_HEADROOM: {
-    label: "MIXBUS HEADROOM",
-    description:
-      "Global mixbus headroom adjustment (peak level and working LUFS).",
-  },
-  S2_GROUP_PHASE_DRUMS: {
-    label: "DRUM PHASE ALIGNMENT",
-    description:
-      "Phase and polarity alignment across the drum and percussion group.",
-  },
-  S3_MIXBUS_HEADROOM: {
-    label: "MIXBUS HEADROOM",
-    description:
-      "Global mixbus headroom adjustment (peak level and working LUFS).",
-  },
-  S3_LEADVOX_AUDIBILITY: {
-    label: "LEAD VOCAL AUDIBILITY",
-    description:
-      "Static level balancing of the lead vocal against the mix so it sits clearly on top without sounding detached.",
-  },
-  S4_STEM_HPF_LPF: {
-    label: "STEM HPF/LPF FILTERS",
-    description:
-      "Per-stem high-pass / low-pass filtering driven by the instrument profile.",
-  },
-  S4_STEM_RESONANCE_CONTROL: {
-    label: "STEM RESONANCE CONTROL",
-    description:
-      "Per-stem resonance control using narrow, limited cuts on resonant bands.",
-  },
-  S5_STEM_DYNAMICS_GENERIC: {
-    label: "STEM DYNAMICS",
-    description:
-      "Generic per-stem dynamics processing (compression/gating) to control dynamic range.",
-  },
-  S5_LEADVOX_DYNAMICS: {
-    label: "LEAD VOCAL DYNAMICS",
-    description:
-      "Lead vocal-focused dynamics processing (main compression and gentle level automation).",
-  },
-  S5_BUS_DYNAMICS_DRUMS: {
-    label: "DRUM BUS DYNAMICS",
-    description:
-      "Drum-bus compression to enhance punch and glue the drum kit together.",
-  },
-  S6_BUS_REVERB_STYLE: {
-    label: "BUS REVERB & SPACE",
-    description:
-      "Style-aware reverb and space assignment per bus family.",
-  },
-  S7_MIXBUS_TONAL_BALANCE: {
-    label: "MIXBUS TONAL BALANCE",
-    description:
-      "Broad-band tonal EQ on the mixbus to match the target tonal balance for the chosen style.",
-  },
-  S8_MIXBUS_COLOR_GENERIC: {
-    label: "MIXBUS COLOR & SATURATION",
-    description:
-      "Subtle mixbus coloration and saturation to add glue and harmonic density.",
-  },
-  S9_MASTER_GENERIC: {
-    label: "STEREO MASTERING",
-    description:
-      "Final stereo mastering (target loudness, ceiling and moderate M/S width adjustment).",
-  },
-  S10_MASTER_FINAL_LIMITS: {
-    label: "FINAL MASTER QC",
-    description:
-      "Final master quality-control pass over true-peak level, loudness (LUFS), L/R balance and stereo correlation with only micro-adjustments applied.",
-  },
-  S11_REPORT_GENERATION: {
-    label: "REPORT GENERATION",
-    description:
-      "Generation of the final process report, with the parameterization of all stages",
-  }
-};
 
 type MixToolProps = {
   resumeJobId?: string;
@@ -289,6 +135,8 @@ export function MixTool({ resumeJobId }: MixToolProps) {
   );
   const isSongMode = uploadMode === "song";
 
+  const t = useTranslations('MixTool');
+
   // UseAuth hook not used directly here for layout but context handles user state if needed for API calls implicitly if token is in storage.
   // Actually, we might need user info, but let's assume API handles it via token.
 
@@ -345,92 +193,151 @@ export function MixTool({ resumeJobId }: MixToolProps) {
     "OTHER",
   ];
 
-  const HUMAN_STAGE_TEXT: Record<
-    string,
-    { title: string; description: string }
-  > = {
+  // We construct this dynamically to use translations
+  const HUMAN_STAGE_TEXT: Record<string, { title: string; description: string }> = {
     S0_SESSION_FORMAT: {
-      title: "Session format & routing",
-      description: "Normalizes samplerate/bit depth and assigns logical buses to start clean.",
+      title: t('stage.S0_SESSION_FORMAT.title'),
+      description: t('stage.S0_SESSION_FORMAT.description'),
     },
     S1_STEM_DC_OFFSET: {
-      title: "DC offset check",
-      description: "Detects and fixes DC offsets on each stem.",
+      title: t('stage.S1_STEM_DC_OFFSET.title'),
+      description: t('stage.S1_STEM_DC_OFFSET.description'),
     },
     S1_STEM_WORKING_LOUDNESS: {
-      title: "Working loudness",
-      description: "Matches working level per stem based on its instrument profile.",
+      title: t('stage.S1_STEM_WORKING_LOUDNESS.title'),
+      description: t('stage.S1_STEM_WORKING_LOUDNESS.description'),
     },
     S1_KEY_DETECTION: {
-      title: "Key detection",
-      description: "Estimates the song's global key and scale.",
+      title: t('stage.S1_KEY_DETECTION.title'),
+      description: t('stage.S1_KEY_DETECTION.description'),
     },
     S1_VOX_TUNING: {
-      title: "Vocal tuning",
-      description: "Tunes the lead vocal while respecting the detected key.",
+      title: t('stage.S1_VOX_TUNING.title'),
+      description: t('stage.S1_VOX_TUNING.description'),
     },
     S1_MIXBUS_HEADROOM: {
-      title: "Mixbus headroom",
-      description: "Adjusts global headroom to leave space for processing.",
+      title: t('stage.S1_MIXBUS_HEADROOM.title'),
+      description: t('stage.S1_MIXBUS_HEADROOM.description'),
     },
     S2_GROUP_PHASE_DRUMS: {
-      title: "Phase alignment (drums)",
-      description: "Aligns phase/polarity across drums and percussion.",
+      title: t('stage.S2_GROUP_PHASE_DRUMS.title'),
+      description: t('stage.S2_GROUP_PHASE_DRUMS.description'),
     },
     S3_MIXBUS_HEADROOM: {
-      title: "Mixbus headroom",
-      description: "Adjusts global headroom to leave space for processing.",
+      title: t('stage.S3_MIXBUS_HEADROOM.title'),
+      description: t('stage.S3_MIXBUS_HEADROOM.description'),
     },
     S3_LEADVOX_AUDIBILITY: {
-      title: "Lead vocal audibility",
-      description: "Balances the lead vocal against the static mix.",
+      title: t('stage.S3_LEADVOX_AUDIBILITY.title'),
+      description: t('stage.S3_LEADVOX_AUDIBILITY.description'),
     },
     S4_STEM_HPF_LPF: {
-      title: "HPF/LPF per stem",
-      description: "Applies high/low-pass filters per stem based on instrument profile.",
+      title: t('stage.S4_STEM_HPF_LPF.title'),
+      description: t('stage.S4_STEM_HPF_LPF.description'),
     },
     S4_STEM_RESONANCE_CONTROL: {
-      title: "Resonance control",
-      description: "Detects and tames narrow resonances on each stem.",
+      title: t('stage.S4_STEM_RESONANCE_CONTROL.title'),
+      description: t('stage.S4_STEM_RESONANCE_CONTROL.description'),
     },
     S5_STEM_DYNAMICS_GENERIC: {
-      title: "Stem dynamics",
-      description: "Generic per-track dynamics control (compression/gate).",
+      title: t('stage.S5_STEM_DYNAMICS_GENERIC.title'),
+      description: t('stage.S5_STEM_DYNAMICS_GENERIC.description'),
     },
     S5_LEADVOX_DYNAMICS: {
-      title: "Lead vocal dynamics",
-      description: "Compression and dynamics control for the lead vocal.",
+      title: t('stage.S5_LEADVOX_DYNAMICS.title'),
+      description: t('stage.S5_LEADVOX_DYNAMICS.description'),
     },
     S5_BUS_DYNAMICS_DRUMS: {
-      title: "Drum bus dynamics",
-      description: "Bus compression on drums for punch and glue.",
+      title: t('stage.S5_BUS_DYNAMICS_DRUMS.title'),
+      description: t('stage.S5_BUS_DYNAMICS_DRUMS.description'),
     },
     S6_MANUAL_CORRECTION: {
-      title: "Manual Correction",
-      description: "Manual adjustments in Piroola Studio.",
+      title: t('stage.S6_MANUAL_CORRECTION.title'),
+      description: t('stage.S6_MANUAL_CORRECTION.description'),
     },
     S7_MIXBUS_TONAL_BALANCE: {
-      title: "Mixbus tonal balance",
-      description: "Broad EQ to match the tonal balance to the target style.",
+      title: t('stage.S7_MIXBUS_TONAL_BALANCE.title'),
+      description: t('stage.S7_MIXBUS_TONAL_BALANCE.description'),
     },
     S8_MIXBUS_COLOR_GENERIC: {
-      title: "Mixbus color",
-      description: "Gentle saturation/color on the mixbus for cohesion.",
+      title: t('stage.S8_MIXBUS_COLOR_GENERIC.title'),
+      description: t('stage.S8_MIXBUS_COLOR_GENERIC.description'),
     },
     S9_MASTER_GENERIC: {
-      title: "Master prep",
-      description: "Pre-master adjustment (level and balance) before final QC.",
+      title: t('stage.S9_MASTER_GENERIC.title'),
+      description: t('stage.S9_MASTER_GENERIC.description'),
     },
     S10_MASTER_FINAL_LIMITS: {
-      title: "Master final QC",
-      description: "Final check of TP/LUFS/correlation with micro-adjustments.",
+      title: t('stage.S10_MASTER_FINAL_LIMITS.title'),
+      description: t('stage.S10_MASTER_FINAL_LIMITS.description'),
     },
     S11_REPORT_GENERATION: {
-      title: "REPORT GENERATION",
-      description: "Generation of the final process report, with the parameterization of all stages",
-  }
+      title: t('stage.S11_REPORT_GENERATION.title'),
+      description: t('stage.S11_REPORT_GENERATION.description'),
+    }
   };
 
+  const STAGE_UI_INFO: Record<string, StageUiInfo> = {
+    // We map keys to the translated Human Stage Text
+    // This is a bit redundant but keeps structure if backend returns raw keys
+    ...Object.entries(HUMAN_STAGE_TEXT).reduce((acc, [key, val]) => {
+        acc[key] = { label: val.title.toUpperCase(), description: val.description };
+        return acc;
+    }, {} as Record<string, StageUiInfo>)
+  };
+
+  const SPACE_DEPTH_BUSES: SpaceDepthBus[] = [
+    {
+      key: "drums",
+      label: t('spaceDepthBuses.drums.label'),
+      description: t('spaceDepthBuses.drums.description'),
+    },
+    {
+      key: "percussion",
+      label: t('spaceDepthBuses.percussion.label'),
+      description: t('spaceDepthBuses.percussion.description'),
+    },
+    {
+      key: "bass",
+      label: t('spaceDepthBuses.bass.label'),
+      description: t('spaceDepthBuses.bass.description'),
+    },
+    {
+      key: "guitars",
+      label: t('spaceDepthBuses.guitars.label'),
+      description: t('spaceDepthBuses.guitars.description'),
+    },
+    {
+      key: "keys_synths",
+      label: t('spaceDepthBuses.keys_synths.label'),
+      description: t('spaceDepthBuses.keys_synths.description'),
+    },
+    {
+      key: "lead_vocal",
+      label: t('spaceDepthBuses.lead_vocal.label'),
+      description: t('spaceDepthBuses.lead_vocal.description'),
+    },
+    {
+      key: "backing_vocals",
+      label: t('spaceDepthBuses.backing_vocals.label'),
+      description: t('spaceDepthBuses.backing_vocals.description'),
+    },
+    {
+      key: "fx",
+      label: t('spaceDepthBuses.fx.label'),
+      description: t('spaceDepthBuses.fx.description'),
+    },
+    {
+      key: "ambience",
+      label: t('spaceDepthBuses.ambience.label'),
+      description: t('spaceDepthBuses.ambience.description'),
+    },
+    {
+      key: "other",
+      label: t('spaceDepthBuses.other.label'),
+      description: t('spaceDepthBuses.other.description'),
+    },
+  ];
 
 useEffect(() => {
   // No limpiar si estamos reanudando un job, para no borrar correcciones guardadas
@@ -610,7 +517,7 @@ useEffect(() => {
 
     if (isSongMode) {
       if (selected.length !== 1) {
-        setError("Song mode requires exactly one WAV file.");
+        setError(t('songModeWarning'));
         return;
       }
 
@@ -622,7 +529,7 @@ useEffect(() => {
         file.type === "audio/x-wav";
 
       if (!isWav) {
-        setError("Song mode requires exactly one WAV file.");
+        setError(t('songModeWarning'));
         return;
       }
 
@@ -632,7 +539,7 @@ useEffect(() => {
 
     if (selected.length === 1) {
       setSelectionWarning(
-        "You have selected only one stem. If you want to master a song, select Song (Mastering).",
+        t('selectionWarning')
       );
     }
 
@@ -766,7 +673,7 @@ useEffect(() => {
 
           // En cola: texto genérico
           if (jobStatus.status === "queued" || totalSteps === 0) {
-            return `[${percent}%] Step ${currentStep}/${totalSteps} – Waiting in queue…`;
+            return `[${percent}%] Step ${currentStep}/${totalSteps} – ${t('waitingQueue')}`;
           }
 
           const label =
@@ -774,7 +681,7 @@ useEffect(() => {
             jobStatus.stageKey ||
             "Processing";
 
-          return `[${percent}%] Step ${currentStep}/${totalSteps} – Running stage ${label}…`;
+          return `[${percent}%] Step ${currentStep}/${totalSteps} – ${t('runningStage')} ${label}…`;
         })()
       : null;
 
@@ -831,7 +738,7 @@ useEffect(() => {
                 id="how-it-works"
                 className="rounded-2xl border border-slate-700/60 bg-slate-900/60 p-8 shadow-2xl shadow-slate-900/50"
               >
-                <h2 className="sr-only">Upload & Mix Configuration</h2>
+                <h2 className="sr-only">{t('uploadMixConfig')}</h2>
 
                 <div className="mb-6 flex justify-center">
                   <div className="inline-flex rounded-lg bg-slate-950 p-1 shadow-inner shadow-slate-900">
@@ -844,7 +751,7 @@ useEffect(() => {
                           : "text-slate-400 hover:text-slate-200"
                       }`}
                     >
-                      Song (Mastering)
+                      {t('songMode')}
                     </button>
                     <button
                       type="button"
@@ -855,7 +762,7 @@ useEffect(() => {
                           : "text-slate-400 hover:text-slate-200"
                       }`}
                     >
-                      Stems (Full Mix)
+                      {t('stemsMode')}
                     </button>
                   </div>
                 </div>
@@ -886,11 +793,11 @@ useEffect(() => {
                       className="flex w-full items-center justify-between px-4 py-3 text-xs font-semibold uppercase tracking-wide text-amber-100 hover:bg-amber-500/15"
                       aria-expanded={!isPipelineCollapsed}
                     >
-                      <span>Pipeline steps</span>
+                      <span>{t('pipelineSteps')}</span>
                       <span className="flex items-center gap-2 text-[11px] text-amber-200 normal-case">
                         <span>
                           {selectedStageKeys.length} /{" "}
-                          {availableStages.length} enabled
+                          {availableStages.length} {t('enabled')}
                         </span>
                         <span className="text-amber-300">
                           {isPipelineCollapsed ? "▼" : "▲"}
@@ -903,8 +810,7 @@ useEffect(() => {
                       <div className="border-t border-amber-500/40 px-4 py-3">
                         <div className="flex items-center justify-between gap-2">
                           <span className="text-[11px] font-medium text-amber-100">
-                            Activa o desactiva las etapas del pipeline
-                            para este job.
+                            {t('pipelineStepsDesc')}
                           </span>
                           <div className="flex gap-2">
                             <button
@@ -912,14 +818,14 @@ useEffect(() => {
                               onClick={selectAllStages}
                               className="rounded-full bg-amber-600/80 px-2.5 py-1 text-[11px] text-amber-50 hover:bg-amber-500"
                             >
-                              All
+                              {t('all')}
                             </button>
                             <button
                               type="button"
                               onClick={clearStages}
                               className="rounded-full bg-amber-600/80 px-2.5 py-1 text-[11px] text-amber-50 hover:bg-amber-500"
                             >
-                              None
+                              {t('none')}
                             </button>
                           </div>
                         </div>
@@ -997,7 +903,7 @@ useEffect(() => {
                       "transition hover:bg-teal-400 hover:shadow-lg disabled:opacity-60 disabled:cursor-not-allowed",
                     ].join(" ")}
                   >
-                    {loading ? "Processing..." : "Generate AI Mix"}
+                    {loading ? t('processing') : t('generateMix')}
                   </button>
                 </div>
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 
 export type SpaceBus = {
   key: string;
@@ -13,15 +14,6 @@ type Props = {
   value: Record<string, string>;
   onChange: (busKey: string, style: string) => void;
 };
-
-const STYLE_OPTIONS: { value: string; label: string }[] = [
-  { value: "Flamenco_Rumba", label: "Flamenco / Rumba" },
-  { value: "EDM_Club", label: "EDM / Club" },
-  {
-    value: "Acoustic_SingerSongwriter",
-    label: "Acoustic / Singer-songwriter",
-  },
-];
 
 type StyleBusDoc = {
   title: string;
@@ -46,6 +38,17 @@ const STYLE_DOCS: Record<string, StyleDoc> = {
 
 export function SpaceDepthStylePanel({ buses, value, onChange }: Props) {
   const [showDocs, setShowDocs] = useState(false);
+  const t = useTranslations('MixTool');
+
+  // Move STYLE_OPTIONS inside component to use translations
+  const STYLE_OPTIONS: { value: string; label: string }[] = [
+    { value: "Flamenco_Rumba", label: t('styleOptions.Flamenco_Rumba') },
+    { value: "EDM_Club", label: t('styleOptions.EDM_Club') },
+    {
+      value: "Acoustic_SingerSongwriter",
+      label: t('styleOptions.Acoustic_SingerSongwriter'),
+    },
+  ];
 
   if (!buses.length) return null;
 
@@ -54,10 +57,10 @@ export function SpaceDepthStylePanel({ buses, value, onChange }: Props) {
       <div className="flex items-start justify-between gap-2">
         <div>
           <h3 className="text-sm font-semibold uppercase tracking-wide text-amber-100">
-            Space / Depth by bus
+            {t('spaceDepthTitle')}
           </h3>
           <p className="mt-1 text-[11px] text-amber-200">
-            Assign a reverb/space style per bus family to guide later stages.
+            {t('spaceDepthDesc')}
           </p>
         </div>
         <button
@@ -91,7 +94,7 @@ export function SpaceDepthStylePanel({ buses, value, onChange }: Props) {
                 value={value[bus.key] ?? "auto"}
                 onChange={(e) => onChange(bus.key, e.target.value)}
               >
-                <option value="auto">Auto</option>
+                <option value="auto">{t('auto')}</option>
                 {STYLE_OPTIONS.map((opt) => (
                   <option key={opt.value} value={opt.value}>
                     {opt.label}

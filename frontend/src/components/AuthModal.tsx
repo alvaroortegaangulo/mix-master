@@ -6,6 +6,7 @@ import { getBackendBaseUrl } from "../lib/mixApi";
 import { useAuth } from "../context/AuthContext";
 import { useGoogleLogin } from "@react-oauth/google";
 import { gaEvent } from "../lib/ga";
+import { useTranslations } from "next-intl";
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -20,6 +21,7 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
+  const t = useTranslations('AuthModal');
 
   const handleGoogleLogin = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
@@ -129,10 +131,10 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
 
             <div className="relative z-10">
                 <h2 className="mb-4 text-3xl font-bold text-white">
-                    Seamless Mastering
+                    {t('seamlessMastering')}
                 </h2>
                 <p className="mb-8 text-lg text-slate-300">
-                    Experience the power of an advanced AI mastering engine.
+                    {t('experiencePower')}
                 </p>
 
                 {/* Visual Placeholder mimicking the provided image */}
@@ -155,7 +157,7 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
         <div className="flex w-full flex-col justify-center p-8 lg:w-1/2 bg-slate-950">
           <div className="mx-auto w-full max-w-md">
             <h3 className="mb-8 text-center text-2xl font-semibold text-white">
-                {isLogin ? "Sign In" : "Create Account"}
+                {isLogin ? t('signIn') : t('createAccount')}
             </h3>
 
             {/* Social Logins (Placeholders) */}
@@ -183,7 +185,7 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
                     fill="#EA4335"
                   />
                 </svg>
-                Sign in with Google
+                {t('signInGoogle')}
               </button>
             </div>
 
@@ -192,7 +194,7 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
                 <div className="w-full border-t border-slate-700"></div>
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="bg-slate-950 px-2 text-slate-500">or</span>
+                <span className="bg-slate-950 px-2 text-slate-500">{t('or')}</span>
               </div>
             </div>
 
@@ -206,7 +208,7 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
               {!isLogin && (
                 <div>
                   <label className="mb-1 block text-sm font-medium text-slate-300">
-                    Full Name
+                    {t('fullName')}
                   </label>
                   <input
                     type="text"
@@ -221,7 +223,7 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
 
               <div>
                 <label className="mb-1 block text-sm font-medium text-slate-300">
-                  Email Address
+                  {t('email')}
                 </label>
                 <input
                   type="email"
@@ -235,7 +237,7 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
 
               <div>
                 <label className="mb-1 block text-sm font-medium text-slate-300">
-                  Password
+                  {t('password')}
                 </label>
                 <input
                 type="password"
@@ -250,7 +252,7 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
               {isLogin && (
                 <div className="flex justify-end">
                   <a href="#" className="text-sm text-teal-400 hover:text-teal-300">
-                    Forgot password?
+                    {t('forgotPassword')}
                   </a>
                 </div>
               )}
@@ -260,29 +262,29 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
                 disabled={loading}
                 className="w-full rounded-lg bg-teal-500 py-2.5 text-sm font-semibold text-slate-950 shadow-lg shadow-teal-500/20 hover:bg-teal-400 focus:outline-none focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 focus:ring-offset-slate-900 disabled:opacity-50"
               >
-                {loading ? "Processing..." : isLogin ? "Sign In" : "Create Account"}
+                {loading ? t('processing') : isLogin ? t('signIn') : t('createAccount')}
               </button>
             </form>
 
             <div className="mt-6 text-center text-sm text-slate-400">
               {isLogin ? (
                 <>
-                  New user?{" "}
+                  {t('newUser')}{" "}
                   <button
                     onClick={() => { setError(null); setIsLogin(false); }}
                     className="font-medium text-teal-400 hover:text-teal-300"
                   >
-                    Register +
+                    {t('register')}
                   </button>
                 </>
               ) : (
                 <>
-                  Already have an account?{" "}
+                  {t('alreadyHaveAccount')}{" "}
                   <button
                     onClick={() => { setError(null); setIsLogin(true); }}
                     className="font-medium text-teal-400 hover:text-teal-300"
                   >
-                    Sign In
+                    {t('signIn')}
                   </button>
                 </>
               )}
