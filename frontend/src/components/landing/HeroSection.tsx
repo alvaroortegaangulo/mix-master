@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { PlayCircleIcon, StarIcon } from "@heroicons/react/24/solid";
+import { PlayCircleIcon, StarIcon, ExclamationTriangleIcon } from "@heroicons/react/24/solid";
 
 export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
   return (
@@ -11,6 +11,12 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
       </div>
 
       <div className="relative z-10 max-w-5xl space-y-8 flex flex-col items-center">
+        {/* Alert: Website under construction */}
+        <div className="flex items-center gap-2 rounded-full bg-red-900/20 border border-red-500/50 px-5 py-2 text-red-400 animate-in fade-in zoom-in duration-1000">
+          <ExclamationTriangleIcon className="h-5 w-5" />
+          <span className="font-bold text-sm tracking-wide uppercase">ALERT: Website under construction!</span>
+        </div>
+
         {/* Logo */}
         <div className="mx-auto flex justify-center mb-4 animate-in fade-in zoom-in duration-1000">
           <Image
