@@ -505,7 +505,7 @@ export async function startMixJob(
 
 export async function fetchJobStatus(jobId: string): Promise<JobStatus> {
   const baseUrl = getBackendBaseUrl();
-  const res = await fetch(`${baseUrl}/jobs/${encodeURIComponent(jobId)}`, {
+  const res = await fetch(`${baseUrl}/jobs/${encodeURIComponent(jobId)}?_t=${Date.now()}`, {
     method: "GET",
     // Avoid any browser/proxy cache between pipeline updates
     cache: "no-store",

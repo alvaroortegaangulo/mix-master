@@ -36,6 +36,7 @@ from fastapi import (
     Header,
     HTTPException,
     Request,
+    Response,
     UploadFile,
 )
 from fastapi.middleware.cors import CORSMiddleware
@@ -1689,7 +1690,8 @@ async def post_job_correction(
 
 
 @app.get("/jobs/{job_id}")
-def get_job_status(job_id: str, request: Request) -> Dict[str, Any]:
+def get_job_status(job_id: str, request: Request, response: Response) -> Dict[str, Any]:
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
     data = _load_job_status_from_fs(job_id)
     if data is None:
         logger.info(
