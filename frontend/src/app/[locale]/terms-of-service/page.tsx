@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { Link } from "../../../i18n/routing";
+import { getTranslations } from "next-intl/server";
+import { useTranslations } from "next-intl";
 
 const fallbackSiteUrl = "https://music-mix-master.com";
 const siteUrl = (() => {
@@ -45,15 +47,24 @@ const webPageJsonLd = {
   inLanguage: "en",
 };
 
-export const metadata: Metadata = {
-  title: "Terms of Service",
-  description:
-    "Review the Terms of Service for Piroola's AI mixing and mastering platform, including user responsibilities and limitations.",
-  alternates: { canonical: "/terms-of-service" },
-  robots: { index: true, follow: true },
+type Props = {
+  params: Promise<{ locale: string }>;
 };
 
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: 'Terms' });
+  return {
+    title: t('title'),
+    description: "Review the Terms of Service for Piroola's AI mixing and mastering platform.",
+    alternates: { canonical: "/terms-of-service" },
+    robots: { index: true, follow: true },
+  };
+}
+
 export default function TermsOfServicePage() {
+  const t = useTranslations('Terms');
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
       <script
@@ -66,72 +77,48 @@ export default function TermsOfServicePage() {
       />
       <main className="flex-1 px-4 py-12">
         <div className="mx-auto max-w-3xl prose prose-invert prose-slate">
-          <h1 className="text-3xl font-bold mb-8 text-teal-400">Terms of Service</h1>
+          <h1 className="text-3xl font-bold mb-8 text-teal-400">{t('title')}</h1>
 
-          <p className="text-slate-300 mb-6">Last updated: {new Date().toLocaleDateString()}</p>
+          <p className="text-slate-300 mb-6">{t('lastUpdated', { date: new Date().toLocaleDateString() })}</p>
 
           <section className="mb-8">
-            <h2 className="text-xl font-semibold mb-4 text-slate-200">1. Acceptance of Terms</h2>
-            <p className="text-slate-400 leading-relaxed">
-              By accessing or using <strong>Piroola</strong>, you agree to be bound by these Terms of Service.
-              If you do not agree to these terms, please do not use our services.
-            </p>
+            <h2 className="text-xl font-semibold mb-4 text-slate-200">{t('sections.0.title')}</h2>
+            <p className="text-slate-400 leading-relaxed" dangerouslySetInnerHTML={{ __html: t.raw('sections.0.content') }} />
           </section>
 
           <section className="mb-8">
-            <h2 className="text-xl font-semibold mb-4 text-slate-200">2. Service Description</h2>
-            <p className="text-slate-400 leading-relaxed">
-              Piroola provides AI-assisted audio mixing and mastering services. We allow users to upload audio files,
-              process them through our automated pipeline, and download the results.
-            </p>
+            <h2 className="text-xl font-semibold mb-4 text-slate-200">{t('sections.1.title')}</h2>
+            <p className="text-slate-400 leading-relaxed">{t('sections.1.content')}</p>
           </section>
 
           <section className="mb-8">
-            <h2 className="text-xl font-semibold mb-4 text-slate-200">3. User Responsibilities</h2>
-            <p className="text-slate-400 leading-relaxed mb-4">
-              You are responsible for your use of the service and for any content you provide, including compliance with applicable laws.
-              You must not upload any content that:
-            </p>
+            <h2 className="text-xl font-semibold mb-4 text-slate-200">{t('sections.2.title')}</h2>
+            <p className="text-slate-400 leading-relaxed mb-4">{t('sections.2.content')}</p>
             <ul className="list-disc pl-5 text-slate-400 space-y-2">
-              <li>Violates any third-party intellectual property rights.</li>
-              <li>Is illegal, harmful, threatening, or otherwise objectionable.</li>
-              <li>Contains viruses or other malicious code.</li>
+              {Object.values(t.raw('sections.2.list') as Record<string, string>).map((item, i) => (
+                <li key={i}>{item}</li>
+              ))}
             </ul>
           </section>
 
           <section className="mb-8">
-            <h2 className="text-xl font-semibold mb-4 text-slate-200">4. Intellectual Property</h2>
-            <p className="text-slate-400 leading-relaxed">
-              You retain all rights and ownership of your original content. By uploading content, you grant us a limited license
-              to process, store, and modify your content solely for the purpose of providing the service to you.
-              The processed output is owned by you.
-            </p>
+            <h2 className="text-xl font-semibold mb-4 text-slate-200">{t('sections.3.title')}</h2>
+            <p className="text-slate-400 leading-relaxed">{t('sections.3.content')}</p>
           </section>
 
           <section className="mb-8">
-            <h2 className="text-xl font-semibold mb-4 text-slate-200">5. Limitation of Liability</h2>
-            <p className="text-slate-400 leading-relaxed">
-              Piroola is provided "as is" without any warranties. We shall not be liable for any indirect, incidental,
-              special, consequential or punitive damages, including without limitation, loss of profits, data, use, goodwill,
-              or other intangible losses.
-            </p>
+            <h2 className="text-xl font-semibold mb-4 text-slate-200">{t('sections.4.title')}</h2>
+            <p className="text-slate-400 leading-relaxed">{t('sections.4.content')}</p>
           </section>
 
           <section className="mb-8">
-            <h2 className="text-xl font-semibold mb-4 text-slate-200">6. Changes to Terms</h2>
-            <p className="text-slate-400 leading-relaxed">
-              We reserve the right to modify these terms at any time. We will provide notice of any significant changes
-              by posting the new terms on this page. Your continued use of the service after any such changes constitutes
-              your acceptance of the new terms.
-            </p>
+            <h2 className="text-xl font-semibold mb-4 text-slate-200">{t('sections.5.title')}</h2>
+            <p className="text-slate-400 leading-relaxed">{t('sections.5.content')}</p>
           </section>
 
           <section className="mb-8">
-            <h2 className="text-xl font-semibold mb-4 text-slate-200">7. Contact Us</h2>
-            <p className="text-slate-400 leading-relaxed">
-              If you have any questions about these Terms, please contact us at: <br />
-              <span className="text-teal-400">legal@audioalchemy.com</span>
-            </p>
+            <h2 className="text-xl font-semibold mb-4 text-slate-200">{t('sections.6.title')}</h2>
+            <p className="text-slate-400 leading-relaxed" dangerouslySetInnerHTML={{ __html: t.raw('sections.6.content') }} />
           </section>
         </div>
       </main>

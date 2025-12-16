@@ -102,35 +102,58 @@
         "shortDesc": "Diagnóstico de frecuencia, fase y rango dinámico.",
         "desc": "Antes de procesar, entender el material fuente es crucial. Usamos analizadores de espectro, medidores de correlación de fase y medidores LUFS para identificar problemas resonantes, desequilibrios tonales o problemas de fase.",
         "tip": "Siempre escucha en mono inicialmente para detectar cancelaciones de fase.",
-        "tools": ["Analizador de Espectro", "Goniómetro", "Medidor LUFS"]
+        "tools": [
+          "Analizador de Espectro",
+          "Goniómetro",
+          "Medidor LUFS"
+        ]
       },
       "1": {
         "title": "Corrección",
         "shortDesc": "Limpieza, EQ sustractivo y reducción de ruido.",
         "desc": "La etapa quirúrgica. Eliminamos frecuencias problemáticas con EQ sustractivo, reducimos el ruido de fondo y corregimos el tono vocal si es necesario. El objetivo es limpiar antes de mejorar.",
         "tip": "Corta las frecuencias bajas (Paso Alto) en instrumentos que no las necesitan para ganar claridad.",
-        "tools": ["EQ Paramétrico", "De-noiser", "Corrección de Tono"]
+        "tools": [
+          "EQ Paramétrico",
+          "De-noiser",
+          "Corrección de Tono"
+        ]
       },
       "2": {
         "title": "Dinámica",
         "shortDesc": "Control de transitorios, compresión y equilibrio.",
         "desc": "Controlamos el rango dinámico para una mezcla consistente. Usamos compresores para unir elementos y limitadores suaves para domar picos rebeldes.",
         "tip": "Usa compresión en serie (múltiples compresores suaves) en lugar de uno solo agresivo para un sonido más natural.",
-        "tools": ["Compresor VCA", "Compresor Multibanda", "De-esser", "Limitador"]
+        "tools": [
+          "Compresor VCA",
+          "Compresor Multibanda",
+          "De-esser",
+          "Limitador"
+        ]
       },
       "3": {
         "title": "Espacial",
         "shortDesc": "Profundidad, reverberación e imagen estéreo.",
         "desc": "Creamos el mundo 3D de la canción. Colocamos instrumentos en el campo estéreo (paneo) y añadimos profundidad con reverberación e delay.",
         "tip": "Mantén el bombo, el bajo y la voz principal en el centro. Mueve elementos rítmicos y armónicos a los lados.",
-        "tools": ["Reverb Plate/Hall", "Delay Estéreo", "Ensanchador Estéreo", "Pan Pot"]
+        "tools": [
+          "Reverb Plate/Hall",
+          "Delay Estéreo",
+          "Ensanchador Estéreo",
+          "Pan Pot"
+        ]
       },
       "4": {
         "title": "Masterización",
         "shortDesc": "Sonoridad, cohesión final y formatos de entrega.",
         "desc": "El pulido final. Apuntamos a una sonoridad comercial competitiva, equilibrio tonal global y aseguramos que la canción se traduzca bien en cualquier sistema de reproducción (coche, teléfono, club).",
         "tip": "Siempre compara tu master con canciones de referencia del mismo género (Prueba A/B).",
-        "tools": ["Compresor Master Bus", "EQ Lineal", "Maximizador", "Dithering"]
+        "tools": [
+          "Compresor Master Bus",
+          "EQ Lineal",
+          "Maximizador",
+          "Dithering"
+        ]
       }
     }
   },
@@ -333,9 +356,9 @@
       "Other": "Otro"
     },
     "styleOptions": {
-        "Flamenco_Rumba": "Flamenco / Rumba",
-        "EDM_Club": "EDM / Club",
-        "Acoustic_SingerSongwriter": "Acústico / Cantautor"
+      "Flamenco_Rumba": "Flamenco / Rumba",
+      "EDM_Club": "EDM / Club",
+      "Acoustic_SingerSongwriter": "Acústico / Cantautor"
     },
     "result": {
       "originalMix": "Mezcla original",
@@ -439,6 +462,521 @@
     "mostPopular": "Más Popular",
     "startForFree": "Empieza Gratis",
     "getPlus": "Obtener Plus",
-    "getPro": "Obtener Pro"
+    "getPro": "Obtener Pro",
+    "Tiers": {
+      "free": {
+        "name": "Gratis",
+        "description": "Perfecto para aficionados y para probar nuestro motor de mezcla IA.",
+        "features": {
+          "0": "2 Canciones por mes",
+          "1": "Salida MP3 (320kbps)",
+          "2": "Mezcla IA Estándar",
+          "3": "Soporte Básico"
+        },
+        "notIncluded": {
+          "0": "Salida WAV",
+          "1": "Descarga de Stems",
+          "2": "Procesamiento Prioritario",
+          "3": "Opciones Avanzadas de Masterización"
+        },
+        "cta": "Empezar Gratis"
+      },
+      "plus": {
+        "name": "Plus",
+        "description": "Para artistas independientes que lanzan música regularmente.",
+        "features": {
+          "0": "10 Canciones por mes",
+          "1": "Salida WAV de Alta Resolución (24-bit)",
+          "2": "Mezcla y Masterización IA Avanzada",
+          "3": "Soporte por Email",
+          "4": "Historial de Proyectos (30 días)"
+        },
+        "notIncluded": {
+          "0": "Descarga de Stems",
+          "1": "Procesamiento Prioritario"
+        },
+        "cta": "Obtener Plus"
+      },
+      "pro": {
+        "name": "Pro",
+        "description": "Para profesionales y estudios que exigen la más alta calidad.",
+        "features": {
+          "0": "Canciones Ilimitadas",
+          "1": "WAV de Alta Res + Descarga de Stems",
+          "2": "Procesamiento Prioritario (Salta la cola)",
+          "3": "Soporte Premium",
+          "4": "Historial de Proyectos Permanente",
+          "5": "Licencia Comercial"
+        },
+        "notIncluded": {},
+        "cta": "Obtener Pro"
+      }
+    }
+  },
+  "Examples": {
+    "title": "Escucha lo que Piroola ofrece",
+    "subtitle": "Ejemplos",
+    "description": "Mezclas y masters representativos que muestran cómo nuestro pipeline de IA limpia, equilibra y mejora diferentes géneros. Cada ejemplo destaca los movimientos de procesamiento que puedes esperar en tus propias pistas.",
+    "viewPricing": "Ver precios",
+    "howItWorks": "Cómo funciona",
+    "listenLink": "Escuchar",
+    "notableChanges": "Cambios notables",
+    "ctaTitle": "¿Listo para escuchar tu propia pista con esta calidad?",
+    "ctaDescription": "Sube stems, elige un espacio y deja que la IA mezcle y masterice en minutos.",
+    "startMixing": "Empezar a mezclar",
+    "talkToSupport": "Hablar con soporte",
+    "items": {
+      "pop": {
+        "title": "Voz Pop Moderna",
+        "genre": "Pop / Top 40",
+        "summary": "Voces brillantes y al frente con de-essing, reverb aireada y control estricto de graves para un pulido listo para las listas.",
+        "highlights": {
+          "0": "Nivelación de voz principal",
+          "1": "De-essing y EQ de aire",
+          "2": "Ensanchador estéreo en estribillos"
+        },
+        "metrics": {
+          "0": "LUFS: -8.9 → -8.0",
+          "1": "True Peak: -2.0 dB → -1.0 dB",
+          "2": "Sibilancia vocal reducida ~2 dB"
+        }
+      },
+      "hiphop": {
+        "title": "Hip-Hop con Pegada",
+        "genre": "Hip-Hop / Trap",
+        "summary": "Graves unidos con compresión paralela mientras se mantiene el 808 limpio y los transitorios rápidos en la caja.",
+        "highlights": {
+          "0": "Claridad de 808 y control de sub",
+          "1": "Modelado de transitorios en caja/clap",
+          "2": "Saturación de bus para cohesión"
+        },
+        "metrics": {
+          "0": "LUFS: -10.5 → -9.2",
+          "1": "Ancho estéreo: +12%",
+          "2": "Ruido de fondo limpiado 3 dB"
+        }
+      },
+      "indie": {
+        "title": "Banda Indie",
+        "genre": "Indie / Rock",
+        "summary": "Baterías alineadas en fase, guitarras separadas con EQ mid/side y un master cohesivo con color estilo analógico.",
+        "highlights": {
+          "0": "Alineación de fase de batería",
+          "1": "EQ de guitarra mid/side",
+          "2": "Saturación tipo cinta en mixbus"
+        },
+        "metrics": {
+          "0": "LUFS: -12.0 → -10.8",
+          "1": "Factor de Cresta: 11 dB → 9 dB",
+          "2": "Imagen estéreo equilibrada L/R <0.5 dB"
+        }
+      },
+      "ambient": {
+        "title": "Ambient Cinemático",
+        "genre": "Score / Ambient",
+        "summary": "Espacio amplio y envolvente con acumulación controlada de medios-graves, manteniendo los pads exuberantes sin barro.",
+        "highlights": {
+          "0": "Control de resonancia medio-grave",
+          "1": "Reverbs en capas con pre-delay",
+          "2": "Pegamento multibanda suave"
+        },
+        "metrics": {
+          "0": "LUFS: -16.0 → -14.5",
+          "1": "Reverb RT60 domada 12%",
+          "2": "Rumble de sub cortado por debajo de 30 Hz"
+        }
+      }
+    }
+  },
+  "Docs": {
+    "title": "Documentación y Guía",
+    "description": "Guía completa para usar Piroola, incluyendo explicaciones detalladas del pipeline de mezcla y masterización, etapas y resultados.",
+    "toc": {
+      "gettingStarted": "Empezando",
+      "intro": "Introducción",
+      "howToUse": "Cómo Usar",
+      "features": "Características Clave",
+      "pipelineStages": "Etapas del Pipeline",
+      "overview": "Visión General",
+      "results": "Resultados y Soporte",
+      "understandingResults": "Entendiendo los Resultados",
+      "faq": "Preguntas Frecuentes",
+      "s0": "S0: Entrada y Metadatos",
+      "s1": "S1: Prep. Técnica",
+      "s2": "S2: Alineación de Fase",
+      "s3": "S3: Mezcla Estática",
+      "s4": "S4: Limpieza Espectral",
+      "s5": "S5: Dinámica",
+      "s6": "S6: Espacio y Profundidad",
+      "s7": "S7: Equilibrio Tonal",
+      "s8": "S8: Color de Mix Bus",
+      "s9": "S9: Masterización",
+      "s10": "S10: Control de Calidad",
+      "s11": "S11: Informes"
+    },
+    "intro": {
+      "title": "Documentación de Piroola",
+      "p1": "Bienvenido a la guía oficial de <strong>Piroola</strong>. Esta plataforma aprovecha la IA avanzada para proporcionar servicios de mezcla y masterización profesionales directamente en tu navegador. Ya seas músico, productor o ingeniero de audio, Piroola simplifica el complejo proceso de ingeniería de audio en unos pocos pasos simples.",
+      "p2": "Nuestro pipeline analiza tus stems de audio, corrige problemas técnicos, equilibra niveles, aplica procesamiento creativo y entrega un master listo para el lanzamiento. Esta guía cubre todo, desde subir tu primera pista hasta entender el informe de ingeniería detallado."
+    },
+    "howToUse": {
+      "title": "Cómo Usar la Aplicación",
+      "step1": {
+        "title": "1. Subiendo Stems",
+        "desc": "Comienza arrastrando y soltando tus archivos de audio en la zona de carga en la página de inicio. Aceptamos formatos de audio comunes como WAV, AIFF y MP3. Para obtener los mejores resultados, usa archivos WAV de alta calidad (24-bit, 44.1kHz o superior)."
+      },
+      "step2": {
+        "title": "2. Configurando Perfiles de Stem",
+        "desc": "Una vez subido, el sistema intentará identificar automáticamente el instrumento en cada stem (por ejemplo, 'Bombo', 'Bajo', 'Voces'). Revisa el panel de <strong>Perfiles de Stem</strong> a la derecha. Corrige cualquier stem mal identificado para asegurar que la IA aplique el perfil de procesamiento correcto."
+      },
+      "step3": {
+        "title": "3. Seleccionando Etapas del Pipeline",
+        "desc": "El panel de <strong>Pasos del Pipeline</strong> te permite habilitar o deshabilitar partes específicas de la cadena de procesamiento. Por defecto, todas las etapas están habilitadas para una mezcla y masterización completa. Puedes personalizar esto si solo necesitas correcciones específicas (por ejemplo, solo 'Prep. Técnica' o 'Masterización')."
+      },
+      "step4": {
+        "title": "4. Configuración de Espacio y Profundidad",
+        "desc": "Usa el panel de <strong>Espacio y Profundidad</strong> a la izquierda para definir el estilo de reverb para diferentes grupos de instrumentos (por ejemplo, 'Room' para Batería, 'Plate' para Voces). Si se deja en 'Auto', la IA elegirá espacios apropiados basados en el género y la instrumentación."
+      },
+      "step5": {
+        "title": "5. Generar Mezcla",
+        "desc": "Haz clic en el botón <strong>Generar Mezcla IA</strong>. El sistema pondrá en cola tu trabajo y lo procesará a través de las etapas seleccionadas. Puedes monitorear el progreso en tiempo real."
+      }
+    },
+    "features": {
+      "title": "Características Clave",
+      "smartAnalysis": {
+        "title": "Análisis Inteligente",
+        "desc": "Detecta tonalidad, tempo, tipos de instrumentos y fallos técnicos como offset DC o problemas de fase automáticamente."
+      },
+      "autoMixing": {
+        "title": "Auto-Mezcla",
+        "desc": "Equilibra niveles, aplica EQ, compresión y efectos espaciales para crear una mezcla cohesiva."
+      },
+      "aiMastering": {
+        "title": "Masterización IA",
+        "desc": "Entrega un master fuerte y competitivo que cumple con los estándares comerciales de sonoridad (LUFS) y límites de True Peak."
+      },
+      "detailedReports": {
+        "title": "Informes Detallados",
+        "desc": "Proporciona un informe de ingeniería completo detallando cada decisión tomada por la IA, desde curvas de EQ hasta ajustes de compresor."
+      }
+    },
+    "pipeline": {
+      "title": "Etapas del Pipeline (Profundización)",
+      "desc": "El pipeline de Piroola consta de 12 etapas secuenciales (S0-S11). Cada etapa aborda un aspecto específico de la ingeniería de audio.",
+      "s0": {
+        "title": "S0: Entrada y Metadatos",
+        "goal": "Estandarización y Preparación.",
+        "desc": "Esta etapa maneja la ingestión de tus archivos de audio. Normaliza la frecuencia de muestreo (48kHz) y profundidad de bits (32-bit flotante) para asegurar un procesamiento de alta fidelidad a lo largo del pipeline. También valida metadatos y configura el enrutamiento interno para la sesión.",
+        "points": {
+          "0": "<strong>S0_SEPARATE_STEMS:</strong> Asegura que los archivos se traten como stems individuales.",
+          "1": "<strong>S0_SESSION_FORMAT:</strong> Convierte todo el audio al estándar del proyecto."
+        }
+      },
+      "s1": {
+        "title": "S1: Preparación Técnica",
+        "goal": "Limpieza y Corrección.",
+        "desc": "Antes de comenzar la mezcla, se deben resolver los problemas técnicos. Esta etapa detecta propiedades globales como Tonalidad y Escala, y arregla problemas individuales de los stems.",
+        "points": {
+          "0": "<strong>Eliminación de DC Offset:</strong> Elimina energía inaudible de baja frecuencia que consume headroom.",
+          "1": "<strong>Detección de Tonalidad:</strong> Analiza la tonalidad musical de la canción.",
+          "2": "<strong>Afinación Vocal:</strong> Corrige suavemente el tono de las voces a la tonalidad detectada si es necesario (se puede deshabilitar).",
+          "3": "<strong>Gain Staging:</strong> Establece una sonoridad de trabajo saludable para cada stem."
+        }
+      },
+      "s2": {
+        "title": "S2: Alineación de Fase y Polaridad",
+        "goal": "Cohesión y Pegada.",
+        "desc": "Los problemas de fase, especialmente en grabaciones con múltiples micrófonos como baterías, pueden causar que las pistas suenen delgadas o huecas. Esta etapa analiza la correlación entre pistas relacionadas (por ejemplo, Bombo In, Bombo Out, Aéreos) y aplica alineación de tiempo o inversiones de polaridad para asegurar que sumen constructivamente."
+      },
+      "s3": {
+        "title": "S3: Mezcla Estática y Enrutamiento",
+        "goal": "Equilibrio y Headroom.",
+        "desc": "Establece el equilibrio de volumen inicial. Asegura que la voz principal sea audible y se asiente correctamente contra las pistas de acompañamiento. También establece el headroom global del mixbus (típicamente -6dB a -12dB pico) para proporcionar espacio para etapas de procesamiento posteriores."
+      },
+      "s4": {
+        "title": "S4: Limpieza Espectral",
+        "goal": "Claridad y Separación.",
+        "desc": "Esta etapa limpia el espectro de frecuencia de cada stem.",
+        "points": {
+          "0": "<strong>HPF/LPF:</strong> Aplica filtros Paso Alto y Paso Bajo basados en el tipo de instrumento (por ejemplo, eliminando el retumbe sub-grave de un Hi-Hat).",
+          "1": "<strong>Control de Resonancia:</strong> Identifica y corta frecuencias resonantes duras que pueden causar fatiga auditiva."
+        }
+      },
+      "s5": {
+        "title": "S5: Dinámica y Automatización de Nivel",
+        "goal": "Control y Consistencia.",
+        "desc": "Aplica compresión y puertas para controlar el rango dinámico. Asegura que las partes silenciosas sean audibles y los transitorios fuertes estén controlados.",
+        "points": {
+          "0": "<strong>Dinámica de Stem:</strong> Compresión genérica para instrumentos.",
+          "1": "<strong>Dinámica Vocal:</strong> Procesamiento especializado para voces para mantenerlas al frente y estables.",
+          "2": "<strong>Compresión de Bus:</strong> Compresión de pegamento para grupos como Batería."
+        }
+      },
+      "s6": {
+        "title": "S6: Espacio y Profundidad",
+        "goal": "Dimensión y Atmósfera.",
+        "desc": "Crea una sensación de espacio usando reverb y delay. Diferentes 'estilos' (por ejemplo, Hall, Plate, Room) se aplican a diferentes grupos de bus para crear profundidad sin enturbiar la mezcla. Puedes personalizar estos estilos en el panel 'Espacio y Profundidad'."
+      },
+      "s7": {
+        "title": "S7: EQ Multibanda / Equilibrio Tonal",
+        "goal": "Equilibrio de Frecuencia Profesional.",
+        "desc": "Analiza el espectro de frecuencia general del mixbus y lo compara con una curva objetivo típica de lanzamientos profesionales. Aplica movimientos de EQ amplios y musicales para corregir desequilibrios (por ejemplo, demasiado embarrado, demasiado brillante)."
+      },
+      "s8": {
+        "title": "S8: Color de Mix Bus",
+        "goal": "Pegamento y Calidez.",
+        "desc": "Añade una sutil saturación armónica a toda la mezcla. Esto 'une' los elementos y añade calidez y carácter de estilo analógico."
+      },
+      "s9": {
+        "title": "S9: Masterización",
+        "goal": "Sonoridad Comercial y Pulido.",
+        "desc": "La etapa creativa final. Lleva la pista a un volumen comercial usando limitación y maximización. También ajusta el ancho estéreo para asegurar una experiencia inmersiva que aún sea compatible con mono."
+      },
+      "s10": {
+        "title": "S10: Control de Calidad Estéreo Master",
+        "goal": "Cumplimiento Técnico.",
+        "desc": "Un pase final de Control de Calidad. Verifica que el master cumpla con los estándares técnicos para True Peak (evitando el recorte digital), LUFS (sonoridad) y equilibrio de canales. Realiza micro-ajustes si se excede algún límite."
+      },
+      "s11": {
+        "title": "S11: Informes",
+        "goal": "Transparencia y Perspectiva.",
+        "desc": "Recopila datos de todas las etapas anteriores para generar el informe JSON final y renderizar la retroalimentación visual proporcionada al usuario."
+      }
+    },
+    "results": {
+      "title": "Entendiendo los Resultados",
+      "p1": "Cuando se complete el procesamiento, se te presentará el <strong>Panel de Resultados de Mezcla</strong>.",
+      "audioFiles": {
+        "title": "Los Archivos de Audio",
+        "desc": "Puedes descargar el <strong>Audio Masterizado</strong> final (WAV). Este es el archivo listo para producción. También puedes tener acceso al archivo Mixbus no masterizado si es necesario para masterización externa."
+      },
+      "report": {
+        "title": "El Informe de Ingeniería",
+        "desc": "Haz clic en 'Ver Informe' para abrir el modal detallado. Este informe contiene:",
+        "points": {
+          "0": "<strong>Resúmenes de Etapa:</strong> Estado de Pasa/Falla para cada paso de procesamiento.",
+          "1": "<strong>Métricas Detalladas:</strong> Datos numéricos que muestran exactamente qué cambió (por ejemplo, 'Ganancia reducida en 2.5dB', 'Corte de EQ a 300Hz').",
+          "2": "<strong>Comparaciones Antes/Después:</strong> (Donde esté disponible) Representaciones visuales de la señal de audio antes y después del procesamiento."
+        }
+      }
+    },
+    "faq": {
+      "title": "Preguntas Frecuentes y Solución de Problemas",
+      "q1": {
+        "q": "Mi mezcla suena distorsionada. ¿Qué pasó?",
+        "a": "Verifica tus archivos de entrada. Si los stems ya están recortados (distorsionados) antes de subir, la IA no puede arreglarlos. Además, asegúrate de no haber asignado un perfil de 'Batería' a una pista vocal, ya que esto puede causar una compresión agresiva."
+      },
+      "q2": {
+        "q": "El proceso falló en la Etapa S1.",
+        "a": "Esto generalmente significa que los archivos de entrada estaban corruptos o en un formato no soportado. Intenta re-exportar tus stems como archivos WAV estándar."
+      },
+      "q3": {
+        "q": "¿Puedo usar el archivo masterizado para streaming?",
+        "a": "¡Sí! Nuestras etapas S9 y S10 están calibradas a objetivos de sonoridad de streaming estándar (aprox -14 LUFS integrado, -1dB True Peak)."
+      }
+    }
+  },
+  "Support": {
+    "title": "Centro de Soporte",
+    "subtitle": "¿Necesitas ayuda? Te tenemos cubierto.",
+    "quickResources": "Recursos Rápidos",
+    "quickResourcesDesc": "Antes de contactar, revisa nuestra documentación y FAQs.",
+    "faqLink": "Preguntas Frecuentes",
+    "docsLink": "Documentación y Guía",
+    "directContact": "Contacto Directo",
+    "directContactDesc": "¿Prefieres email? Puedes contactar a nuestro equipo de soporte directamente.",
+    "formTitle": "Envíanos un mensaje",
+    "successTitle": "¡Mensaje Enviado!",
+    "successDesc": "Gracias por contactarnos.",
+    "sendAnother": "Enviar otro mensaje",
+    "labels": {
+      "name": "Nombre",
+      "email": "Email",
+      "subject": "Asunto",
+      "message": "Mensaje",
+      "submit": "Enviar Mensaje",
+      "sending": "Enviando..."
+    },
+    "placeholders": {
+      "name": "Tu nombre",
+      "email": "tu@ejemplo.com",
+      "message": "¿Cómo podemos ayudarte?"
+    },
+    "options": {
+      "default": "Selecciona un tema",
+      "technical": "Soporte Técnico",
+      "billing": "Facturación y Precios",
+      "feedback": "Comentarios y Sugerencias",
+      "other": "Otro"
+    }
+  },
+  "Profile": {
+    "title": "Perfil de Usuario",
+    "signOut": "Cerrar Sesión",
+    "userInfo": {
+      "fullName": "Nombre Completo",
+      "email": "Dirección de Correo"
+    },
+    "changePassword": {
+      "title": "Cambiar Contraseña",
+      "oldPassword": "Vieja Contraseña",
+      "newPassword": "Nueva Contraseña",
+      "confirmPassword": "Confirmar Nueva Contraseña",
+      "update": "Actualizar Contraseña",
+      "updating": "Actualizando...",
+      "success": "Contraseña cambiada exitosamente.",
+      "matchError": "Las nuevas contraseñas no coinciden.",
+      "lengthError": "La nueva contraseña debe tener al menos 8 caracteres.",
+      "genericError": "Error al cambiar la contraseña."
+    },
+    "deleteAccount": {
+      "title": "Zona de Peligro",
+      "warning": "Una vez que elimines tu cuenta, no hay vuelta atrás. Por favor, asegúrate.",
+      "button": "Eliminar Cuenta",
+      "deleting": "Eliminando...",
+      "confirm": "¿Estás seguro de que quieres eliminar tu cuenta? Esta acción no se puede deshacer.",
+      "error": "Error al eliminar la cuenta. Por favor intenta de nuevo."
+    }
+  },
+  "Terms": {
+    "title": "Términos de Servicio",
+    "lastUpdated": "Última actualización: {date}",
+    "intro": "Al acceder o usar <strong>Piroola</strong>, aceptas estar sujeto a estos Términos de Servicio. Si no estás de acuerdo con estos términos, por favor no uses nuestros servicios.",
+    "sections": {
+      "0": {
+        "title": "1. Aceptación de los Términos",
+        "content": "Al acceder o usar <strong>Piroola</strong>, aceptas estar sujeto a estos Términos de Servicio. Si no estás de acuerdo con estos términos, por favor no uses nuestros servicios."
+      },
+      "1": {
+        "title": "2. Descripción del Servicio",
+        "content": "Piroola proporciona servicios de mezcla y masterización de audio asistidos por IA. Permitimos a los usuarios subir archivos de audio, procesarlos a través de nuestro pipeline automatizado y descargar los resultados."
+      },
+      "2": {
+        "title": "3. Responsabilidades del Usuario",
+        "content": "Eres responsable de tu uso del servicio y de cualquier contenido que proporciones, incluido el cumplimiento de las leyes aplicables. No debes subir ningún contenido que:",
+        "list": {
+          "0": "Viole cualquier derecho de propiedad intelectual de terceros.",
+          "1": "Sea ilegal, dañino, amenazante o de otra manera objetable.",
+          "2": "Contenga virus u otro código malicioso."
+        }
+      },
+      "3": {
+        "title": "4. Propiedad Intelectual",
+        "content": "Conservas todos los derechos y la propiedad de tu contenido original. Al subir contenido, nos otorgas una licencia limitada para procesar, almacenar y modificar tu contenido únicamente con el propósito de proporcionarte el servicio. El resultado procesado es de tu propiedad."
+      },
+      "4": {
+        "title": "5. Limitación de Responsabilidad",
+        "content": "Piroola se proporciona 'tal cual' sin ninguna garantía. No seremos responsables de ningún daño indirecto, incidental, especial, consecuente o punitivo, incluyendo, entre otros, pérdida de beneficios, datos, uso, buena voluntad u otras pérdidas intangibles."
+      },
+      "5": {
+        "title": "6. Cambios en los Términos",
+        "content": "Nos reservamos el derecho de modificar estos términos en cualquier momento. Notificaremos cualquier cambio significativo publicando los nuevos términos en esta página. Tu uso continuado del servicio después de dichos cambios constituye tu aceptación de los nuevos términos."
+      },
+      "6": {
+        "title": "7. Contáctanos",
+        "content": "Si tienes alguna pregunta sobre estos Términos, por favor contáctanos en: <br /><span class='text-teal-400'>legal@audioalchemy.com</span>"
+      }
+    }
+  },
+  "Privacy": {
+    "title": "Política de Privacidad",
+    "lastUpdated": "Última actualización: {date}",
+    "intro": "Bienvenido a <strong>Piroola</strong>. Respetamos tu privacidad y estamos comprometidos a proteger tus datos personales.",
+    "sections": {
+      "0": {
+        "title": "1. Introducción",
+        "content": "Bienvenido a <strong>Piroola</strong>. Respetamos tu privacidad y estamos comprometidos a proteger tus datos personales. Esta política de privacidad te informará sobre cómo cuidamos tus datos personales cuando visitas nuestro sitio web y te informará sobre tus derechos de privacidad y cómo la ley te protege."
+      },
+      "1": {
+        "title": "2. Controlador de Datos",
+        "content": "Piroola es el controlador y responsable de tus datos personales. Si tienes alguna pregunta sobre esta política de privacidad, por favor contáctanos."
+      },
+      "2": {
+        "title": "3. Los Datos que Recopilamos",
+        "content": "Podemos recopilar, usar, almacenar y transferir diferentes tipos de datos personales sobre ti que hemos agrupado de la siguiente manera:",
+        "list": {
+          "0": "<strong>Datos de Identidad:</strong> incluye nombre, apellido, nombre de usuario o identificador similar (si aplica).",
+          "1": "<strong>Datos de Contacto:</strong> incluye dirección de correo electrónico (si se proporciona).",
+          "2": "<strong>Datos Técnicos:</strong> incluye dirección de protocolo de internet (IP), tus datos de inicio de sesión, tipo y versión del navegador, configuración de zona horaria y ubicación, tipos y versiones de complementos del navegador, sistema operativo y plataforma y otra tecnología en los dispositivos que usas para acceder a este sitio web.",
+          "3": "<strong>Datos de Uso:</strong> incluye información sobre cómo usas nuestro sitio web, productos y servicios.",
+          "4": "<strong>Datos de Contenido:</strong> incluye los archivos de audio que subes para su procesamiento. Estos se procesan únicamente con el propósito de proporcionar el servicio y no se usan para otros fines sin tu consentimiento."
+        }
+      },
+      "3": {
+        "title": "4. Cómo Usamos Tus Datos Personales",
+        "content": "Solo usaremos tus datos personales cuando la ley nos lo permita. Más comúnmente, usaremos tus datos personales en las siguientes circunstancias:",
+        "list": {
+          "0": "Donde necesitemos realizar el contrato que estamos a punto de celebrar o hemos celebrado contigo (por ejemplo, procesar tu mezcla).",
+          "1": "Donde sea necesario para nuestros intereses legítimos (o los de un tercero) y tus intereses y derechos fundamentales no anulen esos intereses.",
+          "2": "Donde necesitemos cumplir con una obligación legal o regulatoria."
+        }
+      },
+      "4": {
+        "title": "5. Retención de Datos",
+        "content": "Solo retendremos tus datos personales durante el tiempo necesario para cumplir con los fines para los que los recopilamos, incluidos los fines de satisfacer cualquier requisito legal, contable o de informes. Los archivos de audio subidos se retienen solo durante la duración del trabajo de procesamiento y un período razonable posterior para permitirte descargar los resultados, después de lo cual se eliminan."
+      },
+      "5": {
+        "title": "6. Seguridad de Datos",
+        "content": "Hemos implementado medidas de seguridad apropiadas para evitar que tus datos personales se pierdan accidentalmente, se usen o accedan de manera no autorizada, se alteren o divulguen. Además, limitamos el acceso a tus datos personales a aquellos empleados, agentes, contratistas y otros terceros que tengan una necesidad comercial de saber."
+      },
+      "6": {
+        "title": "7. Tus Derechos Legales",
+        "content": "Bajo ciertas circunstancias, tienes derechos bajo las leyes de protección de datos en relación con tus datos personales, incluido el derecho a:",
+        "list": {
+          "0": "Solicitar acceso a tus datos personales.",
+          "1": "Solicitar corrección de tus datos personales.",
+          "2": "Solicitar eliminación de tus datos personales.",
+          "3": "Oponerte al procesamiento de tus datos personales.",
+          "4": "Solicitar restricción del procesamiento de tus datos personales.",
+          "5": "Solicitar transferencia de tus datos personales.",
+          "6": "Derecho a retirar el consentimiento."
+        },
+        "footer": "Si deseas ejercer cualquiera de los derechos establecidos anteriormente, por favor contáctanos."
+      },
+      "7": {
+        "title": "8. Cookies",
+        "content": "Usamos cookies para distinguirte de otros usuarios de nuestro sitio web. Esto nos ayuda a proporcionarte una buena experiencia cuando navegas por nuestro sitio web y también nos permite mejorar nuestro sitio. Usamos Google Analytics para analizar el uso de nuestro sitio web."
+      },
+      "8": {
+        "title": "9. Detalles de Contacto",
+        "content": "Si tienes alguna pregunta sobre esta política de privacidad o nuestras prácticas de privacidad, por favor contáctanos en: <br /><span class='text-teal-400'>privacy@audioalchemy.com</span>"
+      }
+    }
+  },
+  "Cookie": {
+    "title": "Política de Cookies",
+    "lastUpdated": "Última actualización: {date}",
+    "sections": {
+      "0": {
+        "title": "1. Qué Son las Cookies",
+        "content": "Las cookies son pequeños archivos de texto que se colocan en tu computadora o dispositivo móvil cuando navegas por sitios web. Se utilizan ampliamente para hacer que los sitios web funcionen, o funcionen de manera más eficiente, así como para proporcionar información a los propietarios del sitio."
+      },
+      "1": {
+        "title": "2. Cómo Usamos las Cookies",
+        "content": "Usamos cookies por una variedad de razones detalladas a continuación. Desafortunadamente, en la mayoría de los casos no hay opciones estándar de la industria para deshabilitar las cookies sin deshabilitar completamente la funcionalidad y las características que agregan a este sitio. Se recomienda que dejes activadas todas las cookies si no estás seguro de si las necesitas o no, en caso de que se utilicen para proporcionar un servicio que utilizas."
+      },
+      "2": {
+        "title": "3. Las Cookies que Configuramos",
+        "list": {
+          "0": "<strong>Cookies Esenciales:</strong> Estas cookies son necesarias para que el sitio web funcione y no se pueden desactivar en nuestros sistemas. Generalmente solo se configuran en respuesta a acciones realizadas por ti que equivalen a una solicitud de servicios, como configurar tus preferencias de privacidad, iniciar sesión o completar formularios.",
+          "1": "<strong>Cookies de Funcionalidad:</strong> Estas cookies permiten que el sitio web proporcione una funcionalidad y personalización mejoradas. Pueden ser configuradas por nosotros o por proveedores externos cuyos servicios hemos agregado a nuestras páginas.",
+          "2": "<strong>Cookies de Analítica:</strong> Usamos Google Analytics para entender cómo nuestros visitantes interactúan con el sitio web. Esto nos ayuda a mejorar la experiencia del usuario. Estas cookies rastrean cosas como cuánto tiempo pasas en el sitio y las páginas que visitas."
+        }
+      },
+      "3": {
+        "title": "4. Cookies de Terceros",
+        "content": "En algunos casos especiales también usamos cookies proporcionadas por terceros de confianza. La siguiente sección detalla qué cookies de terceros podrías encontrar a través de este sitio.",
+        "p2": "Este sitio utiliza Google Analytics, que es una de las soluciones de análisis más extendidas y confiables en la web para ayudarnos a entender cómo usas el sitio y formas en que podemos mejorar tu experiencia. Estas cookies pueden rastrear cosas como cuánto tiempo pasas en el sitio y las páginas que visitas para que podamos seguir produciendo contenido atractivo."
+      },
+      "4": {
+        "title": "5. Gestionar Cookies",
+        "content": "Puedes evitar la configuración de cookies ajustando la configuración de tu navegador (consulta la Ayuda de tu navegador para saber cómo hacerlo). Ten en cuenta que deshabilitar las cookies afectará la funcionalidad de este y muchos otros sitios web que visites. Deshabilitar las cookies generalmente resultará en deshabilitar también cierta funcionalidad y características de este sitio. Por lo tanto, se recomienda que no deshabilites las cookies."
+      },
+      "5": {
+        "title": "6. Detalles de Contacto",
+        "content": "Si tienes alguna pregunta sobre esta política de cookies, por favor contáctanos en: <br /><span class='text-teal-400'>privacy@audioalchemy.com</span>"
+      }
+    }
   }
 }

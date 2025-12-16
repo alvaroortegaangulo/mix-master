@@ -41,67 +41,51 @@ export default function PricingPage() {
   const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
   const t = useTranslations('Pricing');
 
+  // Helper to get array from translations object
+  const getFeatures = (tier: string, type: 'features' | 'notIncluded'): string[] => {
+    try {
+      const data = t.raw(`Tiers.${tier}.${type}`);
+      return data ? Object.values(data) : [];
+    } catch (e) {
+      return [];
+    }
+  };
+
   const TIERS = [
     {
-      name: "Free",
+      name: t('Tiers.free.name'),
       id: "tier-free",
       href: "/#upload",
       priceMonthly: "$0",
       priceYearly: "$0",
-      description: "Perfect for hobbyists and trying out our AI mixing engine.",
-      features: [
-        "2 Songs per month",
-        "MP3 Output (320kbps)",
-        "Standard AI Mixing",
-        "Basic Support",
-      ],
-      notIncluded: [
-        "WAV Output",
-        "Stems Download",
-        "Priority Processing",
-        "Advanced Mastering Options",
-      ],
-      cta: t('startForFree'),
+      description: t('Tiers.free.description'),
+      features: getFeatures('free', 'features'),
+      notIncluded: getFeatures('free', 'notIncluded'),
+      cta: t('Tiers.free.cta'),
       mostPopular: false,
     },
     {
-      name: "Plus",
+      name: t('Tiers.plus.name'),
       id: "tier-plus",
       href: "/register?plan=plus",
       priceMonthly: "$19",
       priceYearly: "$15",
-      description: "For independent artists who release music regularly.",
-      features: [
-        "10 Songs per month",
-        "High-Res WAV Output (24-bit)",
-        "Advanced AI Mixing & Mastering",
-        "Email Support",
-        "Project History (30 days)",
-      ],
-      notIncluded: [
-        "Stems Download",
-        "Priority Processing",
-      ],
-      cta: t('getPlus'),
+      description: t('Tiers.plus.description'),
+      features: getFeatures('plus', 'features'),
+      notIncluded: getFeatures('plus', 'notIncluded'),
+      cta: t('Tiers.plus.cta'),
       mostPopular: true,
     },
     {
-      name: "Pro",
+      name: t('Tiers.pro.name'),
       id: "tier-pro",
       href: "/register?plan=pro",
       priceMonthly: "$49",
       priceYearly: "$39",
-      description: "For professionals and studios demanding the highest quality.",
-      features: [
-        "Unlimited Songs",
-        "High-Res WAV + Stems Download",
-        "Priority Processing (Skip the queue)",
-        "Premium Support",
-        "Permanent Project History",
-        "Commercial License",
-      ],
-      notIncluded: [],
-      cta: t('getPro'),
+      description: t('Tiers.pro.description'),
+      features: getFeatures('pro', 'features'),
+      notIncluded: getFeatures('pro', 'notIncluded'),
+      cta: t('Tiers.pro.cta'),
       mostPopular: false,
     },
   ];

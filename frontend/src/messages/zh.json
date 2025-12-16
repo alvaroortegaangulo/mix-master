@@ -102,35 +102,58 @@
         "shortDesc": "频率、相位和动态范围诊断。",
         "desc": "在处理之前，了解源素材至关重要。我们使用频谱分析仪、相位相关表和 LUFS 表来识别共振问题、音色不平衡或相位问题。",
         "tip": "最初始终以单声道收听以检测相位抵消。",
-        "tools": ["频谱分析仪", "相位计", "LUFS 表"]
+        "tools": [
+          "频谱分析仪",
+          "相位计",
+          "LUFS 表"
+        ]
       },
       "1": {
         "title": "修正",
         "shortDesc": "清理、减法 EQ 和降噪。",
         "desc": "外科手术阶段。我们使用减法 EQ 去除有问题的频率，减少背景噪音，并在必要时修正人声音高。目标是在增强之前进行清理。",
         "tip": "在不需要低频的乐器上切断低频（高通）以获得清晰度。",
-        "tools": ["参数 EQ", "去噪器", "音高修正"]
+        "tools": [
+          "参数 EQ",
+          "去噪器",
+          "音高修正"
+        ]
       },
       "2": {
         "title": "动态",
         "shortDesc": "瞬态控制、压缩和平衡。",
         "desc": "我们控制动态范围以获得连贯的混音。我们使用压缩器将元素粘合在一起，并使用软限制器驯服不需要的峰值。",
         "tip": "使用串联压缩（多个温和的压缩器）而不是单个激进的压缩器，以获得更自然的声音。",
-        "tools": ["VCA 压缩器", "多段压缩器", "齿音消除器", "限制器"]
+        "tools": [
+          "VCA 压缩器",
+          "多段压缩器",
+          "齿音消除器",
+          "限制器"
+        ]
       },
       "3": {
         "title": "空间",
         "shortDesc": "深度、混响和立体声声像。",
         "desc": "我们创造歌曲的 3D 世界。我们将乐器放置在立体声场中（声像），并使用混响和延迟增加深度。",
         "tip": "保持底鼓、贝斯和主唱在中心。将节奏和和声元素移动到两侧。",
-        "tools": ["板式/大厅混响", "立体声延迟", "立体声扩展器", "声像旋钮"]
+        "tools": [
+          "板式/大厅混响",
+          "立体声延迟",
+          "立体声扩展器",
+          "声像旋钮"
+        ]
       },
       "4": {
         "title": "母带处理",
         "shortDesc": "响度、最终凝聚力和交付格式。",
         "desc": "最终润色。我们的目标是具有竞争力的商业响度、整体音色平衡，并确保歌曲在任何播放系统（汽车、手机、俱乐部）上听起来都很好。",
         "tip": "始终将您的母带与同类型的参考歌曲进行比较（A/B 测试）。",
-        "tools": ["母带总线压缩", "线性 EQ", "最大化器", "抖动"]
+        "tools": [
+          "母带总线压缩",
+          "线性 EQ",
+          "最大化器",
+          "抖动"
+        ]
       }
     }
   },
@@ -333,9 +356,9 @@
       "Other": "其他"
     },
     "styleOptions": {
-        "Flamenco_Rumba": "弗拉门戈 / 伦巴",
-        "EDM_Club": "EDM / 俱乐部",
-        "Acoustic_SingerSongwriter": "原声 / 唱作人"
+      "Flamenco_Rumba": "弗拉门戈 / 伦巴",
+      "EDM_Club": "EDM / 俱乐部",
+      "Acoustic_SingerSongwriter": "原声 / 唱作人"
     },
     "result": {
       "originalMix": "原始混音",
@@ -439,6 +462,521 @@
     "mostPopular": "最受欢迎",
     "startForFree": "免费开始",
     "getPlus": "获取 Plus",
-    "getPro": "获取 Pro"
+    "getPro": "获取 Pro",
+    "Tiers": {
+      "free": {
+        "name": "Free",
+        "description": "Perfect for hobbyists and trying out our AI mixing engine.",
+        "features": {
+          "0": "2 Songs per month",
+          "1": "MP3 Output (320kbps)",
+          "2": "Standard AI Mixing",
+          "3": "Basic Support"
+        },
+        "notIncluded": {
+          "0": "WAV Output",
+          "1": "Stems Download",
+          "2": "Priority Processing",
+          "3": "Advanced Mastering Options"
+        },
+        "cta": "Start for Free"
+      },
+      "plus": {
+        "name": "Plus",
+        "description": "For independent artists who release music regularly.",
+        "features": {
+          "0": "10 Songs per month",
+          "1": "High-Res WAV Output (24-bit)",
+          "2": "Advanced AI Mixing & Mastering",
+          "3": "Email Support",
+          "4": "Project History (30 days)"
+        },
+        "notIncluded": {
+          "0": "Stems Download",
+          "1": "Priority Processing"
+        },
+        "cta": "Get Plus"
+      },
+      "pro": {
+        "name": "Pro",
+        "description": "For professionals and studios demanding the highest quality.",
+        "features": {
+          "0": "Unlimited Songs",
+          "1": "High-Res WAV + Stems Download",
+          "2": "Priority Processing (Skip the queue)",
+          "3": "Premium Support",
+          "4": "Permanent Project History",
+          "5": "Commercial License"
+        },
+        "notIncluded": {},
+        "cta": "Get Pro"
+      }
+    }
+  },
+  "Examples": {
+    "title": "Hear what Piroola delivers",
+    "subtitle": "Examples",
+    "description": "Representative mixes and masters that show how our AI pipeline cleans, balances, and enhances different genres. Each example highlights the processing moves you can expect on your own tracks.",
+    "viewPricing": "View pricing",
+    "howItWorks": "How it works",
+    "listenLink": "Listen",
+    "notableChanges": "Notable changes",
+    "ctaTitle": "Ready to hear your own track at this quality?",
+    "ctaDescription": "Upload stems, pick a space, and let the AI mix and master in minutes.",
+    "startMixing": "Start mixing",
+    "talkToSupport": "Talk to support",
+    "items": {
+      "pop": {
+        "title": "Modern Pop Vocal",
+        "genre": "Pop / Top 40",
+        "summary": "Bright, upfront vocals with de-essing, airy reverb, and tight low-end control for chart-ready polish.",
+        "highlights": {
+          "0": "Lead vocal leveling",
+          "1": "De-essing and air EQ",
+          "2": "Stereo widener on choruses"
+        },
+        "metrics": {
+          "0": "LUFS: -8.9 → -8.0",
+          "1": "True Peak: -2.0 dB → -1.0 dB",
+          "2": "Vocal sibilance reduced ~2 dB"
+        }
+      },
+      "hiphop": {
+        "title": "Punchy Hip-Hop",
+        "genre": "Hip-Hop / Trap",
+        "summary": "Low-end glued with parallel compression while keeping 808s clean and transients snappy on the snare.",
+        "highlights": {
+          "0": "808 clarity and sub control",
+          "1": "Transient shaping on snare/clap",
+          "2": "Bus saturation for glue"
+        },
+        "metrics": {
+          "0": "LUFS: -10.5 → -9.2",
+          "1": "Stereo width: +12%",
+          "2": "Noise floor cleaned 3 dB"
+        }
+      },
+      "indie": {
+        "title": "Indie Band",
+        "genre": "Indie / Rock",
+        "summary": "Phase-aligned drums, guitars separated with mid/side EQ, and a cohesive master with analog-style color.",
+        "highlights": {
+          "0": "Drum phase alignment",
+          "1": "Mid/side guitar EQ",
+          "2": "Tape-like saturation on mixbus"
+        },
+        "metrics": {
+          "0": "LUFS: -12.0 → -10.8",
+          "1": "Crest Factor: 11 dB → 9 dB",
+          "2": "Stereo image balanced L/R <0.5 dB"
+        }
+      },
+      "ambient": {
+        "title": "Cinematic Ambient",
+        "genre": "Score / Ambient",
+        "summary": "Wide, enveloping space with controlled low-mid build-up, keeping pads lush without mud.",
+        "highlights": {
+          "0": "Low-mid resonance control",
+          "1": "Layered reverbs with pre-delay",
+          "2": "Gentle multiband glue"
+        },
+        "metrics": {
+          "0": "LUFS: -16.0 → -14.5",
+          "1": "Reverb RT60 tamed 12%",
+          "2": "Sub rumble cut below 30 Hz"
+        }
+      }
+    }
+  },
+  "Docs": {
+    "title": "Documentation & Guide",
+    "description": "Comprehensive guide to using Piroola, including detailed explanations of the mixing and mastering pipeline, stages, and results.",
+    "toc": {
+      "gettingStarted": "Getting Started",
+      "intro": "Introduction",
+      "howToUse": "How to Use",
+      "features": "Key Features",
+      "pipelineStages": "Pipeline Stages",
+      "overview": "Overview",
+      "results": "Results & Support",
+      "understandingResults": "Understanding Results",
+      "faq": "FAQ & Troubleshooting",
+      "s0": "S0: Input & Metadata",
+      "s1": "S1: Technical Prep",
+      "s2": "S2: Phase Alignment",
+      "s3": "S3: Static Mix",
+      "s4": "S4: Spectral Cleanup",
+      "s5": "S5: Dynamics",
+      "s6": "S6: Space & Depth",
+      "s7": "S7: Tonal Balance",
+      "s8": "S8: Mix Bus Color",
+      "s9": "S9: Mastering",
+      "s10": "S10: Quality Control",
+      "s11": "S11: Reporting"
+    },
+    "intro": {
+      "title": "Piroola Documentation",
+      "p1": "Welcome to the official guide for <strong>Piroola</strong>. This platform leverages advanced AI to provide professional mixing and mastering services directly in your browser. Whether you are a musician, producer, or audio engineer, Piroola streamlines the complex process of audio engineering into a few simple steps.",
+      "p2": "Our pipeline analyzes your audio stems, corrects technical issues, balances levels, applies creative processing, and delivers a release-ready master. This guide covers everything from uploading your first track to understanding the detailed engineering report."
+    },
+    "howToUse": {
+      "title": "How to Use the Application",
+      "step1": {
+        "title": "1. Uploading Stems",
+        "desc": "Start by dragging and dropping your audio files into the upload zone on the home page. We accept common audio formats like WAV, AIFF, and MP3. For best results, use high-quality WAV files (24-bit, 44.1kHz or higher)."
+      },
+      "step2": {
+        "title": "2. Configuring Stem Profiles",
+        "desc": "Once uploaded, the system will attempt to automatically identify the instrument in each stem (e.g., 'Kick', 'Bass', 'Vocals'). Review the <strong>Stem Profiles</strong> panel on the right. Correct any misidentified stems to ensure the AI applies the correct processing profile."
+      },
+      "step3": {
+        "title": "3. Selecting Pipeline Stages",
+        "desc": "The <strong>Pipeline Steps</strong> panel allows you to enable or disable specific parts of the processing chain. By default, all stages are enabled for a complete mix and master. You can customize this if you only need specific corrections (e.g., only 'Technical Prep' or 'Mastering')."
+      },
+      "step4": {
+        "title": "4. Space & Depth Settings",
+        "desc": "Use the <strong>Space & Depth</strong> panel on the left to define the reverb style for different instrument groups (e.g., 'Room' for Drums, 'Plate' for Vocals). If left on 'Auto', the AI will choose appropriate spaces based on the genre and instrumentation."
+      },
+      "step5": {
+        "title": "5. Generate Mix",
+        "desc": "Click the <strong>Generate AI Mix</strong> button. The system will queue your job and process it through the selected stages. You can monitor progress in real-time."
+      }
+    },
+    "features": {
+      "title": "Key Features",
+      "smartAnalysis": {
+        "title": "Smart Analysis",
+        "desc": "Detects key, tempo, instrument types, and technical flaws like DC offset or phase issues automatically."
+      },
+      "autoMixing": {
+        "title": "Auto-Mixing",
+        "desc": "Balances levels, applies EQ, compression, and spatial effects to create a cohesive mix."
+      },
+      "aiMastering": {
+        "title": "AI Mastering",
+        "desc": "Delivers a loud, competitive master that meets commercial loudness standards (LUFS) and True Peak limits."
+      },
+      "detailedReports": {
+        "title": "Detailed Reports",
+        "desc": "Provides a comprehensive engineering report detailing every decision made by the AI, from EQ curves to compressor settings."
+      }
+    },
+    "pipeline": {
+      "title": "Pipeline Stages (Deep Dive)",
+      "desc": "The Piroola pipeline consists of 12 sequential stages (S0-S11). Each stage addresses a specific aspect of audio engineering.",
+      "s0": {
+        "title": "S0: Input & Metadata",
+        "goal": "Standardization and Preparation.",
+        "desc": "This stage handles the ingestion of your audio files. It normalizes the sample rate (48kHz) and bit depth (32-bit float) to ensure high-fidelity processing throughout the pipeline. It also validates metadata and sets up the internal routing for the session.",
+        "points": {
+          "0": "<strong>S0_SEPARATE_STEMS:</strong> Ensures files are treated as individual stems.",
+          "1": "<strong>S0_SESSION_FORMAT:</strong> Converts all audio to the project standard."
+        }
+      },
+      "s1": {
+        "title": "S1: Technical Preparation",
+        "goal": "Cleaning and Correction.",
+        "desc": "Before mixing begins, technical issues must be resolved. This stage detects global properties like Key and Scale, and fixes individual stem issues.",
+        "points": {
+          "0": "<strong>DC Offset Removal:</strong> Removes inaudible low-frequency energy that eats up headroom.",
+          "1": "<strong>Key Detection:</strong> Analyzes the song's musical key.",
+          "2": "<strong>Vocal Tuning:</strong> Gently pitch-corrects vocals to the detected key if needed (can be disabled).",
+          "3": "<strong>Gain Staging:</strong> Sets a healthy working loudness for each stem."
+        }
+      },
+      "s2": {
+        "title": "S2: Phase & Polarity Alignment",
+        "goal": "Cohesion and Punch.",
+        "desc": "Phase issues, especially in multi-mic recordings like drums, can cause tracks to sound thin or hollow. This stage analyzes the correlation between related tracks (e.g., Kick In, Kick Out, Overheads) and applies time alignment or polarity flips to ensure they sum constructively."
+      },
+      "s3": {
+        "title": "S3: Static Mix & Routing",
+        "goal": "Balance and Headroom.",
+        "desc": "Establishes the initial volume balance. It ensures the lead vocal is audible and sits correctly against the backing tracks. It also sets the global mixbus headroom (typically -6dB to -12dB peak) to provide space for subsequent processing stages."
+      },
+      "s4": {
+        "title": "S4: Spectral Cleanup",
+        "goal": "Clarity and Separation.",
+        "desc": "This stage cleans up the frequency spectrum of each stem.",
+        "points": {
+          "0": "<strong>HPF/LPF:</strong> Applies High-Pass and Low-Pass filters based on the instrument type (e.g., removing sub-bass rumble from a Hi-Hat).",
+          "1": "<strong>Resonance Control:</strong> Identifies and cuts harsh, ringing resonant frequencies that can cause ear fatigue."
+        }
+      },
+      "s5": {
+        "title": "S5: Dynamics & Level Automation",
+        "goal": "Control and Consistency.",
+        "desc": "Applies compression and gating to control the dynamic range. It ensures quiet parts are audible and loud transients are controlled.",
+        "points": {
+          "0": "<strong>Stem Dynamics:</strong> Generic compression for instruments.",
+          "1": "<strong>Vocal Dynamics:</strong> Specialized processing for vocals to keep them upfront and steady.",
+          "2": "<strong>Bus Compression:</strong> Glue compression for groups like Drums."
+        }
+      },
+      "s6": {
+        "title": "S6: Space & Depth",
+        "goal": "Dimension and Atmosphere.",
+        "desc": "Creates a sense of space using reverb and delay. Different 'styles' (e.g., Hall, Plate, Room) are applied to different bus groups to create depth without washing out the mix. You can customize these styles in the 'Space & Depth' panel."
+      },
+      "s7": {
+        "title": "S7: Multiband EQ / Tonal Balance",
+        "goal": "Professional Frequency Balance.",
+        "desc": "Analyzes the overall frequency spectrum of the mixbus and compares it to a target curve typical of professional releases. It applies broad, musical EQ moves to correct imbalances (e.g., too muddy, too bright)."
+      },
+      "s8": {
+        "title": "S8: Mix Bus Color",
+        "goal": "Glue and Warmth.",
+        "desc": "Adds subtle harmonic saturation to the entire mix. This 'glues' the elements together and adds analog-style warmth and character."
+      },
+      "s9": {
+        "title": "S9: Mastering",
+        "goal": "Commercial Loudness and Polish.",
+        "desc": "The final creative stage. It brings the track up to commercial volume using limiting and maximizing. It also adjusts the stereo width to ensure an immersive experience that is still mono-compatible."
+      },
+      "s10": {
+        "title": "S10: Master Stereo QC",
+        "goal": "Technical Compliance.",
+        "desc": "A final Quality Control pass. It verifies that the master meets technical standards for True Peak (preventing digital clipping), LUFS (loudness), and channel balance. It makes micro-adjustments if any limits are exceeded."
+      },
+      "s11": {
+        "title": "S11: Reporting",
+        "goal": "Transparency and Insight.",
+        "desc": "Collects data from all previous stages to generate the final JSON report and render the visual feedback provided to the user."
+      }
+    },
+    "results": {
+      "title": "Understanding Results",
+      "p1": "When processing is complete, you will be presented with the <strong>Mix Result Panel</strong>.",
+      "audioFiles": {
+        "title": "The Audio Files",
+        "desc": "You can download the final <strong>Mastered Audio</strong> (WAV). This is the production-ready file. You may also have access to the unmastered Mixbus file if needed for external mastering."
+      },
+      "report": {
+        "title": "The Engineering Report",
+        "desc": "Click 'View Report' to open the detailed modal. This report contains:",
+        "points": {
+          "0": "<strong>Stage Summaries:</strong> Pass/Fail status for each processing step.",
+          "1": "<strong>Detailed Metrics:</strong> Numeric data showing exactly what changed (e.g., 'Gain reduced by 2.5dB', 'EQ cut at 300Hz').",
+          "2": "<strong>Before/After Comparisons:</strong> (Where available) Visual representations of the audio signal before and after processing."
+        }
+      }
+    },
+    "faq": {
+      "title": "FAQ & Troubleshooting",
+      "q1": {
+        "q": "My mix sounds distorted. What happened?",
+        "a": "Check your input files. If the stems are already clipped (distorted) before upload, the AI cannot fix them. Also, ensure you haven't assigned a 'Drum' profile to a vocal track, as this can cause aggressive compression."
+      },
+      "q2": {
+        "q": "The process failed at Stage S1.",
+        "a": "This usually means the input files were corrupted or in an unsupported format. Try re-exporting your stems as standard WAV files."
+      },
+      "q3": {
+        "q": "Can I use the mastered file for streaming?",
+        "a": "Yes! Our S9 and S10 stages are calibrated to standard streaming loudness targets (approx -14 LUFS integrated, -1dB True Peak)."
+      }
+    }
+  },
+  "Support": {
+    "title": "Support Center",
+    "subtitle": "Need help? We've got you covered.",
+    "quickResources": "Quick Resources",
+    "quickResourcesDesc": "Before reaching out, check our documentation and FAQs.",
+    "faqLink": "Frequently Asked Questions",
+    "docsLink": "Documentation & Guide",
+    "directContact": "Direct Contact",
+    "directContactDesc": "Prefer email? You can reach our support team directly.",
+    "formTitle": "Send us a message",
+    "successTitle": "Message Sent!",
+    "successDesc": "Thank you for contacting us.",
+    "sendAnother": "Send another message",
+    "labels": {
+      "name": "Name",
+      "email": "Email",
+      "subject": "Subject",
+      "message": "Message",
+      "submit": "Send Message",
+      "sending": "Sending..."
+    },
+    "placeholders": {
+      "name": "Your name",
+      "email": "you@example.com",
+      "message": "How can we help you?"
+    },
+    "options": {
+      "default": "Select a topic",
+      "technical": "Technical Support",
+      "billing": "Billing & Pricing",
+      "feedback": "Feedback & Suggestions",
+      "other": "Other"
+    }
+  },
+  "Profile": {
+    "title": "User Profile",
+    "signOut": "Sign Out",
+    "userInfo": {
+      "fullName": "Full Name",
+      "email": "Email Address"
+    },
+    "changePassword": {
+      "title": "Change Password",
+      "oldPassword": "Old Password",
+      "newPassword": "New Password",
+      "confirmPassword": "Confirm New Password",
+      "update": "Update Password",
+      "updating": "Updating...",
+      "success": "Password changed successfully.",
+      "matchError": "New passwords do not match.",
+      "lengthError": "New password must be at least 8 characters long.",
+      "genericError": "Failed to change password."
+    },
+    "deleteAccount": {
+      "title": "Danger Zone",
+      "warning": "Once you delete your account, there is no going back. Please be certain.",
+      "button": "Delete Account",
+      "deleting": "Deleting...",
+      "confirm": "Are you sure you want to delete your account? This action cannot be undone.",
+      "error": "Failed to delete account. Please try again."
+    }
+  },
+  "Terms": {
+    "title": "Terms of Service",
+    "lastUpdated": "Last updated: {date}",
+    "intro": "By accessing or using <strong>Piroola</strong>, you agree to be bound by these Terms of Service. If you do not agree to these terms, please do not use our services.",
+    "sections": {
+      "0": {
+        "title": "1. Acceptance of Terms",
+        "content": "By accessing or using <strong>Piroola</strong>, you agree to be bound by these Terms of Service. If you do not agree to these terms, please do not use our services."
+      },
+      "1": {
+        "title": "2. Service Description",
+        "content": "Piroola provides AI-assisted audio mixing and mastering services. We allow users to upload audio files, process them through our automated pipeline, and download the results."
+      },
+      "2": {
+        "title": "3. User Responsibilities",
+        "content": "You are responsible for your use of the service and for any content you provide, including compliance with applicable laws. You must not upload any content that:",
+        "list": {
+          "0": "Violates any third-party intellectual property rights.",
+          "1": "Is illegal, harmful, threatening, or otherwise objectionable.",
+          "2": "Contains viruses or other malicious code."
+        }
+      },
+      "3": {
+        "title": "4. Intellectual Property",
+        "content": "You retain all rights and ownership of your original content. By uploading content, you grant us a limited license to process, store, and modify your content solely for the purpose of providing the service to you. The processed output is owned by you."
+      },
+      "4": {
+        "title": "5. Limitation of Liability",
+        "content": "Piroola is provided 'as is' without any warranties. We shall not be liable for any indirect, incidental, special, consequential or punitive damages, including without limitation, loss of profits, data, use, goodwill, or other intangible losses."
+      },
+      "5": {
+        "title": "6. Changes to Terms",
+        "content": "We reserve the right to modify these terms at any time. We will provide notice of any significant changes by posting the new terms on this page. Your continued use of the service after any such changes constitutes your acceptance of the new terms."
+      },
+      "6": {
+        "title": "7. Contact Us",
+        "content": "If you have any questions about these Terms, please contact us at: <br /><span class='text-teal-400'>legal@audioalchemy.com</span>"
+      }
+    }
+  },
+  "Privacy": {
+    "title": "Privacy Policy",
+    "lastUpdated": "Last updated: {date}",
+    "intro": "Welcome to <strong>Piroola</strong>. We respect your privacy and are committed to protecting your personal data.",
+    "sections": {
+      "0": {
+        "title": "1. Introduction",
+        "content": "Welcome to <strong>Piroola</strong>. We respect your privacy and are committed to protecting your personal data. This privacy policy will inform you as to how we look after your personal data when you visit our website and tell you about your privacy rights and how the law protects you."
+      },
+      "1": {
+        "title": "2. Data Controller",
+        "content": "Piroola is the controller and responsible for your personal data. If you have any questions about this privacy policy, please contact us."
+      },
+      "2": {
+        "title": "3. The Data We Collect",
+        "content": "We may collect, use, store and transfer different kinds of personal data about you which we have grouped together follows:",
+        "list": {
+          "0": "<strong>Identity Data:</strong> includes first name, last name, username or similar identifier (if applicable).",
+          "1": "<strong>Contact Data:</strong> includes email address (if provided).",
+          "2": "<strong>Technical Data:</strong> includes internet protocol (IP) address, your login data, browser type and version, time zone setting and location, browser plug-in types and versions, operating system and platform and other technology on the devices you use to access this website.",
+          "3": "<strong>Usage Data:</strong> includes information about how you use our website, products and services.",
+          "4": "<strong>Content Data:</strong> includes the audio files you upload for processing. These are processed solely for the purpose of providing the service and are not used for other purposes without your consent."
+        }
+      },
+      "3": {
+        "title": "4. How We Use Your Personal Data",
+        "content": "We will only use your personal data when the law allows us to. Most commonly, we will use your personal data in the following circumstances:",
+        "list": {
+          "0": "Where we need to perform the contract we are about to enter into or have entered into with you (e.g., processing your mix).",
+          "1": "Where it is necessary for our legitimate interests (or those of a third party) and your interests and fundamental rights do not override those interests.",
+          "2": "Where we need to comply with a legal or regulatory obligation."
+        }
+      },
+      "4": {
+        "title": "5. Data Retention",
+        "content": "We will only retain your personal data for as long as necessary to fulfill the purposes we collected it for, including for the purposes of satisfying any legal, accounting, or reporting requirements. Audio files uploaded are retained only for the duration of the processing job and a reasonable period thereafter to allow you to download results, after which they are deleted."
+      },
+      "5": {
+        "title": "6. Data Security",
+        "content": "We have put in place appropriate security measures to prevent your personal data from being accidentally lost, used or accessed in an unauthorized way, altered or disclosed. In addition, we limit access to your personal data to those employees, agents, contractors and other third parties who have a business need to know."
+      },
+      "6": {
+        "title": "7. Your Legal Rights",
+        "content": "Under certain circumstances, you have rights under data protection laws in relation to your personal data, including the right to:",
+        "list": {
+          "0": "Request access to your personal data.",
+          "1": "Request correction of your personal data.",
+          "2": "Request erasure of your personal data.",
+          "3": "Object to processing of your personal data.",
+          "4": "Request restriction of processing your personal data.",
+          "5": "Request transfer of your personal data.",
+          "6": "Right to withdraw consent."
+        },
+        "footer": "If you wish to exercise any of the rights set out above, please contact us."
+      },
+      "7": {
+        "title": "8. Cookies",
+        "content": "We use cookies to distinguish you from other users of our website. This helps us to provide you with a good experience when you browse our website and also allows us to improve our site. We use Google Analytics to analyze the use of our website."
+      },
+      "8": {
+        "title": "9. Contact Details",
+        "content": "If you have any questions about this privacy policy or our privacy practices, please contact us at: <br /><span class='text-teal-400'>privacy@audioalchemy.com</span>"
+      }
+    }
+  },
+  "Cookie": {
+    "title": "Cookie Policy",
+    "lastUpdated": "Last updated: {date}",
+    "sections": {
+      "0": {
+        "title": "1. What Are Cookies",
+        "content": "Cookies are small text files that are placed on your computer or mobile device when you browse websites. They are widely used to make websites work, or work more efficiently, as well as to provide information to the owners of the site."
+      },
+      "1": {
+        "title": "2. How We Use Cookies",
+        "content": "We use cookies for a variety of reasons detailed below. Unfortunately, in most cases there are no industry standard options for disabling cookies without completely disabling the functionality and features they add to this site. It is recommended that you leave on all cookies if you are not sure whether you need them or not in case they are used to provide a service that you use."
+      },
+      "2": {
+        "title": "3. The Cookies We Set",
+        "list": {
+          "0": "<strong>Essential Cookies:</strong> These cookies are necessary for the website to function and cannot be switched off in our systems. They are usually only set in response to actions made by you which amount to a request for services, such as setting your privacy preferences, logging in or filling in forms.",
+          "1": "<strong>Functionality Cookies:</strong> These cookies enable the website to provide enhanced functionality and personalization. They may be set by us or by third party providers whose services we have added to our pages.",
+          "2": "<strong>Analytics Cookies:</strong> We use Google Analytics to understand how our visitors interact with the website. This helps us improve the user experience. These cookies track things such as how long you spend on the site and the pages that you visit."
+        }
+      },
+      "3": {
+        "title": "4. Third Party Cookies",
+        "content": "In some special cases we also use cookies provided by trusted third parties. The following section details which third party cookies you might encounter through this site.",
+        "p2": "This site uses Google Analytics which is one of the most widespread and trusted analytics solutions on the web for helping us to understand how you use the site and ways that we can improve your experience. These cookies may track things such as how long you spend on the site and the pages that you visit so we can continue to produce engaging content."
+      },
+      "4": {
+        "title": "5. Managing Cookies",
+        "content": "You can prevent the setting of cookies by adjusting the settings on your browser (see your browser Help for how to do this). Be aware that disabling cookies will affect the functionality of this and many other websites that you visit. Disabling cookies will usually result in also disabling certain functionality and features of this site. Therefore it is recommended that you do not disable cookies."
+      },
+      "5": {
+        "title": "6. Contact Details",
+        "content": "If you have any questions about this cookie policy, please contact us at: <br /><span class='text-teal-400'>privacy@audioalchemy.com</span>"
+      }
+    }
   }
 }

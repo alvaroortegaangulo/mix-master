@@ -5,10 +5,12 @@ import { useAuth } from "../../../context/AuthContext";
 import { useRouter } from "next/navigation";
 import { Link } from "../../../i18n/routing";
 import { getBackendBaseUrl } from "../../../lib/mixApi";
+import { useTranslations } from "next-intl";
 
 export default function ProfilePage() {
   const { user, logout, loading } = useAuth();
   const router = useRouter();
+  const t = useTranslations('Profile');
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -44,12 +46,12 @@ export default function ProfilePage() {
     setChangePasswordSuccess(null);
 
     if (newPassword !== confirmPassword) {
-      setChangePasswordError("New passwords do not match.");
+      setChangePasswordError(t('changePassword.matchError'));
       return;
     }
 
     if (newPassword.length < 8) {
-      setChangePasswordError("New password must be at least 8 characters long.");
+      setChangePasswordError(t('changePassword.lengthError'));
       return;
     }
 
@@ -73,16 +75,16 @@ export default function ProfilePage() {
       const data = await res.json();
 
       if (res.ok) {
-        setChangePasswordSuccess("Password changed successfully.");
+        setChangePasswordSuccess(t('changePassword.success'));
         setOldPassword("");
         setNewPassword("");
         setConfirmPassword("");
       } else {
-        setChangePasswordError(data.detail || "Failed to change password.");
+        setChangePasswordError(data.detail || t('changePassword.genericError'));
       }
     } catch (err) {
       console.error(err);
-      setChangePasswordError("An error occurred while changing password.");
+      setChangePasswordError(t('changePassword.genericError'));
     } finally {
       setIsChangingPassword(false);
     }
@@ -91,7 +93,7 @@ export default function ProfilePage() {
   const handleDeleteAccount = async () => {
     if (
       !window.confirm(
-        "Are you sure you want to delete your account? This action cannot be undone."
+        t('deleteAccount.confirm')
       )
     ) {
       return;
@@ -114,11 +116,11 @@ export default function ProfilePage() {
         logout();
         router.push("/");
       } else {
-        setError("Failed to delete account. Please try again.");
+        setError(t('deleteAccount.error'));
       }
     } catch (err) {
       console.error(err);
-      setError("An error occurred while deleting the account.");
+      setError(t('deleteAccount.error'));
     } finally {
       setIsDeleting(false);
     }
@@ -128,12 +130,12 @@ export default function ProfilePage() {
     <div className="flex min-h-screen flex-col bg-slate-950 text-slate-100">
       <main className="mx-auto mt-10 w-full max-w-2xl px-4 pb-20">
         <div className="flex items-center justify-between mb-8">
-          <h1 className="text-3xl font-bold">User Profile</h1>
+          <h1 className="text-3xl font-bold">{t('title')}</h1>
           <button
             onClick={handleLogout}
             className="rounded-md border border-slate-700 bg-slate-800 px-4 py-2 text-sm font-medium text-slate-300 hover:bg-slate-700 hover:text-white transition-colors"
           >
-            Sign Out
+            {t('signOut')}
           </button>
         </div>
 
@@ -143,7 +145,7 @@ export default function ProfilePage() {
             <div className="space-y-6">
               <div>
                 <label className="block text-sm font-medium text-slate-400">
-                  Full Name
+                  {t('userInfo.fullName')}
                 </label>
                 <div className="mt-1 text-lg font-medium text-slate-200">
                   {user.full_name || "N/A"}
@@ -152,7 +154,7 @@ export default function ProfilePage() {
 
               <div>
                 <label className="block text-sm font-medium text-slate-400">
-                  Email Address
+                  {t('userInfo.email')}
                 </label>
                 <div className="mt-1 text-lg font-medium text-slate-200">
                   {user.email}
@@ -163,7 +165,7 @@ export default function ProfilePage() {
 
           {/* Change Password Section */}
           <div className="rounded-2xl border border-slate-800/80 bg-slate-900/70 p-8 shadow-xl">
-            <h2 className="text-xl font-semibold text-slate-200 mb-6">Change Password</h2>
+            <h2 className="text-xl font-semibold text-slate-200 mb-6">{t('changePassword.title')}</h2>
 
             {changePasswordSuccess && (
               <div className="mb-4 rounded bg-green-900/30 border border-green-800 p-3 text-sm text-green-200">
@@ -180,7 +182,7 @@ export default function ProfilePage() {
             <form onSubmit={handleChangePassword} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-slate-400 mb-1">
-                  Old Password
+                  {t('changePassword.oldPassword')}
                 </label>
                 <input
                   type="password"
@@ -193,7 +195,7 @@ export default function ProfilePage() {
 
               <div>
                 <label className="block text-sm font-medium text-slate-400 mb-1">
-                  New Password
+                  {t('changePassword.newPassword')}
                 </label>
                 <input
                   type="password"
@@ -207,7 +209,7 @@ export default function ProfilePage() {
 
               <div>
                 <label className="block text-sm font-medium text-slate-400 mb-1">
-                  Confirm New Password
+                  {t('changePassword.confirmPassword')}
                 </label>
                 <input
                   type="password"
@@ -225,7 +227,7 @@ export default function ProfilePage() {
                   disabled={isChangingPassword}
                   className="rounded-md bg-teal-600 px-4 py-2 text-sm font-semibold text-white hover:bg-teal-500 disabled:opacity-50 transition-colors"
                 >
-                  {isChangingPassword ? "Updating..." : "Update Password"}
+                  {isChangingPassword ? t('changePassword.updating') : t('changePassword.update')}
                 </button>
               </div>
             </form>
@@ -233,10 +235,9 @@ export default function ProfilePage() {
 
           {/* Delete Account Section */}
           <div className="rounded-2xl border border-slate-800/80 bg-slate-900/70 p-8 shadow-xl">
-            <h2 className="text-xl font-semibold text-red-400 mb-4">Danger Zone</h2>
+            <h2 className="text-xl font-semibold text-red-400 mb-4">{t('deleteAccount.title')}</h2>
             <p className="mb-4 text-sm text-slate-400">
-              Once you delete your account, there is no going back. Please be
-              certain.
+              {t('deleteAccount.warning')}
             </p>
 
             {error && (
@@ -250,7 +251,7 @@ export default function ProfilePage() {
               disabled={isDeleting}
               className="rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50 transition-colors"
             >
-              {isDeleting ? "Deleting..." : "Delete Account"}
+              {isDeleting ? t('deleteAccount.deleting') : t('deleteAccount.button')}
             </button>
           </div>
         </div>
