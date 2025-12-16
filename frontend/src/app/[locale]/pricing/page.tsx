@@ -1,10 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
+import { Link } from "../../../i18n/routing";
 import { CheckIcon, XMarkIcon } from "@heroicons/react/20/solid";
 import Script from "next/script";
-import { gaEvent } from "../../lib/ga";
+import { gaEvent } from "../../../lib/ga";
+import { useTranslations } from "next-intl";
 
 const fallbackSiteUrl = "https://music-mix-master.com";
 const siteUrl = (() => {
@@ -36,85 +37,86 @@ const breadcrumbsJsonLd = {
   ],
 };
 
-const TIERS = [
-  {
-    name: "Free",
-    id: "tier-free",
-    href: "/#upload",
-    priceMonthly: "$0",
-    priceYearly: "$0",
-    description: "Perfect for hobbyists and trying out our AI mixing engine.",
-    features: [
-      "2 Songs per month",
-      "MP3 Output (320kbps)",
-      "Standard AI Mixing",
-      "Basic Support",
-    ],
-    notIncluded: [
-      "WAV Output",
-      "Stems Download",
-      "Priority Processing",
-      "Advanced Mastering Options",
-    ],
-    cta: "Start for Free",
-    mostPopular: false,
-  },
-  {
-    name: "Plus",
-    id: "tier-plus",
-    href: "/register?plan=plus",
-    priceMonthly: "$19",
-    priceYearly: "$15",
-    description: "For independent artists who release music regularly.",
-    features: [
-      "10 Songs per month",
-      "High-Res WAV Output (24-bit)",
-      "Advanced AI Mixing & Mastering",
-      "Email Support",
-      "Project History (30 days)",
-    ],
-    notIncluded: [
-      "Stems Download",
-      "Priority Processing",
-    ],
-    cta: "Get Plus",
-    mostPopular: true,
-  },
-  {
-    name: "Pro",
-    id: "tier-pro",
-    href: "/register?plan=pro",
-    priceMonthly: "$49",
-    priceYearly: "$39",
-    description: "For professionals and studios demanding the highest quality.",
-    features: [
-      "Unlimited Songs",
-      "High-Res WAV + Stems Download",
-      "Priority Processing (Skip the queue)",
-      "Premium Support",
-      "Permanent Project History",
-      "Commercial License",
-    ],
-    notIncluded: [],
-    cta: "Get Pro",
-    mostPopular: false,
-  },
-];
-
 export default function PricingPage() {
   const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
+  const t = useTranslations('Pricing');
+
+  const TIERS = [
+    {
+      name: "Free",
+      id: "tier-free",
+      href: "/#upload",
+      priceMonthly: "$0",
+      priceYearly: "$0",
+      description: "Perfect for hobbyists and trying out our AI mixing engine.",
+      features: [
+        "2 Songs per month",
+        "MP3 Output (320kbps)",
+        "Standard AI Mixing",
+        "Basic Support",
+      ],
+      notIncluded: [
+        "WAV Output",
+        "Stems Download",
+        "Priority Processing",
+        "Advanced Mastering Options",
+      ],
+      cta: t('startForFree'),
+      mostPopular: false,
+    },
+    {
+      name: "Plus",
+      id: "tier-plus",
+      href: "/register?plan=plus",
+      priceMonthly: "$19",
+      priceYearly: "$15",
+      description: "For independent artists who release music regularly.",
+      features: [
+        "10 Songs per month",
+        "High-Res WAV Output (24-bit)",
+        "Advanced AI Mixing & Mastering",
+        "Email Support",
+        "Project History (30 days)",
+      ],
+      notIncluded: [
+        "Stems Download",
+        "Priority Processing",
+      ],
+      cta: t('getPlus'),
+      mostPopular: true,
+    },
+    {
+      name: "Pro",
+      id: "tier-pro",
+      href: "/register?plan=pro",
+      priceMonthly: "$49",
+      priceYearly: "$39",
+      description: "For professionals and studios demanding the highest quality.",
+      features: [
+        "Unlimited Songs",
+        "High-Res WAV + Stems Download",
+        "Priority Processing (Skip the queue)",
+        "Premium Support",
+        "Permanent Project History",
+        "Commercial License",
+      ],
+      notIncluded: [],
+      cta: t('getPro'),
+      mostPopular: false,
+    },
+  ];
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-teal-500/30">
       <main className="py-24 sm:py-32">
         <div className="mx-auto max-w-7xl px-6 lg:px-8">
           <div className="mx-auto max-w-4xl text-center">
-            <h1 className="text-base font-semibold leading-7 text-teal-400">Pricing</h1>
+            <h1 className="text-base font-semibold leading-7 text-teal-400">{t('title')}</h1>
             <p className="mt-2 text-4xl font-bold tracking-tight text-white sm:text-5xl">
-              Pricing plans for every stage of your journey
+              {t('subtitle')}
             </p>
             <p className="mt-6 text-lg leading-8 text-slate-300">
-              Choose the perfect plan for your audio production needs. From demos to professional releases, we have you covered.
+              {t('description')}
             </p>
           </div>
 
@@ -128,7 +130,7 @@ export default function PricingPage() {
                 } relative rounded-full px-6 py-2 text-sm font-semibold transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500`}
                 onClick={() => setBillingCycle("monthly")}
               >
-                Monthly billing
+                {t('monthlyBilling')}
               </button>
               <button
                 type="button"
@@ -137,7 +139,7 @@ export default function PricingPage() {
                 } relative rounded-full px-6 py-2 text-sm font-semibold transition-all duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-teal-500`}
                 onClick={() => setBillingCycle("yearly")}
               >
-                Yearly billing <span className="ml-1 text-teal-400 text-xs">(Save ~20%)</span>
+                {t('yearlyBilling')} <span className="ml-1 text-teal-400 text-xs">({t('save20')})</span>
               </button>
             </div>
           </div>
@@ -155,7 +157,7 @@ export default function PricingPage() {
               >
                 {tier.mostPopular && (
                   <div className="absolute -top-4 left-1/2 -translate-x-1/2 rounded-full bg-teal-500 px-4 py-1 text-sm font-semibold text-white shadow-sm">
-                    Most Popular
+                    {t('mostPopular')}
                   </div>
                 )}
                 <div>
@@ -169,11 +171,11 @@ export default function PricingPage() {
                     <span className="text-4xl font-bold tracking-tight text-white">
                       {billingCycle === "yearly" ? tier.priceYearly : tier.priceMonthly}
                     </span>
-                    <span className="text-sm font-semibold leading-6 text-slate-400">/month</span>
+                    <span className="text-sm font-semibold leading-6 text-slate-400">/{t('month')}</span>
                   </p>
                   {billingCycle === "yearly" && tier.priceYearly !== "$0" && (
                     <p className="mt-1 text-xs text-teal-400">
-                      Billed yearly (${parseInt(tier.priceYearly.replace("$", "")) * 12}/year)
+                      {t('billedYearly')} (${parseInt(tier.priceYearly.replace("$", "")) * 12}/year)
                     </p>
                   )}
 

@@ -1,7 +1,10 @@
 import Image from "next/image";
 import { PlayCircleIcon, StarIcon, ExclamationTriangleIcon } from "@heroicons/react/24/solid";
+import { useTranslations } from 'next-intl';
 
 export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
+  const t = useTranslations('HeroSection');
+
   return (
     <section className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-slate-950 px-4 text-center">
       {/* Background gradients/blobs */}
@@ -14,7 +17,7 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
         {/* Alert: Website under construction */}
         <div className="flex items-center gap-2 rounded-full bg-red-900/20 border border-red-500/50 px-5 py-2 text-red-400 animate-in fade-in zoom-in duration-1000">
           <ExclamationTriangleIcon className="h-5 w-5" />
-          <span className="font-bold text-sm tracking-wide uppercase">ALERT: Website under construction!</span>
+          <span className="font-bold text-sm tracking-wide uppercase">{t('alertConstruction')}</span>
         </div>
 
         {/* Logo */}
@@ -32,17 +35,15 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
         {/* Main Heading - LCP Element (No entrance animation to minimize render delay) */}
         <h1 className="flex flex-col text-5xl font-extrabold tracking-tight md:text-7xl lg:text-8xl gap-2">
           <span className="text-white">
-            Studio Sound.
+            {t('studioSound')}
           </span>
           <span className="bg-gradient-to-r from-teal-400 to-purple-500 bg-clip-text text-transparent">
-            Perfected by AI.
+            {t('perfectedByAI')}
           </span>
         </h1>
 
         <p className="mx-auto max-w-3xl text-lg font-light leading-relaxed text-slate-300 md:text-xl animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-100 fill-mode-backwards">
-          Transform your home recordings (stems) into professional,
-          Spotify-ready mixes in minutes. Piroola handles the technical
-          engineering so you can focus on the music.
+          {t('description')}
         </p>
 
         <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-center mt-4 animate-in fade-in slide-in-from-bottom-6 duration-1000 delay-200 fill-mode-backwards">
@@ -62,7 +63,7 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
             >
               <circle cx="12" cy="12" r="9" />
             </svg>
-            <span>Mix my Tracks</span>
+            <span>{t('mixMyTracks')}</span>
           </button>
 
           {/* Button 2: Escuchar Demos */}
@@ -71,7 +72,7 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
              className="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-full bg-slate-800/80 px-8 py-4 text-lg font-semibold text-white transition-all hover:bg-slate-700 hover:scale-105 focus:outline-none focus:ring-4 focus:ring-purple-500/30 border border-slate-700"
           >
             <PlayCircleIcon className="h-6 w-6 text-white" />
-            <span>Listen to Demos</span>
+            <span>{t('listenToDemos')}</span>
           </button>
         </div>
 
@@ -79,10 +80,10 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
         <div className="flex items-center gap-2 text-sm font-medium text-slate-400 mt-2 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-300 fill-mode-backwards">
             <div className="flex items-center gap-1 text-yellow-400">
                 <StarIcon className="h-5 w-5" />
-                <span>4.9/5 Rating</span>
+                <span>{t('rating')}</span>
             </div>
             <span>•</span>
-            <span>+10k Tracks Mastered</span>
+            <span>{t('tracksMastered')}</span>
         </div>
       </div>
 

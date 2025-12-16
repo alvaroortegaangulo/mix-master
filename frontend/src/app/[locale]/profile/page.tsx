@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useState } from "react";
-import { useAuth } from "../../context/AuthContext";
+import { useAuth } from "../../../context/AuthContext";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { getBackendBaseUrl } from "../../lib/mixApi";
+import { Link } from "../../../i18n/routing";
+import { getBackendBaseUrl } from "../../../lib/mixApi";
 
 export default function ProfilePage() {
   const { user, logout, loading } = useAuth();

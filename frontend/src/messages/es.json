@@ -1,0 +1,41 @@
+{
+  "Metadata": {
+    "title": "Piroola: Mezcla y Masterización de Audio Profesional con IA Online",
+    "description": "Transforma tus pistas con Piroola. Nuestro servicio de mezcla y masterización impulsado por IA ofrece resultados de calidad de estudio profesional a partir de tus stems multipista en minutos."
+  },
+  "Navigation": {
+    "examples": "Ejemplos",
+    "pricing": "Precios",
+    "faq": "Preguntas Frecuentes",
+    "howItWorks": "Cómo Funciona",
+    "support": "Soporte"
+  },
+  "LandingPage": {
+    "readyToElevate": "¿Listo para elevar tu sonido?",
+    "startMixing": "Empieza a Mezclar Gratis"
+  },
+  "HeroSection": {
+    "alertConstruction": "ALERTA: ¡Sitio web en construcción!",
+    "studioSound": "Sonido de Estudio.",
+    "perfectedByAI": "Perfeccionado por IA.",
+    "description": "Transforma tus grabaciones caseras (stems) en mezclas profesionales listas para Spotify en minutos. Piroola se encarga de la ingeniería técnica para que puedas concentrarte en la música.",
+    "mixMyTracks": "Mezclar mis Pistas",
+    "listenToDemos": "Escuchar Demos",
+    "rating": "Calificación 4.9/5",
+    "tracksMastered": "+10k Pistas Masterizadas"
+  },
+  "Pricing": {
+    "title": "Precios",
+    "subtitle": "Planes de precios para cada etapa de tu viaje",
+    "description": "Elige el plan perfecto para tus necesidades de producción de audio. Desde demos hasta lanzamientos profesionales, te cubrimos.",
+    "monthlyBilling": "Facturación mensual",
+    "yearlyBilling": "Facturación anual",
+    "save20": "Ahorra ~20%",
+    "month": "mes",
+    "billedYearly": "Facturado anualmente",
+    "mostPopular": "Más Popular",
+    "startForFree": "Empieza Gratis",
+    "getPlus": "Obtener Plus",
+    "getPro": "Obtener Pro"
+  }
+}

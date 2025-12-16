@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { Link } from "../../../i18n/routing";
 import type { Metadata } from "next";
 import Image from "next/image";
 import Script from "next/script";

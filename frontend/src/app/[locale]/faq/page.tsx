@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { Link } from "../../../i18n/routing";
 import Script from "next/script";
 
 export const metadata = {

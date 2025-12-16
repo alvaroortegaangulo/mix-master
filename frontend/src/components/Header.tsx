@@ -1,19 +1,12 @@
 "use client";
 
-import Link from "next/link";
+import { Link } from "../i18n/routing";
 import Image from "next/image";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "../context/AuthContext";
 import { useModal } from "../context/ModalContext";
 import { useState, useEffect } from "react";
-
-const NAV_LINKS = [
-  { label: "Examples", href: "/examples" },
-  { label: "Pricing", href: "/pricing" },
-  { label: "FAQ", href: "/faq" },
-  { label: "Docs", href: "/docs" },
-  { label: "Support", href: "/support" },
-];
+import { useTranslations } from "next-intl";
 
 export function Header() {
   const pathname = usePathname();
@@ -22,6 +15,15 @@ export function Header() {
   const { openAuthModal } = useModal();
   const [scrolled, setScrolled] = useState(false);
   const router = useRouter();
+  const t = useTranslations('Navigation');
+
+  const NAV_LINKS = [
+    { label: t('examples'), href: "/examples" },
+    { label: t('pricing'), href: "/pricing" },
+    { label: t('faq'), href: "/faq" },
+    { label: t('howItWorks'), href: "/docs" },
+    { label: t('support'), href: "/support" },
+  ];
 
   // Detect scroll to adjust background
   useEffect(() => {

@@ -1,0 +1,41 @@
+{
+  "Metadata": {
+    "title": "Piroola: Professionelles KI-Audio-Mixing & Mastering Online",
+    "description": "Verwandeln Sie Ihre Tracks mit Piroola. Unser KI-gestützter Mixing- und Mastering-Service liefert professionelle Studioqualität aus Ihren Mehrspur-Stems in wenigen Minuten."
+  },
+  "Navigation": {
+    "examples": "Beispiele",
+    "pricing": "Preise",
+    "faq": "FAQ",
+    "howItWorks": "So funktioniert's",
+    "support": "Support"
+  },
+  "LandingPage": {
+    "readyToElevate": "Bereit, deinen Sound zu verbessern?",
+    "startMixing": "Kostenlos mixen starten"
+  },
+  "HeroSection": {
+    "alertConstruction": "ACHTUNG: Website im Aufbau!",
+    "studioSound": "Studio-Sound.",
+    "perfectedByAI": "Perfektioniert durch KI.",
+    "description": "Verwandle deine Heimaufnahmen (Stems) in wenigen Minuten in professionelle, Spotify-fertige Mixe. Piroola kümmert sich um die technische Entwicklung, damit du dich auf die Musik konzentrieren kannst.",
+    "mixMyTracks": "Meine Tracks mixen",
+    "listenToDemos": "Demos anhören",
+    "rating": "4.9/5 Bewertung",
+    "tracksMastered": "+10k Tracks gemastert"
+  },
+  "Pricing": {
+    "title": "Preise",
+    "subtitle": "Preispläne für jede Phase deiner Reise",
+    "description": "Wähle den perfekten Plan für deine Audioproduktionsbedürfnisse. Von Demos bis zu professionellen Veröffentlichungen, wir haben alles für dich.",
+    "monthlyBilling": "Monatliche Abrechnung",
+    "yearlyBilling": "Jährliche Abrechnung",
+    "save20": "Spare ~20%",
+    "month": "Monat",
+    "billedYearly": "Jährlich abgerechnet",
+    "mostPopular": "Am beliebtesten",
+    "startForFree": "Kostenlos starten",
+    "getPlus": "Plus holen",
+    "getPro": "Pro holen"
+  }
+}
