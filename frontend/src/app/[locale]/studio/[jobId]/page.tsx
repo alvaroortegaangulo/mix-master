@@ -55,7 +55,9 @@ interface StemControl {
 }
 
 export default function StudioPage() {
-  const { jobId } = useParams<{ jobId: string }>();
+  const params = useParams();
+  const jobId = params.jobId as string;
+  const locale = params.locale as string;
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -648,7 +650,7 @@ export default function StudioPage() {
                body: JSON.stringify({ stages })
           });
 
-          router.push(`/?view=tool&jobId=${encodeURIComponent(jobId)}`);
+          router.push(`/${locale}/mix?jobId=${encodeURIComponent(jobId)}`);
       } catch (err) {
           console.error(err);
           alert("Error sending corrections");
