@@ -74,24 +74,6 @@ const breadcrumbsJsonLd = {
 export default function ExamplesPage() {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
-      <header className="border-b border-slate-800/80 sticky top-0 bg-slate-950/90 backdrop-blur z-20">
-        <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4">
-          <div className="flex items-center gap-2">
-            <div className="h-7 w-7 rounded-full bg-teal-400/90 flex items-center justify-center text-slate-950 text-lg font-bold" aria-hidden="true">
-              A
-            </div>
-            <Link href="/" className="text-lg font-semibold tracking-tight text-slate-100 hover:text-teal-300 transition">
-              Piroola
-            </Link>
-          </div>
-          <nav className="hidden md:flex items-center gap-5 text-sm">
-            <Link href="/pricing" className="hover:text-teal-300 transition">Pricing</Link>
-            <Link href="/docs" className="hover:text-teal-300 transition">How it works</Link>
-            <Link href="/support" className="hover:text-teal-300 transition">Support</Link>
-          </nav>
-        </div>
-      </header>
-
       <main className="flex-1 px-4 py-12">
         <div className="mx-auto max-w-5xl">
           <div className="flex flex-col gap-4 mb-10 text-center">
@@ -155,10 +137,6 @@ export default function ExamplesPage() {
           </div>
         </div>
       </main>
-
-      <footer className="border-t border-slate-800/80 py-6 text-center text-xs text-slate-500 bg-slate-950">
-        <p>© 2025 Piroola. All rights reserved.</p>
-      </footer>
 
       <Script
         id="ld-breadcrumbs-examples"

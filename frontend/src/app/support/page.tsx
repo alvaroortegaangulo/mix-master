@@ -65,24 +65,6 @@ export default function SupportPage() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
-      <header className="border-b border-slate-800/80">
-        <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-4">
-          <div className="flex items-center gap-2">
-            <div className="h-7 w-7 rounded-full bg-teal-400/90 flex items-center justify-center text-slate-950 text-lg font-bold" aria-hidden="true">
-              A
-            </div>
-            <Link href="/" className="text-lg font-semibold tracking-tight text-slate-100 hover:text-teal-400 transition">
-              Piroola
-            </Link>
-          </div>
-          <nav className="hidden md:flex gap-6 text-sm">
-            <Link href="/" className="hover:text-teal-400 transition">Home</Link>
-            <Link href="/faq" className="hover:text-teal-400 transition">FAQ</Link>
-            <Link href="/docs" className="hover:text-teal-400 transition">Docs</Link>
-          </nav>
-        </div>
-      </header>
-
       <main className="flex-1 px-4 py-12">
         <div className="mx-auto max-w-3xl">
           <h1 className="mb-4 text-4xl font-bold tracking-tight text-teal-400 text-center">
@@ -218,15 +200,6 @@ export default function SupportPage() {
           </div>
         </div>
       </main>
-
-      <footer className="border-t border-slate-800/80 py-4 text-center text-xs text-slate-400 flex flex-col gap-2 items-center justify-center">
-        <p>© 2025 Piroola. All Rights Reserved.</p>
-        <div className="flex gap-4">
-          <Link href="/terms-of-service" className="hover:text-teal-400 hover:underline">Terms of Service</Link>
-          <Link href="/privacy-policy" className="hover:text-teal-400 hover:underline">Privacy Policy</Link>
-          <Link href="/cookie-policy" className="hover:text-teal-400 hover:underline">Cookie Policy</Link>
-        </div>
-      </footer>
       <Script
         id="ld-breadcrumbs-support"
         type="application/ld+json"

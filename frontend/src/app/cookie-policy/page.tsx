@@ -64,22 +64,6 @@ export default function CookiePolicyPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(webPageJsonLd) }}
       />
-      <header className="border-b border-slate-800/80 sticky top-0 bg-slate-950/90 backdrop-blur z-10">
-        <div className="mx-auto flex h-16 max-w-5xl items-center px-4 justify-between">
-          <div className="flex items-center gap-2">
-            <Link href="/" className="flex items-center gap-2 no-underline text-inherit hover:opacity-80 transition">
-              <div className="h-7 w-7 rounded-full bg-teal-400/90 flex items-center justify-center text-slate-950 text-lg font-bold">
-                A
-              </div>
-              <span className="text-lg font-semibold tracking-tight">Piroola</span>
-            </Link>
-          </div>
-          <Link href="/" className="text-sm font-medium text-teal-400 hover:text-teal-300">
-            ← Back to Home
-          </Link>
-        </div>
-      </header>
-
       <main className="flex-1 px-4 py-12">
         <div className="mx-auto max-w-3xl prose prose-invert prose-slate">
           <h1 className="text-3xl font-bold mb-8 text-teal-400">Cookie Policy</h1>
@@ -152,10 +136,6 @@ export default function CookiePolicyPage() {
           </section>
         </div>
       </main>
-
-      <footer className="border-t border-slate-800/80 py-6 text-center text-xs text-slate-400 bg-slate-950">
-        <p>© {new Date().getFullYear()} Piroola. All Rights Reserved.</p>
-      </footer>
     </div>
   );
 }
