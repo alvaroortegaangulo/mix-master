@@ -48,7 +48,7 @@ from fastapi.responses import StreamingResponse
 from tasks import run_full_pipeline_task
 from src.database import engine, Base
 from src.routers import auth
-from src.utils.job_store import update_job_status
+from src.utils.job_store import update_job_status, write_job_status
 
 # ---------------------------------------------------------
 # Database
@@ -304,16 +304,11 @@ def _write_initial_job_status(job_id: str, temp_root: Path) -> None:
         "message": "Job pending in queue",
         "progress": 0.0,
     }
-    status_path = temp_root / "job_status.json"
-    status_path.parent.mkdir(parents=True, exist_ok=True)
-    status_path.write_text(
-        json.dumps(status, indent=2, ensure_ascii=False),
-        encoding="utf-8",
-    )
+    write_job_status(temp_root, status)
+
     logger.info(
-        "[_write_initial_job_status] job_status.json inicial escrito para job_id=%s en %s",
+        "[_write_initial_job_status] job_status.json inicial escrito para job_id=%s",
         job_id,
-        status_path,
     )
 
 

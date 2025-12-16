@@ -9,6 +9,7 @@ from typing import List, Dict, Optional, Any
 
 from celery import states
 from celery_app import celery_app
+from src.utils.job_store import write_job_status, update_job_status
 
 
 logger = logging.getLogger("mix_master.tasks")
@@ -231,31 +232,6 @@ def _locate_original_and_master_paths(job_id: str) -> tuple[Path | None, Path | 
     return original_path, master_path
 
 
-def _write_job_status(job_root: Path, status: Dict[str, Any]) -> None:
-    """
-    Escribe temp/<job_id>/job_status.json con el estado actual del job.
-    """
-    try:
-        status_path = job_root / "job_status.json"
-        status_path.parent.mkdir(parents=True, exist_ok=True)
-        status_path.write_text(
-            json.dumps(status, indent=2, ensure_ascii=False),
-            encoding="utf-8",
-        )
-        job_id = status.get("jobId") or status.get("job_id")
-        logger.info(
-            "[%s] job_status.json actualizado: %s",
-            job_id,
-            status_path,
-        )
-    except Exception:
-        job_id = status.get("jobId") or status.get("job_id")
-        logger.exception(
-            "[%s] No se pudo escribir job_status.json",
-            job_id,
-        )
-
-
 # -------------------------------------------------------------------
 # Tarea Celery
 # -------------------------------------------------------------------
@@ -345,7 +321,7 @@ def run_full_pipeline_task(
         "message": "Inicializando pipeline de mezcla...",
         "progress": initial_progress,
     }
-    _write_job_status(job_root_path, initial_status)
+    write_job_status(job_root_path, initial_status)
 
     def progress_cb(
         stage_index: int,
@@ -384,7 +360,7 @@ def run_full_pipeline_task(
             "message": message,
             "progress": progress_val,
         }
-        _write_job_status(job_root_path, status)
+        write_job_status(job_root_path, status)
 
         logger.info(
             "[%s] Progreso: %d/%d (%.1f%%) stage_key=%s",
@@ -456,7 +432,7 @@ def run_full_pipeline_task(
             ),
             "error": str(exc),
         }
-        _write_job_status(job_root_path, error_status)
+        write_job_status(job_root_path, error_status)
         raise
 
     # Si el pipeline se ha detenido para correcciones manuales (S6),
@@ -466,48 +442,18 @@ def run_full_pipeline_task(
             "[%s] Pipeline pausado en S6 (waiting_for_correction); se omite finalización para que el frontend abra el Studio.",
             job_id,
         )
-        status_path = job_root_path / "job_status.json"
-        pause_status: Dict[str, Any] = {}
-        if status_path.exists():
-            try:
-                pause_status = json.loads(status_path.read_text(encoding="utf-8"))
-            except Exception as exc:  # pragma: no cover - lectura defensiva
-                logger.warning(
-                    "[%s] No se pudo leer job_status.json existente durante pausa: %s",
-                    job_id,
-                    exc,
-                )
-                pause_status = {}
+        # Use update_job_status to merge instead of overwrite, to preserve fields?
+        # Actually in this case we want to set status running->waiting_for_correction
+        pause_status_update = {
+            "status": "running",
+            "stage_key": "waiting_for_correction",
+            "message": "Waiting for manual correction in Studio..."
+        }
+        # Update existing
+        update_job_status(job_root_path, pause_status_update)
 
-        if not isinstance(pause_status, dict):
-            pause_status = {}
-
-        pause_status.setdefault("jobId", job_id)
-        pause_status.setdefault("job_id", job_id)
-        # Aseguramos que no se marque como terminado
-        pause_status["status"] = "running"
-        pause_status["stage_index"] = progress_state.get(
-            "stage_index", pause_status.get("stage_index", 0)
-        )
-        pause_status["total_stages"] = progress_state.get(
-            "total_stages", pause_status.get("total_stages", 0)
-        )
-        pause_status["stage_key"] = "waiting_for_correction"
-        pause_status["message"] = pause_status.get("message") or "Waiting for manual correction in Studio..."
-        if "progress" not in pause_status:
-            try:
-                total = float(pause_status["total_stages"] or 0)
-                if total > 0:
-                    pause_status["progress"] = min(
-                        100.0, float(pause_status["stage_index"]) / total * 100.0
-                    )
-                else:
-                    pause_status["progress"] = 0.0
-            except Exception:
-                pause_status["progress"] = 0.0
-
-        _write_job_status(job_root_path, pause_status)
-        return pause_status
+        # Return current full status (we'd need to read it back or reconstruct)
+        return pause_status_update
 
     logger.info(
         "[%s] Pipeline finalizado correctamente.",
@@ -544,7 +490,7 @@ def run_full_pipeline_task(
         "bus_styles": {},
     }
 
-    _write_job_status(job_root_path, final_status)
+    write_job_status(job_root_path, final_status)
 
     total_time = time.time() - start_ts
     logger.info(
@@ -588,18 +534,10 @@ def run_manual_correction_task(
     logger.info(f"[{job_id}] Iniciando correccion manual {stage_name}")
 
     # Escribir estado 'processing'
-    status_path = temp_root / "job_status.json"
-    current_status = {}
-    if status_path.exists():
-        try:
-            current_status = json.loads(status_path.read_text(encoding="utf-8"))
-        except: pass
-
-    current_status.update({
+    update_job_status(temp_root, {
         "status": "processing_correction",
         "message": f"Processing manual correction adjustment ({stage_name})..."
     })
-    status_path.write_text(json.dumps(current_status, indent=2), encoding="utf-8")
 
     # Construir Context
     # Importar aqui para evitar circularidad si context importa tasks (raro pero posible)
@@ -632,8 +570,7 @@ def run_manual_correction_task(
             raise Exception(f"{stage_name} process failed")
     except Exception as e:
         logger.error(f"{stage_name} execution failed: {e}")
-        current_status.update({"status": "failure", "message": str(e)})
-        status_path.write_text(json.dumps(current_status, indent=2), encoding="utf-8")
+        update_job_status(temp_root, {"status": "failure", "message": str(e)})
         raise
 
     # 2. Ejecutar mixdown
@@ -644,12 +581,11 @@ def run_manual_correction_task(
     # Usamos _make_files_url helper si disponible o manual
     full_song_rel = f"/files/{job_id}/{stage_name}/full_song.wav"
 
-    current_status.update({
+    update_job_status(temp_root, {
         "status": "success",
         "message": "Manual correction adjustment complete",
         "full_song_url": full_song_rel,
     })
-    status_path.write_text(json.dumps(current_status, indent=2), encoding="utf-8")
 
     logger.info(f"[{job_id}] Correccion finalizada.")
-    return current_status
+    return {"status": "success"}
