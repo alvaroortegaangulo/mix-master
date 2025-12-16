@@ -8,16 +8,17 @@ import {
   RocketLaunchIcon,
 } from "@heroicons/react/24/outline";
 import { LazyVideo } from "../LazyVideo";
+import { useTranslations } from "next-intl";
 
 export function FeaturesSection({ className }: { className?: string }) {
   const [activeStep, setActiveStep] = useState(0);
+  const t = useTranslations('FeaturesSection');
 
   const features = [
     {
       id: 0,
-      title: "Intelligent Analysis",
-      description:
-        "Our AI scans your tracks to understand key, tempo, genre, and instrumentation, creating a custom mixing strategy.",
+      title: t('steps.0.title'),
+      description: t('steps.0.description'),
       icon: ArrowUpTrayIcon,
       colorClass: "text-cyan-400",
       borderClass: "border-cyan-400",
@@ -28,9 +29,8 @@ export function FeaturesSection({ className }: { className?: string }) {
     },
     {
       id: 1,
-      title: "Precision Mixing",
-      description:
-        "Piroola applies surgical EQ, dynamic compression, and spatial enhancements tailored to each stem's role in the mix.",
+      title: t('steps.1.title'),
+      description: t('steps.1.description'),
       icon: CpuChipIcon,
       colorClass: "text-purple-400",
       borderClass: "border-purple-400",
@@ -41,9 +41,8 @@ export function FeaturesSection({ className }: { className?: string }) {
     },
     {
       id: 2,
-      title: "Creative Control",
-      description:
-        "Adjust the workflow to your needs for optimal sound. Configure your instruments and musical styles to their fullest potential.",
+      title: t('steps.2.title'),
+      description: t('steps.2.description'),
       icon: AdjustmentsHorizontalIcon,
       colorClass: "text-pink-400",
       borderClass: "border-pink-400",
@@ -54,9 +53,8 @@ export function FeaturesSection({ className }: { className?: string }) {
     },
     {
       id: 3,
-      title: "Mastering Grade Polish",
-      description:
-        "Finalizes your track with industry-standard loudness matching, stereo widening, and limiter safety.",
+      title: t('steps.3.title'),
+      description: t('steps.3.description'),
       icon: RocketLaunchIcon,
       colorClass: "text-amber-400",
       borderClass: "border-amber-400",
@@ -75,14 +73,11 @@ export function FeaturesSection({ className }: { className?: string }) {
         {/* Header */}
         <div className="text-center mb-20">
           <div className="inline-block px-3 py-1 mb-6 text-xs font-semibold tracking-wider text-cyan-400 uppercase rounded-full bg-cyan-950/50 border border-cyan-800/50">
-            WORKFLOW
+            {t('workflow')}
           </div>
-          <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-white mb-6">
-            From your DAW to the <span className="text-cyan-400">World</span>.
-          </h2>
+          <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-white mb-6" dangerouslySetInnerHTML={{ __html: t.raw('title') }} />
           <p className="max-w-3xl mx-auto text-lg md:text-xl text-slate-400 leading-relaxed">
-            We have simplified the complex engineering process.
-            No infinite menus, only superior sonic results.
+            {t('subtitle')}
           </p>
         </div>
 

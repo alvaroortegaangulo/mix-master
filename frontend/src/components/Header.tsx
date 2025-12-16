@@ -14,14 +14,14 @@ export function Header() {
   const { openAuthModal } = useModal();
   const [scrolled, setScrolled] = useState(false);
   const router = useRouter();
-  const t = useTranslations('Navigation');
+  const tNav = useTranslations('Navigation');
 
   const NAV_LINKS = [
-    { label: t('examples'), href: "/examples" },
-    { label: t('pricing'), href: "/pricing" },
-    { label: t('faq'), href: "/faq" },
-    { label: t('howItWorks'), href: "/docs" },
-    { label: t('support'), href: "/support" },
+    { label: tNav('examples'), href: "/examples" },
+    { label: tNav('pricing'), href: "/pricing" },
+    { label: tNav('faq'), href: "/faq" },
+    { label: tNav('howItWorks'), href: "/docs" },
+    { label: tNav('support'), href: "/support" },
   ];
 
   // Detect scroll to adjust background
@@ -33,27 +33,8 @@ export function Header() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Check if we are on the landing page (root path)
-  // Note: pathname from next/navigation includes the locale (e.g. /en) or might be just / if rewritten?
-  // Usually in app router with next-intl, pathname is e.g. /en/pricing or /en.
-  // But standard check often assumes handling locale or checking end of string.
-  // However, simpler is: if it's strictly the home page (possibly with locale), it is Landing.
-  // The safest check for "Landing" vs others is if we are NOT on /mix, /examples, etc.
-  // But for header transparency, we specifically want it transparent ONLY on Landing.
-
-  // Let's assume standard behavior:
-  // If we are on Mix Tool, pathname will contain /mix.
-
   const isMixTool = pathname.endsWith("/mix");
-  // Logic for landing: if it is strictly "/" or just locale "/en", "/es", etc.
-  // Regex to match ^/([a-z]{2})?$
   const isLanding = /^\/([a-z]{2})?$/.test(pathname);
-
-  // If on tool view, we might want a solid header or keep it consistent?
-  // The original page.tsx had: view === 'landing' ? transparent : slate-950
-  // We will replicate this logic based on path.
-
-  // Note: /studio/... has its own layout so this Header won't be rendered there (handled in GlobalLayoutClient).
 
   const headerClass = (isLanding && !scrolled)
     ? "border-transparent bg-slate-950/80 backdrop-blur-md"
@@ -98,7 +79,7 @@ export function Header() {
                               onClick={handleGoToApp}
                               className="text-sm font-semibold text-white hover:text-teal-400 transition"
                            >
-                               Go to App
+                               {tNav('goToApp')}
                            </button>
                        )}
                        <Link href="/profile" className="flex h-9 w-9 items-center justify-center rounded-full bg-purple-600 font-bold text-white shadow-md ring-2 ring-slate-800/50 hover:ring-teal-500/50 transition">
@@ -111,13 +92,13 @@ export function Header() {
                           onClick={openAuthModal}
                           className="text-sm font-semibold text-slate-300 hover:text-white transition"
                       >
-                          Log In
+                          {tNav('logIn')}
                       </button>
                       <button
                           onClick={openAuthModal} // Or go to app? Usually Try for free = Sign up
                           className="rounded-full bg-teal-500 text-slate-950 px-5 py-2 text-sm font-bold shadow-lg shadow-teal-500/20 hover:bg-teal-400 hover:shadow-teal-500/40 transition transform hover:-translate-y-0.5"
                       >
-                          Try for free
+                          {tNav('tryForFree')}
                       </button>
                    </div>
                )

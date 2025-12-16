@@ -20,6 +20,7 @@ import {
   SpeakerWaveIcon,
   SparklesIcon
 } from "@heroicons/react/24/solid";
+import { useTranslations } from "next-intl";
 
 interface StemControl {
   fileName: string;
@@ -59,6 +60,7 @@ export default function StudioPage() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const t = useTranslations('Studio');
 
   const [stems, setStems] = useState<StemControl[]>([]);
   const [selectedStemIndex, setSelectedStemIndex] = useState<number>(0);
@@ -734,8 +736,8 @@ export default function StudioPage() {
       return (
         <div className="h-screen bg-[#0f111a] flex flex-col items-center justify-center text-emerald-500 font-mono gap-3">
             <div className="h-10 w-10 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
-            <div>Loading Piroola Studio...</div>
-            <div className="text-xs text-slate-500">Cargando stems y forma de onda</div>
+            <div>{t('loading')}</div>
+            <div className="text-xs text-slate-500">{t('loadingStems')}</div>
         </div>
       );
   }
@@ -747,27 +749,27 @@ export default function StudioPage() {
          <div className="flex items-center gap-6">
              <div className="flex items-center gap-2 text-emerald-400 font-bold tracking-wider">
                  <AdjustmentsHorizontalIcon className="w-5 h-5" />
-                 <span>Piroola Studio</span>
+                 <span>{t('title')}</span>
              </div>
              <div className="h-6 w-px bg-white/10 mx-2"></div>
              <div className="flex flex-col">
-                 <span className="text-xs text-slate-500 uppercase tracking-wider">Project</span>
+                 <span className="text-xs text-slate-500 uppercase tracking-wider">{t('project')}</span>
                  <span className="text-sm font-medium text-white">{jobId.substring(0,8)}...</span>
              </div>
          </div>
          <div className="flex items-center gap-4">
              <div className="flex flex-col items-end">
                  <button onClick={downloadStems} disabled={downloadingStems} className="px-3 py-1.5 text-xs font-medium text-slate-400 hover:text-white border border-white/10 rounded hover:bg-white/5 transition-colors flex items-center gap-2">
-                     <ArrowDownTrayIcon className="w-3 h-3" /> Stems (ZIP)
+                     <ArrowDownTrayIcon className="w-3 h-3" /> {t('stemsZip')}
                  </button>
-                 {downloadingStems && <span className="text-[10px] text-emerald-500 animate-pulse mt-1">Descargando...</span>}
+                 {downloadingStems && <span className="text-[10px] text-emerald-500 animate-pulse mt-1">{t('downloading')}</span>}
              </div>
 
              <div className="flex flex-col items-end">
                  <button onClick={downloadMixdown} disabled={downloadingMixdown} className="px-3 py-1.5 text-xs font-medium text-slate-400 hover:text-white border border-white/10 rounded hover:bg-white/5 transition-colors flex items-center gap-2">
-                     <ArrowDownTrayIcon className="w-3 h-3" /> Mixdown
+                     <ArrowDownTrayIcon className="w-3 h-3" /> {t('mixdown')}
                  </button>
-                 {downloadingMixdown && <span className="text-[10px] text-emerald-500 animate-pulse mt-1">Descargando...</span>}
+                 {downloadingMixdown && <span className="text-[10px] text-emerald-500 animate-pulse mt-1">{t('downloading')}</span>}
              </div>
 
              <div className="h-6 w-px bg-white/10 mx-2"></div>
@@ -778,7 +780,7 @@ export default function StudioPage() {
                 className="px-4 py-1.5 bg-slate-700 hover:bg-slate-600 text-white text-xs font-bold rounded shadow-lg transition-all flex items-center gap-2"
              >
                 <XMarkIcon className="w-3 h-3" />
-                Finish here (not Mastering)
+                {t('finishHere')}
              </button>
              <button
                 onClick={() => handleApplyCorrection(true)}
@@ -786,7 +788,7 @@ export default function StudioPage() {
                 className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded shadow-lg shadow-emerald-900/20 transition-all flex items-center gap-2"
              >
                 {rendering ? <ArrowPathIcon className="w-3 h-3 animate-spin" /> : <CheckIcon className="w-3 h-3" />}
-                Proceed to Mastering
+                {t('proceedMastering')}
              </button>
          </div>
       </header>
@@ -795,7 +797,7 @@ export default function StudioPage() {
 
           <aside className="w-72 bg-[#11131f] border-r border-white/5 flex flex-col shrink-0">
              <div className="p-4 border-b border-white/5 flex justify-between items-center">
-                 <h2 className="text-xs font-bold text-slate-500 tracking-widest uppercase">Tracks ({stems.length})</h2>
+                 <h2 className="text-xs font-bold text-slate-500 tracking-widest uppercase">{t('tracks')} ({stems.length})</h2>
              </div>
              <div className="flex-1 overflow-y-auto custom-scrollbar p-2 space-y-2">
                  {stems.map((stem, i) => (
@@ -864,7 +866,7 @@ export default function StudioPage() {
 
                  {!currentVisualBuffer && !currentVisualPeaks && (
                      <div className="absolute inset-0 flex items-center justify-center text-slate-600 font-mono pointer-events-none">
-                         {loadingStems ? "Loading..." : "Select a track to view waveform"}
+                         {loadingStems ? "Loading..." : t('selectTrack')}
                      </div>
                  )}
              </div>
@@ -898,7 +900,7 @@ export default function StudioPage() {
                  <div className="flex-1 px-6 flex items-center justify-between">
                      <div className="flex flex-col gap-1 w-48">
                          <div className="flex justify-between text-[10px] text-slate-500 font-mono">
-                             <span>MASTER OUT</span>
+                             <span>{t('masterOut')}</span>
                              <span>{(masterVolume * 20 - 20).toFixed(1)} dB</span>
                          </div>
                          <div className="h-2 bg-slate-800 rounded-full overflow-hidden relative">
@@ -919,7 +921,7 @@ export default function StudioPage() {
                      </div>
 
                      <div className="w-48 flex items-center gap-3">
-                         <span className="text-[10px] text-slate-500 font-bold">MONITOR</span>
+                         <span className="text-[10px] text-slate-500 font-bold">{t('monitor')}</span>
                          <input
                             type="range" min="0" max="1" step="0.01"
                             value={masterVolume}
@@ -934,12 +936,12 @@ export default function StudioPage() {
           <aside className="w-80 bg-[#161b2e] border-l border-white/5 flex flex-col shrink-0 p-6 space-y-6 overflow-y-auto">
 
               <div>
-                  <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Selected Channel</div>
+                  <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">{t('selectedChannel')}</div>
                   <div className="flex items-center gap-3">
                       <div className="w-8 h-8 rounded bg-emerald-500/10 flex items-center justify-center text-emerald-500">
                           <MusicalNoteIcon className="w-5 h-5" />
                       </div>
-                      <h2 className="text-xl font-bold text-white truncate" title={selectedStem?.name}>{selectedStem?.name || "No Track Selected"}</h2>
+                      <h2 className="text-xl font-bold text-white truncate" title={selectedStem?.name}>{selectedStem?.name || t('noTrackSelected')}</h2>
                   </div>
               </div>
 
@@ -955,7 +957,7 @@ export default function StudioPage() {
                                     onChange={(e) => updateStem(selectedStemIndex, { eq: {...selectedStem.eq, enabled: e.target.checked}})}
                                     className="rounded border-slate-600 bg-slate-800 text-emerald-500 focus:ring-emerald-500"
                                 />
-                                <span className={`text-xs font-bold ${selectedStem.eq.enabled ? 'text-emerald-400' : 'text-slate-500'}`}>Parametric EQ</span>
+                                <span className={`text-xs font-bold ${selectedStem.eq.enabled ? 'text-emerald-400' : 'text-slate-500'}`}>{t('parametricEq')}</span>
                              </div>
                         </div>
                         <div className={`transition-opacity ${selectedStem.eq.enabled ? 'opacity-100' : 'opacity-40 pointer-events-none'}`}>
@@ -984,7 +986,7 @@ export default function StudioPage() {
                                     onChange={(e) => updateStem(selectedStemIndex, { compression: {...selectedStem.compression, enabled: e.target.checked}})}
                                     className="rounded border-slate-600 bg-slate-800 text-emerald-500 focus:ring-emerald-500"
                                 />
-                                <span className={`text-xs font-bold ${selectedStem.compression.enabled ? 'text-emerald-400' : 'text-slate-500'}`}>Compressor</span>
+                                <span className={`text-xs font-bold ${selectedStem.compression.enabled ? 'text-emerald-400' : 'text-slate-500'}`}>{t('compressor')}</span>
                              </div>
                         </div>
 
@@ -1004,7 +1006,7 @@ export default function StudioPage() {
                                     onChange={(e) => updateStem(selectedStemIndex, { pan: {...selectedStem.pan, enabled: e.target.checked}})}
                                     className="rounded border-slate-600 bg-slate-800 text-blue-500 focus:ring-blue-500"
                                 />
-                                <span className={`text-xs font-bold ${selectedStem.pan.enabled ? 'text-blue-400' : 'text-slate-500'}`}>Panning</span>
+                                <span className={`text-xs font-bold ${selectedStem.pan.enabled ? 'text-blue-400' : 'text-slate-500'}`}>{t('panning')}</span>
                             </div>
                             <SpeakerWaveIcon className="w-4 h-4 text-slate-600" />
                         </div>
@@ -1023,7 +1025,7 @@ export default function StudioPage() {
                                     onChange={(e) => updateStem(selectedStemIndex, { reverb: {...selectedStem.reverb, enabled: e.target.checked}})}
                                     className="rounded border-slate-600 bg-slate-800 text-purple-500 focus:ring-purple-500"
                                 />
-                                <span className={`text-xs font-bold ${selectedStem.reverb.enabled ? 'text-purple-400' : 'text-slate-500'}`}>Reverb</span>
+                                <span className={`text-xs font-bold ${selectedStem.reverb.enabled ? 'text-purple-400' : 'text-slate-500'}`}>{t('reverb')}</span>
                             </div>
                             <SparklesIcon className="w-4 h-4 text-slate-600" />
                         </div>

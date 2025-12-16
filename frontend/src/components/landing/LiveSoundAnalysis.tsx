@@ -6,8 +6,11 @@ import {
   SpeakerWaveIcon,
   CheckCircleIcon,
 } from "@heroicons/react/24/outline";
+import { useTranslations } from "next-intl";
 
 export function LiveSoundAnalysis({ className }: { className?: string }) {
+  const t = useTranslations('LiveSoundAnalysis');
+
   // State for animations
   const [spectrumData, setSpectrumData] = useState<number[]>([]);
   const [lufs, setLufs] = useState(-13.2);
@@ -73,14 +76,14 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
           <div className="flex items-center gap-2 mb-6">
              <div className="h-2 w-2 rounded-full bg-teal-400 animate-pulse"></div>
              <div className="text-xs font-bold tracking-widest text-teal-400 uppercase">
-                Live Analytics Engine
+                {t('label')}
              </div>
           </div>
           <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-white mb-6">
-            Visualize the Invisible.
+            {t('title')}
           </h2>
           <p className="max-w-2xl text-lg text-slate-400 leading-relaxed">
-            Stop guessing. Piroola provides surgical precision metrics to ensure your mix meets streaming standards (Spotify, Apple Music) and broadcast.
+            {t('description')}
           </p>
         </div>
 
@@ -98,9 +101,9 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                         </svg>
                      </div>
-                     <h3 className="text-lg font-semibold text-white">Frequency Spectrum</h3>
+                     <h3 className="text-lg font-semibold text-white">{t('spectrum.title')}</h3>
                  </div>
-                 <div className="text-xs font-mono text-slate-300 pt-2">20Hz - 20kHz</div>
+                 <div className="text-xs font-mono text-slate-300 pt-2">{t('spectrum.range')}</div>
              </div>
 
              {/* Spectrum Visualizer */}
@@ -123,15 +126,15 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
              {/* Bottom Metrics */}
              <div className="grid grid-cols-3 gap-4 border-t border-slate-800 pt-6 relative z-10">
                  <div>
-                     <div className="text-[10px] font-mono uppercase tracking-wider text-slate-300 mb-1">Low End (Sub)</div>
-                     <div className="text-white font-medium">Balanced</div>
+                     <div className="text-[10px] font-mono uppercase tracking-wider text-slate-300 mb-1">{t('spectrum.sub')}</div>
+                     <div className="text-white font-medium">{t('spectrum.balanced')}</div>
                  </div>
                  <div>
-                     <div className="text-[10px] font-mono uppercase tracking-wider text-slate-300 mb-1">Vocal Presence</div>
-                     <div className="text-teal-400 font-medium">Optimal</div>
+                     <div className="text-[10px] font-mono uppercase tracking-wider text-slate-300 mb-1">{t('spectrum.vocal')}</div>
+                     <div className="text-teal-400 font-medium">{t('spectrum.optimal')}</div>
                  </div>
                  <div className="text-right">
-                     <div className="text-[10px] font-mono uppercase tracking-wider text-slate-300 mb-1">Air / Shine</div>
+                     <div className="text-[10px] font-mono uppercase tracking-wider text-slate-300 mb-1">{t('spectrum.air')}</div>
                      <div className="text-white font-medium">+1.2 dB</div>
                  </div>
              </div>
@@ -148,10 +151,10 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
              <div className="flex justify-end gap-3 mb-2">
                  <button className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-700 bg-slate-900/50 text-xs font-medium text-slate-300 hover:bg-slate-800 transition">
                     <ArrowPathIcon className="w-3 h-3" />
-                    Re-Scan
+                    {t('controls.reScan')}
                  </button>
                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-700 bg-slate-900/50 text-xs font-mono text-slate-400">
-                    <span>Target:</span>
+                    <span>{t('controls.target')}:</span>
                     <span className="text-teal-400">-14 LUFS</span>
                  </div>
              </div>
@@ -159,7 +162,7 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
              {/* Card 1: Integrated Loudness */}
              <div className="bg-slate-900/50 rounded-2xl border border-slate-800 p-6 shadow-lg relative group overflow-hidden">
                 <div className="flex justify-between items-start mb-2">
-                    <div className="text-[10px] font-mono uppercase tracking-wider text-slate-300">Integrated Loudness</div>
+                    <div className="text-[10px] font-mono uppercase tracking-wider text-slate-300">{t('metrics.loudness')}</div>
                     <SpeakerWaveIcon className="w-4 h-4 text-teal-500/50" />
                 </div>
                 <div className="text-4xl font-bold text-white mb-1 tabular-nums tracking-tight">
@@ -172,13 +175,13 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
                 </div>
                 <div className="flex justify-between text-[10px] text-slate-300 font-mono mb-4">
                     <span>-30</span>
-                    <span>-14 (Target)</span>
+                    <span>-14 ({t('metrics.target')})</span>
                     <span>-8</span>
                 </div>
 
                 <div className="flex items-center gap-2 text-teal-400 text-xs font-medium bg-teal-950/30 p-2 rounded-lg border border-teal-900/50 inline-block">
                     <CheckCircleIcon className="w-4 h-4" />
-                    Spotify Ready
+                    {t('spectrum.optimal')}
                 </div>
              </div>
 
@@ -186,9 +189,9 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
              <div className="bg-slate-900/50 rounded-2xl border border-slate-800 p-6 shadow-lg relative overflow-hidden">
                  <div className="flex justify-between items-start">
                      <div>
-                        <div className="text-[10px] font-mono uppercase tracking-wider text-slate-300 mb-1">Stereo Image</div>
-                        <div className="text-2xl font-bold text-white mb-1">Wide</div>
-                        <div className="text-sm font-mono text-slate-400 mb-3 tabular-nums">Correlation: <span className="text-white">+{correlation.toFixed(2)}</span></div>
+                        <div className="text-[10px] font-mono uppercase tracking-wider text-slate-300 mb-1">{t('metrics.stereoImage')}</div>
+                        <div className="text-2xl font-bold text-white mb-1">{t('metrics.wide')}</div>
+                        <div className="text-sm font-mono text-slate-400 mb-3 tabular-nums">{t('metrics.correlation')}: <span className="text-white">+{correlation.toFixed(2)}</span></div>
                      </div>
 
                      {/* Visual representation of Stereo Field (Circle) */}
@@ -200,14 +203,14 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
                  </div>
 
                  <p className="text-xs text-slate-300 leading-relaxed border-t border-slate-800/50 pt-3 mt-1">
-                     Excellent mono compatibility. No critical phase cancellations.
+                     {t('metrics.description')}
                  </p>
              </div>
 
              {/* Card 3: Dynamic Range */}
              <div className="bg-slate-900/50 rounded-2xl border border-slate-800 p-6 shadow-lg flex items-center justify-between">
                  <div>
-                    <div className="text-[10px] font-mono uppercase tracking-wider text-slate-300 mb-1">Dynamic Range</div>
+                    <div className="text-[10px] font-mono uppercase tracking-wider text-slate-300 mb-1">{t('metrics.dynamicRange')}</div>
                     <div className="text-3xl font-bold text-white tabular-nums">{dynamicRange} <span className="text-lg font-normal text-slate-200">dB</span></div>
                  </div>
 

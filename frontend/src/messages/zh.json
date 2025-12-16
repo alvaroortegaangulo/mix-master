@@ -1,41 +1,444 @@
 {
   "Metadata": {
-    "title": "Piroola: 专业AI音频混音与母带处理在线服务",
-    "description": "使用Piroola改变您的曲目。我们的AI驱动混音和母带处理服务可在几分钟内从您的多轨分轨中提供专业录音室质量的结果。"
+    "title": "Piroola: 专业 AI 音频混音与母带处理在线服务",
+    "description": "用 Piroola 改变您的曲目。我们的 AI 驱动的混音和母带处理服务在几分钟内从您的多轨分轨提供专业录音室质量的结果。"
   },
   "Navigation": {
     "examples": "示例",
     "pricing": "定价",
     "faq": "常见问题",
-    "howItWorks": "工作原理",
-    "support": "支持"
+    "howItWorks": "如何运作",
+    "support": "支持",
+    "goToApp": "转到应用",
+    "logIn": "登录",
+    "tryForFree": "免费试用"
   },
   "LandingPage": {
-    "readyToElevate": "准备好提升你的音质了吗？",
+    "readyToElevate": "准备好提升您的声音了吗？",
     "startMixing": "免费开始混音"
   },
   "HeroSection": {
-    "alertConstruction": "警报：网站正在建设中！",
-    "studioSound": "录音室音质。",
-    "perfectedByAI": "由AI完美呈现。",
-    "description": "在几分钟内将您的家庭录音（分轨）转化为专业的、适合Spotify发布的混音。Piroola处理技术工程，让您专注于音乐。",
-    "mixMyTracks": "混合我的轨道",
-    "listenToDemos": "试听演示",
-    "rating": "评分 4.9/5",
-    "tracksMastered": "+1万首曲目已母带处理"
+    "alertConstruction": "警报：网站建设中！",
+    "studioSound": "录音室声音。",
+    "perfectedByAI": "由 AI 完善。",
+    "description": "在几分钟内将您的家庭录音（分轨）转变为专业的、Spotify 就绪的混音。Piroola 处理技术工程，以便您可以专注于音乐。",
+    "mixMyTracks": "混合我的曲目",
+    "listenToDemos": "收听演示",
+    "rating": "4.9/5 评分",
+    "tracksMastered": "+10k 曲目已母带处理"
+  },
+  "FeaturesSection": {
+    "workflow": "工作流程",
+    "title": "从您的 DAW 到<span class='text-cyan-400'>世界</span>。",
+    "subtitle": "我们简化了复杂的工程流程。没有无尽的菜单，只有卓越的声音结果。",
+    "steps": {
+      "0": {
+        "title": "智能分析",
+        "description": "我们的 AI 扫描您的曲目以了解调性、速度、流派和乐器编制，创建自定义混音策略。"
+      },
+      "1": {
+        "title": "精确混音",
+        "description": "Piroola 应用外科手术式的 EQ、动态压缩和空间增强，专为每个分轨在混音中的角色量身定制。"
+      },
+      "2": {
+        "title": "创意控制",
+        "description": "调整工作流程以满足您的需求，获得最佳声音。将您的乐器和音乐风格配置到最大潜力。"
+      },
+      "3": {
+        "title": "母带质量",
+        "description": "以行业标准的响度匹配、立体声宽度和限制器安全性完成您的曲目。"
+      }
+    }
+  },
+  "BenefitsSection": {
+    "speedTitle": "数小时的工作，几分钟完成。",
+    "speedDescription": "忘记繁琐的增益分级、相位对齐和共振清理。Piroola 处理技术重活，让您可以专注于创意氛围。",
+    "speedPoints": [
+      "即时会话设置和路由",
+      "自动化修正 EQ",
+      "实时响度合规性检查"
+    ],
+    "qualityTitle": "录音室质量，人人可及。",
+    "qualityDescription": "您不需要百万美元的录音室或几十年的经验来获得专业的声音。我们的算法在热门唱片上训练，以提供具有商业竞争力的结果。",
+    "spotifyReady": "Spotify 就绪",
+    "appleMusicReady": "Apple Music 就绪"
+  },
+  "LiveSoundAnalysis": {
+    "label": "实时分析引擎",
+    "title": "可视化不可见之物。",
+    "description": "停止猜测。Piroola 提供外科手术般精确的指标，确保您的混音符合流媒体（Spotify、Apple Music）和广播标准。",
+    "spectrum": {
+      "title": "频谱",
+      "range": "20Hz - 20kHz",
+      "sub": "深低音 (Sub)",
+      "vocal": "人声存在感",
+      "air": "空气感 / 亮度",
+      "balanced": "平衡",
+      "optimal": "最佳"
+    },
+    "controls": {
+      "reScan": "重新扫描",
+      "target": "目标"
+    },
+    "metrics": {
+      "loudness": "综合响度",
+      "stereoImage": "立体声声像",
+      "dynamicRange": "动态范围",
+      "target": "目标",
+      "wide": "宽",
+      "correlation": "相关性",
+      "description": "出色的单声道兼容性。无严重相位抵消。"
+    }
+  },
+  "PipelineInteractiveDiagram": {
+    "label": "音频工程工作流程",
+    "title": "混音与母带处理流程",
+    "description": "交互式探索音频制作过程的每个阶段，从初始分析到最终润色。",
+    "keyTools": "关键工具",
+    "proTip": "专业提示",
+    "steps": {
+      "0": {
+        "title": "分析",
+        "shortDesc": "频率、相位和动态范围诊断。",
+        "desc": "在处理之前，了解源素材至关重要。我们使用频谱分析仪、相位相关表和 LUFS 表来识别共振问题、音色不平衡或相位问题。",
+        "tip": "最初始终以单声道收听以检测相位抵消。",
+        "tools": ["频谱分析仪", "相位计", "LUFS 表"]
+      },
+      "1": {
+        "title": "修正",
+        "shortDesc": "清理、减法 EQ 和降噪。",
+        "desc": "外科手术阶段。我们使用减法 EQ 去除有问题的频率，减少背景噪音，并在必要时修正人声音高。目标是在增强之前进行清理。",
+        "tip": "在不需要低频的乐器上切断低频（高通）以获得清晰度。",
+        "tools": ["参数 EQ", "去噪器", "音高修正"]
+      },
+      "2": {
+        "title": "动态",
+        "shortDesc": "瞬态控制、压缩和平衡。",
+        "desc": "我们控制动态范围以获得连贯的混音。我们使用压缩器将元素粘合在一起，并使用软限制器驯服不需要的峰值。",
+        "tip": "使用串联压缩（多个温和的压缩器）而不是单个激进的压缩器，以获得更自然的声音。",
+        "tools": ["VCA 压缩器", "多段压缩器", "齿音消除器", "限制器"]
+      },
+      "3": {
+        "title": "空间",
+        "shortDesc": "深度、混响和立体声声像。",
+        "desc": "我们创造歌曲的 3D 世界。我们将乐器放置在立体声场中（声像），并使用混响和延迟增加深度。",
+        "tip": "保持底鼓、贝斯和主唱在中心。将节奏和和声元素移动到两侧。",
+        "tools": ["板式/大厅混响", "立体声延迟", "立体声扩展器", "声像旋钮"]
+      },
+      "4": {
+        "title": "母带处理",
+        "shortDesc": "响度、最终凝聚力和交付格式。",
+        "desc": "最终润色。我们的目标是具有竞争力的商业响度、整体音色平衡，并确保歌曲在任何播放系统（汽车、手机、俱乐部）上听起来都很好。",
+        "tip": "始终将您的母带与同类型的参考歌曲进行比较（A/B 测试）。",
+        "tools": ["母带总线压缩", "线性 EQ", "最大化器", "抖动"]
+      }
+    }
+  },
+  "TechSpecsSection": {
+    "title": "力量 & 精度",
+    "internalProcessing": "内部处理",
+    "floatDepth": "浮点深度",
+    "processingStages": "处理阶段",
+    "latency": "延迟 (云端)"
+  },
+  "Footer": {
+    "terms": "条款",
+    "privacy": "隐私",
+    "cookies": "Cookie",
+    "contact": "联系",
+    "copyright": "© 2025 Piroola."
+  },
+  "AuthModal": {
+    "seamlessMastering": "无缝母带处理",
+    "experiencePower": "体验先进 AI 母带处理引擎的力量。",
+    "signIn": "登录",
+    "createAccount": "创建账户",
+    "signInGoogle": "使用 Google 登录",
+    "or": "或",
+    "fullName": "全名",
+    "email": "电子邮件地址",
+    "password": "密码",
+    "forgotPassword": "忘记密码？",
+    "processing": "处理中...",
+    "newUser": "新用户？",
+    "register": "注册 +",
+    "alreadyHaveAccount": "已有账户？"
+  },
+  "MixTool": {
+    "loadingStudio": "加载工作室...",
+    "loadingResult": "加载结果...",
+    "spaceDepthSettings": "空间 & 深度设置",
+    "uploadMixConfig": "上传 & 混音配置",
+    "songMode": "歌曲（母带处理）",
+    "stemsMode": "分轨（完整混音）",
+    "songModeWarning": "歌曲模式只需要一个 WAV 文件。",
+    "selectionWarning": "您只选择了一个分轨。如果您想进行歌曲母带处理，请选择歌曲（母带处理）。",
+    "pipelineSteps": "管道步骤",
+    "enabled": "已启用",
+    "pipelineStepsDesc": "为此作业启用或禁用管道阶段。",
+    "all": "全部",
+    "none": "无",
+    "generateMix": "生成 AI 混音",
+    "processing": "处理中...",
+    "waitingQueue": "排队等候中…",
+    "runningStage": "正在运行阶段",
+    "stage": {
+      "S0_SESSION_FORMAT": {
+        "title": "会话格式 & 路由",
+        "description": "标准化采样率/位深度并分配逻辑总线以干净地开始。"
+      },
+      "S1_STEM_DC_OFFSET": {
+        "title": "直流偏移检查",
+        "description": "检测并修正每个分轨上的直流偏移。"
+      },
+      "S1_STEM_WORKING_LOUDNESS": {
+        "title": "工作响度",
+        "description": "根据乐器配置文件匹配每个分轨的工作电平。"
+      },
+      "S1_KEY_DETECTION": {
+        "title": "调性检测",
+        "description": "估计歌曲的整体调性和音阶。"
+      },
+      "S1_VOX_TUNING": {
+        "title": "人声调音",
+        "description": "在尊重检测到的调性的同时调整主唱。"
+      },
+      "S1_MIXBUS_HEADROOM": {
+        "title": "混音总线动态余量",
+        "description": "调整整体动态余量以便为处理留出空间。"
+      },
+      "S2_GROUP_PHASE_DRUMS": {
+        "title": "相位对齐（鼓）",
+        "description": "对齐鼓和打击乐器的相位/极性。"
+      },
+      "S3_MIXBUS_HEADROOM": {
+        "title": "混音总线动态余量",
+        "description": "调整整体动态余量以便为处理留出空间。"
+      },
+      "S3_LEADVOX_AUDIBILITY": {
+        "title": "主唱可听度",
+        "description": "平衡主唱与静态混音。"
+      },
+      "S4_STEM_HPF_LPF": {
+        "title": "每分轨 HPF/LPF",
+        "description": "根据乐器配置文件应用每分轨的高通/低通滤波器。"
+      },
+      "S4_STEM_RESONANCE_CONTROL": {
+        "title": "共振控制",
+        "description": "检测并驯服每个分轨上的窄共振。"
+      },
+      "S5_STEM_DYNAMICS_GENERIC": {
+        "title": "分轨动态",
+        "description": "每轨通用动态控制（压缩/门限）。"
+      },
+      "S5_LEADVOX_DYNAMICS": {
+        "title": "主唱动态",
+        "description": "主唱的压缩和动态控制。"
+      },
+      "S5_BUS_DYNAMICS_DRUMS": {
+        "title": "鼓总线动态",
+        "description": "鼓的总线压缩以获得冲击力和凝聚力。"
+      },
+      "S6_BUS_REVERB_STYLE": {
+        "title": "总线混响 & 空间",
+        "description": "按总线系列进行风格感知的混响和空间分配。"
+      },
+      "S6_MANUAL_CORRECTION": {
+        "title": "手动修正",
+        "description": "Piroola Studio 中的手动调整。"
+      },
+      "S7_MIXBUS_TONAL_BALANCE": {
+        "title": "混音总线音色平衡",
+        "description": "宽带 EQ 以匹配目标风格的音色平衡。"
+      },
+      "S8_MIXBUS_COLOR_GENERIC": {
+        "title": "混音总线色彩",
+        "description": "混音总线上的温和饱和度/色彩以获得凝聚力。"
+      },
+      "S9_MASTER_GENERIC": {
+        "title": "母带准备",
+        "description": "最终质量控制前的预母带调整（电平和平衡）。"
+      },
+      "S10_MASTER_FINAL_LIMITS": {
+        "title": "母带最终质检",
+        "description": "带有微调的 TP/LUFS/相关性的最终检查。"
+      },
+      "S11_REPORT_GENERATION": {
+        "title": "报告生成",
+        "description": "生成最终流程报告。"
+      }
+    },
+    "stemsProfile": "选择分轨配置文件",
+    "stemsProfileDesc": "标记每个分轨在混音中的功能。稍后我们将使用这些配置文件来路由总线。",
+    "spaceDepthTitle": "每总线空间 / 深度",
+    "spaceDepthDesc": "按总线系列分配混响/空间风格以指导后续阶段。",
+    "spaceDepthBuses": {
+      "drums": {
+        "label": "鼓总线",
+        "description": "架子鼓、编曲鼓、循环等。"
+      },
+      "percussion": {
+        "label": "打击乐总线",
+        "description": "额外打击乐、拍手、沙锤等。"
+      },
+      "bass": {
+        "label": "贝斯总线",
+        "description": "电贝司、合成贝司、超低音。"
+      },
+      "guitars": {
+        "label": "吉他总线",
+        "description": "原声吉他和电吉他。"
+      },
+      "keys_synths": {
+        "label": "键盘 / 合成器总线",
+        "description": "钢琴、Rhodes、铺底、合成器。"
+      },
+      "lead_vocal": {
+        "label": "主唱总线",
+        "description": "主唱。"
+      },
+      "backing_vocals": {
+        "label": "和声总线",
+        "description": "和声、配音、和弦。"
+      },
+      "fx": {
+        "label": "特效总线",
+        "description": "上升音效、撞击声、人声切片、创意特效。"
+      },
+      "ambience": {
+        "label": "氛围 / 大气总线",
+        "description": "氛围、大气、房间麦克风、背景特效。"
+      },
+      "other": {
+        "label": "其他总线",
+        "description": "未归类于之前类别的任何分轨。"
+      }
+    },
+    "auto": "自动",
+    "autoRecommended": "自动检测（推荐）",
+    "profileOptions": {
+      "Kick": "底鼓（主要底鼓）",
+      "Snare": "军鼓（主要军鼓）",
+      "Percussion": "打击乐（拍手、邦戈...）",
+      "Bass_Electric": "电贝司 / 合成贝司",
+      "Acoustic_Guitar": "原声吉他",
+      "Electric_Guitar_Rhythm": "电吉他",
+      "Keys_Piano": "钢琴 / 键盘",
+      "Synth_Pads": "合成器铺底",
+      "Lead_Vocal_Melodic": "主唱（旋律）",
+      "Lead_Vocal_Rap": "主唱（说唱）",
+      "Backing_Vocals": "和声",
+      "FX_EarCandy": "特效 / 听觉糖果",
+      "Ambience_Atmos": "氛围 / 大气",
+      "Other": "其他"
+    },
+    "styleOptions": {
+        "Flamenco_Rumba": "弗拉门戈 / 伦巴",
+        "EDM_Club": "EDM / 俱乐部",
+        "Acoustic_SingerSongwriter": "原声 / 唱作人"
+    },
+    "result": {
+      "originalMix": "原始混音",
+      "aiMix": "AI 混音 & 母带处理（结果）",
+      "originalDesc": "原始混音（处理前）。",
+      "aiDesc": "AI 混音 & 母带处理（结果）。收听处理后的最终混音。",
+      "backToResult": "返回结果",
+      "listenOriginal": "收听原始",
+      "viewReport": "查看完整报告",
+      "loadingReport": "加载报告...",
+      "finalReport": "最终混音报告",
+      "close": "关闭",
+      "retry": "重试加载报告",
+      "unavailable": "报告数据不可用。"
+    }
+  },
+  "Studio": {
+    "title": "Piroola 工作室",
+    "project": "项目",
+    "stemsZip": "分轨 (ZIP)",
+    "mixdown": "混音",
+    "downloading": "下载中...",
+    "finishHere": "在此结束（无母带处理）",
+    "proceedMastering": "继续进行母带处理",
+    "tracks": "轨道",
+    "masterOut": "主输出",
+    "monitor": "监听",
+    "selectedChannel": "已选通道",
+    "noTrackSelected": "未选择轨道",
+    "parametricEq": "参数 EQ",
+    "compressor": "压缩器",
+    "panning": "声像",
+    "reverb": "混响",
+    "loading": "加载 Piroola 工作室...",
+    "loadingStems": "加载分轨和波形",
+    "selectTrack": "选择一个轨道以查看波形"
+  },
+  "FAQ": {
+    "title": "常见问题",
+    "subtitle": "关于我们 AI 混音和母带处理服务您需要知道的一切。",
+    "items": {
+      "0": {
+        "question": "什么是 Piroola？",
+        "answer": "Piroola 是一项先进的在线服务，使用人工智能混合和母带处理您的多轨音频文件。它分析您的分轨并应用专业的录音室技术，在几分钟内提供广播质量的曲目。"
+      },
+      "1": {
+        "question": "AI 混音如何运作？",
+        "answer": "我们的 AI 管道分析每个分轨的频率内容、动态和音色平衡。然后，它应用修正处理（EQ、压缩），平衡电平，将乐器放置在立体声场中，并添加混响等效果，以创建针对您的流派量身定制的连贯混音。"
+      },
+      "2": {
+        "question": "支持哪些文件格式？",
+        "answer": "我们支持大多数标准音频格式，包括 WAV、AIFF、FLAC 和 MP3。为了获得最佳效果，我们建议上传高质量的未压缩 WAV 或 AIFF 文件（24 位 / 44.1kHz 或更高）。"
+      },
+      "3": {
+        "question": "我的音乐安全吗？",
+        "answer": "是的，您的安全是我们的首要任务。您的文件在我们的服务器上安全处理，并在短时间后自动删除。我们不对您的音乐主张任何权利；您保留作品的 100% 所有权。"
+      },
+      "4": {
+        "question": "该过程需要多长时间？",
+        "answer": "大多数混音在几分钟内完成，具体取决于分轨数量和曲目长度。您将看到一个进度条，指示分析和混音过程的每个阶段。"
+      },
+      "5": {
+        "question": "我可以上传分轨吗？",
+        "answer": "当然。实际上，我们的服务就是为分轨设计的！您可以上传单独的乐器轨道（如底鼓、军鼓、贝斯、人声），让我们的 AI 将它们完美地混合在一起。"
+      },
+      "6": {
+        "question": "混音和母带处理有什么区别？",
+        "answer": "混音涉及平衡单独的轨道（分轨）以形成一首歌曲，包括调整电平、声像和添加效果。母带处理是润色混音歌曲的最后一步，确保其声音连贯且响度足以进行商业发行。"
+      },
+      "7": {
+        "question": "我拥有混音曲目的权利吗？",
+        "answer": "是的！您保留原创音乐和 Piroola 制作的最终混音的完整版权和所有权。您可以在任何流媒体平台上发布您的曲目，而无需向我们支付版税。"
+      },
+      "8": {
+        "question": "如果我不满意结果怎么办？",
+        "answer": "我们提供所应用处理的详细报告。如果结果不是您所期望的，您可以尝试调整输入分轨（例如，清理噪音）或确保文件标记正确，然后重新运行该过程。"
+      },
+      "9": {
+        "question": "有文件大小限制吗？",
+        "answer": "目前，我们支持音乐制作分轨典型的合理文件大小。如果您遇到极大项目的问题，请考虑以标准采样率（例如 44.1kHz 或 48kHz）导出您的分轨。"
+      },
+      "10": {
+        "question": "如何下载我的结果？",
+        "answer": "处理完成后，将出现一个“下载”按钮。您可以直接将最终混音和母带处理后的立体声文件下载到您的设备。"
+      },
+      "11": {
+        "question": "我可以在移动设备上使用 Piroola 吗？",
+        "answer": "是的，我们的网站完全响应式，可在移动设备上运行。但是，为了管理多个分轨文件，台式电脑可能会提供更流畅的工作流程。"
+      }
+    }
   },
   "Pricing": {
     "title": "定价",
-    "subtitle": "为您旅程的每个阶段提供定价计划",
-    "description": "选择适合您音频制作需求的完美计划。从演示到专业发布，我们都能满足您的需求。",
+    "subtitle": "为您旅程的每个阶段提供的定价计划",
+    "description": "为您的音频制作需求选择完美的计划。从演示到专业发行，我们都能满足您的需求。",
     "monthlyBilling": "按月计费",
     "yearlyBilling": "按年计费",
-    "save20": "节省约20%",
+    "save20": "节省 ~20%",
     "month": "月",
     "billedYearly": "按年计费",
     "mostPopular": "最受欢迎",
     "startForFree": "免费开始",
-    "getPlus": "获取Plus版",
-    "getPro": "获取Pro版"
+    "getPlus": "获取 Plus",
+    "getPro": "获取 Pro"
   }
 }

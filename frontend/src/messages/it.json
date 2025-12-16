@@ -1,28 +1,431 @@
 {
   "Metadata": {
     "title": "Piroola: Mixaggio e Mastering Audio IA Professionale Online",
-    "description": "Trasforma le tue tracce con Piroola. Il nostro servizio di mixaggio e mastering basato sull'IA offre risultati di qualità professionale da studio dai tuoi stem multitraccia in pochi minuti."
+    "description": "Trasforma le tue tracce con Piroola. Il nostro servizio di mixaggio e mastering basato sull'IA offre risultati di qualità professionale da studio a partire dai tuoi stem multitraccia in pochi minuti."
   },
   "Navigation": {
     "examples": "Esempi",
     "pricing": "Prezzi",
     "faq": "FAQ",
-    "howItWorks": "Come funziona",
-    "support": "Supporto"
+    "howItWorks": "Come Funziona",
+    "support": "Supporto",
+    "goToApp": "Vai all'App",
+    "logIn": "Accedi",
+    "tryForFree": "Prova Gratis"
   },
   "LandingPage": {
     "readyToElevate": "Pronto a elevare il tuo suono?",
-    "startMixing": "Inizia a mixare gratis"
+    "startMixing": "Inizia a Mixare Gratuitamente"
   },
   "HeroSection": {
     "alertConstruction": "AVVISO: Sito web in costruzione!",
     "studioSound": "Suono da Studio.",
     "perfectedByAI": "Perfezionato dall'IA.",
-    "description": "Trasforma le tue registrazioni casalinghe (stems) in mix professionali pronti per Spotify in pochi minuti. Piroola si occupa dell'ingegneria tecnica così puoi concentrarti sulla musica.",
-    "mixMyTracks": "Mixa le mie tracce",
-    "listenToDemos": "Ascolta demo",
-    "rating": "Valutazione 4.9/5",
+    "description": "Trasforma le tue registrazioni casalinghe (stem) in mix professionali pronti per Spotify in pochi minuti. Piroola gestisce l'ingegneria tecnica così puoi concentrarti sulla musica.",
+    "mixMyTracks": "Mixa le mie Tracce",
+    "listenToDemos": "Ascolta Demo",
+    "rating": "Voto 4.9/5",
     "tracksMastered": "+10k Tracce Masterizzate"
+  },
+  "FeaturesSection": {
+    "workflow": "FLUSSO DI LAVORO",
+    "title": "Dalla tua DAW al <span class='text-cyan-400'>Mondo</span>.",
+    "subtitle": "Abbiamo semplificato il complesso processo di ingegneria. Nessun menu infinito, solo risultati sonori superiori.",
+    "steps": {
+      "0": {
+        "title": "Analisi Intelligente",
+        "description": "La nostra IA scansiona le tue tracce per comprendere tonalità, tempo, genere e strumentazione, creando una strategia di mixaggio personalizzata."
+      },
+      "1": {
+        "title": "Mixaggio di Precisione",
+        "description": "Piroola applica EQ chirurgico, compressione dinamica e miglioramenti spaziali su misura per il ruolo di ogni stem nel mix."
+      },
+      "2": {
+        "title": "Controllo Creativo",
+        "description": "Regola il flusso di lavoro secondo le tue esigenze per un suono ottimale. Configura i tuoi strumenti e stili musicali al massimo potenziale."
+      },
+      "3": {
+        "title": "Qualità Mastering",
+        "description": "Finalizza la tua traccia con corrispondenza del volume standard del settore, ampiezza stereo e sicurezza del limitatore."
+      }
+    }
+  },
+  "BenefitsSection": {
+    "speedTitle": "Ore di lavoro, fatte in minuti.",
+    "speedDescription": "Dimentica il noioso gain staging, l'allineamento di fase e la pulizia delle risonanze. Piroola gestisce il lavoro pesante tecnico così puoi concentrarti sull'atmosfera creativa.",
+    "speedPoints": [
+      "Configurazione della sessione e routing istantanei",
+      "EQ correttivo automatizzato",
+      "Verifica della conformità del volume in tempo reale"
+    ],
+    "qualityTitle": "Qualità da Studio, accessibile a tutti.",
+    "qualityDescription": "Non hai bisogno di uno studio da un milione di dollari o decenni di esperienza per ottenere un suono professionale. I nostri algoritmi sono addestrati su dischi di successo per fornire risultati commercialmente competitivi.",
+    "spotifyReady": "Pronto per Spotify",
+    "appleMusicReady": "Pronto per Apple Music"
+  },
+  "LiveSoundAnalysis": {
+    "label": "Motore di Analisi Live",
+    "title": "Visualizza l'Invisibile.",
+    "description": "Smetti di indovinare. Piroola fornisce metriche di precisione chirurgica per garantire che il tuo mix rispetti gli standard di streaming (Spotify, Apple Music) e broadcast.",
+    "spectrum": {
+      "title": "Spettro di Frequenza",
+      "range": "20Hz - 20kHz",
+      "sub": "Bassi Profondi (Sub)",
+      "vocal": "Presenza Vocale",
+      "air": "Aria / Brillantezza",
+      "balanced": "Bilanciato",
+      "optimal": "Ottimale"
+    },
+    "controls": {
+      "reScan": "Ri-Scansiona",
+      "target": "Obiettivo"
+    },
+    "metrics": {
+      "loudness": "Volume Integrato",
+      "stereoImage": "Immagine Stereo",
+      "dynamicRange": "Gamma Dinamica",
+      "target": "Obiettivo",
+      "wide": "Ampio",
+      "correlation": "Correlazione",
+      "description": "Ottima compatibilità mono. Nessuna cancellazione di fase critica."
+    }
+  },
+  "PipelineInteractiveDiagram": {
+    "label": "Flusso di Lavoro Ingegneria Audio",
+    "title": "Pipeline di Mixaggio & Mastering",
+    "description": "Esplora in modo interattivo ogni fase del processo di produzione audio, dall'analisi iniziale alla rifinitura finale.",
+    "keyTools": "Strumenti Chiave",
+    "proTip": "CONSIGLIO PRO",
+    "steps": {
+      "0": {
+        "title": "Analisi",
+        "shortDesc": "Diagnosi di frequenza, fase e gamma dinamica.",
+        "desc": "Prima di elaborare, comprendere il materiale sorgente è cruciale. Utilizziamo analizzatori di spettro, misuratori di correlazione di fase e misuratori LUFS per identificare problemi di risonanza, squilibri tonali o problemi di fase.",
+        "tip": "Ascolta sempre inizialmente in mono per rilevare cancellazioni di fase.",
+        "tools": ["Analizzatore di Spettro", "Goniometro", "Misuratore LUFS"]
+      },
+      "1": {
+        "title": "Correzione",
+        "shortDesc": "Pulizia, EQ sottrattivo e riduzione del rumore.",
+        "desc": "La fase chirurgica. Rimuoviamo le frequenze problematiche con un EQ sottrattivo, riduciamo il rumore di fondo e correggiamo l'intonazione vocale se necessario. L'obiettivo è pulire prima di migliorare.",
+        "tip": "Taglia le basse frequenze (Passa-Alto) sugli strumenti che non ne hanno bisogno per guadagnare chiarezza.",
+        "tools": ["EQ Parametrico", "De-noiser", "Correzione Intonazione"]
+      },
+      "2": {
+        "title": "Dinamica",
+        "shortDesc": "Controllo dei transienti, compressione ed equilibrio.",
+        "desc": "Controlliamo la gamma dinamica per un mix coerente. Utilizziamo compressori per legare gli elementi insieme e limitatori morbidi per domare i picchi indesiderati.",
+        "tip": "Usa la compressione in serie (più compressori delicati) invece di uno solo aggressivo per un suono più naturale.",
+        "tools": ["Compressore VCA", "Compressore Multibanda", "De-esser", "Limitatore"]
+      },
+      "3": {
+        "title": "Spaziale",
+        "shortDesc": "Profondità, riverbero e immagine stereo.",
+        "desc": "Creiamo il mondo 3D della canzone. Posizioniamo gli strumenti nel campo stereo (panning) e aggiungiamo profondità con riverbero e delay.",
+        "tip": "Mantieni cassa, basso e voce principale al centro. Sposta gli elementi ritmici e armonici ai lati.",
+        "tools": ["Riverbero Plate/Hall", "Delay Stereo", "Allargatore Stereo", "Pan Pot"]
+      },
+      "4": {
+        "title": "Mastering",
+        "shortDesc": "Volume, coesione finale e formati di consegna.",
+        "desc": "La rifinitura finale. Miriamo a un volume commerciale competitivo, un equilibrio tonale globale e ci assicuriamo che la canzone si traduca bene su qualsiasi sistema di riproduzione (auto, telefono, club).",
+        "tip": "Confronta sempre il tuo master con canzoni di riferimento dello stesso genere (Test A/B).",
+        "tools": ["Compressore Master Bus", "EQ Lineare", "Maximizer", "Dithering"]
+      }
+    }
+  },
+  "TechSpecsSection": {
+    "title": "Potenza & Precisione",
+    "internalProcessing": "Elaborazione Interna",
+    "floatDepth": "Profondità Float",
+    "processingStages": "Fasi di Elaborazione",
+    "latency": "Latenza (Cloud)"
+  },
+  "Footer": {
+    "terms": "Termini",
+    "privacy": "Privacy",
+    "cookies": "Cookie",
+    "contact": "Contatto",
+    "copyright": "© 2025 Piroola."
+  },
+  "AuthModal": {
+    "seamlessMastering": "Mastering Senza Intoppi",
+    "experiencePower": "Prova la potenza di un motore di mastering IA avanzato.",
+    "signIn": "Accedi",
+    "createAccount": "Crea Account",
+    "signInGoogle": "Accedi con Google",
+    "or": "o",
+    "fullName": "Nome Completo",
+    "email": "Indirizzo Email",
+    "password": "Password",
+    "forgotPassword": "Password dimenticata?",
+    "processing": "Elaborazione...",
+    "newUser": "Nuovo utente?",
+    "register": "Registrati +",
+    "alreadyHaveAccount": "Hai già un account?"
+  },
+  "MixTool": {
+    "loadingStudio": "Caricamento studio...",
+    "loadingResult": "Caricamento risultato...",
+    "spaceDepthSettings": "Impostazioni Spazio & Profondità",
+    "uploadMixConfig": "Configurazione Caricamento & Mix",
+    "songMode": "Canzone (Mastering)",
+    "stemsMode": "Stems (Mix Completo)",
+    "songModeWarning": "La modalità canzone richiede esattamente un file WAV.",
+    "selectionWarning": "Hai selezionato solo uno stem. Se vuoi masterizzare una canzone, seleziona Canzone (Mastering).",
+    "pipelineSteps": "Fasi della pipeline",
+    "enabled": "abilitato",
+    "pipelineStepsDesc": "Abilita o disabilita le fasi della pipeline per questo lavoro.",
+    "all": "Tutti",
+    "none": "Nessuno",
+    "generateMix": "Genera Mix IA",
+    "processing": "Elaborazione...",
+    "waitingQueue": "In attesa in coda…",
+    "runningStage": "Esecuzione fase",
+    "stage": {
+      "S0_SESSION_FORMAT": {
+        "title": "Formato sessione & routing",
+        "description": "Normalizza frequenza di campionamento/profondità di bit e assegna bus logici per iniziare in modo pulito."
+      },
+      "S1_STEM_DC_OFFSET": {
+        "title": "Controllo offset DC",
+        "description": "Rileva e corregge offset DC su ogni stem."
+      },
+      "S1_STEM_WORKING_LOUDNESS": {
+        "title": "Volume di lavoro",
+        "description": "Abbina il livello di lavoro per stem in base al suo profilo strumentale."
+      },
+      "S1_KEY_DETECTION": {
+        "title": "Rilevamento tonalità",
+        "description": "Stima la tonalità globale e la scala della canzone."
+      },
+      "S1_VOX_TUNING": {
+        "title": "Intonazione vocale",
+        "description": "Intona la voce principale rispettando la tonalità rilevata."
+      },
+      "S1_MIXBUS_HEADROOM": {
+        "title": "Headroom del Mixbus",
+        "description": "Regola l'headroom globale per lasciare spazio all'elaborazione."
+      },
+      "S2_GROUP_PHASE_DRUMS": {
+        "title": "Allineamento di fase (batteria)",
+        "description": "Allinea fase/polarità su batteria e percussioni."
+      },
+      "S3_MIXBUS_HEADROOM": {
+        "title": "Headroom del Mixbus",
+        "description": "Regola l'headroom globale per lasciare spazio all'elaborazione."
+      },
+      "S3_LEADVOX_AUDIBILITY": {
+        "title": "Audibilità voce principale",
+        "description": "Bilancia la voce principale contro il mix statico."
+      },
+      "S4_STEM_HPF_LPF": {
+        "title": "Filtri HPF/LPF per stem",
+        "description": "Applica filtri passa-alto/basso per stem in base al profilo strumentale."
+      },
+      "S4_STEM_RESONANCE_CONTROL": {
+        "title": "Controllo risonanza",
+        "description": "Rileva e doma risonanze strette su ogni stem."
+      },
+      "S5_STEM_DYNAMICS_GENERIC": {
+        "title": "Dinamica stem",
+        "description": "Controllo dinamico generico per traccia (compressione/gate)."
+      },
+      "S5_LEADVOX_DYNAMICS": {
+        "title": "Dinamica voce principale",
+        "description": "Compressione e controllo dinamico per la voce principale."
+      },
+      "S5_BUS_DYNAMICS_DRUMS": {
+        "title": "Dinamica bus batteria",
+        "description": "Compressione bus su batteria per punch e coesione."
+      },
+      "S6_BUS_REVERB_STYLE": {
+        "title": "Riverbero & spazio bus",
+        "description": "Assegnazione di riverbero e spazio consapevole dello stile per famiglia di bus."
+      },
+      "S6_MANUAL_CORRECTION": {
+        "title": "Correzione Manuale",
+        "description": "Regolazioni manuali in Piroola Studio."
+      },
+      "S7_MIXBUS_TONAL_BALANCE": {
+        "title": "Equilibrio tonale Mixbus",
+        "description": "EQ a banda larga per abbinare l'equilibrio tonale dello stile target."
+      },
+      "S8_MIXBUS_COLOR_GENERIC": {
+        "title": "Colore Mixbus",
+        "description": "Saturazione/colore delicato sul mixbus per coesione."
+      },
+      "S9_MASTER_GENERIC": {
+        "title": "Preparazione Master",
+        "description": "Regolazione pre-master (livello ed equilibrio) prima del controllo qualità finale."
+      },
+      "S10_MASTER_FINAL_LIMITS": {
+        "title": "Controllo qualità finale Master",
+        "description": "Controllo finale di TP/LUFS/correlazione con micro-regolazioni."
+      },
+      "S11_REPORT_GENERATION": {
+        "title": "Generazione Rapporto",
+        "description": "Generazione del rapporto finale del processo."
+      }
+    },
+    "stemsProfile": "Seleziona profilo stems",
+    "stemsProfileDesc": "Etichetta ogni stem con la sua funzione nel mix. Più tardi useremo questi profili per instradare i bus.",
+    "spaceDepthTitle": "Spazio / Profondità per bus",
+    "spaceDepthDesc": "Assegna uno stile di riverbero/spazio per famiglia di bus per guidare le fasi successive.",
+    "spaceDepthBuses": {
+      "drums": {
+        "label": "Bus Batteria",
+        "description": "Kit batteria, batteria programmata, loop, ecc."
+      },
+      "percussion": {
+        "label": "Bus Percussioni",
+        "description": "Percussioni aggiuntive, clap, shaker, ecc."
+      },
+      "bass": {
+        "label": "Bus Basso",
+        "description": "Basso elettrico, basso synth, sub-basso."
+      },
+      "guitars": {
+        "label": "Bus Chitarre",
+        "description": "Chitarre acustiche ed elettriche."
+      },
+      "keys_synths": {
+        "label": "Bus Tastiere / Synth",
+        "description": "Pianoforti, Rhodes, pad, sintetizzatori."
+      },
+      "lead_vocal": {
+        "label": "Bus Voce Principale",
+        "description": "Voce principale."
+      },
+      "backing_vocals": {
+        "label": "Bus Cori",
+        "description": "Cori, doppiaggi, armonie."
+      },
+      "fx": {
+        "label": "Bus FX",
+        "description": "Riser, impatti, vocal chops, FX creativi."
+      },
+      "ambience": {
+        "label": "Bus Ambiente / Atmos",
+        "description": "Ambienti, atmosfere, microfoni ambientali, FX di sfondo."
+      },
+      "other": {
+        "label": "Bus Altro",
+        "description": "Qualsiasi stem non classificato nelle categorie precedenti."
+      }
+    },
+    "auto": "Auto",
+    "autoRecommended": "Rilevamento automatico (consigliato)",
+    "profileOptions": {
+      "Kick": "Cassa (kick principale)",
+      "Snare": "Rullante (snare principale)",
+      "Percussion": "Percussioni (clap, bongo...)",
+      "Bass_Electric": "Basso elettrico / synth",
+      "Acoustic_Guitar": "Chitarra acustica",
+      "Electric_Guitar_Rhythm": "Chitarra elettrica",
+      "Keys_Piano": "Piano / tastiere",
+      "Synth_Pads": "Pad synth",
+      "Lead_Vocal_Melodic": "Voce principale (melodica)",
+      "Lead_Vocal_Rap": "Voce principale (rap)",
+      "Backing_Vocals": "Cori",
+      "FX_EarCandy": "FX / orecchiabile",
+      "Ambience_Atmos": "Ambiente / atmosfera",
+      "Other": "Altro"
+    },
+    "styleOptions": {
+        "Flamenco_Rumba": "Flamenco / Rumba",
+        "EDM_Club": "EDM / Club",
+        "Acoustic_SingerSongwriter": "Acustico / Cantautore"
+    },
+    "result": {
+      "originalMix": "Mix originale",
+      "aiMix": "Mixaggio & mastering IA (risultato)",
+      "originalDesc": "Mix originale (prima del trattamento).",
+      "aiDesc": "Mixaggio & mastering IA (risultato). Ascolta il mix finale dopo il trattamento.",
+      "backToResult": "Torna al Risultato",
+      "listenOriginal": "Ascolta l'Originale",
+      "viewReport": "Vedi Rapporto Completo",
+      "loadingReport": "Caricamento Rapporto...",
+      "finalReport": "Rapporto Finale di Mixaggio",
+      "close": "Chiudi",
+      "retry": "Riprova caricamento rapporto",
+      "unavailable": "I dati del rapporto non sono disponibili."
+    }
+  },
+  "Studio": {
+    "title": "Studio Piroola",
+    "project": "Progetto",
+    "stemsZip": "Stems (ZIP)",
+    "mixdown": "Mixdown",
+    "downloading": "Scaricamento...",
+    "finishHere": "Termina qui (niente Mastering)",
+    "proceedMastering": "Procedi al Mastering",
+    "tracks": "Tracce",
+    "masterOut": "USCITA MASTER",
+    "monitor": "MONITOR",
+    "selectedChannel": "Canale Selezionato",
+    "noTrackSelected": "Nessuna Traccia Selezionata",
+    "parametricEq": "EQ Parametrico",
+    "compressor": "Compressore",
+    "panning": "Panning",
+    "reverb": "Riverbero",
+    "loading": "Caricamento Studio Piroola...",
+    "loadingStems": "Caricamento stems e forma d'onda",
+    "selectTrack": "Seleziona una traccia per vedere la forma d'onda"
+  },
+  "FAQ": {
+    "title": "Domande Frequenti",
+    "subtitle": "Tutto quello che devi sapere sul nostro servizio di mixaggio e mastering IA.",
+    "items": {
+      "0": {
+        "question": "Cos'è Piroola?",
+        "answer": "Piroola è un servizio online avanzato che utilizza l'Intelligenza Artificiale per mixare e masterizzare i tuoi file audio multitraccia. Analizza i tuoi stem e applica tecniche di studio professionali per fornire tracce di qualità radiofonica in pochi minuti."
+      },
+      "1": {
+        "question": "Come funziona il mixaggio IA?",
+        "answer": "La nostra pipeline IA analizza ogni stem per contenuto di frequenza, dinamica ed equilibrio tonale. Quindi applica un'elaborazione correttiva (EQ, compressione), bilancia i livelli, posiziona gli strumenti nel campo stereo e aggiunge effetti come il riverbero per creare un mix coerente, adatto al tuo genere."
+      },
+      "2": {
+        "question": "Quali formati di file sono supportati?",
+        "answer": "Supportiamo la maggior parte dei formati audio standard, inclusi WAV, AIFF, FLAC e MP3. Per i migliori risultati, consigliamo di caricare file WAV o AIFF non compressi di alta qualità (24-bit / 44.1kHz o superiore)."
+      },
+      "3": {
+        "question": "La mia musica è al sicuro?",
+        "answer": "Sì, la tua sicurezza è la nostra priorità. I tuoi file sono elaborati in modo sicuro sui nostri server e vengono automaticamente eliminati dopo un breve periodo. Non rivendichiamo alcun diritto sulla tua musica; mantieni il 100% della proprietà del tuo lavoro."
+      },
+      "4": {
+        "question": "Quanto tempo richiede il processo?",
+        "answer": "La maggior parte dei mix viene completata in pochi minuti, a seconda del numero di stem e della lunghezza della traccia. Vedrai una barra di avanzamento che indica ogni fase del processo di analisi e mixaggio."
+      },
+      "5": {
+        "question": "Posso caricare stem?",
+        "answer": "Assolutamente. In effetti, il nostro servizio è progettato per gli stem! Puoi caricare tracce di strumenti individuali (come cassa, rullante, basso, voce) per permettere alla nostra IA di mixarli perfettamente insieme."
+      },
+      "6": {
+        "question": "Qual è la differenza tra mixaggio e mastering?",
+        "answer": "Il mixaggio implica il bilanciamento di tracce individuali (stem) per formare una canzone, inclusi l'aggiustamento dei livelli, il panning e l'aggiunta di effetti. Il mastering è la fase finale che lucida la canzone mixata, assicurando che suoni in modo coerente e abbastanza forte per un'uscita commerciale."
+      },
+      "7": {
+        "question": "Possiedo i diritti della traccia mixata?",
+        "answer": "Sì! Mantieni l'intero copyright e la proprietà della tua musica originale e del mix finale prodotto da Piroola. Puoi pubblicare le tue tracce su qualsiasi piattaforma di streaming senza pagarci royalty."
+      },
+      "8": {
+        "question": "E se non sono soddisfatto del risultato?",
+        "answer": "Forniamo un rapporto dettagliato dell'elaborazione applicata. Se il risultato non è quello che ti aspettavi, puoi provare a regolare gli stem di ingresso (ad esempio, pulire il rumore) o assicurarti che i tuoi file siano correttamente etichettati, e rilanciare il processo."
+      },
+      "9": {
+        "question": "C'è un limite di dimensione del file?",
+        "answer": "Attualmente, supportiamo dimensioni di file ragionevoli tipiche per gli stem di produzione musicale. Se incontri problemi con progetti estremamente voluminosi, considera di esportare i tuoi stem a una frequenza di campionamento standard (ad esempio, 44.1kHz o 48kHz)."
+      },
+      "10": {
+        "question": "Come scarico i miei risultati?",
+        "answer": "Una volta completata l'elaborazione, apparirà un pulsante 'Scarica'. Puoi scaricare il file stereo mixato e masterizzato finale direttamente sul tuo dispositivo."
+      },
+      "11": {
+        "question": "Posso usare Piroola su mobile?",
+        "answer": "Sì, il nostro sito web è completamente reattivo e funziona sui dispositivi mobili. Tuttavia, per gestire più file stem, un computer desktop potrebbe offrire un flusso di lavoro più fluido."
+      }
+    }
   },
   "Pricing": {
     "title": "Prezzi",

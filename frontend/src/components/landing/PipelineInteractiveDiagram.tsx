@@ -1,75 +1,77 @@
 'use client';
 
 import React, { useState } from 'react';
-
-const stepsData = [
-  {
-    title: "Analysis",
-    icon: "/icon_analysis.webp",
-    colorClass: "text-cyan-400",
-    bgClass: "bg-cyan-900/30",
-    borderClass: "border-cyan-800",
-    shortDesc: "Frequency, phase, and dynamic range diagnosis.",
-    desc: "Before processing, understanding the source material is crucial. We use spectrum analyzers, phase correlation meters, and LUFS meters to identify resonant issues, tonal imbalances, or phase problems.",
-    tools: ["Spectrum Analyzer", "Goniometer", "LUFS Meter"],
-    tip: "Always listen in mono initially to detect phase cancellations.",
-    image: "/analysis.webp"
-  },
-  {
-    title: "Correction",
-    icon: "/icon_correction.webp",
-    colorClass: "text-purple-400",
-    bgClass: "bg-purple-900/30",
-    borderClass: "border-purple-800",
-    shortDesc: "Cleaning, subtractive EQ, and noise reduction.",
-    desc: "The surgical stage. We remove problematic frequencies with subtractive EQ, reduce background noise, and correct vocal pitch if necessary. The goal is to clean before enhancing.",
-    tools: ["Parametric EQ", "De-noiser", "Pitch Correction"],
-    tip: "Cut low frequencies (High Pass) on instruments that don't need them to gain clarity.",
-    image: "/correction.webp"
-  },
-  {
-    title: "Dynamics",
-    icon: "/icon_dynamics.webp",
-    colorClass: "text-orange-400",
-    bgClass: "bg-orange-900/30",
-    borderClass: "border-orange-800",
-    shortDesc: "Transient control, compression, and balance.",
-    desc: "We control the dynamic range for a consistent mix. We use compressors to glue elements together and soft limiters to tame unruly peaks.",
-    tools: ["VCA Compressor", "Multiband Compressor", "De-esser", "Limiter"],
-    tip: "Use serial compression (multiple gentle compressors) instead of a single aggressive one for a more natural sound.",
-    image: "/dynamics.webp"
-  },
-  {
-    title: "Spatial",
-    icon: "/icon_spatial.webp",
-    colorClass: "text-pink-400",
-    bgClass: "bg-pink-900/30",
-    borderClass: "border-pink-800",
-    shortDesc: "Depth, reverberation, and stereo image.",
-    desc: "We create the song's 3D world. We place instruments in the stereo field (panning) and add depth with reverb and delay.",
-    tools: ["Reverb Plate/Hall", "Stereo Delay", "Stereo Widener", "Pan Pot"],
-    tip: "Keep the kick, bass, and lead vocal in the center. Move rhythmic and harmonic elements to the sides.",
-    image: "/spatial.webp"
-  },
-  {
-    title: "Mastering",
-    icon: "/icon_mastering.webp",
-    colorClass: "text-yellow-400",
-    bgClass: "bg-yellow-900/30",
-    borderClass: "border-yellow-800",
-    shortDesc: "Loudness, final cohesion, and delivery formats.",
-    desc: "The final polish. We aim for competitive commercial loudness, global tonal balance, and ensure the song translates well to any playback system (car, phone, club).",
-    tools: ["Master Bus Comp", "Linear EQ", "Maximizer", "Dithering"],
-    tip: "Always compare your master with reference songs of the same genre (A/B testing).",
-    image: "/mastering.webp"
-  }
-];
+import { useTranslations } from 'next-intl';
 
 export function PipelineInteractiveDiagram({ className }: { className?: string }) {
   const [currentStep, setCurrentStep] = useState(0);
   const [isFadingOut, setIsFadingOut] = useState(false);
   // Separate state for display data to handle transition delay
   const [displayStep, setDisplayStep] = useState(0);
+  const t = useTranslations('PipelineInteractiveDiagram');
+
+  const stepsData = [
+    {
+      title: t('steps.0.title'),
+      icon: "/icon_analysis.webp",
+      colorClass: "text-cyan-400",
+      bgClass: "bg-cyan-900/30",
+      borderClass: "border-cyan-800",
+      shortDesc: t('steps.0.shortDesc'),
+      desc: t('steps.0.desc'),
+      tools: [t('steps.0.tools.0'), t('steps.0.tools.1'), t('steps.0.tools.2')],
+      tip: t('steps.0.tip'),
+      image: "/analysis.webp"
+    },
+    {
+      title: t('steps.1.title'),
+      icon: "/icon_correction.webp",
+      colorClass: "text-purple-400",
+      bgClass: "bg-purple-900/30",
+      borderClass: "border-purple-800",
+      shortDesc: t('steps.1.shortDesc'),
+      desc: t('steps.1.desc'),
+      tools: [t('steps.1.tools.0'), t('steps.1.tools.1'), t('steps.1.tools.2')],
+      tip: t('steps.1.tip'),
+      image: "/correction.webp"
+    },
+    {
+      title: t('steps.2.title'),
+      icon: "/icon_dynamics.webp",
+      colorClass: "text-orange-400",
+      bgClass: "bg-orange-900/30",
+      borderClass: "border-orange-800",
+      shortDesc: t('steps.2.shortDesc'),
+      desc: t('steps.2.desc'),
+      tools: [t('steps.2.tools.0'), t('steps.2.tools.1'), t('steps.2.tools.2'), t('steps.2.tools.3')],
+      tip: t('steps.2.tip'),
+      image: "/dynamics.webp"
+    },
+    {
+      title: t('steps.3.title'),
+      icon: "/icon_spatial.webp",
+      colorClass: "text-pink-400",
+      bgClass: "bg-pink-900/30",
+      borderClass: "border-pink-800",
+      shortDesc: t('steps.3.shortDesc'),
+      desc: t('steps.3.desc'),
+      tools: [t('steps.3.tools.0'), t('steps.3.tools.1'), t('steps.3.tools.2'), t('steps.3.tools.3')],
+      tip: t('steps.3.tip'),
+      image: "/spatial.webp"
+    },
+    {
+      title: t('steps.4.title'),
+      icon: "/icon_mastering.webp",
+      colorClass: "text-yellow-400",
+      bgClass: "bg-yellow-900/30",
+      borderClass: "border-yellow-800",
+      shortDesc: t('steps.4.shortDesc'),
+      desc: t('steps.4.desc'),
+      tools: [t('steps.4.tools.0'), t('steps.4.tools.1'), t('steps.4.tools.2'), t('steps.4.tools.3')],
+      tip: t('steps.4.tip'),
+      image: "/mastering.webp"
+    }
+  ];
 
   // Handle step selection with animation timing
   const handleStepClick = (index: number) => {
@@ -94,13 +96,13 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
       {/* Header */}
       <header className="text-center mx-auto mb-16 relative z-10 max-w-4xl">
         <div className="inline-block mb-4 px-4 py-1.5 rounded-full border border-cyan-500/30 bg-cyan-500/10 text-cyan-300 text-xs font-semibold tracking-wider uppercase">
-          Audio Engineering Workflow
+          {t('label')}
         </div>
         <h2 className="text-4xl md:text-6xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-white via-cyan-200 to-indigo-200 drop-shadow-lg">
-          Mixing & Mastering Pipeline
+          {t('title')}
         </h2>
         <p className="text-slate-400 text-lg max-w-2xl mx-auto">
-          Interactively explore each stage of the audio production process, from initial analysis to final polishing.
+          {t('description')}
         </p>
       </header>
 
@@ -188,7 +190,7 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
 
               <div className="bg-slate-800/50 rounded-xl p-5 border border-slate-700">
                 <h3 className="text-xs font-bold uppercase tracking-widest text-slate-300 mb-3">
-                  Key Tools
+                  {t('keyTools')}
                 </h3>
                 <div className="flex flex-wrap gap-2">
                   {data.tools.map((tool, idx) => (
@@ -213,7 +215,7 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
                 <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent opacity-80"></div>
                 <div className="absolute bottom-4 left-4 right-4">
                   <div className="text-xs text-white/70 font-mono bg-black/50 inline-block px-2 py-1 rounded mb-1">
-                    PRO TIP
+                    {t('proTip')}
                   </div>
                   <p className="text-sm font-medium text-white italic">
                     "{data.tip}"
