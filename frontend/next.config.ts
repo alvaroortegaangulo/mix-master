@@ -12,7 +12,7 @@ const nextConfig: NextConfig = {
     return [
       {
         // Aplica a TODO: páginas, API routes y estáticos de Next
-        source: "/((?!_next/|favicon.ico).*)",
+        source: "/((?!_next/|favicon.ico|.*\\.(?:jpg|jpeg|gif|png|webp|svg)).*)",
         headers: [
           {
             key: "Cache-Control",
