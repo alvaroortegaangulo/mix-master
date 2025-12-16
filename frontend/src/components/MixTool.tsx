@@ -668,12 +668,28 @@ useEffect(() => {
     (jobStatus.status === "queued" || jobStatus.status === "running")
       ? (() => {
           const percent = Math.round(jobStatus.progress ?? 0);
-          const currentStep = jobStatus.stageIndex ?? 0;
           const totalSteps = jobStatus.totalStages ?? 0;
+          const rawStep = jobStatus.stageIndex ?? 0;
+
+          const baseStep =
+            jobStatus.status === "running" && rawStep === 0 && totalSteps > 0
+              ? 1
+              : rawStep;
+          const stagePrefixMatch = jobStatus.stageKey?.match(/^S(\d+)/);
+          const stagePrefix = stagePrefixMatch ? Number(stagePrefixMatch[1]) : null;
+          const displayStep =
+            totalSteps > 0
+              ? Math.min(
+                  totalSteps,
+                  stagePrefix !== null && stagePrefix > baseStep
+                    ? baseStep + 1
+                    : baseStep,
+                )
+              : baseStep;
 
           // En cola: texto genérico
           if (jobStatus.status === "queued" || totalSteps === 0) {
-            return `[${percent}%] Step ${currentStep}/${totalSteps} – ${t('waitingQueue')}`;
+            return `[${percent}%] Step ${displayStep}/${totalSteps} - ${t('waitingQueue')}`;
           }
 
           const label =
@@ -681,7 +697,7 @@ useEffect(() => {
             jobStatus.stageKey ||
             "Processing";
 
-          return `[${percent}%] Step ${currentStep}/${totalSteps} – ${t('runningStage')} ${label}…`;
+          return `[${percent}%] Step ${displayStep}/${totalSteps} - ${t('runningStage')} ${label}...`;
         })()
       : null;
 
