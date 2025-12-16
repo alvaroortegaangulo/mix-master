@@ -3,9 +3,9 @@
 import { Suspense, useState, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { useSearchParams } from "next/navigation";
-import { LandingPage } from "./landing/LandingPage";
 import { useAuth } from "../context/AuthContext";
 import { useModal } from "../context/ModalContext";
+import { HomeViewContext } from "../context/HomeViewContext";
 
 const MixTool = dynamic(
   () => import("./MixTool").then((mod) => mod.MixTool),
@@ -19,7 +19,11 @@ const MixTool = dynamic(
   }
 );
 
-function PageContent() {
+interface HomeClientProps {
+  children?: React.ReactNode;
+}
+
+function PageContent({ children }: HomeClientProps) {
   // view state: 'landing' or 'tool'
   const searchParams = useSearchParams();
   const jobIdParam = searchParams.get("jobId");
@@ -45,22 +49,24 @@ function PageContent() {
   }, [startInTool]);
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-teal-500/30">
-      <div className="flex flex-col">
-         {view === 'landing' ? (
-             <LandingPage onTryIt={handleTryIt} />
-         ) : (
-             <MixTool resumeJobId={jobIdParam || undefined} />
-         )}
+    <HomeViewContext.Provider value={{ handleTryIt }}>
+      <div className="min-h-screen bg-slate-950 text-slate-100 font-sans selection:bg-teal-500/30">
+        <div className="flex flex-col">
+          {view === 'landing' ? (
+              children
+          ) : (
+              <MixTool resumeJobId={jobIdParam || undefined} />
+          )}
+        </div>
       </div>
-    </div>
+    </HomeViewContext.Provider>
   );
 }
 
-export function HomeClient() {
+export function HomeClient({ children }: HomeClientProps) {
   return (
     <Suspense fallback={<div className="min-h-screen bg-slate-950" />}>
-      <PageContent />
+      <PageContent>{children}</PageContent>
     </Suspense>
   );
 }

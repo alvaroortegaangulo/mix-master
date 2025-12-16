@@ -1,11 +1,21 @@
 from __future__ import annotations
 
 import json
-import numpy as np
+import sys
+from pathlib import Path
 
-from ..context import PipelineContext
-from ..utils.audio_utils import save_audio_stems, load_audio_stems
-from ..utils.logger import logger as pipeline_logger
+import numpy as np
+import soundfile as sf
+
+# Ensure src is on sys.path when executed standalone
+THIS_DIR = Path(__file__).resolve().parent
+SRC_DIR = THIS_DIR.parent
+if str(SRC_DIR) not in sys.path:
+    sys.path.insert(0, str(SRC_DIR))
+
+from context import PipelineContext
+from utils.audio_utils import save_audio_stems, load_audio_stems
+from utils.logger import logger as pipeline_logger
 
 # Try importing pedalboard for DSP
 try:
@@ -13,6 +23,25 @@ try:
     HAS_PEDALBOARD = True
 except ImportError:
     HAS_PEDALBOARD = False
+
+
+def _detect_sample_rate(*directories: Path) -> int | None:
+    """
+    Try to infer the sample rate from the first available WAV file in the
+    provided directories. Returns None if it cannot be determined.
+    """
+    for directory in directories:
+        if not directory or not directory.exists():
+            continue
+        for wav_path in directory.glob("*.wav"):
+            if wav_path.name.lower() == "full_song.wav":
+                continue
+            try:
+                return int(sf.info(wav_path).samplerate)
+            except Exception:
+                continue
+    return None
+
 
 def process(context: PipelineContext) -> bool:
     """
@@ -25,6 +54,7 @@ def process(context: PipelineContext) -> bool:
     # 1. Setup directories
     current_dir = context.get_stage_dir(stage_id)
     current_dir.mkdir(parents=True, exist_ok=True)
+    s5_dir = context.temp_root / "S5_LEADVOX_DYNAMICS" if context.temp_root else None
 
     # 2. Load corrections
     work_dir = context.temp_root / "work"
@@ -41,13 +71,12 @@ def process(context: PipelineContext) -> bool:
             return False
 
     # 3. Load input stems (prefer cached context; fallback to disk when resuming)
-    stems_map = context.audio_stems
+    stems_map = getattr(context, "audio_stems", {}) or {}
     if not stems_map:
         stems_map = load_audio_stems(current_dir)
         if not stems_map:
             pipeline_logger.info(f"[{stage_id}] No stems in memory or {current_dir}. Checking S5...")
-            s5_dir = context.temp_root / "S5_LEADVOX_DYNAMICS"  # Predecessor output
-            if s5_dir.exists():
+            if s5_dir and s5_dir.exists():
                 stems_map = load_audio_stems(s5_dir)
 
             if not stems_map:
@@ -59,7 +88,13 @@ def process(context: PipelineContext) -> bool:
     any_solo = any(c.get('solo', False) for c in corrections)
 
     processed_stems = {}
-    sr = context.sample_rate
+    sr = getattr(context, "sample_rate", None)
+    if sr is None:
+        sr = _detect_sample_rate(current_dir, s5_dir)
+    if sr is None:
+        sr = 48000
+        pipeline_logger.info(f"[{stage_id}] sample_rate not found; defaulting to {sr} Hz.")
+    context.sample_rate = sr
 
     for name, audio in stems_map.items():
         # Audio is (channels, samples) float32 numpy array
@@ -88,15 +123,15 @@ def process(context: PipelineContext) -> bool:
                 # Simple 3-band EQ mapping
                 # Low Shelf (100Hz?)
                 if eq_cfg.get('low') != 0:
-                     board.append(LowShelfFilter(cutoff_frequency_hz=100, gain_db=eq_cfg['low']))
+                    board.append(LowShelfFilter(cutoff_frequency_hz=100, gain_db=eq_cfg['low']))
 
                 # Peaking (1kHz?)
                 if eq_cfg.get('mid') != 0:
-                     board.append(PeakingFilter(cutoff_frequency_hz=1000, gain_db=eq_cfg['mid'], q=1.0))
+                    board.append(PeakingFilter(cutoff_frequency_hz=1000, gain_db=eq_cfg['mid'], q=1.0))
 
                 # High Shelf (5kHz?)
                 if eq_cfg.get('high') != 0:
-                     board.append(HighShelfFilter(cutoff_frequency_hz=5000, gain_db=eq_cfg['high']))
+                    board.append(HighShelfFilter(cutoff_frequency_hz=5000, gain_db=eq_cfg['high']))
 
             # Compression
             # Frontend sends: compression: { threshold, ratio, enabled }
@@ -134,12 +169,12 @@ def process(context: PipelineContext) -> bool:
             # Apply Pan manually after processing (simple linear/power pan)
             pan = corr.get('pan', 0.0)
             if pan != 0.0 and processed.shape[0] == 2:
-                 # Standard equal-power or linear
-                 # Using linear for simplicity and robustness
-                 l_gain = 1.0 if pan <= 0 else (1.0 - pan)
-                 r_gain = 1.0 if pan >= 0 else (1.0 + pan)
-                 processed[0] *= l_gain
-                 processed[1] *= r_gain
+                # Standard equal-power or linear
+                # Using linear for simplicity and robustness
+                l_gain = 1.0 if pan <= 0 else (1.0 - pan)
+                r_gain = 1.0 if pan >= 0 else (1.0 + pan)
+                processed[0] *= l_gain
+                processed[1] *= r_gain
 
             processed_stems[name] = processed
 
@@ -151,10 +186,10 @@ def process(context: PipelineContext) -> bool:
 
             processed = audio * (10 ** (vol_db / 20.0))
             if pan != 0.0 and processed.shape[0] == 2:
-                 l_gain = 1.0 if pan <= 0 else (1.0 - pan)
-                 r_gain = 1.0 if pan >= 0 else (1.0 + pan)
-                 processed[0] *= l_gain
-                 processed[1] *= r_gain
+                l_gain = 1.0 if pan <= 0 else (1.0 - pan)
+                r_gain = 1.0 if pan >= 0 else (1.0 + pan)
+                processed[0] *= l_gain
+                processed[1] *= r_gain
 
             processed_stems[name] = processed
 

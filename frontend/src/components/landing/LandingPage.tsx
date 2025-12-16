@@ -19,7 +19,7 @@ const TechSpecsSection = dynamic(() => import("./TechSpecsSection").then(mod => 
   loading: () => <div className="h-96 bg-slate-950" />
 });
 
-export function LandingPage({ onTryIt }: { onTryIt: () => void }) {
+export function LandingPage() {
   // Alternating pattern: Dark (Hero) -> Light -> Dark -> Light -> Dark -> Light
   // "Light" in this dark theme context = bg-slate-900
   // "Dark" = bg-slate-950
@@ -29,7 +29,7 @@ export function LandingPage({ onTryIt }: { onTryIt: () => void }) {
   return (
     <div className="flex-1 flex flex-col bg-slate-950">
       {/* 1. Hero: Dark (bg-slate-950) - Default */}
-      <HeroSection onTryIt={onTryIt} />
+      <HeroSection />
 
       {/* 2. Features: Light (bg-slate-900) */}
       <FeaturesSection className="bg-slate-900" />
