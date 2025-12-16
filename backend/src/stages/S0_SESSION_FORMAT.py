@@ -16,6 +16,19 @@ except ImportError:
 
 from utils.analysis_utils import get_temp_dir
 
+
+def _using_daemonic_process() -> bool:
+    """
+    Devuelve True si el proceso actual es daemon (por ejemplo, worker prefork de Celery).
+    Los procesos daemon no pueden crear nuevos procesos hijos, por lo que
+    deberiamos evitar ProcessPoolExecutor en ese contexto.
+    """
+    try:
+        import multiprocessing
+        return bool(multiprocessing.current_process().daemon)
+    except Exception:
+        return False
+
 def load_analysis(contract_id: str) -> Dict[str, Any]:
     """Carga el JSON de análisis de analysis\\S0_SESSION_FORMAT.py en temp/<contract_id>."""
     temp_dir = get_temp_dir(contract_id, create=False)
@@ -181,7 +194,13 @@ def main() -> None:
 
     logger.logger.info(f"[S0_SESSION_FORMAT] Procesando {len(stems)} stems con {max_workers} workers.")
 
-    with concurrent.futures.ProcessPoolExecutor(max_workers=max_workers) as executor:
+    use_process_pool = not _using_daemonic_process()
+    executor_cls = concurrent.futures.ProcessPoolExecutor if use_process_pool else concurrent.futures.ThreadPoolExecutor
+
+    if not use_process_pool:
+        logger.logger.info("[S0_SESSION_FORMAT] Proceso daemon detectado; usando ThreadPoolExecutor en lugar de procesos.")
+
+    with executor_cls(max_workers=max_workers) as executor:
         list(executor.map(_process_stem_worker, args_list))
 
     logger.logger.info(f"[S0_SESSION_FORMAT] Conversión de formato completada para {len(stems)} stems.")
