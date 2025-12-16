@@ -1,7 +1,7 @@
-// frontend/src/components/UploadDropzone.tsx
 "use client";
 
 import { useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 
 type UploadMode = "song" | "stems";
 
@@ -18,6 +18,7 @@ export function UploadDropzone({
   filesCount = 0,
   uploadMode,
 }: UploadDropzoneProps) {
+  const t = useTranslations("UploadDropzone");
   const [isDragging, setIsDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
@@ -78,12 +79,12 @@ export function UploadDropzone({
       {/* Cabecera: título dinámico según modo */}
       <div className="mb-4 w-full text-center">
         <p className="text-base font-semibold text-slate-50">
-          {isSongUpload ? "Upload Your Song" : "Upload Your Stems"}
+          {isSongUpload ? t("uploadSong") : t("uploadStems")}
         </p>
         <p className="text-xs text-slate-400">
           {isSongUpload
-            ? "Master a single stereo bounce."
-            : "Upload individual tracks for a full AI mix."}
+            ? t("songModeDesc")
+            : t("stemsModeDesc")}
         </p>
       </div>
 
@@ -100,16 +101,16 @@ export function UploadDropzone({
       {/* Texto principal del dropzone, adaptado al modo */}
       <p className="text-sm font-semibold text-slate-50 mb-1 text-center">
         {isSongUpload
-          ? "Drag & drop your song here, or click to select a file"
-          : "Drag & drop stems here, or click to select files"}
+          ? t("dragDropSong")
+          : t("dragDropStems")}
       </p>
       <p className="text-xs text-slate-400 mb-2 text-center">
-        Supported formats: WAV
+        {t("supportedFormats")}
       </p>
 
       {filesCount > 0 && (
         <p className="mt-1 text-xs text-teal-300">
-          {filesCount} audio file{filesCount > 1 ? "s" : ""} selected
+          {t("filesSelected", { count: filesCount })}
         </p>
       )}
 
