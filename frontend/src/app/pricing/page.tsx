@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { CheckIcon, XMarkIcon } from "@heroicons/react/20/solid";
 import Script from "next/script";
+import { gaEvent } from "../../lib/ga";
 
 const fallbackSiteUrl = "https://music-mix-master.com";
 const siteUrl = (() => {
@@ -194,6 +195,7 @@ export default function PricingPage() {
                 <Link
                   href={tier.href}
                   aria-describedby={tier.id}
+                  onClick={() => gaEvent("select_plan", { plan: tier.id, billing: billingCycle })}
                   className={`mt-8 block rounded-full px-3 py-2 text-center text-sm font-semibold leading-6 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 ${
                     tier.mostPopular
                       ? "bg-teal-500 text-white hover:bg-teal-400 focus-visible:outline-teal-500 shadow-lg shadow-teal-500/20"

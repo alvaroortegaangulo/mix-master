@@ -16,6 +16,7 @@ import Script from "next/script";
 import { UploadDropzone } from "./UploadDropzone";
 import { type SpaceBus } from "./SpaceDepthStylePanel";
 import { useAuth } from "../context/AuthContext";
+import { gaEvent } from "../lib/ga";
 
 const siteName = "Piroola";
 const fallbackSiteUrl = "https://music-mix-master.com";
@@ -637,6 +638,14 @@ useEffect(() => {
 
     setFiles(selected);
 
+    // Track upload start/selection
+    gaEvent("upload_stems", {
+        mode: uploadMode,
+        file_count: selected.length,
+        total_size_mb: Math.round(selected.reduce((acc, f) => acc + f.size, 0) / (1024 * 1024)),
+        format: selected[0]?.type || "unknown",
+    });
+
     const newProfiles: StemProfile[] = selected.map((file, index) => {
       const dotIndex = file.name.lastIndexOf(".");
       let baseName = file.name;
@@ -704,6 +713,14 @@ useEffect(() => {
         stemProfilesPayload,
         spaceDepthBusStylesPayload,
       );
+
+      // Track job start
+      gaEvent("mix_job_started", {
+        job_id: jobId,
+        mode: uploadMode,
+        files_count: files.length,
+        pipeline_stages_count: enabled?.length ?? 0,
+      });
 
       const totalStages =
         enabled?.length ?? availableStages.length ?? 0;

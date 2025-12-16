@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { GoogleAnalytics } from "@next/third-parties/google";
 import Script from "next/script";
+import { GARouteTracker } from "../components/analytics/GARouteTracker";
 import { AuthProvider } from "../context/AuthContext";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import { GlobalLayoutClient } from "../components/GlobalLayoutClient";
@@ -156,6 +157,7 @@ export default function RootLayout({
 
         {/* Google Analytics: solo si hay ID */}
         {gaId && <GoogleAnalytics gaId={gaId} />}
+        {gaId && <GARouteTracker gaId={gaId} />}
 
         {/* CookieScript / Cookie CMP */}
         <Script

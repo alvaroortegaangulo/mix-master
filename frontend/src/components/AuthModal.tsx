@@ -5,6 +5,7 @@ import { XMarkIcon } from "@heroicons/react/24/outline";
 import { getBackendBaseUrl } from "../lib/mixApi";
 import { useAuth } from "../context/AuthContext";
 import { useGoogleLogin } from "@react-oauth/google";
+import { gaEvent } from "../lib/ga";
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -48,6 +49,7 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
         }
 
         login(data.access_token);
+        gaEvent("login", { method: "google" });
         onClose();
       } catch (err: any) {
         setError(err.message || "An error occurred");
@@ -91,9 +93,13 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
 
       if (data.access_token) {
         login(data.access_token);
+        gaEvent(isLogin ? "login" : "sign_up", { method: "email" });
         onClose();
       } else {
         // Should not happen if backend returns token on register
+        if (!isLogin) {
+             gaEvent("sign_up", { method: "email", status: "pending_verification" });
+        }
         setIsLogin(true);
         setError("Registration successful. Please log in.");
       }

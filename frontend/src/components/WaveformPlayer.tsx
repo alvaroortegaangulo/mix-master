@@ -2,6 +2,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { gaEvent } from "../lib/ga";
 
 type WaveformPlayerProps = {
   src: string;
@@ -283,6 +284,13 @@ export const WaveformPlayer: React.FC<WaveformPlayerProps> = ({
 
   const handleDownload = () => {
     if (!src) return;
+
+    // Track download
+    gaEvent("download_result", {
+      file_name: downloadFileName || "mix.wav",
+      url: src,
+    });
+
     const a = document.createElement("a");
     a.href = src;
     a.download = downloadFileName || "mix.wav";
