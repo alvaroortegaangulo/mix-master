@@ -1,5 +1,6 @@
 import { HeroSection } from "./HeroSection";
 import dynamic from "next/dynamic";
+import { BottomTryItButton } from "./LandingButtons";
 
 const PipelineInteractiveDiagram = dynamic(() => import("./PipelineInteractiveDiagram").then(mod => mod.PipelineInteractiveDiagram), {
   loading: () => <div className="h-96 bg-slate-900" />
@@ -18,7 +19,7 @@ const TechSpecsSection = dynamic(() => import("./TechSpecsSection").then(mod => 
   loading: () => <div className="h-96 bg-slate-950" />
 });
 
-export function LandingPage({ onTryIt }: { onTryIt: () => void }) {
+export function LandingPage() {
   // Alternating pattern: Dark (Hero) -> Light -> Dark -> Light -> Dark -> Light
   // "Light" in this dark theme context = bg-slate-900
   // "Dark" = bg-slate-950
@@ -26,7 +27,7 @@ export function LandingPage({ onTryIt }: { onTryIt: () => void }) {
   return (
     <div className="flex-1 flex flex-col bg-slate-950">
       {/* 1. Hero: Dark (bg-slate-950) - Default */}
-      <HeroSection onTryIt={onTryIt} />
+      <HeroSection />
 
       {/* 2. Features: Light (bg-slate-900) */}
       <FeaturesSection className="bg-slate-900" />
@@ -48,12 +49,7 @@ export function LandingPage({ onTryIt }: { onTryIt: () => void }) {
         <h2 className="text-3xl md:text-5xl font-bold text-white mb-8">
           Ready to elevate your sound?
         </h2>
-        <button
-          onClick={onTryIt}
-          className="bg-white text-slate-950 px-10 py-4 rounded-full text-lg font-bold hover:bg-teal-50 transition shadow-xl shadow-teal-500/10"
-        >
-          Start Mixing for Free
-        </button>
+        <BottomTryItButton />
       </section>
 
       {/* Footer removed from here, now in GlobalLayout */}
