@@ -47,6 +47,7 @@ from fastapi.responses import StreamingResponse
 from tasks import run_full_pipeline_task
 from src.database import engine, Base
 from src.routers import auth
+from src.utils.job_store import update_job_status
 
 # ---------------------------------------------------------
 # Database
@@ -1414,6 +1415,14 @@ async def start_mix_job_endpoint(
                 job_id,
                 exc,
             )
+
+    # Force immediate status update to avoid race condition with frontend polling
+    # fetching old "waiting_for_correction" status before Celery worker starts.
+    update_job_status(job_root, {
+        "status": "queued",
+        "message": "Job queued for processing...",
+        "stage_key": "queued",
+    })
 
     # Encolar tarea Celery
     try:
