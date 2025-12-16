@@ -34,6 +34,25 @@ export const WaveformPlayer: React.FC<WaveformPlayerProps> = ({
   const [currentTime, setCurrentTime] = useState(0);
   const [peaks, setPeaks] = useState<PeakArray>([]);
   const [isLoadingPeaks, setIsLoadingPeaks] = useState(false);
+  const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (entry) {
+        setCanvasSize({
+          width: entry.contentRect.width,
+          height: entry.contentRect.height,
+        });
+      }
+    });
+
+    observer.observe(canvas);
+    return () => observer.disconnect();
+  }, []);
 
   // ------------------------------------------------------------
   // Carga de audio (HTMLAudio) – solo para reproducción
@@ -152,16 +171,17 @@ export const WaveformPlayer: React.FC<WaveformPlayerProps> = ({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    const rect = canvas.getBoundingClientRect();
+    const { width, height } = canvasSize;
+    if (width === 0 || height === 0) return;
+
     const dpr = window.devicePixelRatio || 1;
 
-    canvas.width = rect.width * dpr;
-    canvas.height = rect.height * dpr;
+    if (canvas.width !== width * dpr || canvas.height !== height * dpr) {
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+    }
 
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-    const width = rect.width;
-    const height = rect.height;
 
     // Fondo suave
     const bgGrad = ctx.createLinearGradient(0, 0, 0, height);
@@ -250,7 +270,7 @@ export const WaveformPlayer: React.FC<WaveformPlayerProps> = ({
       ctx.fillStyle = isPlayed ? playedReflection : unplayedReflection;
       ctx.fillRect(x, midY + 1, barWidth, barHeightBottom);
     }
-  }, [peaks, currentTime, duration, accentColor, progress]);
+  }, [peaks, currentTime, duration, accentColor, progress, canvasSize]);
 
   // ------------------------------------------------------------
   // Interacción

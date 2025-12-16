@@ -27,6 +27,25 @@ export const CanvasWaveform: React.FC<CanvasWaveformProps> = ({
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [peaks, setPeaks] = useState<number[]>([]);
+  const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const observer = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (entry) {
+        setCanvasSize({
+          width: entry.contentRect.width,
+          height: entry.contentRect.height,
+        });
+      }
+    });
+
+    observer.observe(canvas);
+    return () => observer.disconnect();
+  }, []);
 
   // Calculate peaks when audioBuffer changes (unless provided)
   useEffect(() => {
@@ -82,20 +101,21 @@ export const CanvasWaveform: React.FC<CanvasWaveformProps> = ({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
+    const { width, height } = canvasSize;
+    if (width === 0 || height === 0) return;
+
     const dpr = window.devicePixelRatio || 1;
-    const rect = canvas.getBoundingClientRect();
 
     // Ensure canvas dimensions match display size * pixel ratio
-    if (canvas.width !== rect.width * dpr || canvas.height !== rect.height * dpr) {
-        canvas.width = rect.width * dpr;
-        canvas.height = rect.height * dpr;
+    if (canvas.width !== width * dpr || canvas.height !== height * dpr) {
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
     }
 
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.clearRect(0, 0, rect.width, rect.height);
+    ctx.clearRect(0, 0, width, height);
 
-    const width = rect.width;
-    const heightProp = rect.height;
+    const heightProp = height;
 
     // Center line
     const midY = heightProp / 2;
@@ -156,7 +176,7 @@ export const CanvasWaveform: React.FC<CanvasWaveformProps> = ({
         }
     }
 
-  }, [peaks, currentTime, duration, waveColor, progressColor, cursorColor]);
+  }, [peaks, currentTime, duration, waveColor, progressColor, cursorColor, canvasSize]);
 
   const handleClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
       if (!duration) return;
