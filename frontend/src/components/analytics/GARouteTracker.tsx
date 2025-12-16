@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, Suspense } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 
 declare global {
@@ -9,7 +9,7 @@ declare global {
   }
 }
 
-export function GARouteTracker({ gaId }: { gaId: string }) {
+function GARouteTrackerContent({ gaId }: { gaId: string }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
@@ -28,4 +28,12 @@ export function GARouteTracker({ gaId }: { gaId: string }) {
   }, [gaId, pathname, searchParams]);
 
   return null;
+}
+
+export function GARouteTracker({ gaId }: { gaId: string }) {
+    return (
+        <Suspense fallback={null}>
+            <GARouteTrackerContent gaId={gaId} />
+        </Suspense>
+    );
 }
