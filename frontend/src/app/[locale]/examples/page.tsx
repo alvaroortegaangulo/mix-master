@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Link } from "../../../i18n/routing";
 import Script from "next/script";
+import { useTranslations } from "next-intl";
+import { getTranslations } from "next-intl/server";
 
 const fallbackSiteUrl = "https://music-mix-master.com";
 const siteUrl = (() => {
@@ -13,44 +15,22 @@ const siteUrl = (() => {
   }
 })();
 
-export const metadata: Metadata = {
-  title: "Examples | Piroola",
-  description: "Listen to sample outcomes from Piroola: vocal polish, wide pop mixes, punchy hip-hop, and clean acoustic masters.",
-  alternates: {
-    canonical: "/examples",
-  },
+type Props = {
+  params: Promise<{ locale: string }>;
 };
 
-const EXAMPLES = [
-  {
-    title: "Modern Pop Vocal",
-    genre: "Pop / Top 40",
-    summary: "Bright, upfront vocals with de-essing, airy reverb, and tight low-end control for chart-ready polish.",
-    highlights: ["Lead vocal leveling", "De-essing and air EQ", "Stereo widener on choruses"],
-    metrics: ["LUFS: -8.9 → -8.0", "True Peak: -2.0 dB → -1.0 dB", "Vocal sibilance reduced ~2 dB"],
-  },
-  {
-    title: "Punchy Hip-Hop",
-    genre: "Hip-Hop / Trap",
-    summary: "Low-end glued with parallel compression while keeping 808s clean and transients snappy on the snare.",
-    highlights: ["808 clarity and sub control", "Transient shaping on snare/clap", "Bus saturation for glue"],
-    metrics: ["LUFS: -10.5 → -9.2", "Stereo width: +12%", "Noise floor cleaned 3 dB"],
-  },
-  {
-    title: "Indie Band",
-    genre: "Indie / Rock",
-    summary: "Phase-aligned drums, guitars separated with mid/side EQ, and a cohesive master with analog-style color.",
-    highlights: ["Drum phase alignment", "Mid/side guitar EQ", "Tape-like saturation on mixbus"],
-    metrics: ["LUFS: -12.0 → -10.8", "Crest Factor: 11 dB → 9 dB", "Stereo image balanced L/R <0.5 dB"],
-  },
-  {
-    title: "Cinematic Ambient",
-    genre: "Score / Ambient",
-    summary: "Wide, enveloping space with controlled low-mid build-up, keeping pads lush without mud.",
-    highlights: ["Low-mid resonance control", "Layered reverbs with pre-delay", "Gentle multiband glue"],
-    metrics: ["LUFS: -16.0 → -14.5", "Reverb RT60 tamed 12%", "Sub rumble cut below 30 Hz"],
-  },
-];
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { locale } = await params;
+  const t = await getTranslations({ locale, namespace: 'Examples' });
+
+  return {
+    title: `${t('subtitle')} | Piroola`,
+    description: t('description'),
+    alternates: {
+      canonical: "/examples",
+    },
+  };
+}
 
 const breadcrumbsJsonLd = {
   "@context": "https://schema.org",
@@ -72,23 +52,33 @@ const breadcrumbsJsonLd = {
 };
 
 export default function ExamplesPage() {
+  const t = useTranslations('Examples');
+  const exampleKeys = ['pop', 'hiphop', 'indie', 'ambient'];
+
+  const EXAMPLES = exampleKeys.map(key => ({
+    title: t(`items.${key}.title`),
+    genre: t(`items.${key}.genre`),
+    summary: t(`items.${key}.summary`),
+    highlights: Object.values(t.raw(`items.${key}.highlights`) as Record<string, string>),
+    metrics: Object.values(t.raw(`items.${key}.metrics`) as Record<string, string>),
+  }));
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
       <main className="flex-1 px-4 py-12">
         <div className="mx-auto max-w-5xl">
           <div className="flex flex-col gap-4 mb-10 text-center">
-            <p className="text-xs uppercase tracking-[0.2em] text-teal-300/80">Examples</p>
-            <h1 className="text-4xl font-bold tracking-tight text-slate-50">Hear what Piroola delivers</h1>
+            <p className="text-xs uppercase tracking-[0.2em] text-teal-300/80">{t('subtitle')}</p>
+            <h1 className="text-4xl font-bold tracking-tight text-slate-50">{t('title')}</h1>
             <p className="text-lg text-slate-400 max-w-3xl mx-auto">
-              Representative mixes and masters that show how our AI pipeline cleans, balances, and enhances different genres.
-              Each example highlights the processing moves you can expect on your own tracks.
+              {t('description')}
             </p>
             <div className="flex flex-wrap gap-3 justify-center">
               <Link href="/pricing" className="rounded-full bg-teal-400 text-slate-950 px-4 py-2 text-sm font-semibold shadow-md shadow-teal-500/30 hover:bg-teal-300 transition">
-                View pricing
+                {t('viewPricing')}
               </Link>
               <Link href="/docs" className="rounded-full border border-slate-800 px-4 py-2 text-sm font-semibold text-slate-100 hover:border-teal-400 hover:text-teal-300 transition">
-                How it works
+                {t('howItWorks')}
               </Link>
             </div>
           </div>
@@ -112,7 +102,7 @@ export default function ExamplesPage() {
                   ))}
                 </div>
                 <div className="rounded-xl border border-slate-800/70 bg-slate-950/50 p-4">
-                  <p className="text-xs uppercase tracking-[0.12em] text-slate-400 mb-2">Notable changes</p>
+                  <p className="text-xs uppercase tracking-[0.12em] text-slate-400 mb-2">{t('notableChanges')}</p>
                   <ul className="space-y-2 text-sm text-slate-300 list-disc list-inside">
                     {example.metrics.map((metric) => (
                       <li key={metric}>{metric}</li>
@@ -124,14 +114,14 @@ export default function ExamplesPage() {
           </div>
 
           <div className="mt-12 rounded-2xl border border-teal-500/40 bg-teal-500/10 p-8 text-center shadow-lg shadow-teal-500/20">
-            <h3 className="text-2xl font-semibold text-teal-200 mb-3">Ready to hear your own track at this quality?</h3>
-            <p className="text-slate-200 mb-6">Upload stems, pick a space, and let the AI mix and master in minutes.</p>
+            <h3 className="text-2xl font-semibold text-teal-200 mb-3">{t('ctaTitle')}</h3>
+            <p className="text-slate-200 mb-6">{t('ctaDescription')}</p>
             <div className="flex justify-center gap-3">
               <Link href="/" className="rounded-full bg-teal-400 text-slate-950 px-4 py-2 text-sm font-semibold shadow-md shadow-teal-500/30 hover:bg-teal-300 transition">
-                Start mixing
+                {t('startMixing')}
               </Link>
               <Link href="/support" className="rounded-full border border-teal-500/70 px-4 py-2 text-sm font-semibold text-teal-100 hover:bg-teal-500/10 transition">
-                Talk to support
+                {t('talkToSupport')}
               </Link>
             </div>
           </div>

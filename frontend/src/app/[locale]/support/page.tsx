@@ -3,6 +3,8 @@
 import { Link } from "../../../i18n/routing";
 import { useState, type FormEvent } from "react";
 import Script from "next/script";
+import { useTranslations } from "next-intl";
+import { getTranslations } from "next-intl/server";
 
 const fallbackSiteUrl = "https://music-mix-master.com";
 const siteUrl = (() => {
@@ -35,6 +37,7 @@ const breadcrumbsJsonLd = {
 };
 
 export default function SupportPage() {
+  const t = useTranslations('Support');
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -68,40 +71,40 @@ export default function SupportPage() {
       <main className="flex-1 px-4 py-12">
         <div className="mx-auto max-w-3xl">
           <h1 className="mb-4 text-4xl font-bold tracking-tight text-teal-400 text-center">
-            Support Center
+            {t('title')}
           </h1>
           <p className="mb-12 text-center text-slate-400 text-lg">
-            Need help? We've got you covered.
+            {t('subtitle')}
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
             <div className="rounded-2xl border border-slate-800/60 bg-slate-900/50 p-6 shadow-lg">
-              <h2 className="text-xl font-semibold text-slate-200 mb-4">Quick Resources</h2>
+              <h2 className="text-xl font-semibold text-slate-200 mb-4">{t('quickResources')}</h2>
               <p className="text-slate-400 mb-6">
-                Before reaching out, check our documentation and FAQs.
+                {t('quickResourcesDesc')}
               </p>
               <div className="flex flex-col gap-3">
                 <Link 
                   href="/faq" 
                   className="inline-flex items-center justify-between px-4 py-3 rounded-lg bg-slate-800/50 hover:bg-slate-800 hover:text-teal-400 transition border border-slate-700/50"
                 >
-                  <span>Frequently Asked Questions</span>
+                  <span>{t('faqLink')}</span>
                   <span>→</span>
                 </Link>
                 <Link 
                   href="/docs" 
                   className="inline-flex items-center justify-between px-4 py-3 rounded-lg bg-slate-800/50 hover:bg-slate-800 hover:text-teal-400 transition border border-slate-700/50"
                 >
-                  <span>Documentation & Guide</span>
+                  <span>{t('docsLink')}</span>
                   <span>→</span>
                 </Link>
               </div>
             </div>
 
              <div className="rounded-2xl border border-slate-800/60 bg-slate-900/50 p-6 shadow-lg">
-              <h2 className="text-xl font-semibold text-slate-200 mb-4">Direct Contact</h2>
+              <h2 className="text-xl font-semibold text-slate-200 mb-4">{t('directContact')}</h2>
               <p className="text-slate-400 mb-6">
-                Prefer email? You can reach our support team directly.
+                {t('directContactDesc')}
               </p>
               <div className="flex items-center gap-3 text-slate-300 mb-2">
                 <a href="mailto:support@audioalchemy.com" className="hover:text-teal-400 transition">support@audioalchemy.com</a>
@@ -110,24 +113,24 @@ export default function SupportPage() {
           </div>
 
           <div className="rounded-2xl border border-slate-800/60 bg-slate-900/50 p-8 shadow-xl">
-            <h2 className="text-2xl font-semibold text-slate-200 mb-6 text-center">Send us a message</h2>
+            <h2 className="text-2xl font-semibold text-slate-200 mb-6 text-center">{t('formTitle')}</h2>
             
             {status === "success" ? (
               <div className="text-center py-12">
-                <h3 className="text-xl font-medium text-slate-100 mb-2">Message Sent!</h3>
-                <p className="text-slate-400">Thank you for contacting us.</p>
+                <h3 className="text-xl font-medium text-slate-100 mb-2">{t('successTitle')}</h3>
+                <p className="text-slate-400">{t('successDesc')}</p>
                 <button 
                   onClick={() => setStatus("idle")}
                   className="mt-6 text-teal-400 hover:text-teal-300 font-medium text-sm hover:underline"
                 >
-                  Send another message
+                  {t('sendAnother')}
                 </button>
               </div>
             ) : (
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <label htmlFor="name" className="text-sm font-medium text-slate-300">Name</label>
+                    <label htmlFor="name" className="text-sm font-medium text-slate-300">{t('labels.name')}</label>
                     <input
                       type="text"
                       id="name"
@@ -136,11 +139,11 @@ export default function SupportPage() {
                       value={formData.name}
                       onChange={handleChange}
                       className="w-full rounded-lg border border-slate-700 bg-slate-950 px-4 py-2.5 text-slate-100 placeholder-slate-500 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500 transition"
-                      placeholder="Your name"
+                      placeholder={t('placeholders.name')}
                     />
                   </div>
                   <div className="space-y-2">
-                    <label htmlFor="email" className="text-sm font-medium text-slate-300">Email</label>
+                    <label htmlFor="email" className="text-sm font-medium text-slate-300">{t('labels.email')}</label>
                     <input
                       type="email"
                       id="email"
@@ -149,13 +152,13 @@ export default function SupportPage() {
                       value={formData.email}
                       onChange={handleChange}
                       className="w-full rounded-lg border border-slate-700 bg-slate-950 px-4 py-2.5 text-slate-100 placeholder-slate-500 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500 transition"
-                      placeholder="you@example.com"
+                      placeholder={t('placeholders.email')}
                     />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <label htmlFor="subject" className="text-sm font-medium text-slate-300">Subject</label>
+                  <label htmlFor="subject" className="text-sm font-medium text-slate-300">{t('labels.subject')}</label>
                   <select
                     id="subject"
                     name="subject"
@@ -164,16 +167,16 @@ export default function SupportPage() {
                     onChange={handleChange}
                     className="w-full rounded-lg border border-slate-700 bg-slate-950 px-4 py-2.5 text-slate-100 placeholder-slate-500 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500 transition appearance-none"
                   >
-                    <option value="" disabled>Select a topic</option>
-                    <option value="technical">Technical Support</option>
-                    <option value="billing">Billing & Pricing</option>
-                    <option value="feedback">Feedback & Suggestions</option>
-                    <option value="other">Other</option>
+                    <option value="" disabled>{t('options.default')}</option>
+                    <option value="technical">{t('options.technical')}</option>
+                    <option value="billing">{t('options.billing')}</option>
+                    <option value="feedback">{t('options.feedback')}</option>
+                    <option value="other">{t('options.other')}</option>
                   </select>
                 </div>
 
                 <div className="space-y-2">
-                  <label htmlFor="message" className="text-sm font-medium text-slate-300">Message</label>
+                  <label htmlFor="message" className="text-sm font-medium text-slate-300">{t('labels.message')}</label>
                   <textarea
                     id="message"
                     name="message"
@@ -182,7 +185,7 @@ export default function SupportPage() {
                     value={formData.message}
                     onChange={handleChange}
                     className="w-full rounded-lg border border-slate-700 bg-slate-950 px-4 py-2.5 text-slate-100 placeholder-slate-500 focus:border-teal-500 focus:outline-none focus:ring-1 focus:ring-teal-500 transition resize-none"
-                    placeholder="How can we help you?"
+                    placeholder={t('placeholders.message')}
                   />
                 </div>
 
@@ -192,7 +195,7 @@ export default function SupportPage() {
                     disabled={status === "submitting"}
                     className="w-full rounded-full bg-teal-500 py-3 text-sm font-bold text-slate-950 shadow-md shadow-teal-500/20 hover:bg-teal-400 hover:shadow-teal-500/30 transition disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                    {status === "submitting" ? "Sending..." : "Send Message"}
+                    {status === "submitting" ? t('labels.sending') : t('labels.submit')}
                   </button>
                 </div>
               </form>
