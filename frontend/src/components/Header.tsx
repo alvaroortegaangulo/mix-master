@@ -43,7 +43,7 @@ export function Header() {
 
   const headerClass = (isLanding && !scrolled)
     ? "border-transparent bg-slate-950/80 backdrop-blur-md"
-    : "border-slate-800 bg-slate-950";
+    : "border-slate-800 bg-slate-950/80 backdrop-blur-md";
 
   const handleLogoClick = (e: React.MouseEvent) => {
       e.preventDefault();
