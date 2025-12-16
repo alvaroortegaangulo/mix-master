@@ -493,6 +493,8 @@ export async function fetchJobStatus(jobId: string): Promise<JobStatus> {
   const baseUrl = getBackendBaseUrl();
   const res = await fetch(`${baseUrl}/jobs/${encodeURIComponent(jobId)}`, {
     method: "GET",
+    // Avoid any browser/proxy cache between pipeline updates
+    cache: "no-store",
   });
 
   if (!res.ok) {

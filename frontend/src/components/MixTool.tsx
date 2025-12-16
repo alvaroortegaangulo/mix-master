@@ -451,6 +451,7 @@ useEffect(() => {
   if (!activeJobId) return;
 
   let cancelled = false;
+  let consecutiveErrors = 0;
   setLoading(true);
   setError(null);
 
@@ -461,6 +462,8 @@ useEffect(() => {
         if (cancelled) break;
 
         setJobStatus(status);
+        consecutiveErrors = 0;
+        setError(null);
 
         if (status.status === "done") {
           setLoading(false);
@@ -474,19 +477,23 @@ useEffect(() => {
         }
 
         if (status.stageKey === "waiting_for_correction") {
-             setLoading(false);
-             window.location.href = `/studio/${activeJobId}`;
-             return;
+          setLoading(false);
+          window.location.href = `/studio/${activeJobId}`;
+          return;
         }
       } catch (err: any) {
         if (!cancelled) {
+          consecutiveErrors += 1;
           setError(err.message ?? "Unknown error");
-          setLoading(false);
+          // Keep loading true so the UI still reflects an active job
+          setLoading(true);
         }
-        break;
       }
 
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+      const delayMs = consecutiveErrors > 0
+        ? Math.min(5000, 1000 * (consecutiveErrors + 1))
+        : 1000;
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
     }
   };
 
