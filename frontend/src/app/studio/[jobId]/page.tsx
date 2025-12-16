@@ -368,8 +368,9 @@ export default function StudioPage() {
                     }
                 }
                 // Fallback para que la waveform pinte una lïnea central
-                const flatPeaks = Array.from({ length: 400 }, () => 0);
-                return { ...stem, peaks: flatPeaks };
+                // (Disabled: forcing zeros prevents client-side calculation. Leaving undefined allows fallback.)
+                // const flatPeaks = Array.from({ length: 400 }, () => 0);
+                return { ...stem, peaks: undefined };
             })
         );
 
@@ -716,7 +717,8 @@ export default function StudioPage() {
 
   // Waveform: use visualBuffer (client-side generated) or peaks (server-side)
   const currentVisualBuffer = visualBuffer;
-  const currentVisualPeaks = selectedStem?.peaks || null;
+  // Ensure we don't pass zero-filled peaks to CanvasWaveform, which would suppress AudioBuffer calculation
+  const currentVisualPeaks = (selectedStem?.peaks && selectedStem.peaks.some(p => p > 0)) ? selectedStem.peaks : null;
 
   if (authLoading) return <div className="h-screen bg-[#0f111a]"></div>;
 
