@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { HomeClient } from "../components/HomeClient";
+import { LandingPage } from "../components/landing/LandingPage";
 
 export const metadata: Metadata = {
   alternates: {
@@ -8,5 +9,9 @@ export const metadata: Metadata = {
 };
 
 export default function Page() {
-  return <HomeClient />;
+  return (
+    <HomeClient>
+      <LandingPage />
+    </HomeClient>
+  );
 }

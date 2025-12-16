@@ -1,7 +1,8 @@
 import Image from "next/image";
-import { PlayCircleIcon, StarIcon, ExclamationTriangleIcon } from "@heroicons/react/24/solid";
+import { StarIcon, ExclamationTriangleIcon } from "@heroicons/react/24/solid";
+import { HeroTryItButton, DemoScrollButton } from "./LandingButtons";
 
-export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
+export function HeroSection() {
   return (
     <section className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-slate-950 px-4 text-center">
       {/* Background gradients/blobs */}
@@ -47,32 +48,10 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
 
         <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-center mt-4 animate-in fade-in slide-in-from-bottom-6 duration-1000 delay-200 fill-mode-backwards">
           {/* Button 1: Mezclar mi Track */}
-          <button
-            onClick={onTryIt}
-            className="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-full bg-teal-400 px-8 py-4 text-lg font-bold text-slate-950 transition-all hover:bg-teal-300 hover:scale-105 focus:outline-none focus:ring-4 focus:ring-teal-500/30"
-          >
-            {/* Simple Circle Icon */}
-            <svg
-              width="24"
-              height="24"
-              viewBox="0 0 24 24"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-              className="stroke-current stroke-2"
-            >
-              <circle cx="12" cy="12" r="9" />
-            </svg>
-            <span>Mix my Tracks</span>
-          </button>
+          <HeroTryItButton />
 
           {/* Button 2: Escuchar Demos */}
-          <button
-             onClick={() => document.getElementById('benefits')?.scrollIntoView({ behavior: 'smooth' })}
-             className="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-full bg-slate-800/80 px-8 py-4 text-lg font-semibold text-white transition-all hover:bg-slate-700 hover:scale-105 focus:outline-none focus:ring-4 focus:ring-purple-500/30 border border-slate-700"
-          >
-            <PlayCircleIcon className="h-6 w-6 text-white" />
-            <span>Listen to Demos</span>
-          </button>
+          <DemoScrollButton />
         </div>
 
         {/* Rating Section */}
