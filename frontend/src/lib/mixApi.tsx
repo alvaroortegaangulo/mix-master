@@ -213,20 +213,26 @@ function mapBackendStatusToJobStatus(raw: any, baseUrl: string): JobStatus {
   let status: JobStatus["status"];
   switch (backendStatus) {
     case "pending":
+    case "queued":
       status = "queued";
       break;
     case "running":
+    case "processing_correction":
+    case "waiting_for_correction":
       status = "running";
       break;
     case "finished":
     case "success":
+    case "done":
       status = "done";
       break;
     case "failed":
     case "failure":
+    case "error":
       status = "error";
       break;
     default:
+      console.warn(`[mixApi] Unknown backend status: "${backendStatus}". Defaulting to error.`);
       status = "error";
       break;
   }
@@ -245,11 +251,11 @@ function mapBackendStatusToJobStatus(raw: any, baseUrl: string): JobStatus {
     error: raw.error,
   };
 
-  if (backendStatus === "pending") {
+  if (status === "queued") {
     base.stageKey = "queued";
     base.message = raw.message ?? "Job pending in queue";
     base.progress = 0;
-  } else if (backendStatus === "running") {
+  } else if (status === "running") {
     base.stageIndex =
       typeof raw.stage_index === "number" ? raw.stage_index : base.stageIndex;
     base.totalStages =
@@ -265,8 +271,16 @@ function mapBackendStatusToJobStatus(raw: any, baseUrl: string): JobStatus {
     base.progress = 100;
   } else if (status === "error") {
     base.stageKey = "error";
-    base.message =
-      raw.message ?? raw.error ?? "Error while processing mix";
+    // If we fell into default error, append the status to the message for debugging
+    const defaultMsg = ["failed", "failure", "error"].includes(backendStatus)
+      ? "Error while processing mix"
+      : `Unknown job status: "${backendStatus}"`;
+
+    base.message = raw.message ?? raw.error ?? defaultMsg;
+    // Also ensure error field is set if missing so MixTool displays it
+    if (!base.error && !raw.message && !raw.error) {
+      base.error = defaultMsg;
+    }
     base.progress = base.progress || 0;
   }
 
