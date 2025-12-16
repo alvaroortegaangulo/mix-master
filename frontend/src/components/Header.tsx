@@ -1,8 +1,8 @@
 "use client";
 
-import { Link } from "../i18n/routing";
+import { Link, useRouter } from "../i18n/routing";
 import Image from "next/image";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useAuth } from "../context/AuthContext";
 import { useModal } from "../context/ModalContext";
 import { useState, useEffect } from "react";
@@ -10,7 +10,6 @@ import { useTranslations } from "next-intl";
 
 export function Header() {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
   const { user, loading: authLoading } = useAuth();
   const { openAuthModal } = useModal();
   const [scrolled, setScrolled] = useState(false);
@@ -34,12 +33,25 @@ export function Header() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const isLanding = pathname === "/" && (!searchParams.get("view") || searchParams.get("view") === "landing");
-  const isTool = pathname === "/" && searchParams.get("view") === "tool";
+  // Check if we are on the landing page (root path)
+  // Note: pathname from next/navigation includes the locale (e.g. /en) or might be just / if rewritten?
+  // Usually in app router with next-intl, pathname is e.g. /en/pricing or /en.
+  // But standard check often assumes handling locale or checking end of string.
+  // However, simpler is: if it's strictly the home page (possibly with locale), it is Landing.
+  // The safest check for "Landing" vs others is if we are NOT on /mix, /examples, etc.
+  // But for header transparency, we specifically want it transparent ONLY on Landing.
+
+  // Let's assume standard behavior:
+  // If we are on Mix Tool, pathname will contain /mix.
+
+  const isMixTool = pathname.endsWith("/mix");
+  // Logic for landing: if it is strictly "/" or just locale "/en", "/es", etc.
+  // Regex to match ^/([a-z]{2})?$
+  const isLanding = /^\/([a-z]{2})?$/.test(pathname);
 
   // If on tool view, we might want a solid header or keep it consistent?
   // The original page.tsx had: view === 'landing' ? transparent : slate-950
-  // We will replicate this logic based on path and params.
+  // We will replicate this logic based on path.
 
   // Note: /studio/... has its own layout so this Header won't be rendered there (handled in GlobalLayoutClient).
 
@@ -49,14 +61,11 @@ export function Header() {
 
   const handleLogoClick = (e: React.MouseEvent) => {
       e.preventDefault();
-      // If on landing/root, verify we reset view?
-      // Actually Link href="/" does a soft nav.
-      // If we are on /?view=tool, clicking logo should probably go to /?view=landing or just /
       router.push("/");
   };
 
   const handleGoToApp = () => {
-      router.push("/?view=tool");
+      router.push("/mix");
   };
 
   return (
@@ -84,7 +93,7 @@ export function Header() {
                user ? (
                    <div className="flex items-center gap-4">
                        {/* If we are NOT in the tool view, show Go to App */}
-                       {!isTool && (
+                       {!isMixTool && (
                            <button
                               onClick={handleGoToApp}
                               className="text-sm font-semibold text-white hover:text-teal-400 transition"
