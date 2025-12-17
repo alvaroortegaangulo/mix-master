@@ -97,6 +97,9 @@ export default function StudioPage() {
   const selectedStem = stems[selectedStemIndex];
 
   const audioContextRef = useRef<AudioContext | null>(null);
+  const masterGainNodeRef = useRef<GainNode | null>(null);
+  const masterAnalyserNodeRef = useRef<AnalyserNode | null>(null);
+
   const audioElsRef = useRef<Map<string, HTMLAudioElement>>(new Map());
   const mediaNodesRef = useRef<Map<string, MediaElementAudioSourceNode>>(new Map());
   const gainNodesRef = useRef<Map<string, GainNode>>(new Map());
@@ -151,7 +154,23 @@ export default function StudioPage() {
   useEffect(() => {
     if (typeof window !== "undefined" && !audioContextRef.current) {
       try {
-        audioContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)();
+        const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+        audioContextRef.current = ctx;
+
+        // Create Master Chain
+        const masterGain = ctx.createGain();
+        masterGain.gain.value = masterVolume; // Init volume
+        const analyser = ctx.createAnalyser();
+        analyser.fftSize = 2048;
+        analyser.smoothingTimeConstant = 0.85;
+
+        // Connect Chain: MasterGain -> Analyser -> Destination
+        masterGain.connect(analyser);
+        analyser.connect(ctx.destination);
+
+        masterGainNodeRef.current = masterGain;
+        masterAnalyserNodeRef.current = analyser;
+
       } catch (e) {
         console.error("Studio: AudioContext init error", e);
       }
@@ -160,6 +179,18 @@ export default function StudioPage() {
         audioContextRef.current?.close();
     };
   }, []);
+
+  // Update Master Volume
+  useEffect(() => {
+      if (masterGainNodeRef.current && audioContextRef.current) {
+          masterGainNodeRef.current.gain.setTargetAtTime(
+              masterVolume,
+              audioContextRef.current.currentTime,
+              0.05
+          );
+      }
+  }, [masterVolume]);
+
 
   // Effect to load waveform data for selected stem
   useEffect(() => {
@@ -367,8 +398,6 @@ export default function StudioPage() {
                 const stemBase = stem.fileName.replace(/\.wav$/i, "");
                 const peakCandidates: string[] = [];
                 if (stem.stage) peakCandidates.push(`${stem.stage}/peaks/${stemBase}.peaks.json`);
-                // Removed aggressive fallback to S6_MANUAL_CORRECTION to prevent 404 console errors
-                // and defer to client-side generation logic
 
                 for (const rel of peakCandidates) {
                     try {
@@ -384,9 +413,6 @@ export default function StudioPage() {
                         // continuar con siguiente candidato
                     }
                 }
-                // Fallback para que la waveform pinte una lïnea central
-                // (Disabled: forcing zeros prevents client-side calculation. Leaving undefined allows fallback.)
-                // const flatPeaks = Array.from({ length: 400 }, () => 0);
                 return { ...stem, peaks: undefined };
             })
         );
@@ -404,13 +430,16 @@ export default function StudioPage() {
                 audio.crossOrigin = "anonymous";
 
                 const ctx = audioContextRef.current;
-                if (ctx && !mediaNodesRef.current.has(stem.fileName)) {
+                // Wait for master node to be ready (useEffect runs first but safe check)
+                if (ctx && masterGainNodeRef.current && !mediaNodesRef.current.has(stem.fileName)) {
                     const mediaNode = ctx.createMediaElementSource(audio);
                     const gain = ctx.createGain();
                     const panner = ctx.createStereoPanner();
                     mediaNode.connect(gain);
                     gain.connect(panner);
-                    panner.connect(ctx.destination);
+                    // Connect to Master Bus instead of ctx.destination
+                    panner.connect(masterGainNodeRef.current);
+
                     mediaNodesRef.current.set(stem.fileName, mediaNode);
                     gainNodesRef.current.set(stem.fileName, gain);
                     pannerNodesRef.current.set(stem.fileName, panner);
@@ -606,14 +635,15 @@ export default function StudioPage() {
           if (gainNode) {
               let shouldMute = stem.mute;
               if (anySolo) shouldMute = !stem.solo;
-              const vol = Math.pow(10, stem.volume / 20) * masterVolume;
+              // Volume applied here is just the stem volume, not multiplied by masterVolume
+              const vol = Math.pow(10, stem.volume / 20);
               gainNode.gain.setTargetAtTime(shouldMute ? 0 : vol, audioContextRef.current!.currentTime, 0.05);
           }
           if (pannerNode) {
                pannerNode.pan.setTargetAtTime(stem.pan.enabled ? stem.pan.value : 0, audioContextRef.current!.currentTime, 0.05);
           }
       });
-  }, [stems, masterVolume]);
+  }, [stems]); // Removed masterVolume dependency here as it's handled in its own effect on masterGain
 
   const handleApplyCorrection = async (proceedToMastering: boolean) => {
       setRendering(true);
@@ -876,6 +906,8 @@ export default function StudioPage() {
                     currentTime={currentTime}
                     duration={duration}
                     onSeek={seek}
+                    analyser={masterAnalyserNodeRef.current}
+                    isPlaying={isPlaying}
                  />
                  </div>
 
