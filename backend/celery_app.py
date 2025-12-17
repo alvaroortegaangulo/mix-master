@@ -15,7 +15,7 @@ RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND", BROKER_URL)
 if not logging.getLogger().handlers:
     logging.basicConfig(
         level=logging.INFO,
-        format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+        format="%(message)s",
     )
 
 logger = logging.getLogger("mix_master.celery_app")
@@ -69,6 +69,10 @@ celery_app.conf.update(
 
     # Si una tarea peta, que el mensaje no se pierda
     task_acks_late=True,
+
+    # Custom Log Format to remove prefixes
+    worker_log_format="%(message)s",
+    worker_task_log_format="%(message)s",
 )
 
 # ---------------------------------------------------------------------------
