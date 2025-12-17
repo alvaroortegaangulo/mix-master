@@ -945,94 +945,94 @@
     }
   },
   "Cookie": {
-    "title": "Cookie Policy",
-    "lastUpdated": "Last updated: {date}",
+    "title": "Cookie 政策",
+    "lastUpdated": "最后更新：{date}",
     "sections": {
       "0": {
-        "title": "1. What Are Cookies",
-        "content": "Cookies are small text files that are placed on your computer or mobile device when you browse websites. They are widely used to make websites work, or work more efficiently, as well as to provide information to the owners of the site."
+        "title": "1. 什么是 Cookie",
+        "content": "Cookie 是您浏览网站时放置在您的计算机或移动设备上的小文本文件。它们被广泛用于使网站工作，或更有效地工作，以及向网站所有者提供信息。"
       },
       "1": {
-        "title": "2. How We Use Cookies",
-        "content": "We use cookies for a variety of reasons detailed below. Unfortunately, in most cases there are no industry standard options for disabling cookies without completely disabling the functionality and features they add to this site. It is recommended that you leave on all cookies if you are not sure whether you need them or not in case they are used to provide a service that you use."
+        "title": "2. 我们如何使用 Cookie",
+        "content": "我们使用 Cookie 的原因详见下文。不幸的是，在大多数情况下，没有行业标准选项可以在不完全禁用它们添加到本网站的功能和特性的情况下禁用 Cookie。如果您不确定是否需要它们，建议您保留所有 Cookie，以防它们用于提供您使用的服务。"
       },
       "2": {
-        "title": "3. The Cookies We Set",
+        "title": "3. 我们设置的 Cookie",
         "list": {
-          "0": "<strong>Essential Cookies:</strong> These cookies are necessary for the website to function and cannot be switched off in our systems. They are usually only set in response to actions made by you which amount to a request for services, such as setting your privacy preferences, logging in or filling in forms.",
-          "1": "<strong>Functionality Cookies:</strong> These cookies enable the website to provide enhanced functionality and personalization. They may be set by us or by third party providers whose services we have added to our pages.",
-          "2": "<strong>Analytics Cookies:</strong> We use Google Analytics to understand how our visitors interact with the website. This helps us improve the user experience. These cookies track things such as how long you spend on the site and the pages that you visit."
+          "0": "<strong>基本 Cookie：</strong> 这些 Cookie 对于网站运行是必需的，无法在我们的系统中关闭。它们通常仅根据您做出的相当于服务请求的操作（例如设置您的隐私首选项、登录或填写表格）进行设置。",
+          "1": "<strong>功能性 Cookie：</strong> 这些 Cookie 使网站能够提供增强的功能和个性化。它们可能由我们或我们已将其服务添加到我们页面的第三方提供商设置。",
+          "2": "<strong>分析 Cookie：</strong> 我们使用 Google Analytics 来了解我们的访问者如何与网站互动。这有助于我们改善用户体验。这些 Cookie 跟踪诸如您在网站上花费的时间和您访问的页面等内容。"
         }
       },
       "3": {
-        "title": "4. Third Party Cookies",
-        "content": "In some special cases we also use cookies provided by trusted third parties. The following section details which third party cookies you might encounter through this site.",
-        "p2": "This site uses Google Analytics which is one of the most widespread and trusted analytics solutions on the web for helping us to understand how you use the site and ways that we can improve your experience. These cookies may track things such as how long you spend on the site and the pages that you visit so we can continue to produce engaging content."
+        "title": "4. 第三方 Cookie",
+        "content": "在某些特殊情况下，我们还会使用受信任的第三方提供的 Cookie。以下部分详细介绍了您通过本网站可能会遇到的第三方 Cookie。",
+        "p2": "本网站使用 Google Analytics，这是网络上最广泛和最受信任的分析解决方案之一，用于帮助我们了解您如何使用本网站以及我们如何改善您的体验。这些 Cookie 可能会跟踪诸如您在网站上花费的时间和您访问的页面等内容，以便我们可以继续制作引人入胜的内容。"
       },
       "4": {
-        "title": "5. Managing Cookies",
-        "content": "You can prevent the setting of cookies by adjusting the settings on your browser (see your browser Help for how to do this). Be aware that disabling cookies will affect the functionality of this and many other websites that you visit. Disabling cookies will usually result in also disabling certain functionality and features of this site. Therefore it is recommended that you do not disable cookies."
+        "title": "5. 管理 Cookie",
+        "content": "您可以通过调整浏览器上的设置来阻止设置 Cookie（请参阅您的浏览器帮助以了解如何执行此操作）。请注意，禁用 Cookie 将影响本网站以及您访问的许多其他网站的功能。禁用 Cookie 通常还会导致禁用本网站的某些功能和特性。因此，建议您不要禁用 Cookie。"
       },
       "5": {
-        "title": "6. Contact Details",
-        "content": "If you have any questions about this cookie policy, please contact us at: <br /><span class='text-teal-400'>privacy@audioalchemy.com</span>"
+        "title": "6. 联系方式",
+        "content": "如果您对本 Cookie 政策有任何疑问，请通过以下方式联系我们：<br /><span class='text-teal-400'>privacy@audioalchemy.com</span>"
       }
     }
   },
   "UploadDropzone": {
     "uploadSong": "上传您的歌曲",
     "uploadStems": "上传您的分轨",
-    "songModeDesc": "母带处理单个立体声音频。",
+    "songModeDesc": "母带处理单个立体声混音。",
     "stemsModeDesc": "上传单独的轨道以进行完整的 AI 混音。",
-    "dragDropSong": "将您的歌曲拖放到此处，或点击选择文件",
-    "dragDropStems": "将分轨拖放到此处，或点击选择文件",
+    "dragDropSong": "将您的歌曲拖放到此处，或单击以选择文件",
+    "dragDropStems": "将分轨拖放到此处，或单击以选择文件",
     "supportedFormats": "支持的格式：WAV",
     "filesSelected": "已选择 {count} 个音频文件"
   },
   "PipelinePhases": {
     "inputMetadata": {
-      "title": "输入与元数据",
-      "body": "我们通过整理所有上传的文件并标准化格式、采样率和基本元数据来准备您的会话，以便管道的其余部分可以一致地工作。"
+      "title": "输入 & 元数据",
+      "body": "我们通过组织所有上传的文件并标准化格式、采样率和基本元数据来准备您的会话，以便管道的其余部分可以一致地工作。"
     },
     "technicalPreparation": {
       "title": "技术准备",
       "body": "我们修复每个分轨上的基本技术问题：直流偏移、工作响度和初始动态余量，以确保混音有一个干净、可靠的起点。"
     },
     "phasePolarityAlignment": {
-      "title": "相位与极性对齐",
-      "body": "我们分析多麦克风组（如鼓）以对齐相位并校正极性，避免抵消并恢复低频的冲击力和清晰度。"
+      "title": "相位 & 极性对齐",
+      "body": "我们分析多麦克风组（如鼓）以对齐相位并校正极性，避免抵消并恢复冲击力和低频清晰度。"
     },
     "staticMixRouting": {
-      "title": "静态混音与路由",
-      "body": "我们建立静态平衡和总线路由，设置推子和声像位置，以便在进行任何重度处理之前都能清晰地听到所有元素。"
+      "title": "静态混音 & 路由",
+      "body": "我们构建静态平衡和总线路由，放置推子和声像位置，以便在任何繁重处理之前都能清晰地听到所有元素。"
     },
     "spectralCleanup": {
       "title": "频谱清理",
-      "body": "我们使用高通滤波器和温和的陷波滤波器清理每个分轨，以去除隆隆声和刺耳的共振，从而在混音中腾出空间。"
+      "body": "我们使用高通滤波器和温和的陷波滤波器清洁每个分轨，以去除隆隆声和刺耳的共振，释放混音中的空间。"
     },
     "dynamicsLevelAutomation": {
-      "title": "动态与电平自动化",
-      "body": "我们使用压缩、限制和电平自动化来控制动态，保持演奏的表现力，但防止峰值从混音中跳出。"
+      "title": "动态 & 电平自动化",
+      "body": "我们使用压缩、限制和电平自动化控制动态，保持表演的表现力，但防止峰值跳出混音。"
     },
     "spaceDepthByBuses": {
-      "title": "总线空间与深度",
-      "body": "我们将乐器发送到专用的混响和氛围总线，将它们放置在声场的近处或远处，以创造深度和空间感。"
+      "title": "按总线的空间 & 深度",
+      "body": "我们将乐器发送到专用的混响和氛围总线，将它们放置在声场的更近或更远位置，以营造深度感和空间感。"
     },
     "multibandEqTonalBalance": {
-      "title": "多段 EQ 与音调平衡",
-      "body": "我们微调整体频谱平衡，使混音听起来自然，并在不同的播放系统中表现良好。"
+      "title": "多段 EQ & 音色平衡",
+      "body": "我们微调整体频谱平衡，使混音感觉自然并在不同的播放系统上转换良好。"
     },
     "mixBusColor": {
       "title": "混音总线色彩",
-      "body": "我们添加温和的饱和度和总线处理将混音粘合在一起，在不破坏动态的情况下增强温暖感、冲击力和感知响度。"
+      "body": "我们添加温和的饱和度和总线处理以将混音粘合在一起，增强温暖度、冲击力和感知响度，而不会破坏动态。"
     },
     "mastering": {
       "title": "母带处理",
-      "body": "我们将轨道提升到目标响度，调整最终的 EQ、立体声宽度和限制，使其准备好在流媒体平台上发布。"
+      "body": "我们将曲目提升至目标响度，调整最终 EQ、立体声宽度和限制，使其准备好在流媒体平台上发布。"
     },
     "masterStereoQc": {
-      "title": "母带立体声 QC",
-      "body": "我们运行最终质量检查（真峰值、响度、立体声图像和平衡），以确保母带符合技术目标。"
+      "title": "母带立体声质检",
+      "body": "我们运行最终质量检查（真峰值、响度、立体声声像和平衡）以确保母带符合技术目标。"
     },
     "reporting": {
       "title": "报告",
@@ -1041,9 +1041,9 @@
   },
   "MixPipelinePanel": {
     "title": "管道",
-    "description": "通过聆听每个主要处理块后的累积结果，探索混音在每个阶段的演变。",
+    "description": "通过收听每个主要处理块后的累积结果，探索混音在每个阶段的演变过程。",
     "loading": "正在加载管道定义...",
     "error": "加载管道定义时出错。",
-    "activeContract": "活动合约："
+    "activeContract": "活动合同："
   }
 }

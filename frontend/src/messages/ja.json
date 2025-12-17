@@ -945,104 +945,104 @@
     }
   },
   "Cookie": {
-    "title": "Cookie Policy",
-    "lastUpdated": "Last updated: {date}",
+    "title": "クッキーポリシー",
+    "lastUpdated": "最終更新日: {date}",
     "sections": {
       "0": {
-        "title": "1. What Are Cookies",
-        "content": "Cookies are small text files that are placed on your computer or mobile device when you browse websites. They are widely used to make websites work, or work more efficiently, as well as to provide information to the owners of the site."
+        "title": "1. クッキーとは",
+        "content": "クッキーは、ウェブサイトを閲覧する際にお使いのコンピュータやモバイルデバイスに配置される小さなテキストファイルです。これらはウェブサイトを機能させる、またはより効率的に機能させるため、およびサイトの所有者に情報を提供するために広く使用されています。"
       },
       "1": {
-        "title": "2. How We Use Cookies",
-        "content": "We use cookies for a variety of reasons detailed below. Unfortunately, in most cases there are no industry standard options for disabling cookies without completely disabling the functionality and features they add to this site. It is recommended that you leave on all cookies if you are not sure whether you need them or not in case they are used to provide a service that you use."
+        "title": "2. クッキーの使用方法",
+        "content": "当社は以下に詳述するさまざまな理由でクッキーを使用します。残念ながら、ほとんどの場合、このサイトに追加する機能や特徴を完全に無効にすることなくクッキーを無効にする業界標準のオプションはありません。使用するサービスを提供するために使用される場合に備えて、必要かどうかわからない場合はすべてのクッキーをオンのままにしておくことをお勧めします。"
       },
       "2": {
-        "title": "3. The Cookies We Set",
+        "title": "3. 当社が設定するクッキー",
         "list": {
-          "0": "<strong>Essential Cookies:</strong> These cookies are necessary for the website to function and cannot be switched off in our systems. They are usually only set in response to actions made by you which amount to a request for services, such as setting your privacy preferences, logging in or filling in forms.",
-          "1": "<strong>Functionality Cookies:</strong> These cookies enable the website to provide enhanced functionality and personalization. They may be set by us or by third party providers whose services we have added to our pages.",
-          "2": "<strong>Analytics Cookies:</strong> We use Google Analytics to understand how our visitors interact with the website. This helps us improve the user experience. These cookies track things such as how long you spend on the site and the pages that you visit."
+          "0": "<strong>必須クッキー:</strong> これらのクッキーはウェブサイトが機能するために必要であり、当社のシステムでオフにすることはできません。これらは通常、プライバシー設定の設定、ログイン、フォームへの入力など、サービスのリクエストに相当するアクションに応じてのみ設定されます。",
+          "1": "<strong>機能性クッキー:</strong> これらのクッキーにより、ウェブサイトは強化された機能とパーソナライゼーションを提供できます。これらは当社、または当社がページにサービスを追加したサードパーティプロバイダーによって設定される場合があります。",
+          "2": "<strong>分析クッキー:</strong> 当社はGoogle Analyticsを使用して、訪問者がウェブサイトとどのようにやり取りするかを理解します。これはユーザーエクスペリエンスの向上に役立ちます。これらのクッキーは、サイトでの滞在時間や訪問したページなどを追跡します。"
         }
       },
       "3": {
-        "title": "4. Third Party Cookies",
-        "content": "In some special cases we also use cookies provided by trusted third parties. The following section details which third party cookies you might encounter through this site.",
-        "p2": "This site uses Google Analytics which is one of the most widespread and trusted analytics solutions on the web for helping us to understand how you use the site and ways that we can improve your experience. These cookies may track things such as how long you spend on the site and the pages that you visit so we can continue to produce engaging content."
+        "title": "4. サードパーティクッキー",
+        "content": "特別な場合には、信頼できるサードパーティが提供するクッキーも使用します。次のセクションでは、このサイトを通じて遭遇する可能性のあるサードパーティクッキーについて詳しく説明します。",
+        "p2": "このサイトでは、ウェブ上で最も普及しており信頼できる分析ソリューションの1つであるGoogle Analyticsを使用して、サイトの使用方法やエクスペリエンスを向上させる方法を理解するのに役立てています。これらのクッキーは、魅力的なコンテンツを作成し続けるために、サイトでの滞在時間や訪問したページなどを追跡する場合があります。"
       },
       "4": {
-        "title": "5. Managing Cookies",
-        "content": "You can prevent the setting of cookies by adjusting the settings on your browser (see your browser Help for how to do this). Be aware that disabling cookies will affect the functionality of this and many other websites that you visit. Disabling cookies will usually result in also disabling certain functionality and features of this site. Therefore it is recommended that you do not disable cookies."
+        "title": "5. クッキーの管理",
+        "content": "ブラウザの設定を調整することで、クッキーの設定を防ぐことができます（方法についてはブラウザのヘルプを参照してください）。クッキーを無効にすると、このサイトや訪問する他の多くのウェブサイトの機能に影響することに注意してください。クッキーを無効にすると、通常、このサイトの特定の機能や特徴も無効になります。したがって、クッキーを無効にしないことをお勧めします。"
       },
       "5": {
-        "title": "6. Contact Details",
-        "content": "If you have any questions about this cookie policy, please contact us at: <br /><span class='text-teal-400'>privacy@audioalchemy.com</span>"
+        "title": "6. 連絡先",
+        "content": "このクッキーポリシーについてご質問がある場合は、以下までお問い合わせください。<br /><span class='text-teal-400'>privacy@audioalchemy.com</span>"
       }
     }
   },
   "UploadDropzone": {
     "uploadSong": "曲をアップロード",
     "uploadStems": "ステムをアップロード",
-    "songModeDesc": "ステレオファイルを1つマスタリングします。",
-    "stemsModeDesc": "AIによる完全なミックスのために個々のトラックをアップロードします。",
+    "songModeDesc": "単一のステレオバウンスをマスタリングします。",
+    "stemsModeDesc": "完全なAIミックスのために個々のトラックをアップロードします。",
     "dragDropSong": "ここに曲をドラッグ＆ドロップするか、クリックしてファイルを選択してください",
     "dragDropStems": "ここにステムをドラッグ＆ドロップするか、クリックしてファイルを選択してください",
-    "supportedFormats": "対応フォーマット: WAV",
+    "supportedFormats": "サポートされている形式: WAV",
     "filesSelected": "{count} 個のオーディオファイルが選択されました"
   },
   "PipelinePhases": {
     "inputMetadata": {
-      "title": "入力とメタデータ",
-      "body": "アップロードされたすべてのファイルを整理し、フォーマット、サンプリングレート、基本的なメタデータを正規化して、パイプラインの残りの部分が一貫して機能するようにセッションを準備します。"
+      "title": "入力＆メタデータ",
+      "body": "アップロードされたすべてのファイルを整理し、フォーマット、サンプリングレート、基本的なメタデータを正規化して、残りのパイプラインが一貫して機能するようにセッションを準備します。"
     },
     "technicalPreparation": {
       "title": "技術的な準備",
-      "body": "各ステムの基本的な技術的問題（DCオフセット、作業ラウドネス、初期ヘッドルーム）を修正し、ミキシングのためのクリーンで信頼できる出発点を確保します。"
+      "body": "各ステムの基本的な技術的問題を修正します：DCオフセット、作業ラウドネス、初期ヘッドルームを修正して、ミキシングのためのクリーンで信頼できる出発点を確保します。"
     },
     "phasePolarityAlignment": {
-      "title": "位相と極性の調整",
-      "body": "ドラムなどのマルチマイクグループを分析して位相を調整し、極性を修正することで、打ち消し合いを防ぎ、インパクトと低域の明瞭さを取り戻します。"
+      "title": "位相＆極性の調整",
+      "body": "マルチマイクグループ（ドラムなど）を分析して位相を調整し、極性を修正し、キャンセルを回避してインパクトと低域の明瞭さを回復します。"
     },
     "staticMixRouting": {
-      "title": "スタティックミックスとルーティング",
-      "body": "静的なバランスとバスルーティングを構築し、フェーダーとパンの位置を設定して、重い処理を行う前にすべての要素が明確に聞こえるようにします。"
+      "title": "静的ミックス＆ルーティング",
+      "body": "静的なバランスとバスルーティングを構築し、フェーダーとパンの位置を配置して、重い処理の前にすべての要素が明確に聞こえるようにします。"
     },
     "spectralCleanup": {
       "title": "スペクトルクリーンアップ",
-      "body": "ハイパスフィルターと緩やかなノッチフィルターを使用して各ステムをクリーンアップし、ランブルや耳障りな共鳴を取り除き、ミックス内のスペースを確保します。"
+      "body": "ハイパスフィルターと穏やかなノッチフィルターを使用して各ステムをクリーンアップし、ランブルと耳障りな共鳴を取り除き、ミックス内のスペースを解放します。"
     },
     "dynamicsLevelAutomation": {
-      "title": "ダイナミクスとレベルオートメーション",
-      "body": "コンプレッション、リミッティング、レベルオートメーションを使用してダイナミクスを制御し、パフォーマンスの表現力を維持しながら、ピークがミックスから飛び出すのを防ぎます。"
+      "title": "ダイナミクス＆レベルオートメーション",
+      "body": "コンプレッション、リミッティング、レベルオートメーションを使用してダイナミクスを制御し、パフォーマンスを表現豊かに保ちながら、ピークがミックスから飛び出すのを防ぎます。"
     },
     "spaceDepthByBuses": {
-      "title": "バスによる空間と深み",
-      "body": "楽器を専用のリバーブおよびアンビエンスバスに送り、サウンドステージ上で近くまたは遠くに配置して、深みと空間の感覚を作り出します。"
+      "title": "バスによる空間＆深さ",
+      "body": "楽器を専用のリバーブおよびアンビエンスバスに送り、サウンドステージの近くまたは遠くに配置して、深さと空間の感覚を作り出します。"
     },
     "multibandEqTonalBalance": {
-      "title": "マルチバンドEQとトナルバランス",
-      "body": "全体的なスペクトルバランスを微調整して、ミックスが自然に聞こえ、さまざまな再生システムでうまく変換されるようにします。"
+      "title": "マルチバンドEQ＆音色バランス",
+      "body": "全体的なスペクトルバランスを微調整して、ミックスが自然に感じられ、さまざまな再生システムでうまく聞こえるようにします。"
     },
     "mixBusColor": {
       "title": "ミックスバスカラー",
-      "body": "穏やかなサチュレーションとバス処理を追加してミックスをまとめ、ダイナミクスを損なうことなく、暖かみ、パンチ、知覚されるラウドネスを向上させます。"
+      "body": "穏やかなサチュレーションとバス処理を追加してミックスを結び付け、ダイナミクスを破壊することなく暖かさ、パンチ、知覚されるラウドネスを向上させます。"
     },
     "mastering": {
       "title": "マスタリング",
-      "body": "トラックをターゲットラウドネスに持ち上げ、最終的なEQ、ステレオ幅、リミッティングを調整して、ストリーミングプラットフォームでのリリースの準備を整えます。"
+      "body": "トラックをターゲットのラウドネスまで上げ、最終的なEQ、ステレオ幅、リミッティングを調整して、ストリーミングプラットフォームでのリリースの準備を整えます。"
     },
     "masterStereoQc": {
       "title": "マスターステレオQC",
-      "body": "最終的な品質チェック（トゥルーピーク、ラウドネス、ステレオイメージ、バランス）を実行し、マスターが技術的な目標を満たしていることを確認します。"
+      "body": "最終的な品質チェック（トゥルーピーク、ラウドネス、ステレオイメージ、バランス）を実行して、マスターが技術的な目標を満たしていることを確認します。"
     },
     "reporting": {
       "title": "レポート",
-      "body": "技術レポートを生成し、最終的なマスターをエクスポートして、パイプラインの各段階で何が行われたかを確認できるようにします。"
+      "body": "技術レポートを生成し、最終マスターをエクスポートして、パイプラインの各段階で行われたことを確認できるようにします。"
     }
   },
   "MixPipelinePanel": {
     "title": "パイプライン",
-    "description": "主要な処理ブロックごとの累積結果を聞くことで、各フェーズでミックスがどのように進化するかを探索します。",
-    "loading": "パイプライン定義を読み込んでいます...",
+    "description": "主要な処理ブロックごとの累積結果を聞くことで、各フェーズでミックスがどのように進化するかを探ります。",
+    "loading": "パイプライン定義を読み込み中...",
     "error": "パイプライン定義の読み込み中にエラーが発生しました。",
     "activeContract": "アクティブな契約:"
   }
