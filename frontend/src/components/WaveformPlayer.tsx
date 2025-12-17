@@ -346,8 +346,17 @@ export const WaveformPlayer: React.FC<WaveformPlayerProps> = ({
     const usableBins = Math.floor(bufferLength * 0.7);
     const binsPerBar = Math.floor(usableBins / maxBars) || 1;
 
-    const barColor = accentColor;
-    const reflectionColor = "rgba(251, 146, 60, 0.35)";
+    // Colores para estado "tocado" vs "por tocar"
+    const playedColor = accentColor;
+    const unplayedColor = "#e5e7eb";
+    const playedReflection = "rgba(251, 146, 60, 0.35)";
+    const unplayedReflection = "rgba(229, 231, 235, 0.18)";
+
+    // Calcular progreso actual directamente del audio para suavidad
+    const audio = audioRef.current;
+    const currentDuration = audio?.duration || 1;
+    const currentT = audio?.currentTime || 0;
+    const currentProgress = currentDuration > 0 ? currentT / currentDuration : 0;
 
     for (let i = 0; i < maxBars; i++) {
         let sum = 0;
@@ -365,9 +374,13 @@ export const WaveformPlayer: React.FC<WaveformPlayerProps> = ({
         const barHeightBottom = barHeightTop * reflectFactor;
         const x = paddingX + i * step;
 
-        ctx.fillStyle = barColor;
+        // Determinar si esta barra corresponde a tiempo pasado
+        const barProgress = maxBars > 1 ? i / (maxBars - 1) : 0;
+        const isPlayed = barProgress <= currentProgress;
+
+        ctx.fillStyle = isPlayed ? playedColor : unplayedColor;
         ctx.fillRect(x, midY - barHeightTop, barWidth, barHeightTop);
-        ctx.fillStyle = reflectionColor;
+        ctx.fillStyle = isPlayed ? playedReflection : unplayedReflection;
         ctx.fillRect(x, midY + 1, barWidth, barHeightBottom);
     }
 
