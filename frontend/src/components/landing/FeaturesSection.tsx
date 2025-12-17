@@ -25,7 +25,7 @@ export function FeaturesSection({ className }: { className?: string }) {
       bgClass: "bg-cyan-950/30",
       placeholderBg: "bg-cyan-900/20",
       borderColor: "border-cyan-500/30",
-      videoUrl: "/intelligent_analysis.mp4",
+      videoUrl: "/intelligent_analysis.webm",
     },
     {
       id: 1,
@@ -37,7 +37,7 @@ export function FeaturesSection({ className }: { className?: string }) {
       bgClass: "bg-purple-950/30",
       placeholderBg: "bg-purple-900/20",
       borderColor: "border-purple-500/30",
-      videoUrl: "/precision_mixing.mp4",
+      videoUrl: "/precision_mixing.webm",
     },
     {
       id: 2,
@@ -49,7 +49,7 @@ export function FeaturesSection({ className }: { className?: string }) {
       bgClass: "bg-pink-950/30",
       placeholderBg: "bg-pink-900/20",
       borderColor: "border-pink-500/30",
-      videoUrl: "/creative_control.mp4",
+      videoUrl: "/creative_control.webm",
     },
     {
       id: 3,
@@ -61,11 +61,9 @@ export function FeaturesSection({ className }: { className?: string }) {
       bgClass: "bg-amber-950/30",
       placeholderBg: "bg-amber-900/20",
       borderColor: "border-amber-500/30",
-      videoUrl: "/mastering_grade_polish.mp4",
+      videoUrl: "/mastering_grade_polish.webm",
     },
   ];
-
-  const activeFeature = features[activeStep];
 
   return (
     <section className={`py-24 ${className || 'bg-slate-950'}`} id="features">
@@ -136,11 +134,20 @@ export function FeaturesSection({ className }: { className?: string }) {
           {/* Right Column: Dynamic Video Display */}
           <div className="relative aspect-[4/3] w-full rounded-2xl border border-slate-800 bg-slate-900 overflow-hidden shadow-2xl">
             <div className="absolute inset-0 top-10">
-              <LazyVideo
-                key={activeFeature.id}
-                src={activeFeature.videoUrl}
-                className="w-full h-full object-cover"
-              />
+              {features.map((feature, idx) => (
+                <div
+                  key={feature.id}
+                  className={`absolute inset-0 transition-opacity duration-500 ${
+                    activeStep === idx ? "opacity-100 z-10" : "opacity-0 z-0"
+                  }`}
+                >
+                  <LazyVideo
+                    src={feature.videoUrl}
+                    className="w-full h-full object-cover"
+                    isActive={activeStep === idx}
+                  />
+                </div>
+              ))}
             </div>
 
             {/* Top Bar Decoration for the "App Window" look */}

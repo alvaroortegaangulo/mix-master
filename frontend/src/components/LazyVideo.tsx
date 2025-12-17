@@ -10,6 +10,7 @@ type LazyVideoProps = {
   loop?: boolean;
   muted?: boolean;
   playsInline?: boolean;
+  isActive?: boolean;
 };
 
 export function LazyVideo({
@@ -20,6 +21,7 @@ export function LazyVideo({
   loop = true,
   muted = true,
   playsInline = true,
+  isActive = true,
 }: LazyVideoProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [shouldLoad, setShouldLoad] = useState(false);
@@ -45,29 +47,46 @@ export function LazyVideo({
     return () => observer.disconnect();
   }, []);
 
+  // Handle loading and ready state
   useEffect(() => {
-    setIsReady(false);
     if (!shouldLoad || !videoRef.current) return;
 
     const video = videoRef.current;
-    const handleReady = () => setIsReady(true);
-    video.addEventListener("loadeddata", handleReady);
 
-    if (autoPlay) {
-      const play = () => {
-        void video.play().catch(() => {});
-      };
-      const id = requestAnimationFrame(play);
-      return () => {
-        cancelAnimationFrame(id);
-        video.removeEventListener("loadeddata", handleReady);
-      };
+    // If src changed, we are not ready
+    setIsReady(false);
+
+    const handleReady = () => setIsReady(true);
+    // If we already have data, we might be ready
+    if (video.readyState >= 3) {
+      setIsReady(true);
     }
+
+    video.addEventListener("loadeddata", handleReady);
+    video.addEventListener("canplay", handleReady);
 
     return () => {
       video.removeEventListener("loadeddata", handleReady);
+      video.removeEventListener("canplay", handleReady);
     };
-  }, [shouldLoad, autoPlay, src]);
+  }, [src, shouldLoad]);
+
+  // Handle playback control
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !shouldLoad) return;
+
+    if (autoPlay && isActive) {
+      const playPromise = video.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(() => {
+          // Auto-play was prevented
+        });
+      }
+    } else {
+      video.pause();
+    }
+  }, [shouldLoad, autoPlay, isActive, isReady]); // Re-run when ready state changes to retry play if needed
 
   useEffect(() => {
     if (shouldLoad && videoRef.current) {
@@ -84,7 +103,6 @@ export function LazyVideo({
       loop={loop}
       muted={muted}
       playsInline={playsInline}
-      autoPlay={shouldLoad && autoPlay}
       preload={shouldLoad ? "metadata" : "none"}
     />
   );
