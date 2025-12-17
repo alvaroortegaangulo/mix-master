@@ -217,7 +217,7 @@ export async function signFileUrl(jobId: string, filePath: string, token?: strin
  * que usa tu frontend (queued/running/done/error, camelCase, etc.).
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function mapBackendStatusToJobStatus(raw: any, baseUrl: string): JobStatus {
+export function mapBackendStatusToJobStatus(raw: any, baseUrl: string): JobStatus {
   const backendStatus = (raw.status ?? "pending") as string;
   const jobId: string = raw.jobId ?? raw.job_id ?? "";
 
@@ -324,6 +324,36 @@ function mapBackendStatusToJobStatus(raw: any, baseUrl: string): JobStatus {
   }
 
   return base;
+}
+
+async function attachSignedResultUrls(jobId: string, status: JobStatus, baseUrl: string): Promise<JobStatus> {
+  if (!status.result) return status;
+
+  const next: JobStatus = { ...status, result: { ...status.result } };
+
+  const signMaybe = async (rawUrl: string | undefined, key: "fullSongUrl" | "originalFullSongUrl") => {
+    if (!rawUrl) return;
+    try {
+      const urlObj = new URL(rawUrl, baseUrl);
+      const prefix = `/files/${jobId}/`;
+      const filePath = urlObj.pathname.startsWith(prefix)
+        ? urlObj.pathname.slice(prefix.length)
+        : urlObj.pathname.replace(/^\/files\//, "");
+      const signed = await signFileUrl(jobId, filePath);
+      if (signed) {
+        next.result![key] = signed;
+      }
+    } catch (e) {
+      console.warn(`Failed to sign ${key}`, e);
+    }
+  };
+
+  await Promise.all([
+    signMaybe(next.result.fullSongUrl, "fullSongUrl"),
+    signMaybe(next.result.originalFullSongUrl, "originalFullSongUrl"),
+  ]);
+
+  return next;
 }
 
 export async function cleanupTemp(): Promise<void> {
@@ -534,35 +564,88 @@ export async function fetchJobStatus(jobId: string): Promise<JobStatus> {
   const raw = await res.json();
   const mapped = mapBackendStatusToJobStatus(raw, baseUrl);
 
-  // Firmar URLs de media si existen
-  // [MODIFIED] Added error handling for signing to prevent crash if file not ready
-  if (mapped.result?.fullSongUrl) {
-    try {
-      const urlObj = new URL(mapped.result.fullSongUrl, baseUrl);
-      const prefix = `/files/${jobId}/`;
-      const filePath = urlObj.pathname.startsWith(prefix)
-        ? urlObj.pathname.slice(prefix.length)
-        : urlObj.pathname.replace(/^\/files\//, "");
-      mapped.result.fullSongUrl = await signFileUrl(jobId, filePath);
-    } catch (e) {
-      console.warn("Failed to sign fullSongUrl", e);
-      // Keep mapped.result.fullSongUrl as is (unsigned) so user might see 401 instead of crashing app
-    }
-  }
-  if (mapped.result?.originalFullSongUrl) {
-    try {
-      const urlObj = new URL(mapped.result.originalFullSongUrl, baseUrl);
-      const prefix = `/files/${jobId}/`;
-      const filePath = urlObj.pathname.startsWith(prefix)
-        ? urlObj.pathname.slice(prefix.length)
-        : urlObj.pathname.replace(/^\/files\//, "");
-      mapped.result.originalFullSongUrl = await signFileUrl(jobId, filePath);
-    } catch (e) {
-      console.warn("Failed to sign originalFullSongUrl", e);
-    }
+  const signed = await attachSignedResultUrls(jobId, mapped, baseUrl);
+  return signed;
+}
+
+export type JobStatusStreamHandlers = {
+  onStatus: (status: JobStatus) => void;
+  onError?: (error: Error | Event) => void;
+  onClose?: (event: CloseEvent) => void;
+  onOpen?: () => void;
+};
+
+export type JobStatusStream = {
+  close: () => void;
+};
+
+export function openJobStatusStream(
+  jobId: string,
+  handlers: JobStatusStreamHandlers,
+): JobStatusStream | null {
+  if (typeof window === "undefined" || typeof WebSocket === "undefined") {
+    return null;
   }
 
-  return mapped;
+  const baseUrl = getBackendBaseUrl();
+  const wsBase = baseUrl.startsWith("https")
+    ? baseUrl.replace(/^https/i, "wss")
+    : baseUrl.replace(/^http/i, "ws");
+
+  const params = new URLSearchParams();
+  const apiKey = process.env.NEXT_PUBLIC_MIXMASTER_API_KEY;
+  if (apiKey) params.set("api_key", apiKey);
+
+  const token = localStorage.getItem("access_token");
+  if (token) params.set("token", token);
+  params.set("_t", Date.now().toString());
+
+  const wsUrl = `${wsBase}/ws/jobs/${encodeURIComponent(jobId)}?${params.toString()}`;
+  let socket: WebSocket;
+  try {
+    socket = new WebSocket(wsUrl);
+  } catch (err) {
+    handlers.onError?.(err as Error);
+    return null;
+  }
+
+  socket.onopen = () => {
+    handlers.onOpen?.();
+  };
+
+  socket.onmessage = (event: MessageEvent) => {
+    void (async () => {
+      try {
+        const rawText =
+          typeof event.data === "string"
+            ? event.data
+            : typeof (event.data as Blob).text === "function"
+              ? await (event.data as Blob).text()
+              : "";
+
+        if (!rawText) return;
+        const parsed = JSON.parse(rawText);
+        const payload = parsed?.payload ?? parsed;
+        const mapped = mapBackendStatusToJobStatus(payload, baseUrl);
+        const signed = await attachSignedResultUrls(jobId, mapped, baseUrl);
+        handlers.onStatus(signed);
+      } catch (err) {
+        console.warn("Failed to parse job status WS message", err);
+      }
+    })();
+  };
+
+  socket.onerror = (event) => {
+    handlers.onError?.(event);
+  };
+
+  socket.onclose = (event) => {
+    handlers.onClose?.(event);
+  };
+
+  return {
+    close: () => socket.close(),
+  };
 }
 
 export type PipelineStage = {

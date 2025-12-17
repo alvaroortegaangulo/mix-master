@@ -1,13 +1,80 @@
-
 import json
 import logging
 import os
-import shutil
 import tempfile
+import time
 from pathlib import Path
 from typing import Any, Dict
 
+PROGRESS_REDIS_URL = os.environ.get(
+    "PROGRESS_REDIS_URL",
+    os.environ.get("CELERY_BROKER_URL", "redis://redis:6379/0"),
+)
+PROGRESS_REDIS_PREFIX = os.environ.get("PROGRESS_REDIS_PREFIX", "job-progress:")
+
+_redis_client = None
+
 logger = logging.getLogger(__name__)
+
+
+def progress_channel_name(job_id: str) -> str:
+    """
+    Devuelve el nombre de canal Pub/Sub para progreso en tiempo real.
+    """
+    clean = (job_id or "").strip()
+    return f"{PROGRESS_REDIS_PREFIX}{clean}"
+
+
+def _get_redis_client():
+    """
+    Obtiene (y cachea) un cliente Redis sincrono para publicar progreso.
+    Silencia errores para no romper el flujo de escritura.
+    """
+    global _redis_client
+    if _redis_client is not None:
+        return _redis_client
+
+    redis_url = PROGRESS_REDIS_URL
+    if not redis_url:
+        return None
+
+    try:
+        import redis
+
+        _redis_client = redis.Redis.from_url(redis_url)
+        return _redis_client
+    except Exception as exc:  # pragma: no cover - fallo no critico
+        logger.debug("No se pudo inicializar Redis para progreso: %s", exc)
+        _redis_client = None
+        return None
+
+
+def _publish_progress(job_root: Path, status: Dict[str, Any]) -> None:
+    """
+    Publica el estado en Redis Pub/Sub para que el servidor lo reenvie por WebSocket.
+    Best-effort: si Redis no esta disponible, no interfiere con la escritura.
+    """
+    client = _get_redis_client()
+    if not client:
+        return
+
+    job_id = str(status.get("jobId") or status.get("job_id") or job_root.name)
+    if not job_id:
+        return
+
+    channel = progress_channel_name(job_id)
+    envelope = {
+        "type": "job_status",
+        "jobId": job_id,
+        "payload": status,
+        "ts": time.time(),
+    }
+
+    try:
+        client.publish(channel, json.dumps(envelope))
+    except Exception as exc:  # pragma: no cover - envio best-effort
+        logger.debug("No se pudo publicar progreso en Redis (%s): %s", channel, exc)
+
 
 def write_job_status(job_root: Path, status: Dict[str, Any]) -> None:
     """
@@ -15,6 +82,7 @@ def write_job_status(job_root: Path, status: Dict[str, Any]) -> None:
     Ensures file permissions are 666 (rw-rw-rw-) to avoid permission issues between
     server and worker processes.
     """
+    write_ok = False
     try:
         if not job_root.exists():
             job_root.mkdir(parents=True, exist_ok=True)
@@ -46,6 +114,7 @@ def write_job_status(job_root: Path, status: Dict[str, Any]) -> None:
                     tmp_path.unlink()
             except Exception:
                 pass
+        write_ok = True
 
     except Exception as e:
         logger.error(f"Failed to write job status atomic: {e}; falling back to direct write")
@@ -53,8 +122,13 @@ def write_job_status(job_root: Path, status: Dict[str, Any]) -> None:
             status_path.parent.mkdir(parents=True, exist_ok=True)
             status_path.write_text(json.dumps(status, indent=2, ensure_ascii=False), encoding="utf-8")
             os.chmod(status_path, 0o666)
+            write_ok = True
         except Exception as e2:
             logger.error(f"Fallback write_job_status also failed: {e2}")
+
+    if write_ok:
+        _publish_progress(job_root, status)
+
 
 def update_job_status(job_root: Path, status_update: Dict[str, Any]) -> None:
     """

@@ -37,6 +37,8 @@ from fastapi import (
     HTTPException,
     Request,
     Response,
+    WebSocket,
+    WebSocketDisconnect,
     UploadFile,
 )
 from fastapi.middleware.cors import CORSMiddleware
@@ -44,13 +46,20 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from fastapi.responses import JSONResponse
 from fastapi.responses import StreamingResponse
+from jose import JWTError, jwt
 
 from tasks import run_full_pipeline_task
-from src.database import engine, Base
+from src.database import engine, Base, SessionLocal
 from src.routers import auth
 from src.routers.auth import get_current_user
 from src.models.user import User
-from src.utils.job_store import update_job_status, write_job_status
+from src.utils.job_store import (
+    PROGRESS_REDIS_URL,
+    progress_channel_name,
+    update_job_status,
+    write_job_status,
+)
+from src.utils.security import SECRET_KEY, ALGORITHM
 from src.utils.waveform import compute_and_cache_peaks, ensure_preview_wav
 
 # ---------------------------------------------------------
@@ -386,6 +395,59 @@ def _assert_job_owner(job_id: str, current_user: User) -> Dict[str, Any]:
             logger.warning("No se pudo persistir owner_email para job %s", job_id)
 
     return data
+
+
+def _make_pending_status(job_id: str) -> Dict[str, Any]:
+    """
+    Estado por defecto para jobs sin progreso (evita exponer None al frontend).
+    """
+    return {
+        "jobId": job_id,
+        "job_id": job_id,
+        "status": "pending",
+        "stage_index": 0,
+        "total_stages": 0,
+        "stage_key": "queued",
+        "message": "Job pending in queue",
+        "progress": 0.0,
+    }
+
+
+def _resolve_user_from_token(token: str) -> User:
+    """
+    Valida un JWT recibido por WebSocket (query param token) y devuelve el usuario.
+    Lanza HTTPException 401 si el token no es valido o el usuario no existe.
+    """
+    if not token:
+        raise HTTPException(status_code=401, detail="Missing token")
+
+    db = SessionLocal()
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        email = payload.get("sub")
+        if not email:
+            raise HTTPException(status_code=401, detail="Invalid token payload")
+
+        user = db.query(User).filter(User.email == email).first()
+        if not user:
+            raise HTTPException(status_code=401, detail="User not found")
+        return user
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+    finally:
+        db.close()
+
+
+def _make_ws_status(job_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Normaliza el payload que se envia por WebSocket / Redis.
+    """
+    return {
+        "type": "job_status",
+        "jobId": job_id,
+        "payload": payload,
+        "ts": time.time(),
+    }
 
 
 PROFILES_PATH = SRC_DIR / "struct" / "profiles.json"
@@ -1640,6 +1702,160 @@ async def post_job_correction(
     return {"status": "saved", "message": "Corrections saved. Call /start to resume pipeline."}
 
 
+# ---------------------------------------------------------
+# WebSocket: progreso de pipeline en tiempo real
+# ---------------------------------------------------------
+
+
+async def _stream_job_progress_fs(websocket: WebSocket, job_id: str, last_status: Dict[str, Any]) -> None:
+    """
+    Fallback sin Redis: reenvía job_status.json si cambia cada ~1s.
+    """
+    last_serialized = json.dumps(_make_ws_status(job_id, last_status), sort_keys=True)
+    try:
+        while True:
+            await asyncio.sleep(1.0)
+            latest = _load_job_status_from_fs(job_id)
+            if not latest:
+                continue
+
+            envelope = _make_ws_status(job_id, latest)
+            serialized = json.dumps(envelope, sort_keys=True)
+            if serialized == last_serialized:
+                continue
+
+            last_serialized = serialized
+            await websocket.send_json(envelope)
+    except WebSocketDisconnect:
+        return
+    except Exception as exc:
+        logger.debug("WS progreso (fs) detenido para %s: %s", job_id, exc)
+        return
+
+
+async def _stream_job_progress_redis(websocket: WebSocket, job_id: str) -> tuple[bool, bool]:
+    """
+    Devuelve (started, disconnected):
+      - started=False -> no se pudo conectar/suscribir, usar fallback.
+      - disconnected=True -> el cliente cerró; no continuar.
+    """
+    if not aioredis:
+        return False, False
+
+    try:
+        redis = aioredis.from_url(PROGRESS_REDIS_URL, decode_responses=True)
+    except Exception as exc:
+        logger.warning("WS progreso: no se pudo conectar a Redis: %s", exc)
+        return False, False
+
+    channel = progress_channel_name(job_id)
+    pubsub = redis.pubsub()
+    try:
+        await pubsub.subscribe(channel)
+    except Exception as exc:
+        logger.warning("WS progreso: suscripcion fallida a %s: %s", channel, exc)
+        try:
+            await pubsub.close()
+        except Exception:
+            pass
+        try:
+            await redis.close()
+        except Exception:
+            try:
+                redis.close()
+            except Exception:
+                pass
+        return False, False
+
+    started = True
+    disconnected = False
+    try:
+        async for message in pubsub.listen():
+            if not message or message.get("type") != "message":
+                continue
+            raw = message.get("data")
+            if raw is None:
+                continue
+            if isinstance(raw, bytes):
+                raw = raw.decode("utf-8", "ignore")
+            try:
+                payload = json.loads(raw)
+            except Exception:
+                logger.debug("WS progreso: mensaje no JSON en %s: %r", channel, raw)
+                continue
+
+            try:
+                await websocket.send_json(payload)
+            except WebSocketDisconnect:
+                disconnected = True
+                break
+            except Exception as exc:
+                logger.warning("WS progreso: error enviando a cliente %s: %s", job_id, exc)
+                break
+    finally:
+        try:
+            await pubsub.unsubscribe(channel)
+        except Exception:
+            pass
+        try:
+            await pubsub.close()
+        except Exception:
+            pass
+        try:
+            await redis.close()
+        except Exception:
+            try:
+                redis.close()
+            except Exception:
+                pass
+
+    return started, disconnected
+
+
+@app.websocket("/ws/jobs/{job_id}")
+async def websocket_job_progress(websocket: WebSocket, job_id: str):
+    token = websocket.query_params.get("token")
+    if not token:
+        await websocket.close(code=1008, reason="Missing token")
+        return
+
+    try:
+        current_user = _resolve_user_from_token(token)
+    except HTTPException as exc:
+        await websocket.close(code=1008, reason=str(exc.detail))
+        return
+
+    try:
+        _assert_job_owner(job_id, current_user)
+    except HTTPException as exc:
+        await websocket.close(code=1008, reason=str(exc.detail))
+        return
+
+    try:
+        await websocket.accept()
+    except Exception:
+        return
+
+    snapshot = _load_job_status_from_fs(job_id) or _make_pending_status(job_id)
+    initial_payload = _make_ws_status(job_id, snapshot)
+    try:
+        await websocket.send_json(initial_payload)
+    except Exception:
+        await websocket.close(code=1011, reason="Failed to send initial status")
+        return
+
+    started, disconnected = await _stream_job_progress_redis(websocket, job_id)
+    if disconnected:
+        return
+
+    if not started:
+        await _stream_job_progress_fs(websocket, job_id, snapshot)
+        return
+
+    # Redis stream terminada (error o sin más subscriptores). Fallback a FS si el socket sigue abierto.
+    await _stream_job_progress_fs(websocket, job_id, snapshot)
+
+
 @app.get("/jobs/{job_id}")
 def get_job_status(
     job_id: str,
@@ -1655,16 +1871,7 @@ def get_job_status(
             "[/jobs/%s] job_status.json no encontrado; devolviendo estado pending.",
             job_id,
         )
-        return {
-            "jobId": job_id,
-            "job_id": job_id,
-            "status": "pending",
-            "stage_index": 0,
-            "total_stages": 0,
-            "stage_key": "queued",
-            "message": "Job pending in queue",
-            "progress": 0.0,
-        }
+        return _make_pending_status(job_id)
     logger.info(
         "[/jobs/%s] Estado leído de job_status.json: status=%s stage_index=%s/%s",
         job_id,

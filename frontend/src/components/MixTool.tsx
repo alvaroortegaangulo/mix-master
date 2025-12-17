@@ -8,6 +8,7 @@ import {
   fetchPipelineStages,
   type PipelineStage,
   type StemProfilePayload,
+  openJobStatusStream,
   cleanupTemp,
 } from "../lib/mixApi";
 import { getSongModeStages } from "../lib/mixUtils";
@@ -359,56 +360,114 @@ useEffect(() => {
   if (!activeJobId) return;
 
   let cancelled = false;
-  let consecutiveErrors = 0;
+  let finished = false;
+  let stopPolling: (() => void) | null = null;
+  let wsHandle: { close: () => void } | null = null;
+
   setLoading(true);
   setError(null);
 
-  const pollStatus = async () => {
-    while (!cancelled) {
-      try {
-        const status = await fetchJobStatus(activeJobId);
-        if (cancelled) break;
+  const applyStatus = (status: JobStatus) => {
+    if (cancelled) return;
+    setJobStatus(status);
+    setError(null);
 
-        setJobStatus(status);
-        consecutiveErrors = 0;
-        setError(null);
+    if (status.stageKey === "waiting_for_correction") {
+      finished = true;
+      setLoading(false);
+      wsHandle?.close();
+      window.location.href = `/studio/${activeJobId}`;
+      return;
+    }
 
-        if (status.status === "done") {
-          setLoading(false);
-          break;
-        }
+    if (status.status === "done") {
+      finished = true;
+      setLoading(false);
+      wsHandle?.close();
+      return;
+    }
 
-        if (status.status === "error") {
-          setError(status.error ?? "Error processing mix");
-          setLoading(false);
-          break;
-        }
+    if (status.status === "error") {
+      finished = true;
+      setError(status.error ?? "Error processing mix");
+      setLoading(false);
+      wsHandle?.close();
+      return;
+    }
 
-        if (status.stageKey === "waiting_for_correction") {
-          setLoading(false);
-          window.location.href = `/studio/${activeJobId}`;
-          return;
-        }
-      } catch (err: any) {
-        if (!cancelled) {
-          consecutiveErrors += 1;
-          setError(err.message ?? "Unknown error");
-          // Keep loading true so the UI still reflects an active job
-          setLoading(true);
-        }
-      }
-
-      const delayMs = consecutiveErrors > 0
-        ? Math.min(5000, 1000 * (consecutiveErrors + 1))
-        : 1000;
-      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    if (status.status === "queued" || status.status === "running") {
+      setLoading(true);
     }
   };
 
-  void pollStatus();
+  const startPolling = () => {
+    if (stopPolling) return;
+    let stopped = false;
+    let consecutiveErrors = 0;
+
+    const pollStatus = async () => {
+      while (!cancelled && !stopped && !finished) {
+        try {
+          const status = await fetchJobStatus(activeJobId);
+          if (cancelled || stopped) break;
+          applyStatus(status);
+          consecutiveErrors = 0;
+        } catch (err: any) {
+          if (!cancelled) {
+            consecutiveErrors += 1;
+            setError(err.message ?? "Unknown error");
+            setLoading(true);
+          }
+        }
+
+        const delayMs =
+          consecutiveErrors > 0
+            ? Math.min(5000, 1000 * (consecutiveErrors + 1))
+            : 1000;
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+      }
+    };
+
+    void pollStatus();
+    stopPolling = () => {
+      stopped = true;
+    };
+  };
+
+  wsHandle = openJobStatusStream(activeJobId, {
+    onOpen: () => setLoading(true),
+    onStatus: (status) => {
+      applyStatus(status);
+    },
+    onError: () => {
+      if (!cancelled && !finished) {
+        wsHandle?.close();
+        wsHandle = null;
+        startPolling();
+      }
+    },
+    onClose: () => {
+      if (!cancelled && !finished) {
+        startPolling();
+      }
+    },
+  });
+
+  if (!wsHandle) {
+    startPolling();
+  }
 
   return () => {
     cancelled = true;
+    finished = true;
+    if (stopPolling) {
+      stopPolling();
+      stopPolling = null;
+    }
+    if (wsHandle) {
+      wsHandle.close();
+      wsHandle = null;
+    }
   };
 }, [activeJobId]);
 
@@ -425,16 +484,16 @@ useEffect(() => {
     }
     void loadStages();
   }, []);
-
+  
   // Sync default stage selection with the current upload mode
   useEffect(() => {
     if (!availableStages.length) return;
-
+  
     const nextKeys =
       uploadMode === "song"
         ? songModeStageKeys
         : availableStages.map((s) => s.key);
-
+  
     setSelectedStageKeys(nextKeys);
   }, [availableStages, uploadMode, songModeStageKeys]);
 
@@ -981,3 +1040,4 @@ useEffect(() => {
     </div>
   );
 }
+
