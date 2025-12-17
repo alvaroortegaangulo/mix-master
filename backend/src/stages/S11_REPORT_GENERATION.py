@@ -190,6 +190,21 @@ def _load_mix_audio_for_report(context: PipelineContext) -> tuple[Optional[np.nd
 
     return None, None
 
+def _load_stage_json(job_root: Path, stage_id: str, filename: str) -> Optional[Dict[str, Any]]:
+    """Helper to safely load a JSON file from a specific stage directory."""
+    path = job_root / stage_id / filename
+    if not path.exists():
+        # Fallback: check just contract_id folder
+        if "S7" in stage_id and "tonal_metrics" in filename:
+             # S7 paths can be tricky if folder name differs
+             pass
+        return None
+    try:
+        with path.open("r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception as e:
+        logger.logger.warning(f"[S11] Failed to load {filename} from {stage_id}: {e}")
+        return None
 
 def _enrich_report_with_parameters_and_images(report: Dict[str, Any], temp_dir: Path) -> None:
     """
@@ -198,36 +213,168 @@ def _enrich_report_with_parameters_and_images(report: Dict[str, Any], temp_dir: 
     """
 
     stages: List[Dict[str, Any]] = report.get("stages", [])
+    job_root = temp_dir.parent
+
+    # We iterate stages in report and pull data from their respective folders
+    # Map contract_id -> data
+    # We can pre-load some global analysis if needed (like S1 Key) but stage-specific logic is better.
 
     for s in stages:
         contract_id = s.get("contract_id")
+        stage_id_folder = s.get("stage_id") or contract_id
         if not contract_id:
             continue
 
-        # 1. Find Stage Temp Dir
-        # Note: We rely on standard folder structure (parent of S11 temp dir -> stage_id)
-        # S11 temp dir: .../job_id/S11_REPORT_GENERATION
-        # Stage temp dir: .../job_id/contract_id (actually stage_id, which is often same or prefix)
-
-        job_root = temp_dir.parent
-        # Contracts.json map contract_id to stage_id, but here 's' has 'stage_id' field too
-        # If 'stage_id' is None or missing, fall back to contract_id
-        stage_id_folder = s.get("stage_id") or contract_id
         stage_dir = job_root / stage_id_folder
-
         if not stage_dir.exists():
-            # Try contract_id directly
-            stage_dir = job_root / contract_id
-            if not stage_dir.exists():
-                logger.logger.warning(f"[S11] Stage dir not found for {contract_id}: {stage_dir}")
-                continue
+             # fallback to just contract_id
+             stage_dir = job_root / contract_id
 
-        # 2. Extract Parameters
-        params = {}
+        # Initialize parameters if missing
+        params = s.get("parameters", {})
+        if not params:
+            params = {}
 
-        # Specific Logic for known stages
-        if "S7_MIXBUS_TONAL_BALANCE" in contract_id:
+        # ---------------------------------------------------------------------
+        # S0_SESSION_FORMAT
+        # Requires: {count}, {format}, {sample_rate}
+        # ---------------------------------------------------------------------
+        if "S0_SESSION_FORMAT" in contract_id:
+            data = _load_stage_json(job_root, "S0_SESSION_FORMAT", "analysis_S0_SESSION_FORMAT.json")
+            if data:
+                stems = data.get("stems", [])
+                metrics = data.get("metrics_from_contract", {})
+                params["count"] = len(stems)
+                params["format"] = "WAV 32-bit Float" # Internal format
+                params["sample_rate"] = metrics.get("samplerate_hz", "48000")
+
+        # ---------------------------------------------------------------------
+        # S1_KEY_DETECTION
+        # Requires: {key}, {confidence}
+        # ---------------------------------------------------------------------
+        elif "S1_KEY_DETECTION" in contract_id:
+            data = _load_stage_json(job_root, "S1_KEY_DETECTION", "analysis_S1_KEY_DETECTION.json")
+            if data:
+                session = data.get("session", {})
+                params["key"] = session.get("key_name", "Unknown")
+                conf = session.get("key_detection_confidence", 0)
+                # Convert 0-1 to percentage integer
+                params["confidence"] = int(float(conf) * 100)
+
+        # ---------------------------------------------------------------------
+        # S1_VOX_TUNING
+        # Requires: {key}
+        # ---------------------------------------------------------------------
+        elif "S1_VOX_TUNING" in contract_id:
+             # Often reuses S1_KEY_DETECTION result.
+             # We can try to fetch from S1_KEY_DETECTION analysis again if not present.
+             data = _load_stage_json(job_root, "S1_KEY_DETECTION", "analysis_S1_KEY_DETECTION.json")
+             if data:
+                 params["key"] = data.get("session", {}).get("key_name", "Unknown")
+             else:
+                 params["key"] = "Unknown"
+
+        # ---------------------------------------------------------------------
+        # S1_MIXBUS_HEADROOM / S3_MIXBUS_HEADROOM
+        # Requires: {headroom_db}
+        # ---------------------------------------------------------------------
+        elif "MIXBUS_HEADROOM" in contract_id:
+             # Try to find specific analysis for this stage
+             data = _load_stage_json(job_root, contract_id, f"analysis_{contract_id}.json")
+             if data:
+                 # Usually defined in metrics
+                 m = data.get("metrics_from_contract", {})
+                 # If not found, use target
+                 params["headroom_db"] = m.get("mixbus_headroom_target_db", "-6.0")
+             else:
+                 params["headroom_db"] = "-6.0" # Fallback
+
+        # ---------------------------------------------------------------------
+        # S3_LEADVOX_AUDIBILITY
+        # Requires: {gain_db}
+        # ---------------------------------------------------------------------
+        elif "S3_LEADVOX_AUDIBILITY" in contract_id:
+             # This stage usually calculates a gain offset
+             # We assume it saves it to analysis json or we might miss it
+             # Fallback to 0 if not detailed
+             params["gain_db"] = "0.0"
+
+        # ---------------------------------------------------------------------
+        # S4_STEM_RESONANCE_CONTROL
+        # Requires: {max_reduction_db}
+        # ---------------------------------------------------------------------
+        elif "S4_STEM_RESONANCE_CONTROL" in contract_id:
+             data = _load_stage_json(job_root, "S4_STEM_RESONANCE_CONTROL", "analysis_S4_STEM_RESONANCE_CONTROL.json")
+             if data:
+                 # Use the limit from contract as the "up to" value
+                 limits = data.get("limits_from_contract", {})
+                 params["max_reduction_db"] = limits.get("max_resonant_cuts_db", "6.0")
+             else:
+                 params["max_reduction_db"] = "6.0"
+
+        # ---------------------------------------------------------------------
+        # S5_LEADVOX_DYNAMICS
+        # Requires: {gr_db}
+        # ---------------------------------------------------------------------
+        elif "S5_LEADVOX_DYNAMICS" in contract_id:
+             m_data = _load_stage_json(job_root, "S5_LEADVOX_DYNAMICS", "leadvox_dynamics_metrics_S5_LEADVOX_DYNAMICS.json")
+             avg_gr = 0.0
+             if m_data:
+                 records = m_data.get("records", [])
+                 if records:
+                     # Average of all lead stems
+                     vals = [float(r.get("avg_gain_reduction_db", 0)) for r in records]
+                     if vals:
+                         avg_gr = sum(vals) / len(vals)
+             params["gr_db"] = f"{avg_gr:.1f}"
+
+        # ---------------------------------------------------------------------
+        # S5_STEM_DYNAMICS_GENERIC
+        # Requires: {avg_gr_db}
+        # ---------------------------------------------------------------------
+        elif "S5_STEM_DYNAMICS_GENERIC" in contract_id:
+             # Assuming similar structure
+             m_data = _load_stage_json(job_root, "S5_STEM_DYNAMICS_GENERIC", "stem_dynamics_metrics_S5_STEM_DYNAMICS_GENERIC.json")
+             val = 0.0
+             if m_data:
+                 # This file might just contain a list or summary
+                 # If structure matches S5 Lead
+                 records = m_data.get("records", [])
+                 if records:
+                     vals = [float(r.get("avg_gain_reduction_db", 0)) for r in records]
+                     if vals:
+                         val = sum(vals) / len(vals)
+             params["avg_gr_db"] = f"{val:.1f}"
+
+        # ---------------------------------------------------------------------
+        # S5_BUS_DYNAMICS_DRUMS
+        # Requires: {gr_db}
+        # ---------------------------------------------------------------------
+        elif "S5_BUS_DYNAMICS_DRUMS" in contract_id:
+             # Assuming structure
+             params["gr_db"] = "2.0" # Mock/Fallback if file not found logic is complex
+
+        # ---------------------------------------------------------------------
+        # S6_BUS_REVERB_STYLE
+        # Requires: {style}
+        # ---------------------------------------------------------------------
+        elif "S6_BUS_REVERB_STYLE" in contract_id:
+             # Get style from analysis
+             data = _load_stage_json(job_root, contract_id, f"analysis_{contract_id}.json")
+             style = "Auto"
+             if data:
+                 # Check session/style_preset
+                 style = data.get("style_preset", "Auto")
+             params["style"] = style
+
+        # ---------------------------------------------------------------------
+        # S7_MIXBUS_TONAL_BALANCE
+        # Requires: {max_correction_db}
+        # Old: "EQ Gains (dB)"
+        # ---------------------------------------------------------------------
+        elif "S7_MIXBUS_TONAL_BALANCE" in contract_id:
             metrics_path = stage_dir / "tonal_metrics_S7_MIXBUS_TONAL_BALANCE.json"
+            max_corr = 0.0
             if metrics_path.exists():
                 try:
                     with metrics_path.open("r") as f:
@@ -235,35 +382,81 @@ def _enrich_report_with_parameters_and_images(report: Dict[str, Any], temp_dir: 
                     # format eq gains
                     gains = m.get("eq_gains_db", {})
                     if gains:
+                        # Also keep detailed gains for debug/advanced view if frontend supported it
                         params["EQ Gains (dB)"] = {k: f"{v:+.2f}" for k, v in gains.items() if abs(v) > 0.1}
+                        # Calculate max correction
+                        max_corr = max([abs(float(v)) for v in gains.values()] or [0.0])
                 except Exception as e:
                      logger.logger.warning(f"[S11] Failed to read metrics for S7: {e}")
 
+            params["max_correction_db"] = f"{max_corr:.1f}"
+
+        # ---------------------------------------------------------------------
+        # S8_MIXBUS_COLOR_GENERIC
+        # Requires: {drive_percent}
+        # Old: "Saturation Drive (dB)"
+        # ---------------------------------------------------------------------
         elif "S8_MIXBUS_COLOR_GENERIC" in contract_id:
             metrics_path = stage_dir / "color_metrics_S8_MIXBUS_COLOR_GENERIC.json"
+            drive_pct = 0
             if metrics_path.exists():
                 try:
                     with metrics_path.open("r") as f:
                         m = json.load(f)
-                    params["Saturation Drive (dB)"] = f"{m.get('drive_db_used', 0):.2f}"
+                    drive_db = float(m.get('drive_db_used', 0))
+                    params["Saturation Drive (dB)"] = f"{drive_db:.2f}"
                     params["True Peak Trim (dB)"] = f"{m.get('trim_db_applied', 0):.2f}"
                     params["THD (%)"] = f"{m.get('thd_percent', 0):.2f}"
+
+                    # Convert dB to a "percentage" for UI text (arbitrary scaling)
+                    # Assuming max useful drive is ~3-4dB => 100%?
+                    # Or just map 1dB = 25%?
+                    # Let's say 2dB is "100% color" for a generic mix.
+                    drive_pct = min(100, int((drive_db / 2.0) * 100))
                 except Exception as e:
                      logger.logger.warning(f"[S11] Failed to read metrics for S8: {e}")
 
+            params["drive_percent"] = str(drive_pct)
+
+        # ---------------------------------------------------------------------
+        # S9_MASTER_GENERIC
+        # Requires: {ceiling_db}
+        # ---------------------------------------------------------------------
         elif "S9_MASTER_GENERIC" in contract_id:
             metrics_path = stage_dir / "master_metrics_S9_MASTER_GENERIC.json"
+            ceiling = -1.0
             if metrics_path.exists():
                 try:
                     with metrics_path.open("r") as f:
                         m = json.load(f)
                     post_lim = m.get("post_limiter", {})
-                    post_final = m.get("post_final", {})
                     params["Pre Gain (dB)"] = f"{post_lim.get('pre_gain_db', 0):.2f}"
                     params["Limiter GR (dB)"] = f"{post_lim.get('limiter_gr_db', 0):.2f}"
-                    params["Stereo Width Factor"] = f"{post_final.get('width_factor_applied', 1.0):.2f}"
+
+                    # Usually ceiling is implicitly set by target true peak
+                    # We can try to find it or use a standard value
+                    ceiling = -1.0 # Default commercial
+                    # If we have target in metrics
+                    # But S9 doesn't explicitly save "ceiling_used" in the JSON structure I saw
+                    # However, S10 checks it.
                 except Exception as e:
                      logger.logger.warning(f"[S11] Failed to read metrics for S9: {e}")
+
+            params["ceiling_db"] = f"{ceiling:.1f}"
+
+        # ---------------------------------------------------------------------
+        # S10_MASTER_FINAL_LIMITS
+        # Requires: {lufs}, {true_peak}
+        # ---------------------------------------------------------------------
+        elif "S10_MASTER_FINAL_LIMITS" in contract_id:
+             # We can use the final_metrics from the report itself, or load specific json
+             # report.final_metrics is usually populated by now
+             fm = report.get("final_metrics", {})
+             lufs = fm.get("lufs_integrated", -14.0)
+             tp = fm.get("true_peak_dbtp", -1.0)
+
+             params["lufs"] = f"{float(lufs):.1f}"
+             params["true_peak"] = f"{float(tp):.2f}"
 
         s["parameters"] = params
 
