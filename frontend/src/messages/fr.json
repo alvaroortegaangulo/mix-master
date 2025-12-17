@@ -1045,5 +1045,103 @@
     "loading": "Chargement de la définition du pipeline...",
     "error": "Erreur lors du chargement de la définition du pipeline.",
     "activeContract": "Contrat actif :"
+  },
+  "Report": {
+    "title": "Rapport de Mastering",
+    "downloadPdf": "Télécharger le PDF",
+    "generatingPdf": "Génération du PDF...",
+    "mixSummary": "Résumé du Mix",
+    "interactiveAnalysis": "Analyse Interactive",
+    "detailedStageReport": "Rapport Détaillé des Étapes",
+    "stages": {
+      "S0_SESSION_FORMAT": {
+        "title": "Entrée & Métadonnées",
+        "description": "Session initialisée avec {count} stems. Format vérifié comme {format}. Taux d'échantillonnage normalisé à {sample_rate}Hz pour un traitement cohérent."
+      },
+      "S0_SEPARATE_STEMS": {
+        "title": "Séparation des Stems",
+        "description": "Traitement des fichiers téléchargés pour préparer les stems individuels pour le mixage."
+      },
+      "S1_STEM_DC_OFFSET": {
+        "title": "Correction du Décalage DC",
+        "description": "Analyse des stems pour le bruit de décalage DC inaudible. Corrigé pour assurer une marge maximale."
+      },
+      "S1_KEY_DETECTION": {
+        "title": "Détection de Tonalité",
+        "description": "Tonalité globale détectée comme {key} avec {confidence}% de confiance."
+      },
+      "S1_VOX_TUNING": {
+        "title": "Accordage Vocal",
+        "description": "Correction de hauteur appliquée aux voix pour correspondre à la tonalité détectée de {key}."
+      },
+      "S1_MIXBUS_HEADROOM": {
+        "title": "Marge du Mixbus",
+        "description": "Marge du mixbus ajustée à {headroom_db}dB pour préparer le traitement."
+      },
+      "S1_STEM_WORKING_LOUDNESS": {
+        "title": "Intensité de Travail",
+        "description": "Niveaux de stem normalisés à une intensité de travail cohérente."
+      },
+      "S2_GROUP_PHASE_DRUMS": {
+        "title": "Alignement de Phase de Batterie",
+        "description": "Phase alignée pour les pistes de groupe de batterie afin d'améliorer l'impact et la clarté des basses."
+      },
+      "S3_MIXBUS_HEADROOM": {
+        "title": "Vérification de la Marge du Mixbus",
+        "description": "Marge re-vérifiée à {headroom_db}dB."
+      },
+      "S3_LEADVOX_AUDIBILITY": {
+        "title": "Équilibre de la Voix Principale",
+        "description": "Niveau de voix principale équilibré par {gain_db}dB pour une audibilité optimale contre le mix."
+      },
+      "S4_STEM_HPF_LPF": {
+        "title": "Nettoyage Spectral",
+        "description": "Filtres passe-haut/passe-bas appliqués pour nettoyer le spectre de fréquences."
+      },
+      "S4_STEM_RESONANCE_CONTROL": {
+        "title": "Contrôle de Résonance",
+        "description": "Résonances dures supprimées, réduisant les pics jusqu'à {max_reduction_db}dB."
+      },
+      "S5_STEM_DYNAMICS_GENERIC": {
+        "title": "Dynamique des Stems",
+        "description": "Contrôle dynamique appliqué aux stems. Réduction de gain moyenne : {avg_gr_db}dB."
+      },
+      "S5_LEADVOX_DYNAMICS": {
+        "title": "Dynamique Vocale",
+        "description": "Dynamique vocale contrôlée avec {gr_db}dB de réduction de gain pour une performance cohérente."
+      },
+      "S5_BUS_DYNAMICS_DRUMS": {
+        "title": "Compression du Bus Batterie",
+        "description": "Compression 'glue' appliquée au bus batterie. Réduction de gain : {gr_db}dB."
+      },
+      "S6_BUS_REVERB_STYLE": {
+        "title": "Profondeur Spatiale",
+        "description": "Profondeur spatiale améliorée en utilisant le style de réverbération '{style}' pour les bus."
+      },
+      "S7_MIXBUS_TONAL_BALANCE": {
+        "title": "Équilibre Tonal",
+        "description": "Spectre du mixbus équilibré. Correction maximale appliquée : {max_correction_db}dB."
+      },
+      "S8_MIXBUS_COLOR_GENERIC": {
+        "title": "Saturation du Mixbus",
+        "description": "Saturation harmonique ajoutée au mixbus. Quantité de drive : {drive_percent}%."
+      },
+      "S9_MASTER_GENERIC": {
+        "title": "Limiteur de Mastering",
+        "description": "Limitation finale appliquée avec un plafond de {ceiling_db}dB pour une intensité commerciale."
+      },
+      "S10_MASTER_FINAL_LIMITS": {
+        "title": "Contrôle Qualité Final",
+        "description": "Standards vérifiés. Intensité intégrée : {lufs} LUFS, True Peak : {true_peak} dBTP."
+      },
+      "S11_REPORT_GENERATION": {
+        "title": "Génération de Rapport",
+        "description": "Ce rapport d'analyse a été généré."
+      },
+      "S13_MANUAL_CORRECTION": {
+        "title": "Correction Manuelle",
+        "description": "Ajustements manuels appliqués basés sur les retours utilisateur dans Piroola Studio."
+      }
+    }
   }
 }

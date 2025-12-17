@@ -1045,5 +1045,103 @@
     "loading": "正在加载管道定义...",
     "error": "加载管道定义时出错。",
     "activeContract": "活动合同："
+  },
+  "Report": {
+    "title": "母带处理报告",
+    "downloadPdf": "下载 PDF",
+    "generatingPdf": "正在生成 PDF...",
+    "mixSummary": "混音摘要",
+    "interactiveAnalysis": "交互式分析",
+    "detailedStageReport": "详细阶段报告",
+    "stages": {
+      "S0_SESSION_FORMAT": {
+        "title": "输入与元数据",
+        "description": "会话初始化包含 {count} 个分轨。格式验证为 {format}。采样率标准化为 {sample_rate}Hz 以确保处理一致性。"
+      },
+      "S0_SEPARATE_STEMS": {
+        "title": "分轨分离",
+        "description": "处理上传的文件以准备用于混音的单独分轨。"
+      },
+      "S1_STEM_DC_OFFSET": {
+        "title": "直流偏移校正",
+        "description": "分析分轨中的不可听直流偏移噪声。已校正以确保最大动态余量。"
+      },
+      "S1_KEY_DETECTION": {
+        "title": "调性检测",
+        "description": "检测到全局调性为 {key}，置信度为 {confidence}%。"
+      },
+      "S1_VOX_TUNING": {
+        "title": "人声调音",
+        "description": "对人声应用音高修正以匹配检测到的调性 {key}。"
+      },
+      "S1_MIXBUS_HEADROOM": {
+        "title": "总线动态余量",
+        "description": "调整总线动态余量至 {headroom_db}dB 以准备处理。"
+      },
+      "S1_STEM_WORKING_LOUDNESS": {
+        "title": "工作响度",
+        "description": "将分轨电平标准化为一致的工作响度。"
+      },
+      "S2_GROUP_PHASE_DRUMS": {
+        "title": "鼓组相位对齐",
+        "description": "对齐鼓组音轨的相位以提高冲击力和低频清晰度。"
+      },
+      "S3_MIXBUS_HEADROOM": {
+        "title": "总线动态余量检查",
+        "description": "重新验证动态余量为 {headroom_db}dB。"
+      },
+      "S3_LEADVOX_AUDIBILITY": {
+        "title": "主唱平衡",
+        "description": "平衡主唱电平 {gain_db}dB，以获得相对于混音的最佳听感。"
+      },
+      "S4_STEM_HPF_LPF": {
+        "title": "频谱清理",
+        "description": "应用高通/低通滤波器以清理频谱。"
+      },
+      "S4_STEM_RESONANCE_CONTROL": {
+        "title": "共振控制",
+        "description": "抑制刺耳的共振，峰值降低高达 {max_reduction_db}dB。"
+      },
+      "S5_STEM_DYNAMICS_GENERIC": {
+        "title": "分轨动态",
+        "description": "对分轨应用动态控制。平均增益衰减：{avg_gr_db}dB。"
+      },
+      "S5_LEADVOX_DYNAMICS": {
+        "title": "人声动态",
+        "description": "以 {gr_db}dB 的增益衰减控制人声动态，以获得一致的表现。"
+      },
+      "S5_BUS_DYNAMICS_DRUMS": {
+        "title": "鼓组总线压缩",
+        "description": "对鼓组总线应用胶水压缩。增益衰减：{gr_db}dB。"
+      },
+      "S6_BUS_REVERB_STYLE": {
+        "title": "空间深度",
+        "description": "使用 '{style}' 混响风格增强总线的空间深度。"
+      },
+      "S7_MIXBUS_TONAL_BALANCE": {
+        "title": "音调平衡",
+        "description": "平衡总线频谱。应用的最大修正：{max_correction_db}dB。"
+      },
+      "S8_MIXBUS_COLOR_GENERIC": {
+        "title": "总线饱和度",
+        "description": "向总线添加谐波饱和。驱动量：{drive_percent}%。"
+      },
+      "S9_MASTER_GENERIC": {
+        "title": "母带限制器",
+        "description": "应用最终限制，上限为 {ceiling_db}dB，以达到商业响度。"
+      },
+      "S10_MASTER_FINAL_LIMITS": {
+        "title": "最终质量控制",
+        "description": "验证标准。综合响度：{lufs} LUFS，真峰值：{true_peak} dBTP。"
+      },
+      "S11_REPORT_GENERATION": {
+        "title": "报告生成",
+        "description": "生成了此分析报告。"
+      },
+      "S13_MANUAL_CORRECTION": {
+        "title": "手动校正",
+        "description": "根据用户在 Piroola Studio 中的反馈应用了手动调整。"
+      }
+    }
   }
 }
