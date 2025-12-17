@@ -337,6 +337,15 @@ def run_stage(stage_id: str, context: Optional[PipelineContext] = None) -> None:
     if pre_analysis and post_analysis:
         logger.print_comparison(pre_analysis, post_analysis)
 
+        # Save comparison diff to JSON for S11 reporting
+        try:
+            diff_data = compute_analysis_diff(pre_analysis, post_analysis)
+            comp_path = stage_dir / f"comparison_{stage_id}.json"
+            with comp_path.open("w", encoding="utf-8") as f:
+                json.dump(diff_data, f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            logger.logger.warning(f"[stage] Failed to save comparison_{stage_id}.json: {e}")
+
     # 4) Validación (Legacy args: stage_id)
     logger.logger.info("") # Blank line
     logger.print_section("Metrics Limits Check", color="\033[36m")
