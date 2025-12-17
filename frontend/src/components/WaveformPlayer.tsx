@@ -466,7 +466,7 @@ export const WaveformPlayer: React.FC<WaveformPlayerProps> = ({
             cancelAnimationFrame(requestRef.current);
         }
     };
-  }, [isPlaying, drawSpectrum, drawStaticWaveform]);
+  }, [isPlaying, compareSrc, drawSpectrum, drawStaticWaveform]);
 
   // Re-draw static when stopped and state changes
   useEffect(() => {
@@ -481,21 +481,29 @@ export const WaveformPlayer: React.FC<WaveformPlayerProps> = ({
      if (ctx && mainGainRef.current) {
          const now = ctx.currentTime;
          // Crossfade duration very short (instant but no pop)
-         const ramp = 0.05;
+         const rampTime = now + 0.05;
+
+         // Ensure we cancel any scheduled changes to avoid conflicts
+         mainGainRef.current.gain.cancelScheduledValues(now);
+         mainGainRef.current.gain.setValueAtTime(mainGainRef.current.gain.value, now);
 
          if (isCompareActive) {
-             mainGainRef.current.gain.setTargetAtTime(0, now, ramp);
+             mainGainRef.current.gain.linearRampToValueAtTime(0, rampTime);
              if (compareGainRef.current) {
-                 compareGainRef.current.gain.setTargetAtTime(1, now, ramp);
+                 compareGainRef.current.gain.cancelScheduledValues(now);
+                 compareGainRef.current.gain.setValueAtTime(compareGainRef.current.gain.value, now);
+                 compareGainRef.current.gain.linearRampToValueAtTime(1, rampTime);
              }
          } else {
-             mainGainRef.current.gain.setTargetAtTime(1, now, ramp);
+             mainGainRef.current.gain.linearRampToValueAtTime(1, rampTime);
              if (compareGainRef.current) {
-                 compareGainRef.current.gain.setTargetAtTime(0, now, ramp);
+                 compareGainRef.current.gain.cancelScheduledValues(now);
+                 compareGainRef.current.gain.setValueAtTime(compareGainRef.current.gain.value, now);
+                 compareGainRef.current.gain.linearRampToValueAtTime(0, rampTime);
              }
          }
      }
-  }, [isCompareActive, compareSrc]); // Re-run if compare active toggles
+  }, [isCompareActive, compareSrc, isPlaying]); // Added isPlaying to ensure gains are applied on play start
 
 
   // ------------------------------------------------------------
