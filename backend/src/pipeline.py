@@ -431,7 +431,17 @@ def run_pipeline_for_job(
         contract_ids = all_contract_ids
 
     total_stages = len(contract_ids)
-    effective_total_stages = resume_total_stages or (resume_stage_index_offset + total_stages)
+    # Calcular el índice final al que llegaremos
+    final_stage_index = resume_stage_index_offset + total_stages
+
+    # Usar el total previo si existe, o el calculado
+    effective_total_stages = resume_total_stages or final_stage_index
+
+    # Corrección de seguridad: si el total efectivo es menor que el índice final,
+    # lo ampliamos para evitar porcentajes > 100%.
+    if effective_total_stages < final_stage_index:
+        effective_total_stages = final_stage_index
+
     if effective_total_stages == 0:
         effective_total_stages = total_stages
 
