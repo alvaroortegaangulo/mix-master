@@ -18,7 +18,7 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
                {/* Image Placeholder */}
                <div className="w-full aspect-video rounded-2xl bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 flex items-center justify-center relative shadow-2xl overflow-hidden group">
                   <LazyVideo
-                    src="/master_interface.mp4"
+                    src="/master_interface.webm"
                     className="w-full h-full object-cover"
                   />
                </div>
@@ -69,7 +69,7 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
                {/* Image Placeholder */}
                <div className="w-full aspect-video rounded-2xl bg-gradient-to-br from-purple-900/20 to-slate-900 border border-slate-700 flex items-center justify-center relative shadow-2xl overflow-hidden">
                   <LazyVideo
-                    src="/spectral_analysis.mp4"
+                    src="/spectral_analysis.webm"
                     className="w-full h-full object-cover"
                   />
                </div>
