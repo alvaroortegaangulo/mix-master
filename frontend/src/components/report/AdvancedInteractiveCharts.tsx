@@ -40,7 +40,7 @@ export interface DynamicsData {
 
 export interface StereoData {
   correlation: number[];
-  width: number[];
+  width?: number[];
   time: number[];
 }
 
@@ -49,11 +49,17 @@ export interface SpectrogramData {
   freqs: number[];
 }
 
+export interface TonalData {
+    spectrum: number[];
+    freqs: number[];
+}
+
 export interface AnalysisData {
   loudness?: LoudnessData;
   dynamics?: DynamicsData;
   stereo?: StereoData;
   spectrogram?: SpectrogramData;
+  tonal?: TonalData;
 }
 
 export interface AdvancedChartsProps {
@@ -295,6 +301,8 @@ const StereoChart = ({
       timeLabel: formatTime(t),
       corr_res: data.correlation[i] ?? 0,
       corr_orig: original?.correlation[i] ?? 0,
+      width_res: data.width?.[i] ?? 0,
+      width_orig: original?.width?.[i] ?? 0,
     }));
 
     return (
@@ -314,11 +322,11 @@ const StereoChart = ({
           />
           <Tooltip
               contentStyle={{ backgroundColor: "#0f172a", borderColor: "#334155", color: "#f8fafc" }}
-              formatter={(val?: number) => {
+              formatter={(val?: number, name: string) => {
                 if (typeof val !== "number" || Number.isNaN(val)) {
-                  return ["N/A", "Corr"];
+                  return ["N/A", name];
                 }
-                return [val.toFixed(2), "Corr"];
+                return [val.toFixed(2), name];
               }}
           />
           {expanded && <Legend />}
@@ -333,7 +341,7 @@ const StereoChart = ({
               strokeWidth={1}
               strokeDasharray="4 4"
               dot={false}
-              name="Original"
+              name="Correlation (Orig)"
             />
           )}
 
@@ -343,8 +351,33 @@ const StereoChart = ({
             stroke="#3b82f6"
             strokeWidth={2}
             dot={false}
-            name="Result"
+            name="Correlation (Res)"
           />
+           {/* Width lines - only if present */}
+           {expanded && (
+             <>
+               {original && (
+                   <Line
+                   type="monotone"
+                   dataKey="width_orig"
+                   stroke="#94a3b8"
+                   strokeWidth={1}
+                   strokeDasharray="2 2"
+                   dot={false}
+                   name="Width (Orig)"
+                   />
+               )}
+                <Line
+                   type="monotone"
+                   dataKey="width_res"
+                   stroke="#ec4899"
+                   strokeWidth={2}
+                   strokeDasharray="2 2"
+                   dot={false}
+                   name="Width (Res)"
+                />
+             </>
+           )}
         </LineChart>
       </ResponsiveContainer>
     );
@@ -416,6 +449,88 @@ const SpectrogramCanvas = ({
     );
 }
 
+// 5. Tonal Balance (Spectrum)
+const SpectrumChart = ({
+    data,
+    original,
+    expanded,
+  }: {
+    data: TonalData;
+    original?: TonalData;
+    expanded?: boolean;
+  }) => {
+    // data.spectrum is array of db values.
+    // data.freqs is array of freq values.
+    const chartData = data.spectrum.map((val, i) => ({
+      freq: data.freqs[i],
+      val_res: val,
+      val_orig: original?.spectrum[i] ?? -80
+    }));
+
+    return (
+      <ResponsiveContainer width="100%" height="100%">
+        <AreaChart data={chartData}>
+            <defs>
+                <linearGradient id="gradSpec" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.4}/>
+                    <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
+                </linearGradient>
+            </defs>
+          <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
+          <XAxis
+            dataKey="freq"
+            type="number"
+            scale="log"
+            domain={['auto', 'auto']}
+            stroke="#64748b"
+            tick={{ fill: "#64748b", fontSize: 10 }}
+            tickFormatter={(val) => val >= 1000 ? `${(val/1000).toFixed(1)}k` : `${val}`}
+            allowDataOverflow
+          />
+          <YAxis
+            stroke="#64748b"
+            tick={{ fill: "#64748b", fontSize: 10 }}
+            domain={[-80, 0]}
+            allowDataOverflow={false}
+          />
+          <Tooltip
+              contentStyle={{ backgroundColor: "#0f172a", borderColor: "#334155", color: "#f8fafc" }}
+              labelFormatter={(label) => `${Number(label).toFixed(0)} Hz`}
+              formatter={(val?: number) => {
+                if (typeof val !== "number" || Number.isNaN(val)) {
+                  return ["N/A", "dB"];
+                }
+                return [`${val.toFixed(1)} dB`, ""];
+              }}
+          />
+          {expanded && <Legend />}
+
+          {original && (
+             <Area
+             type="monotone"
+             dataKey="val_orig"
+             stroke="#64748b"
+             fill="transparent"
+             strokeDasharray="4 4"
+             strokeWidth={1}
+             name="Original"
+           />
+          )}
+
+          <Area
+            type="monotone"
+            dataKey="val_res"
+            stroke="#8b5cf6"
+            fill="url(#gradSpec)"
+            strokeWidth={2}
+            name="Result"
+          />
+        </AreaChart>
+      </ResponsiveContainer>
+    );
+  };
+
+
 // --- Main Component ---
 
 export const AdvancedInteractiveCharts: React.FC<AdvancedChartsProps> = ({
@@ -454,8 +569,14 @@ export const AdvancedInteractiveCharts: React.FC<AdvancedChartsProps> = ({
         component: <SpectrogramCanvas data={result.spectrogram!} />,
         expandedComponent: <SpectrogramCanvas data={result.spectrogram!} expanded />,
         hasData: !!result.spectrogram
+    },
+    {
+        id: "tonal",
+        title: "Tonal Balance (Avg Spectrum)",
+        component: <SpectrumChart data={result.tonal!} original={original?.tonal} />,
+        expandedComponent: <SpectrumChart data={result.tonal!} original={original?.tonal} expanded />,
+        hasData: !!result.tonal
     }
-    // Add more here (Tonal, Width, etc.)
   ];
 
   const activeModal = charts.find(c => c.id === modalChart);
