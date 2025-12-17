@@ -190,8 +190,8 @@ async def _unhandled_exception_handler(request: Request, exc: Exception):
 PROJECT_ROOT = Path(__file__).resolve().parent  # .../backend
 SRC_DIR = PROJECT_ROOT / "src"
 CONTRACTS_PATH = SRC_DIR / "struct" / "contracts.json"
-JOBS_ROOT = PROJECT_ROOT / "temp"
-MEDIA_ROOT = PROJECT_ROOT / "media"
+JOBS_ROOT = Path(os.environ.get("MIX_TEMP_ROOT", PROJECT_ROOT / "temp"))
+MEDIA_ROOT = Path(os.environ.get("MIX_MEDIA_ROOT", PROJECT_ROOT / "media"))
 
 JOBS_ROOT.mkdir(parents=True, exist_ok=True)
 MEDIA_ROOT.mkdir(parents=True, exist_ok=True)
