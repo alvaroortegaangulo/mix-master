@@ -349,7 +349,20 @@
       "finalReport": "Final Mix Report",
       "close": "Close",
       "retry": "Retry loading report",
-      "unavailable": "Report data is not available."
+      "unavailable": "Report data is not available.",
+      "share": "Share Mix",
+      "shareMix": "Share Your Mix",
+      "shareMixDesc": "Copy the link below to share this mix with clients or friends. The link provides read-only access to listen to the result.",
+      "copy": "Copy"
+    },
+    "share": {
+      "invalidLink": "Invalid or expired link.",
+      "notFound": "Shared mix not found.",
+      "sharedMixTitle": "Shared AI Mix",
+      "sharedMixDesc": "Listen to this track mixed and mastered by Piroola AI.",
+      "aiMix": "AI Mix & Master",
+      "originalMix": "Original Mix (Reference)",
+      "createYourOwn": "Create your own mix with Piroola"
     }
   },
   "Studio": {

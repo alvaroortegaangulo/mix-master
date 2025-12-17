@@ -212,6 +212,41 @@ export async function signFileUrl(jobId: string, filePath: string, token?: strin
   }
 }
 
+export async function createShareLink(jobId: string): Promise<string> {
+  const baseUrl = getBackendBaseUrl();
+  const res = await fetch(`${baseUrl}/jobs/${jobId}/share`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeaders(),
+    },
+  });
+
+  if (!res.ok) {
+    throw new Error("Failed to create share link");
+  }
+
+  const data = await res.json();
+  return data.token;
+}
+
+export async function getSharedJob(token: string): Promise<any> {
+  const baseUrl = getBackendBaseUrl();
+  // Public endpoint
+  const res = await fetch(`${baseUrl}/share/${token}`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (!res.ok) {
+    throw new Error("Failed to fetch shared job");
+  }
+
+  return res.json();
+}
+
 /**
  * Mapea el JSON crudo que devuelve el backend (Celery) al JobStatus
  * que usa tu frontend (queued/running/done/error, camelCase, etc.).

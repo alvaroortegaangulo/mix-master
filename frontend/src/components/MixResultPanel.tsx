@@ -30,6 +30,9 @@ export function MixResultPanel({
   const [report, setReport] = useState<any>(null);
   const [loadingReport, setLoadingReport] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [shareLink, setShareLink] = useState("");
+  const [loadingShare, setLoadingShare] = useState(false);
   const t = useTranslations('MixTool.result');
 
   const { originalFullSongUrl, fullSongUrl, jobId } = result;
@@ -111,6 +114,25 @@ export function MixResultPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [jobId]);
 
+  const handleShare = async () => {
+    setLoadingShare(true);
+    try {
+       const { createShareLink } = await import("../lib/mixApi");
+       const token = await createShareLink(jobId);
+       const link = `${window.location.origin}/share/${token}`;
+       setShareLink(link);
+       setIsShareModalOpen(true);
+    } catch (e) {
+       console.error("Share error", e);
+    } finally {
+       setLoadingShare(false);
+    }
+  };
+
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(shareLink);
+  };
+
   return (
     <section className="mt-6 rounded-3xl border border-emerald-500/40 bg-emerald-500/10 p-6 text-emerald-50 shadow-lg shadow-emerald-500/20">
 
@@ -154,6 +176,60 @@ export function MixResultPanel({
         result={result}
         enabledPipelineStageKeys={enabledPipelineStageKeys}
       />
+
+      {/* Share Button (Below and to the right) */}
+      <div className="mt-4 flex justify-end">
+        <button
+           onClick={handleShare}
+           className="flex items-center gap-2 rounded-full bg-emerald-600 px-5 py-2 text-sm font-bold text-white transition hover:bg-emerald-500 shadow-lg shadow-emerald-900/40"
+           disabled={loadingShare}
+        >
+           {loadingShare ? (
+             <span className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent"></span>
+           ) : (
+             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+               <path d="M15 8a3 3 0 10-2.977-2.63l-4.94 2.47a3 3 0 100 4.319l4.94 2.47a3 3 0 10.895-1.789l-4.94-2.47a3.027 3.027 0 000-.74l4.94-2.47C13.456 7.68 14.19 8 15 8z" />
+             </svg>
+           )}
+           <span>{t('share')}</span>
+        </button>
+      </div>
+
+      {/* Share Modal */}
+      {isShareModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+           <div className="w-full max-w-md rounded-2xl border border-emerald-500/30 bg-slate-950 p-6 shadow-2xl">
+              <h3 className="text-xl font-bold text-emerald-100 mb-2">{t('shareMix')}</h3>
+              <p className="text-sm text-emerald-200/60 mb-4">{t('shareMixDesc')}</p>
+
+              <div className="mb-4 flex gap-2">
+                 <input
+                   type="text"
+                   value={shareLink}
+                   readOnly
+                   className="flex-1 rounded-lg border border-emerald-500/20 bg-slate-900 px-3 py-2 text-sm text-emerald-100 focus:outline-none"
+                 />
+                 <button
+                   onClick={copyToClipboard}
+                   className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500"
+                 >
+                   {t('copy')}
+                 </button>
+              </div>
+
+              <div className="flex gap-4 justify-center py-2">
+                  <a href={`https://wa.me/?text=${encodeURIComponent(shareLink)}`} target="_blank" rel="noopener noreferrer" className="text-emerald-400 hover:text-emerald-300">WhatsApp</a>
+                  <a href={`mailto:?body=${encodeURIComponent(shareLink)}`} className="text-emerald-400 hover:text-emerald-300">Email</a>
+                  <a href={`https://twitter.com/intent/tweet?url=${encodeURIComponent(shareLink)}`} target="_blank" rel="noopener noreferrer" className="text-emerald-400 hover:text-emerald-300">X / Twitter</a>
+                  <a href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareLink)}`} target="_blank" rel="noopener noreferrer" className="text-emerald-400 hover:text-emerald-300">Facebook</a>
+              </div>
+
+              <div className="mt-4 flex justify-end">
+                 <button onClick={() => setIsShareModalOpen(false)} className="text-sm text-slate-400 hover:text-white">Close</button>
+              </div>
+           </div>
+        </div>
+      )}
 
       {/* Report Modal */}
       {isReportOpen && (
