@@ -28,6 +28,7 @@ except ImportError:
     PipelineContext = None
 
 from utils.plot_utils import generate_comparison_data
+from utils.diff_utils import compute_analysis_diff
 
 
 
