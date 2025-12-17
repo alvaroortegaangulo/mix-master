@@ -978,5 +978,72 @@
         "content": "If you have any questions about this cookie policy, please contact us at: <br /><span class='text-teal-400'>privacy@audioalchemy.com</span>"
       }
     }
+  },
+  "UploadDropzone": {
+    "uploadSong": "上传您的歌曲",
+    "uploadStems": "上传您的分轨",
+    "songModeDesc": "母带处理单个立体声音频。",
+    "stemsModeDesc": "上传单独的轨道以进行完整的 AI 混音。",
+    "dragDropSong": "将您的歌曲拖放到此处，或点击选择文件",
+    "dragDropStems": "将分轨拖放到此处，或点击选择文件",
+    "supportedFormats": "支持的格式：WAV",
+    "filesSelected": "已选择 {count} 个音频文件"
+  },
+  "PipelinePhases": {
+    "inputMetadata": {
+      "title": "输入与元数据",
+      "body": "我们通过整理所有上传的文件并标准化格式、采样率和基本元数据来准备您的会话，以便管道的其余部分可以一致地工作。"
+    },
+    "technicalPreparation": {
+      "title": "技术准备",
+      "body": "我们修复每个分轨上的基本技术问题：直流偏移、工作响度和初始动态余量，以确保混音有一个干净、可靠的起点。"
+    },
+    "phasePolarityAlignment": {
+      "title": "相位与极性对齐",
+      "body": "我们分析多麦克风组（如鼓）以对齐相位并校正极性，避免抵消并恢复低频的冲击力和清晰度。"
+    },
+    "staticMixRouting": {
+      "title": "静态混音与路由",
+      "body": "我们建立静态平衡和总线路由，设置推子和声像位置，以便在进行任何重度处理之前都能清晰地听到所有元素。"
+    },
+    "spectralCleanup": {
+      "title": "频谱清理",
+      "body": "我们使用高通滤波器和温和的陷波滤波器清理每个分轨，以去除隆隆声和刺耳的共振，从而在混音中腾出空间。"
+    },
+    "dynamicsLevelAutomation": {
+      "title": "动态与电平自动化",
+      "body": "我们使用压缩、限制和电平自动化来控制动态，保持演奏的表现力，但防止峰值从混音中跳出。"
+    },
+    "spaceDepthByBuses": {
+      "title": "总线空间与深度",
+      "body": "我们将乐器发送到专用的混响和氛围总线，将它们放置在声场的近处或远处，以创造深度和空间感。"
+    },
+    "multibandEqTonalBalance": {
+      "title": "多段 EQ 与音调平衡",
+      "body": "我们微调整体频谱平衡，使混音听起来自然，并在不同的播放系统中表现良好。"
+    },
+    "mixBusColor": {
+      "title": "混音总线色彩",
+      "body": "我们添加温和的饱和度和总线处理将混音粘合在一起，在不破坏动态的情况下增强温暖感、冲击力和感知响度。"
+    },
+    "mastering": {
+      "title": "母带处理",
+      "body": "我们将轨道提升到目标响度，调整最终的 EQ、立体声宽度和限制，使其准备好在流媒体平台上发布。"
+    },
+    "masterStereoQc": {
+      "title": "母带立体声 QC",
+      "body": "我们运行最终质量检查（真峰值、响度、立体声图像和平衡），以确保母带符合技术目标。"
+    },
+    "reporting": {
+      "title": "报告",
+      "body": "我们生成技术报告并导出最终母带，以便您可以查看管道每个阶段所做的工作。"
+    }
+  },
+  "MixPipelinePanel": {
+    "title": "管道",
+    "description": "通过聆听每个主要处理块后的累积结果，探索混音在每个阶段的演变。",
+    "loading": "正在加载管道定义...",
+    "error": "加载管道定义时出错。",
+    "activeContract": "活动合约："
   }
 }
