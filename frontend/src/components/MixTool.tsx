@@ -670,7 +670,7 @@ useEffect(() => {
 
       // Ocultar a la vez Pipeline steps + Select stems profile
       setStemProfiles([]);
-      setShowStageSelector(false);
+      // setShowStageSelector(false); // Mantener visible pero deshabilitado
       setSpaceBusStyles({});
 
       const { jobId } = await startMixJob(
@@ -768,8 +768,7 @@ useEffect(() => {
 
     const isProcessing =
     loading ||
-    (jobStatus &&
-      (jobStatus.status === "queued" || jobStatus.status === "running"));
+    (jobStatus?.status === "queued" || jobStatus?.status === "running");
 
 
   return (
@@ -891,14 +890,24 @@ useEffect(() => {
                             <button
                               type="button"
                               onClick={selectAllStages}
-                              className="rounded-full bg-amber-600/80 px-2.5 py-1 text-[11px] text-amber-50 hover:bg-amber-500"
+                              disabled={isProcessing}
+                              className={`rounded-full px-2.5 py-1 text-[11px] text-amber-50 ${
+                                isProcessing
+                                  ? "cursor-not-allowed bg-amber-600/40 opacity-70"
+                                  : "bg-amber-600/80 hover:bg-amber-500"
+                              }`}
                             >
                               {t('all')}
                             </button>
                             <button
                               type="button"
                               onClick={clearStages}
-                              className="rounded-full bg-amber-600/80 px-2.5 py-1 text-[11px] text-amber-50 hover:bg-amber-500"
+                              disabled={isProcessing}
+                              className={`rounded-full px-2.5 py-1 text-[11px] text-amber-50 ${
+                                isProcessing
+                                  ? "cursor-not-allowed bg-amber-600/40 opacity-70"
+                                  : "bg-amber-600/80 hover:bg-amber-500"
+                              }`}
                             >
                               {t('none')}
                             </button>
@@ -922,12 +931,13 @@ useEffect(() => {
                                     const isDisabledForSong =
                                       isSongMode &&
                                       !songModeStageKeys.includes(stage.key);
+                                    const isDisabled = isDisabledForSong || isProcessing;
                                     return (
                                     <label
                                       key={stage.key}
                                       className={[
                                         "flex items-start gap-2 rounded-lg bg-slate-950/70 px-3 py-2 text-xs text-amber-50",
-                                        isDisabledForSong
+                                        isDisabled
                                           ? "cursor-not-allowed opacity-60"
                                           : "cursor-pointer hover:bg-slate-900",
                                       ].join(" ")}
@@ -939,7 +949,7 @@ useEffect(() => {
                                           stage.key,
                                         )}
                                         onChange={() => toggleStage(stage.key)}
-                                        disabled={isDisabledForSong}
+                                        disabled={isDisabled}
                                       />
                                       <div>
                                         <span className="font-semibold">
