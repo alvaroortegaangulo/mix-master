@@ -27,8 +27,7 @@ except ImportError:
         print("[stage] Warning: Could not import PipelineContext from context")
     PipelineContext = None
 
-from utils.plot_utils import generate_comparison_plots
-from utils.diff_utils import compute_analysis_diff
+from utils.plot_utils import generate_comparison_data
 
 
 
@@ -317,12 +316,12 @@ def run_stage(stage_id: str, context: Optional[PipelineContext] = None) -> None:
     # 2) Procesamiento principal (Legacy args: stage_id)
     _run_script(stage_script, context, stage_id)
 
-    # Generate plots when pre-stage audio is available
+    # Generate comparison data when pre-stage audio is available
     if pre_audio_path and pre_audio_path.exists():
         post_audio_path = stage_dir / "full_song.wav"
         if post_audio_path.exists():
-             generate_comparison_plots(pre_audio_path, post_audio_path, stage_dir, stage_id)
-             # S11 reads the images left in the stage folder.
+             generate_comparison_data(pre_audio_path, post_audio_path, stage_dir, stage_id)
+             # S11 reads the json left in the stage folder.
 
         # Cleanup pre file
         try:

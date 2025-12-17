@@ -42,6 +42,10 @@ interface StageReport {
     spectrogram?: string;
   };
   key_metrics?: any;
+  interactive_comparison?: {
+    pre: InteractiveChartsData;
+    post: InteractiveChartsData;
+  };
 }
 
 interface InteractiveChartsData {
@@ -178,44 +182,257 @@ const ReportStageCard = ({
         </div>
       </div>
 
-      {/* Images Grid */}
-      {hasImages && (
+      {/* Images Grid (Legacy / Fallback) - Spectrogram removed per request */}
+      {hasImages && images.waveform && !stage.interactive_comparison && (
         <div className="mt-6 space-y-6">
-          {images.waveform && (
-            <div className="space-y-2">
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-wide">
-                Waveform Comparison
-              </p>
-              <div className="rounded border border-emerald-500/20 bg-black/40 p-1">
-                <img
-                  src={waveformUrl}
-                  alt="Waveform"
-                  className="w-full h-auto object-cover opacity-90"
-                  crossOrigin="anonymous"
-                />
-              </div>
+          <div className="space-y-2">
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-wide">
+              Waveform Comparison (Image)
+            </p>
+            <div className="rounded border border-emerald-500/20 bg-black/40 p-1">
+              <img
+                src={waveformUrl}
+                alt="Waveform"
+                className="w-full h-auto object-cover opacity-90"
+                crossOrigin="anonymous"
+              />
             </div>
-          )}
-          {images.spectrogram && (
-            <div className="space-y-2">
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-wide">
-                Spectrogram Comparison
-              </p>
-              <div className="rounded border border-emerald-500/20 bg-black/40 p-1">
-                <img
-                  src={spectrogramUrl}
-                  alt="Spectrogram"
-                  className="w-full h-auto object-contain opacity-90"
-                  crossOrigin="anonymous"
-                />
-              </div>
+          </div>
+        </div>
+      )}
+
+      {/* Interactive Comparison Charts */}
+      {stage.interactive_comparison && (
+        <div className="mt-6 space-y-6">
+          {/* Dynamics Comparison */}
+          <div className="space-y-2">
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-wide">
+               Waveform Comparison (Interactive)
+            </p>
+            <div className="rounded border border-emerald-500/20 bg-black/40 p-2">
+              <DynamicsComparisonChart
+                pre={stage.interactive_comparison.pre.dynamics}
+                post={stage.interactive_comparison.post.dynamics}
+              />
             </div>
-          )}
+          </div>
+
+          {/* Spectrum Comparison */}
+           <div className="space-y-2">
+            <p className="text-xs font-bold text-slate-400 uppercase tracking-wide">
+               Spectrum Comparison
+            </p>
+            <div className="rounded border border-emerald-500/20 bg-black/40 p-2">
+              <SpectrumComparisonChart
+                pre={stage.interactive_comparison.pre.spectrum}
+                post={stage.interactive_comparison.post.spectrum}
+              />
+            </div>
+          </div>
         </div>
       )}
     </div>
   );
 };
+
+// --- Comparison Chart Components ---
+
+const DynamicsComparisonChart = ({
+    pre,
+    post
+}: {
+    pre?: InteractiveChartsData["dynamics"];
+    post?: InteractiveChartsData["dynamics"];
+}) => {
+    // We assume pre and post have roughly the same duration/timestep,
+    // or we take the max duration and interpolate (but simpler: just map by index if timestep matches)
+    // Fallback: Use post if available, else pre.
+    const primary = post || pre;
+    if (!primary) return null;
+
+    const chartData = primary.rms_db.map((_, i) => ({
+        time: (i * primary.time_step).toFixed(1),
+        rms_pre: pre?.rms_db[i] ?? -90,
+        peak_pre: pre?.peak_db[i] ?? -90,
+        rms_post: post?.rms_db[i] ?? -90,
+        peak_post: post?.peak_db[i] ?? -90,
+    }));
+
+    return (
+      <div className="h-64 w-full">
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart
+            data={chartData}
+            margin={{ top: 5, right: 0, left: -20, bottom: 0 }}
+          >
+            <defs>
+              <linearGradient id="colorRmsPost" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
+                <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+              </linearGradient>
+              <linearGradient id="colorRmsPre" x1="0" y1="0" x2="0" y2="1">
+                 <stop offset="5%" stopColor="#94a3b8" stopOpacity={0.1} />
+                 <stop offset="95%" stopColor="#94a3b8" stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid
+              strokeDasharray="3 3"
+              stroke="#334155"
+              vertical={false}
+            />
+            <XAxis
+              dataKey="time"
+              stroke="#64748b"
+              tick={{ fill: "#64748b", fontSize: 10 }}
+              minTickGap={30}
+              interval="preserveStartEnd"
+            />
+            <YAxis
+              stroke="#64748b"
+              tick={{ fill: "#64748b", fontSize: 10 }}
+              domain={[-60, 0]}
+            />
+            <Tooltip
+              contentStyle={{
+                backgroundColor: "#0f172a",
+                borderColor: "#334155",
+                color: "#f8fafc",
+                fontSize: "12px",
+              }}
+              labelFormatter={(label: any) => `Time: ${label}s`}
+            />
+
+            {/* PRE (Before) - Subtler */}
+            {pre && (
+                <>
+                 <Area
+                    type="monotone"
+                    dataKey="rms_pre"
+                    stroke="#64748b"
+                    fillOpacity={1}
+                    fill="url(#colorRmsPre)"
+                    name="RMS (Before)"
+                    strokeWidth={1}
+                    strokeDasharray="3 3"
+                 />
+                 {/* Peak for Pre usually too cluttered, maybe omit or make very faint */}
+                 {/* <Line type="monotone" dataKey="peak_pre" stroke="#475569" strokeWidth={0.5} dot={false} strokeDasharray="2 2" /> */}
+                </>
+            )}
+
+            {/* POST (After) - Prominent */}
+            {post && (
+                <>
+                 <Area
+                    type="monotone"
+                    dataKey="rms_post"
+                    stroke="#10b981"
+                    fillOpacity={1}
+                    fill="url(#colorRmsPost)"
+                    name="RMS (After)"
+                    strokeWidth={1.5}
+                 />
+                 <Line
+                    type="monotone"
+                    dataKey="peak_post"
+                    stroke="#f59e0b"
+                    dot={false}
+                    strokeWidth={1}
+                    strokeOpacity={0.6}
+                    name="Peak (After)"
+                 />
+                </>
+            )}
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+    );
+};
+
+const SpectrumComparisonChart = ({
+    pre,
+    post
+}: {
+    pre?: InteractiveChartsData["spectrum"];
+    post?: InteractiveChartsData["spectrum"];
+}) => {
+    const primary = post || pre;
+    if (!primary) return null;
+
+    const chartData = primary.frequencies.map((freq, i) => ({
+      freq: freq,
+      mag_pre: pre?.magnitudes_db[i] ?? -90,
+      mag_post: post?.magnitudes_db[i] ?? -90,
+    }));
+
+    return (
+      <div className="h-64 w-full">
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart // Using LineChart for comparison is usually cleaner than Bar
+            data={chartData}
+            margin={{ top: 5, right: 0, left: -20, bottom: 0 }}
+          >
+            <CartesianGrid
+              strokeDasharray="3 3"
+              stroke="#334155"
+              vertical={false}
+            />
+            <XAxis
+              dataKey="freq"
+              stroke="#64748b"
+              tick={{ fill: "#64748b", fontSize: 10 }}
+              scale="log"
+              domain={[20, 20000]}
+              type="number"
+              tickFormatter={(val) =>
+                val >= 1000 ? `${(val / 1000).toFixed(0)}k` : val
+              }
+              ticks={[50, 100, 200, 500, 1000, 2000, 5000, 10000]}
+            />
+            <YAxis
+              stroke="#64748b"
+              tick={{ fill: "#64748b", fontSize: 10 }}
+              domain={[-60, 0]}
+            />
+            <Tooltip
+              cursor={{ stroke: "#334155", strokeWidth: 1 }}
+              contentStyle={{
+                backgroundColor: "#0f172a",
+                borderColor: "#334155",
+                color: "#f8fafc",
+                fontSize: "12px",
+              }}
+              labelFormatter={(label: any) =>
+                `Freq: ${Number(label).toFixed(0)} Hz`
+              }
+            />
+
+             {pre && (
+                <Line
+                    type="monotone"
+                    dataKey="mag_pre"
+                    stroke="#64748b"
+                    name="Magnitude (Before)"
+                    strokeWidth={1.5}
+                    dot={false}
+                    strokeDasharray="4 4"
+                />
+             )}
+             {post && (
+                <Line
+                    type="monotone"
+                    dataKey="mag_post"
+                    stroke="#3b82f6"
+                    name="Magnitude (After)"
+                    strokeWidth={2}
+                    dot={false}
+                />
+             )}
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+    );
+  };
 
 // --- Chart Components ---
 
