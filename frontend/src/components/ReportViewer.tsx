@@ -1,6 +1,20 @@
 
 import React, { useEffect, useState } from "react";
 import { appendApiKeyParam, getBackendBaseUrl } from "../lib/mixApi";
+import {
+  LineChart,
+  Line,
+  AreaChart,
+  Area,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  ReferenceLine,
+} from "recharts";
 
 // --- Types ---
 interface StageParameter {
@@ -20,6 +34,19 @@ interface StageReport {
   key_metrics?: any;
 }
 
+interface InteractiveChartsData {
+  dynamics?: {
+    time_step: number;
+    rms_db: number[];
+    peak_db: number[];
+    duration_sec: number;
+  };
+  spectrum?: {
+    frequencies: number[];
+    magnitudes_db: number[];
+  };
+}
+
 interface FullReport {
   pipeline_version: string;
   generated_at_utc: string;
@@ -27,6 +54,7 @@ interface FullReport {
   general_summary?: string;
   stages: StageReport[];
   final_metrics: any;
+  interactive_charts?: InteractiveChartsData;
 }
 
 interface ReportViewerProps {
@@ -205,10 +233,113 @@ const ReportStageCard = ({
   );
 };
 
+// --- Chart Components ---
+
+const DynamicsChart = ({ data }: { data: NonNullable<InteractiveChartsData['dynamics']> }) => {
+    // Transform data for Recharts
+    const chartData = data.rms_db.map((rms, i) => ({
+        time: (i * data.time_step).toFixed(1),
+        rms: rms,
+        peak: data.peak_db[i] || -90
+    }));
+
+    return (
+        <div className="h-64 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={chartData} margin={{ top: 5, right: 0, left: -20, bottom: 0 }}>
+                    <defs>
+                        <linearGradient id="colorRms" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
+                            <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                        </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
+                    <XAxis
+                        dataKey="time"
+                        stroke="#64748b"
+                        tick={{ fill: "#64748b", fontSize: 10 }}
+                        minTickGap={30}
+                        interval="preserveStartEnd"
+                    />
+                    <YAxis
+                        stroke="#64748b"
+                        tick={{ fill: "#64748b", fontSize: 10 }}
+                        domain={[-60, 0]}
+                    />
+                    <Tooltip
+                        contentStyle={{ backgroundColor: "#0f172a", borderColor: "#334155", color: "#f8fafc", fontSize: "12px" }}
+                        itemStyle={{ color: "#10b981" }}
+                        labelFormatter={(label) => `Time: ${label}s`}
+                        formatter={(value: number) => [`${value.toFixed(1)} dB`, ""]}
+                    />
+                    <Area
+                        type="monotone"
+                        dataKey="rms"
+                        stroke="#10b981"
+                        fillOpacity={1}
+                        fill="url(#colorRms)"
+                        name="RMS"
+                        strokeWidth={1.5}
+                    />
+                    <Line
+                        type="monotone"
+                        dataKey="peak"
+                        stroke="#f59e0b"
+                        dot={false}
+                        strokeWidth={1}
+                        strokeOpacity={0.6}
+                        name="Peak"
+                    />
+                </AreaChart>
+            </ResponsiveContainer>
+        </div>
+    );
+};
+
+const SpectrumChart = ({ data }: { data: NonNullable<InteractiveChartsData['spectrum']> }) => {
+    const chartData = data.frequencies.map((freq, i) => ({
+        freq: freq,
+        mag: data.magnitudes_db[i]
+    }));
+
+    return (
+        <div className="h-64 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={chartData} margin={{ top: 5, right: 0, left: -20, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
+                    <XAxis
+                        dataKey="freq"
+                        stroke="#64748b"
+                        tick={{ fill: "#64748b", fontSize: 10 }}
+                        scale="log"
+                        domain={[20, 20000]}
+                        type="number"
+                        tickFormatter={(val) => val >= 1000 ? `${(val/1000).toFixed(0)}k` : val}
+                        ticks={[50, 100, 200, 500, 1000, 2000, 5000, 10000]}
+                    />
+                    <YAxis
+                        stroke="#64748b"
+                        tick={{ fill: "#64748b", fontSize: 10 }}
+                        domain={[-60, 0]}
+                    />
+                    <Tooltip
+                        cursor={{fill: '#334155', opacity: 0.2}}
+                        contentStyle={{ backgroundColor: "#0f172a", borderColor: "#334155", color: "#f8fafc", fontSize: "12px" }}
+                        labelFormatter={(label) => `Freq: ${Number(label).toFixed(0)} Hz`}
+                        formatter={(value: number) => [`${value.toFixed(1)} dB`, "Magnitude"]}
+                    />
+                    <Bar dataKey="mag" fill="#3b82f6" radius={[2, 2, 0, 0]} />
+                </BarChart>
+            </ResponsiveContainer>
+        </div>
+    );
+};
+
 export const ReportViewer: React.FC<ReportViewerProps> = ({ report, jobId }) => {
   if (!report) return null;
 
   const processedStages = report.stages || [];
+  const charts = report.interactive_charts;
 
   return (
     <div className="w-full space-y-6 p-1">
@@ -264,6 +395,34 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({ report, jobId }) => 
             </div>
         </div>
       </section>
+
+      {/* Interactive Charts Section */}
+      {charts && (
+          <section className="rounded-xl border border-emerald-500/20 bg-slate-900/40 p-5">
+              <h2 className="mb-4 text-sm font-bold uppercase tracking-widest text-emerald-500/80">
+                  Interactive Analysis
+              </h2>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {charts.dynamics && (
+                      <div className="space-y-2">
+                          <h3 className="text-xs font-bold text-slate-400 uppercase">Dynamic Range (RMS & Peak)</h3>
+                          <div className="rounded-lg border border-slate-800 bg-black/20 p-2">
+                             <DynamicsChart data={charts.dynamics} />
+                          </div>
+                      </div>
+                  )}
+                  {charts.spectrum && (
+                       <div className="space-y-2">
+                          <h3 className="text-xs font-bold text-slate-400 uppercase">Average Frequency Spectrum</h3>
+                          <div className="rounded-lg border border-slate-800 bg-black/20 p-2">
+                              <SpectrumChart data={charts.spectrum} />
+                          </div>
+                      </div>
+                  )}
+              </div>
+          </section>
+      )}
 
       {/* Detailed Stage Report */}
       <section>
