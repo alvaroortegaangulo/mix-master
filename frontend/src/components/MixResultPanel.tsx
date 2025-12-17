@@ -25,6 +25,7 @@ export function MixResultPanel({
   result,
   enabledPipelineStageKeys,
 }: Props) {
+  const [processedStageKeys, setProcessedStageKeys] = useState<string[] | undefined>(enabledPipelineStageKeys);
   const [showOriginal, setShowOriginal] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [report, setReport] = useState<any>(null);
@@ -38,6 +39,35 @@ export function MixResultPanel({
   const { originalFullSongUrl, fullSongUrl, jobId } = result;
   const [signedOriginalUrl, setSignedOriginalUrl] = useState(originalFullSongUrl);
   const [signedFullUrl, setSignedFullUrl] = useState(fullSongUrl);
+
+  const deriveProcessedStageKeys = (reportData: any): string[] => {
+    if (!reportData) return [];
+
+    const stageList = Array.isArray(reportData.stages) ? reportData.stages : [];
+    const fromStages = stageList
+      .map((s: any) => s?.contract_id || s?.stage_id)
+      .filter((v: any): v is string => typeof v === "string" && v.length > 0);
+    if (fromStages.length) {
+      return Array.from(new Set(fromStages));
+    }
+
+    const timingStages = reportData?.pipeline_durations?.stages;
+    if (Array.isArray(timingStages)) {
+      const keys = timingStages
+        .map((s: any) => s?.contract_id)
+        .filter((v: any): v is string => typeof v === "string" && v.length > 0);
+      if (keys.length) {
+        return Array.from(new Set(keys));
+      }
+    }
+
+    return [];
+  };
+
+  // Keep processed stage keys in sync when parent resets (e.g. new job)
+  useEffect(() => {
+    setProcessedStageKeys(enabledPipelineStageKeys);
+  }, [enabledPipelineStageKeys, jobId]);
 
   // Prepara URLs firmadas para reproducir (en caso de que lleguen sin firmar o con host interno)
   useEffect(() => {
@@ -99,6 +129,7 @@ export function MixResultPanel({
     try {
       const data = await fetchJobReport(jobId);
       setReport(data);
+      setProcessedStageKeys(deriveProcessedStageKeys(data));
       setIsReportOpen(true);
     } catch (err) {
       console.error("Failed to load report", err);
@@ -176,7 +207,7 @@ export function MixResultPanel({
       {/* Pipeline Panel (Stages + Player per stage) */}
       <MixPipelinePanel
         result={result}
-        enabledPipelineStageKeys={enabledPipelineStageKeys}
+        enabledPipelineStageKeys={processedStageKeys}
       />
 
       {/* Share Button (Below and to the right) */}

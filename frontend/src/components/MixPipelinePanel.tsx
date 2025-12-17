@@ -78,31 +78,23 @@ export function MixPipelinePanel({
         const sorted = [...data].sort((a, b) => a.index - b.index);
 
         // Filter stages based on what was actually executed (passed via enabledPipelineStageKeys).
-        // If enabledPipelineStageKeys is provided, strict filtering is applied.
-        // We also explicitly require that the stage has a 'previewMixRelPath' or is a known audio producer
-        // to avoid listing stages that are purely analytical or internal if they somehow get in the list.
         let filtered = sorted;
 
-        if (enabledPipelineStageKeys && enabledPipelineStageKeys.length > 0) {
-           filtered = sorted.filter((s) => enabledPipelineStageKeys.includes(s.key));
-        } else {
-           // If no specific keys are passed (e.g. legacy/resume without state), we fallback to all.
-           // However, to respect "only show processed", we might consider showing nothing or just the final,
-           // but showing all is the safe fallback for now to avoid empty UI.
-           // We will rely on the parent component to pass the correct keys.
+        if (Array.isArray(enabledPipelineStageKeys)) {
+          const allowed = new Set(enabledPipelineStageKeys);
+          filtered = sorted.filter((s) => allowed.has(s.key));
         }
 
         setStages(filtered);
 
         // Adjust active stage
-        if (!activeKey && filtered.length > 0) {
-          setActiveKey(filtered[filtered.length - 1].key);
-        } else if (activeKey) {
-          const stillExists = filtered.some((s) => s.key === activeKey);
-          if (!stillExists && filtered.length > 0) {
-            setActiveKey(filtered[filtered.length - 1].key);
-          }
-        }
+        setActiveKey((prev) => {
+          if (!filtered.length) return "";
+          if (!prev) return filtered[filtered.length - 1].key;
+          return filtered.some((s) => s.key === prev)
+            ? prev
+            : filtered[filtered.length - 1].key;
+        });
       } catch (err: any) {
         if (err?.name === "AbortError") return;
         console.error("Error loading pipeline stages", err);
