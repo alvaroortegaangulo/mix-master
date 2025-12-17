@@ -16,7 +16,7 @@ import {
 } from "recharts";
 import { useTranslations } from "next-intl";
 import html2canvas from "html2canvas";
-import jsPDF from "jspdf";
+import { jsPDF } from "jspdf";
 
 // --- Types ---
 interface StageParameter {
@@ -331,15 +331,23 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
     setIsDownloading(true);
 
     try {
-      // Small delay to ensure rendering
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      // Save current scroll position and scroll to top to ensure complete capture
+      const scrollY = window.scrollY;
+      window.scrollTo(0, 0);
+
+      // Delay to ensure rendering/scroll updates
+      await new Promise((resolve) => setTimeout(resolve, 500));
 
       const canvas = await html2canvas(reportRef.current, {
         scale: 2,
         useCORS: true,
         logging: false,
         backgroundColor: "#0f172a", // Match bg-slate-950
+        allowTaint: false, // Ensure we fail if images are tainted
       });
+
+      // Restore scroll
+      window.scrollTo(0, scrollY);
 
       const imgData = canvas.toDataURL("image/png");
       const pdf = new jsPDF("p", "mm", "a4");
@@ -353,26 +361,18 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
       const pdfImgHeight = imgHeight * ratio;
 
       let heightLeft = pdfImgHeight;
-      let position = 0;
 
       // Add first page
-      pdf.addImage(imgData, "PNG", 0, position, pdfWidth, pdfImgHeight);
+      pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfImgHeight);
       heightLeft -= pdfHeight;
 
       // Add subsequent pages
       while (heightLeft > 0) {
-        position = heightLeft - pdfImgHeight; // relative to bottom
-        // Actually, multipage logic with image slicing is tricky.
-        // Simplified approach: Add new page and offset image.
         pdf.addPage();
-        // position needs to be negative to show the next part
-        // For page 2, we want to show from -pdfHeight
-        position = - (pdfImgHeight - heightLeft); // This logic is often buggy for naive slicing
-
-        // Correct logic for simple naive slicing (might cut text in half):
-        // Page 1: y=0.
-        // Page 2: y=-pdfHeight.
-
+        // Calculate the negative offset to shift the image up for the next page
+        // Page 1 (index 0): y = 0
+        // Page 2 (index 1): y = -pdfHeight
+        // Page 3 (index 2): y = -2 * pdfHeight
         const pageIndex = Math.ceil((pdfImgHeight - heightLeft) / pdfHeight);
         pdf.addImage(imgData, "PNG", 0, -(pageIndex * pdfHeight), pdfWidth, pdfImgHeight);
 
@@ -382,6 +382,7 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
       pdf.save(`piroola_report_${jobId}.pdf`);
     } catch (error) {
       console.error("PDF generation failed:", error);
+      alert("Failed to generate PDF. Please check your internet connection or try again.");
     } finally {
       setIsDownloading(false);
     }
