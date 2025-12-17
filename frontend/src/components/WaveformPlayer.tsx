@@ -1,7 +1,6 @@
-// frontend/src/components/WaveformPlayer.tsx
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { gaEvent } from "../lib/ga";
 import { PlayIcon, PauseIcon, ArrowDownTrayIcon } from "@heroicons/react/24/solid";
 
@@ -29,6 +28,12 @@ export const WaveformPlayer: React.FC<WaveformPlayerProps> = ({
 }) => {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  // Web Audio API refs
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const sourceRef = useRef<MediaElementAudioSourceNode | null>(null);
+  const requestRef = useRef<number | null>(null);
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [duration, setDuration] = useState(0);
@@ -79,6 +84,11 @@ export const WaveformPlayer: React.FC<WaveformPlayerProps> = ({
       audio.removeEventListener("loadedmetadata", onLoaded);
       audio.removeEventListener("timeupdate", onTimeUpdate);
       audio.removeEventListener("ended", onEnded);
+
+      // Cleanup animation frame if component unmounts or src changes
+      if (requestRef.current) {
+        cancelAnimationFrame(requestRef.current);
+      }
     };
   }, [src]);
 
@@ -97,6 +107,7 @@ export const WaveformPlayer: React.FC<WaveformPlayerProps> = ({
 
         const AudioCtx =
           window.AudioContext || (window as any).webkitAudioContext;
+        // Use a temporary context for decoding to avoid conflicting with the playback context
         const audioCtx = new AudioCtx();
         const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
 
@@ -164,25 +175,16 @@ export const WaveformPlayer: React.FC<WaveformPlayerProps> = ({
   );
 
   // ------------------------------------------------------------
-  // Dibujo en canvas: barras rectangulares + reflejo
+  // Dibujo: Funciones auxiliares
   // ------------------------------------------------------------
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
 
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    const { width, height } = canvasSize;
-    if (width === 0 || height === 0) return;
-
+  const setupCanvas = useCallback((ctx: CanvasRenderingContext2D, width: number, height: number) => {
     const dpr = window.devicePixelRatio || 1;
-
-    if (canvas.width !== width * dpr || canvas.height !== height * dpr) {
+    const canvas = canvasRef.current;
+    if (canvas && (canvas.width !== width * dpr || canvas.height !== height * dpr)) {
       canvas.width = width * dpr;
       canvas.height = height * dpr;
     }
-
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
     // Fondo suave
@@ -191,10 +193,19 @@ export const WaveformPlayer: React.FC<WaveformPlayerProps> = ({
     bgGrad.addColorStop(1, "#020617");
     ctx.fillStyle = bgGrad;
     ctx.fillRect(0, 0, width, height);
+  }, []);
 
-    // Si no hay datos de forma de onda aún, no dibujamos barras
+  const drawStaticWaveform = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    const { width, height } = canvasSize;
+    if (width === 0 || height === 0) return;
+
+    setupCanvas(ctx, width, height);
+
     if (!peaks.length) {
-      // línea central igualmente
       const midY = height / 2;
       ctx.strokeStyle = "rgba(0,0,0,0.75)";
       ctx.lineWidth = 1;
@@ -207,22 +218,16 @@ export const WaveformPlayer: React.FC<WaveformPlayerProps> = ({
 
     const paddingX = 8;
     const availableWidth = width - paddingX * 2;
-
-    // barras finas: 2px + 1px de gap
     const barWidth = 2;
     const gap = 1;
     const step = barWidth + gap;
     const maxBars = Math.floor(availableWidth / step);
-
-    // Ajustamos número de barras usando los peaks ya calculados
     const totalBars = Math.min(maxBars, peaks.length);
     const peaksPerBar = Math.max(1, Math.floor(peaks.length / totalBars));
-
     const midY = height / 2;
-    const topMaxHeight = height * 0.45; // parte superior
-    const reflectFactor = 0.5; // la parte de abajo será la mitad de alta
+    const topMaxHeight = height * 0.45;
+    const reflectFactor = 0.5;
 
-    // centro: línea negra
     ctx.strokeStyle = "rgba(0,0,0,0.85)";
     ctx.lineWidth = 1;
     ctx.beginPath();
@@ -230,20 +235,15 @@ export const WaveformPlayer: React.FC<WaveformPlayerProps> = ({
     ctx.lineTo(width - paddingX, midY + 0.5);
     ctx.stroke();
 
-    // calculamos máximo peak para normalizar
-    const maxPeak = peaks.reduce(
-      (max, v) => (v > max ? v : max),
-      Number.NEGATIVE_INFINITY,
-    );
+    const maxPeak = peaks.reduce((max, v) => (v > max ? v : max), Number.NEGATIVE_INFINITY);
     const normalizer = maxPeak > 0 ? maxPeak : 1;
 
-    const playedColor = accentColor; // parte superior reproducida
-    const unplayedColor = "#e5e7eb"; // gris claro
+    const playedColor = accentColor;
+    const unplayedColor = "#e5e7eb";
     const playedReflection = "rgba(251, 146, 60, 0.35)";
     const unplayedReflection = "rgba(229, 231, 235, 0.18)";
 
     for (let i = 0; i < totalBars; i++) {
-      // agregamos varios peaks en uno solo
       let sum = 0;
       let count = 0;
       const peakStart = i * peaksPerBar;
@@ -253,26 +253,158 @@ export const WaveformPlayer: React.FC<WaveformPlayerProps> = ({
         count++;
       }
       const avg = count > 0 ? sum / count : 0;
-
-      // curva suave para que sea más orgánico
-      const norm = Math.pow(avg / normalizer, 0.7); // 0..1
+      const norm = Math.pow(avg / normalizer, 0.7);
       const barHeightTop = Math.max(2, norm * topMaxHeight);
       const barHeightBottom = barHeightTop * reflectFactor;
-
       const x = paddingX + i * step;
-
       const barProgress = totalBars > 1 ? i / (totalBars - 1) : 0;
       const isPlayed = barProgress <= progress + 0.001;
 
-      // parte superior
       ctx.fillStyle = isPlayed ? playedColor : unplayedColor;
       ctx.fillRect(x, midY - barHeightTop, barWidth, barHeightTop);
 
-      // reflejo inferior
       ctx.fillStyle = isPlayed ? playedReflection : unplayedReflection;
       ctx.fillRect(x, midY + 1, barWidth, barHeightBottom);
     }
-  }, [peaks, currentTime, duration, accentColor, progress, canvasSize]);
+  }, [peaks, accentColor, progress, canvasSize, setupCanvas]);
+
+  const drawSpectrum = useCallback(() => {
+    if (!analyserRef.current || !canvasRef.current) return;
+
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const { width, height } = canvasSize;
+    if (width === 0 || height === 0) return;
+
+    setupCanvas(ctx, width, height);
+
+    const analyser = analyserRef.current;
+    const bufferLength = analyser.frequencyBinCount;
+    const dataArray = new Uint8Array(bufferLength);
+    analyser.getByteFrequencyData(dataArray);
+
+    const paddingX = 8;
+    const availableWidth = width - paddingX * 2;
+    // We want to display a subset of frequencies (e.g. up to ~16kHz) to avoid empty high-end
+    // Typically the bufferLength is 1024 or 2048.
+
+    // Simplification: draw bars
+    const barWidth = 2;
+    const gap = 1;
+    const step = barWidth + gap;
+    const maxBars = Math.floor(availableWidth / step);
+
+    const midY = height / 2;
+    const topMaxHeight = height * 0.45;
+    const reflectFactor = 0.5;
+
+    // Center line
+    ctx.strokeStyle = "rgba(0,0,0,0.85)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(paddingX, midY + 0.5);
+    ctx.lineTo(width - paddingX, midY + 0.5);
+    ctx.stroke();
+
+    // We step through the frequency data
+    // Usually log scale is better, but linear is easier for a quick implementation
+    // Let's use linear for now but skip the very high frequencies which are often empty
+    const usableBins = Math.floor(bufferLength * 0.7);
+    const binsPerBar = Math.floor(usableBins / maxBars) || 1;
+
+    const barColor = accentColor;
+    const reflectionColor = "rgba(251, 146, 60, 0.35)";
+
+    for (let i = 0; i < maxBars; i++) {
+        let sum = 0;
+        for (let j = 0; j < binsPerBar; j++) {
+            const index = i * binsPerBar + j;
+            if (index < bufferLength) {
+                sum += dataArray[index];
+            }
+        }
+        const avg = sum / binsPerBar;
+        const norm = avg / 255; // 0..1
+
+        // Enhance low levels
+        const boostedNorm = Math.pow(norm, 0.8);
+
+        const barHeightTop = Math.max(1, boostedNorm * topMaxHeight);
+        const barHeightBottom = barHeightTop * reflectFactor;
+
+        const x = paddingX + i * step;
+
+        ctx.fillStyle = barColor;
+        ctx.fillRect(x, midY - barHeightTop, barWidth, barHeightTop);
+
+        ctx.fillStyle = reflectionColor;
+        ctx.fillRect(x, midY + 1, barWidth, barHeightBottom);
+    }
+
+    requestRef.current = requestAnimationFrame(drawSpectrum);
+  }, [canvasSize, accentColor, setupCanvas]);
+
+  // ------------------------------------------------------------
+  // Inicializar Web Audio on Play
+  // ------------------------------------------------------------
+  const initAudioContext = () => {
+      if (!audioContextRef.current) {
+          const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+          const ctx = new AudioCtx();
+          audioContextRef.current = ctx;
+
+          const analyser = ctx.createAnalyser();
+          analyser.fftSize = 2048; // Higher resolution
+          analyser.smoothingTimeConstant = 0.85;
+          analyserRef.current = analyser;
+      }
+
+      const ctx = audioContextRef.current;
+      if (ctx.state === 'suspended') {
+          ctx.resume();
+      }
+
+      if (!sourceRef.current && audioRef.current) {
+          try {
+             const source = ctx.createMediaElementSource(audioRef.current);
+             source.connect(analyserRef.current!);
+             analyserRef.current!.connect(ctx.destination);
+             sourceRef.current = source;
+          } catch (e) {
+             console.error("Error creating MediaElementSource:", e);
+          }
+      }
+  };
+
+  // ------------------------------------------------------------
+  // Efecto principal de dibujo (toggle entre estático y espectro)
+  // ------------------------------------------------------------
+  useEffect(() => {
+    if (isPlaying) {
+        initAudioContext();
+        drawSpectrum();
+    } else {
+        if (requestRef.current) {
+            cancelAnimationFrame(requestRef.current);
+        }
+        drawStaticWaveform();
+    }
+
+    return () => {
+        if (requestRef.current) {
+            cancelAnimationFrame(requestRef.current);
+        }
+    };
+  }, [isPlaying, drawSpectrum, drawStaticWaveform]);
+
+  // Redraw static waveform when not playing but time/canvas changes
+  useEffect(() => {
+    if (!isPlaying) {
+        drawStaticWaveform();
+    }
+  }, [isPlaying, drawStaticWaveform, progress, peaks]); // Depend on relevant props
 
   // ------------------------------------------------------------
   // Interacción
@@ -280,10 +412,15 @@ export const WaveformPlayer: React.FC<WaveformPlayerProps> = ({
   const togglePlay = () => {
     const audio = audioRef.current;
     if (!audio) return;
+
     if (isPlaying) {
       audio.pause();
       setIsPlaying(false);
     } else {
+      // Ensure context is running (play must be triggered by user for AudioContext)
+      if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
+          audioContextRef.current.resume();
+      }
       void audio.play();
       setIsPlaying(true);
     }
@@ -302,6 +439,7 @@ export const WaveformPlayer: React.FC<WaveformPlayerProps> = ({
     const newTime = Math.max(0, Math.min(duration * ratio, duration));
     audio.currentTime = newTime;
     setCurrentTime(newTime);
+    // If not playing, the useEffect for static waveform will redraw due to progress/currentTime change
   };
 
   const handleDownload = async () => {
@@ -351,8 +489,8 @@ export const WaveformPlayer: React.FC<WaveformPlayerProps> = ({
         className,
       ].join(" ")}
     >
-      {/* Audio oculto para controlar playback */}
-      <audio ref={audioRef} src={src} className="hidden" />
+      {/* Audio oculto para controlar playback - crossOrigin anonymous is crucial for Web Audio */}
+      <audio ref={audioRef} src={src} crossOrigin="anonymous" className="hidden" />
 
       {/* Botón Play/Pause */}
       <button

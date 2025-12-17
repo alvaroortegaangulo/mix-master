@@ -24,6 +24,7 @@ except ImportError:
     PipelineContext = Any
 
 from utils.analysis_utils import get_temp_dir, sanitize_json_floats
+import soundfile as sf
 
 
 def _compute_interactive_data(audio: np.ndarray, sr: int) -> Dict[str, Any]:
@@ -147,6 +148,47 @@ def _compute_interactive_data(audio: np.ndarray, sr: int) -> Dict[str, Any]:
         "dynamics": dynamics,
         "spectrum": spectrum
     }
+
+def _load_mix_audio_for_report(context: PipelineContext) -> tuple[Optional[np.ndarray], Optional[int]]:
+    """
+    Fallback para cargar el mix final desde disco cuando el contexto
+    no trae audio en memoria (pipeline actual). Prioriza el WAV mßs
+    reciente disponible.
+    """
+    job_root: Optional[Path] = None
+    try:
+        if getattr(context, "temp_root", None):
+            job_root = Path(context.temp_root)
+        else:
+            # Legacy fallback: usar el stage dir actual para resolver el job root
+            job_root = get_temp_dir(context.stage_id or "S11_REPORT_GENERATION", create=False).parent
+    except Exception:
+        job_root = None
+
+    if not job_root:
+        return None, None
+
+    candidates = [
+        job_root / "S11_REPORT_GENERATION" / "full_song.wav",
+        job_root / "S10_MASTER_FINAL_LIMITS" / "full_song.wav",
+        job_root / "S6_MANUAL_CORRECTION" / "full_song.wav",
+        job_root / "S0_SESSION_FORMAT" / "full_song.wav",
+        job_root / "S0_MIX_ORIGINAL" / "full_song.wav",
+    ]
+
+    for wav_path in candidates:
+        if not wav_path.exists():
+            continue
+        try:
+            audio, sr = sf.read(str(wav_path), dtype="float32", always_2d=True)
+            if audio.size == 0:
+                continue
+            return audio, sr
+        except Exception as exc:
+            logger.logger.warning(f"[S11] Could not read mix audio from {wav_path}: {exc}")
+            continue
+
+    return None, None
 
 
 def _enrich_report_with_parameters_and_images(report: Dict[str, Any], temp_dir: Path) -> None:
@@ -309,12 +351,20 @@ def process(context: PipelineContext, *args) -> bool:
 
     # --- GENERATE INTERACTIVE CHART DATA ---
     try:
-        if hasattr(context, "audio_mixdown") and context.audio_mixdown is not None:
-             logger.logger.info("[S11] Generating interactive chart data from in-memory mixdown...")
-             chart_data = _compute_interactive_data(context.audio_mixdown, context.sample_rate)
-             report["interactive_charts"] = chart_data
+        audio_arr = getattr(context, "audio_mixdown", None)
+        sample_rate = getattr(context, "sample_rate", None)
+
+        # Si no viene en memoria (pipeline actual), cargamos desde disco
+        if audio_arr is None or not sample_rate:
+            audio_arr, sample_rate = _load_mix_audio_for_report(context)
+            if audio_arr is not None and sample_rate:
+                logger.logger.info(f"[S11] Loaded mix audio from disk for interactive charts (sr={sample_rate})")
+
+        if audio_arr is not None and sample_rate:
+            chart_data = _compute_interactive_data(audio_arr, int(sample_rate))
+            report["interactive_charts"] = chart_data
         else:
-            logger.logger.warning("[S11] No audio_mixdown found in context. Interactive charts will be empty.")
+            logger.logger.warning("[S11] No mix audio available; interactive charts will be empty.")
     except Exception as e:
         logger.logger.error(f"[S11] Error generating chart data: {e}")
         traceback.print_exc()
