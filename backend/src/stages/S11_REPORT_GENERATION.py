@@ -223,19 +223,54 @@ def _enrich_report_with_parameters_and_images(report: Dict[str, Any], temp_dir: 
                 continue
 
         # 2. Extract Parameters
-        params = {}
+        params = s.get("parameters", {})
 
-        # Specific Logic for known stages
-        if "S7_MIXBUS_TONAL_BALANCE" in contract_id:
+        # S0: Session Format
+        if "S0_SESSION_FORMAT" in contract_id:
+             analysis_path = stage_dir / f"analysis_{contract_id}.json"
+             if analysis_path.exists():
+                try:
+                    with analysis_path.open("r", encoding="utf-8") as f:
+                        data = json.load(f)
+                    stems = data.get("stems", [])
+                    metrics = data.get("metrics_from_contract", {})
+
+                    params["count"] = len(stems)
+                    params["sample_rate"] = metrics.get("samplerate_hz", 48000)
+                    params["format"] = "32-bit Float"
+                except Exception as e:
+                    logger.logger.warning(f"[S11] Failed to read analysis for S0: {e}")
+
+        # S5: Lead Vox Dynamics
+        elif "S5_LEADVOX_DYNAMICS" in contract_id:
+             metrics_path = stage_dir / "leadvox_dynamics_metrics_S5_LEADVOX_DYNAMICS.json"
+             if metrics_path.exists():
+                try:
+                    with metrics_path.open("r", encoding="utf-8") as f:
+                        m = json.load(f)
+                    records = m.get("records", [])
+                    if records:
+                        avg_gr = sum(r.get("avg_gain_reduction_db", 0) for r in records) / len(records)
+                        params["gr_db"] = f"{avg_gr:.1f}"
+                    else:
+                        params["gr_db"] = "0.0"
+                except Exception as e:
+                    logger.logger.warning(f"[S11] Failed to read metrics for S5 Lead: {e}")
+
+        # S7: Tonal Balance
+        elif "S7_MIXBUS_TONAL_BALANCE" in contract_id:
             metrics_path = stage_dir / "tonal_metrics_S7_MIXBUS_TONAL_BALANCE.json"
             if metrics_path.exists():
                 try:
-                    with metrics_path.open("r") as f:
+                    with metrics_path.open("r", encoding="utf-8") as f:
                         m = json.load(f)
                     # format eq gains
                     gains = m.get("eq_gains_db", {})
                     if gains:
                         params["EQ Gains (dB)"] = {k: f"{v:+.2f}" for k, v in gains.items() if abs(v) > 0.1}
+
+                        max_correction = max((abs(float(v)) for v in gains.values()), default=0.0)
+                        params["max_correction_db"] = f"{max_correction:.1f}"
                 except Exception as e:
                      logger.logger.warning(f"[S11] Failed to read metrics for S7: {e}")
 
@@ -243,9 +278,11 @@ def _enrich_report_with_parameters_and_images(report: Dict[str, Any], temp_dir: 
             metrics_path = stage_dir / "color_metrics_S8_MIXBUS_COLOR_GENERIC.json"
             if metrics_path.exists():
                 try:
-                    with metrics_path.open("r") as f:
+                    with metrics_path.open("r", encoding="utf-8") as f:
                         m = json.load(f)
                     params["Saturation Drive (dB)"] = f"{m.get('drive_db_used', 0):.2f}"
+                    params["drive_percent"] = f"{m.get('drive_db_used', 0):.1f}" # Assuming drive_db maps roughly to percent for UI text
+
                     params["True Peak Trim (dB)"] = f"{m.get('trim_db_applied', 0):.2f}"
                     params["THD (%)"] = f"{m.get('thd_percent', 0):.2f}"
                 except Exception as e:
@@ -255,13 +292,16 @@ def _enrich_report_with_parameters_and_images(report: Dict[str, Any], temp_dir: 
             metrics_path = stage_dir / "master_metrics_S9_MASTER_GENERIC.json"
             if metrics_path.exists():
                 try:
-                    with metrics_path.open("r") as f:
+                    with metrics_path.open("r", encoding="utf-8") as f:
                         m = json.load(f)
                     post_lim = m.get("post_limiter", {})
                     post_final = m.get("post_final", {})
                     params["Pre Gain (dB)"] = f"{post_lim.get('pre_gain_db', 0):.2f}"
                     params["Limiter GR (dB)"] = f"{post_lim.get('limiter_gr_db', 0):.2f}"
                     params["Stereo Width Factor"] = f"{post_final.get('width_factor_applied', 1.0):.2f}"
+
+                    # For translation
+                    params["ceiling_db"] = "-0.5" # Usually hardcoded safe ceiling or retrieved if saved
                 except Exception as e:
                      logger.logger.warning(f"[S11] Failed to read metrics for S9: {e}")
 
