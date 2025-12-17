@@ -286,6 +286,24 @@ def run_pipeline_for_job(
         enabled_stage_keys,
     )
 
+    def _emit_progress(stage_index: int, total_stages: int, stage_key: str, message: str) -> None:
+        status = {
+            "jobId": job_id,
+            "job_id": job_id,
+            "status": "running",
+            "stage_index": stage_index,
+            "total_stages": total_stages,
+            "stage_key": stage_key,
+            "message": message,
+            "progress": float(stage_index) / float(total_stages) * 100.0 if total_stages > 0 else 0.0,
+        }
+        try:
+            update_job_status(temp_root, status)
+        except Exception as exc:
+            logger.warning("[%s] No se pudo actualizar job_status: %s", job_id, exc)
+        if progress_cb is not None:
+            progress_cb(stage_index, total_stages, stage_key, message)
+
     # ------------------------------------------------------------------
     # 0) Preparar S0_MIX_ORIGINAL para este job
     # ------------------------------------------------------------------
@@ -483,13 +501,12 @@ def run_pipeline_for_job(
             )
 
     # Callback inicial de progreso (antes de cualquier stage)
-    if progress_cb is not None:
-        progress_cb(
-            resume_stage_index_offset,
-            effective_total_stages,
-            "initializing",
-            "Inicializando pipeline de mezcla...",
-        )
+    _emit_progress(
+        resume_stage_index_offset,
+        effective_total_stages,
+        "initializing",
+        "Inicializando pipeline de mezcla...",
+    )
 
     # ------------------------------------------------------------------
     # 4) Ejecutar cada contrato en orden
@@ -541,13 +558,12 @@ def run_pipeline_for_job(
                         ensure_preview_wav(stem_path, preview_path)
 
                 # Set status to waiting_for_correction
-                if progress_cb:
-                    progress_cb(
-                        current_stage_index,
-                        effective_total_stages,
-                        "waiting_for_correction",
-                        "Waiting for manual correction in Studio..."
-                    )
+                _emit_progress(
+                    current_stage_index,
+                    effective_total_stages,
+                    "waiting_for_correction",
+                    "Waiting for manual correction in Studio..."
+                )
 
                 # Detenemos ejecución del resto de stages hasta que lleguen correcciones.
                 return
@@ -566,13 +582,12 @@ def run_pipeline_for_job(
 
         # Avisamos ANTES de ejecutar el stage para que el frontend
         # muestre el stage que está EN PROGRESO.
-        if progress_cb is not None:
-            progress_cb(
-                current_stage_index,
-                effective_total_stages,
-                contract_id,
-                f"Running stage {contract_id}...",
-            )
+        _emit_progress(
+            current_stage_index,
+            effective_total_stages,
+            contract_id,
+            f"Running stage {contract_id}...",
+        )
 
         # Ejecuta análisis, stage y check con reintentos, copia al siguiente contrato, etc.
         run_stage(contract_id, context=context)
