@@ -722,49 +722,32 @@ useEffect(() => {
 
 
 
-  const progressHeader =
-    jobStatus &&
-    (jobStatus.status === "queued" || jobStatus.status === "running")
-      ? (() => {
-          const percent = Math.round(jobStatus.progress ?? 0);
-          const totalSteps = jobStatus.totalStages ?? 0;
-          const rawStep = jobStatus.stageIndex ?? 0;
+  const progressInfo = useMemo(() => {
+    if (
+      !jobStatus ||
+      (jobStatus.status !== "queued" && jobStatus.status !== "running")
+    ) {
+      return null;
+    }
 
-          const baseStep =
-            jobStatus.status === "running" && rawStep === 0 && totalSteps > 0
-              ? 1
-              : rawStep;
-          const stagePrefixMatch = jobStatus.stageKey?.match(/^S(\d+)/);
-          const stagePrefix = stagePrefixMatch ? Number(stagePrefixMatch[1]) : null;
-          const displayStep =
-            totalSteps > 0
-              ? Math.min(
-                  totalSteps,
-                  stagePrefix !== null && stagePrefix > baseStep
-                    ? baseStep + 1
-                    : baseStep,
-                )
-              : baseStep;
+    const percent = Math.round(jobStatus.progress ?? 0);
 
-          // En cola: texto genérico
-          if (jobStatus.status === "queued" || totalSteps === 0) {
-            return `[${percent}%] Step ${displayStep}/${totalSteps} - ${t('waitingQueue')}`;
-          }
+    // Queued state
+    if (jobStatus.status === "queued") {
+      return {
+        percent,
+        title: (t("waitingQueue") || "Queue").toUpperCase(),
+        description: jobStatus.message || "Waiting for worker...",
+      };
+    }
 
-          const label =
-            stageUiInfo?.label ||
-            jobStatus.stageKey ||
-            "Processing";
+    // Running state
+    const title =
+      stageUiInfo?.label || jobStatus.stageKey?.toUpperCase() || "PROCESSING";
+    const description = stageUiInfo?.description || jobStatus.message || "";
 
-          return `[${percent}%] Step ${displayStep}/${totalSteps} - ${t('runningStage')} ${label}...`;
-        })()
-      : null;
-
-  const progressSubtext =
-    jobStatus &&
-    (jobStatus.status === "queued" || jobStatus.status === "running")
-      ? stageUiInfo?.description || jobStatus.message || null
-      : null;
+    return { percent, title, description };
+  }, [jobStatus, stageUiInfo, t]);
 
     const isProcessing =
     loading ||
@@ -982,18 +965,33 @@ useEffect(() => {
                   </button>
                 </div>
 
-      {progressHeader && (
-        <p className="mt-4 text-center text-sm font-mono text-slate-300">
-          {progressHeader}
-          {progressSubtext && (
-            <>
-              <br />
-              <span className="font-sans text-[11px] text-slate-400">
-                {progressSubtext}
-              </span>
-            </>
-          )}
-        </p>
+      {progressInfo && (
+        <div className="mx-auto mt-6 w-full max-w-md select-none">
+          {/* Progress Bar Row */}
+          <div className="mb-2 flex items-center gap-3">
+            <div className="flex-1 overflow-hidden rounded-full border border-slate-800 bg-slate-950/50 h-2.5">
+              <div
+                className="relative h-full bg-amber-500 shadow-[0_0_12px_rgba(245,158,11,0.6)] transition-all duration-300 ease-out"
+                style={{ width: `${progressInfo.percent}%` }}
+              >
+                <div className="absolute inset-0 bg-white/20" />
+              </div>
+            </div>
+            <span className="min-w-[3ch] text-right font-mono text-sm font-bold text-amber-400">
+              {progressInfo.percent}%
+            </span>
+          </div>
+
+          {/* Title */}
+          <h3 className="mb-1 text-center text-xs font-bold uppercase tracking-[0.15em] text-amber-100">
+            {progressInfo.title}
+          </h3>
+
+          {/* Description */}
+          <p className="mx-auto max-w-xs text-center text-[11px] font-medium leading-relaxed text-amber-200/70">
+            {progressInfo.description}
+          </p>
+        </div>
       )}
 
                 {error && (
