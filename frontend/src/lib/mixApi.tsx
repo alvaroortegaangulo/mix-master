@@ -329,7 +329,8 @@ export function mapBackendStatusToJobStatus(raw: any, baseUrl: string): JobStatu
 async function attachSignedResultUrls(jobId: string, status: JobStatus, baseUrl: string): Promise<JobStatus> {
   if (!status.result) return status;
 
-  const next: JobStatus = { ...status, result: { ...status.result } };
+  const nextResult: MixResult = { ...status.result };
+  const next: JobStatus = { ...status, result: nextResult };
 
   const signMaybe = async (rawUrl: string | undefined, key: "fullSongUrl" | "originalFullSongUrl") => {
     if (!rawUrl) return;
@@ -341,7 +342,7 @@ async function attachSignedResultUrls(jobId: string, status: JobStatus, baseUrl:
         : urlObj.pathname.replace(/^\/files\//, "");
       const signed = await signFileUrl(jobId, filePath);
       if (signed) {
-        next.result![key] = signed;
+        nextResult[key] = signed;
       }
     } catch (e) {
       console.warn(`Failed to sign ${key}`, e);
@@ -349,8 +350,8 @@ async function attachSignedResultUrls(jobId: string, status: JobStatus, baseUrl:
   };
 
   await Promise.all([
-    signMaybe(next.result.fullSongUrl, "fullSongUrl"),
-    signMaybe(next.result.originalFullSongUrl, "originalFullSongUrl"),
+    signMaybe(nextResult.fullSongUrl, "fullSongUrl"),
+    signMaybe(nextResult.originalFullSongUrl, "originalFullSongUrl"),
   ]);
 
   return next;
