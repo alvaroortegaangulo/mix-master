@@ -25,7 +25,7 @@ interface StageParameter {
 
 interface StageReport {
   contract_id: string;
-  stage_id: string;
+  stage_id?: string | null;
   name: string;
   status: string;
   parameters?: StageParameter;
@@ -101,11 +101,21 @@ const ReportStageCard = ({
   };
 
   // Safe translation helper
-  const stageTitle = t(`${stage.stage_id}.title`, { default: stage.name || stage.stage_id });
-  const stageDescription = t(`${stage.stage_id}.description`, {
-    ...params,
-    default: "Processing complete.",
-  });
+  const stageKey = stage.contract_id || stage.stage_id || "stage";
+  const fallbackTitle = stage.name || stage.stage_id || stage.contract_id;
+  const fallbackDescription =
+    stage.status === "missing_analysis"
+      ? "No analysis data available for this stage."
+      : stage.name || "Processing complete.";
+
+  const resolveTranslation = (key: string, fallback: string) =>
+    t.has(key as any) ? t(key as any, params) : fallback;
+
+  const stageTitle = resolveTranslation(`${stageKey}.title`, fallbackTitle);
+  const stageDescription = resolveTranslation(
+    `${stageKey}.description`,
+    fallbackDescription
+  );
 
   return (
     <div className="mb-4 overflow-hidden rounded-lg border border-emerald-900/50 bg-slate-900/40 backdrop-blur-sm p-6">
