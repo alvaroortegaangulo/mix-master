@@ -6,6 +6,8 @@ import { PlayIcon, PauseIcon, ArrowDownTrayIcon } from "@heroicons/react/24/soli
 
 type WaveformPlayerProps = {
   src: string;
+  compareSrc?: string; // Optional: Original source for A/B
+  isCompareActive?: boolean; // Optional: Whether to play/show the compare source
   downloadFileName?: string;
   accentColor?: string; // color de la parte reproducida (por defecto naranja)
   className?: string;
@@ -22,27 +24,43 @@ function formatTime(seconds: number): string {
 
 export const WaveformPlayer: React.FC<WaveformPlayerProps> = ({
   src,
+  compareSrc,
+  isCompareActive = false,
   downloadFileName,
   accentColor = "#fb923c", // naranja cálido
   className = "",
 }) => {
+  // Audio Refs
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const compareAudioRef = useRef<HTMLAudioElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   // Web Audio API refs
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const sourceRef = useRef<MediaElementAudioSourceNode | null>(null);
+  const compareSourceRef = useRef<MediaElementAudioSourceNode | null>(null);
+  const mainGainRef = useRef<GainNode | null>(null);
+  const compareGainRef = useRef<GainNode | null>(null);
   const requestRef = useRef<number | null>(null);
 
   const [isPlaying, setIsPlaying] = useState(false);
   const [duration, setDuration] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
-  const [peaks, setPeaks] = useState<PeakArray>([]);
+
+  // Peaks state
+  const [mainPeaks, setMainPeaks] = useState<PeakArray>([]);
+  const [comparePeaks, setComparePeaks] = useState<PeakArray>([]);
   const [isLoadingPeaks, setIsLoadingPeaks] = useState(false);
+
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
   const [isDownloading, setIsDownloading] = useState(false);
 
+  // Determine active peaks
+  const peaks = isCompareActive && comparePeaks.length > 0 ? comparePeaks : mainPeaks;
+  const activeSrc = isCompareActive && compareSrc ? compareSrc : src;
+
+  // Resize Observer
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -62,69 +80,77 @@ export const WaveformPlayer: React.FC<WaveformPlayerProps> = ({
   }, []);
 
   // ------------------------------------------------------------
-  // Carga de audio (HTMLAudio) – solo para reproducción
+  // Carga de audio (HTMLAudio) – Listeners
   // ------------------------------------------------------------
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
 
+    // Solo el audio principal controla el tiempo y duración visibles
     const onLoaded = () => setDuration(audio.duration || 0);
-    const onTimeUpdate = () => setCurrentTime(audio.currentTime || 0);
-    const onEnded = () => setIsPlaying(false);
+    const onTimeUpdate = () => {
+        setCurrentTime(audio.currentTime || 0);
+
+        // Sync check (solo si playing)
+        if (compareAudioRef.current && !audio.paused) {
+             const diff = Math.abs(compareAudioRef.current.currentTime - audio.currentTime);
+             if (diff > 0.1) {
+                 compareAudioRef.current.currentTime = audio.currentTime;
+             }
+        }
+    };
+    const onEnded = () => {
+        setIsPlaying(false);
+        if (compareAudioRef.current) {
+            compareAudioRef.current.pause();
+            compareAudioRef.current.currentTime = 0;
+        }
+    };
 
     audio.addEventListener("loadedmetadata", onLoaded);
     audio.addEventListener("timeupdate", onTimeUpdate);
     audio.addEventListener("ended", onEnded);
 
-    // si cambiamos de src, reseteamos estado
-    setIsPlaying(false);
-    setCurrentTime(0);
+    // Cuando cambia src, reseteamos (solo si src cambia de verdad)
+    // Nota: Si solo cambia compareSrc, no reseteamos el playback principal.
 
     return () => {
       audio.removeEventListener("loadedmetadata", onLoaded);
       audio.removeEventListener("timeupdate", onTimeUpdate);
       audio.removeEventListener("ended", onEnded);
-
-      // Cleanup animation frame if component unmounts or src changes
-      if (requestRef.current) {
-        cancelAnimationFrame(requestRef.current);
-      }
     };
+  }, [src]); // Solo re-bind si cambia el src principal
+
+  // Reset state on src change
+  useEffect(() => {
+    setIsPlaying(false);
+    setCurrentTime(0);
+    if (requestRef.current) {
+        cancelAnimationFrame(requestRef.current);
+    }
   }, [src]);
 
-  // ------------------------------------------------------------
-  // Cargar forma de onda (decodeAudioData) -> peaks
-  // ------------------------------------------------------------
+  // Handle Compare Audio loading (solo para estar listos)
   useEffect(() => {
-    let cancelled = false;
+      if (!compareSrc) return;
+      // Podríamos poner listeners aquí si quisiéramos debuggear
+  }, [compareSrc]);
 
-    async function loadPeaks() {
-      if (!src) return;
+  // ------------------------------------------------------------
+  // Cargar formas de onda (decodeAudioData) -> peaks
+  // ------------------------------------------------------------
+  const fetchPeaks = async (url: string): Promise<number[]> => {
       try {
-        setIsLoadingPeaks(true);
-        const res = await fetch(src);
+        const res = await fetch(url);
         const arrayBuffer = await res.arrayBuffer();
 
-        const AudioCtx =
-          window.AudioContext || (window as any).webkitAudioContext;
-        // Use a temporary context for decoding to avoid conflicting with the playback context
+        const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
         const audioCtx = new AudioCtx();
         const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-
-        if (cancelled) {
-          audioCtx.close();
-          return;
-        }
-
-        const channelData = audioBuffer.getChannelData(0); // mono para análisis
+        const channelData = audioBuffer.getChannelData(0);
         const totalSamples = channelData.length;
-
-        // Queremos muchas barras finas para ver bien la forma de onda.
         const desiredBars = 400;
-        const samplesPerBar = Math.max(
-          1,
-          Math.floor(totalSamples / desiredBars),
-        );
+        const samplesPerBar = Math.max(1, Math.floor(totalSamples / desiredBars));
 
         const newPeaks: number[] = [];
         for (let i = 0; i < desiredBars; i++) {
@@ -142,32 +168,44 @@ export const WaveformPlayer: React.FC<WaveformPlayerProps> = ({
           if (count === 0) {
             newPeaks.push(0);
           } else {
-            // rms -> 0..1 aprox
             const rms = Math.sqrt(sum / count);
             newPeaks.push(rms);
           }
         }
-
         audioCtx.close();
-        if (!cancelled) {
-          setPeaks(newPeaks);
-        }
+        return newPeaks;
       } catch (err) {
-        console.error("Error loading waveform data", err);
-        if (!cancelled) {
-          setPeaks([]);
-        }
-      } finally {
-        if (!cancelled) setIsLoadingPeaks(false);
+        console.error("Error loading waveform data for", url, err);
+        return [];
       }
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadAllPeaks() {
+        if (!src) return;
+        setIsLoadingPeaks(true);
+
+        const pMain = await fetchPeaks(src);
+        if (cancelled) return;
+        setMainPeaks(pMain);
+
+        if (compareSrc) {
+            const pCompare = await fetchPeaks(compareSrc);
+            if (cancelled) return;
+            setComparePeaks(pCompare);
+        } else {
+            setComparePeaks([]);
+        }
+
+        setIsLoadingPeaks(false);
     }
 
-    loadPeaks();
+    loadAllPeaks();
+    return () => { cancelled = true; };
+  }, [src, compareSrc]);
 
-    return () => {
-      cancelled = true;
-    };
-  }, [src]);
 
   const progress = useMemo(
     () => (duration > 0 ? currentTime / duration : 0),
@@ -175,7 +213,7 @@ export const WaveformPlayer: React.FC<WaveformPlayerProps> = ({
   );
 
   // ------------------------------------------------------------
-  // Dibujo: Funciones auxiliares
+  // Dibujo
   // ------------------------------------------------------------
 
   const setupCanvas = useCallback((ctx: CanvasRenderingContext2D, width: number, height: number) => {
@@ -238,6 +276,8 @@ export const WaveformPlayer: React.FC<WaveformPlayerProps> = ({
     const maxPeak = peaks.reduce((max, v) => (v > max ? v : max), Number.NEGATIVE_INFINITY);
     const normalizer = maxPeak > 0 ? maxPeak : 1;
 
+    // Si estamos en modo compare, quizás cambiamos el color un poco?
+    // De momento usamos el mismo accentColor.
     const playedColor = accentColor;
     const unplayedColor = "#e5e7eb";
     const playedReflection = "rgba(251, 146, 60, 0.35)";
@@ -287,10 +327,6 @@ export const WaveformPlayer: React.FC<WaveformPlayerProps> = ({
 
     const paddingX = 8;
     const availableWidth = width - paddingX * 2;
-    // We want to display a subset of frequencies (e.g. up to ~16kHz) to avoid empty high-end
-    // Typically the bufferLength is 1024 or 2048.
-
-    // Simplification: draw bars
     const barWidth = 2;
     const gap = 1;
     const step = barWidth + gap;
@@ -300,7 +336,6 @@ export const WaveformPlayer: React.FC<WaveformPlayerProps> = ({
     const topMaxHeight = height * 0.45;
     const reflectFactor = 0.5;
 
-    // Center line
     ctx.strokeStyle = "rgba(0,0,0,0.85)";
     ctx.lineWidth = 1;
     ctx.beginPath();
@@ -308,9 +343,6 @@ export const WaveformPlayer: React.FC<WaveformPlayerProps> = ({
     ctx.lineTo(width - paddingX, midY + 0.5);
     ctx.stroke();
 
-    // We step through the frequency data
-    // Usually log scale is better, but linear is easier for a quick implementation
-    // Let's use linear for now but skip the very high frequencies which are often empty
     const usableBins = Math.floor(bufferLength * 0.7);
     const binsPerBar = Math.floor(usableBins / maxBars) || 1;
 
@@ -326,19 +358,15 @@ export const WaveformPlayer: React.FC<WaveformPlayerProps> = ({
             }
         }
         const avg = sum / binsPerBar;
-        const norm = avg / 255; // 0..1
-
-        // Enhance low levels
+        const norm = avg / 255;
         const boostedNorm = Math.pow(norm, 0.8);
 
         const barHeightTop = Math.max(1, boostedNorm * topMaxHeight);
         const barHeightBottom = barHeightTop * reflectFactor;
-
         const x = paddingX + i * step;
 
         ctx.fillStyle = barColor;
         ctx.fillRect(x, midY - barHeightTop, barWidth, barHeightTop);
-
         ctx.fillStyle = reflectionColor;
         ctx.fillRect(x, midY + 1, barWidth, barHeightBottom);
     }
@@ -347,7 +375,7 @@ export const WaveformPlayer: React.FC<WaveformPlayerProps> = ({
   }, [canvasSize, accentColor, setupCanvas]);
 
   // ------------------------------------------------------------
-  // Inicializar Web Audio on Play
+  // Web Audio Context & Graph
   // ------------------------------------------------------------
   const initAudioContext = () => {
       if (!audioContextRef.current) {
@@ -355,9 +383,11 @@ export const WaveformPlayer: React.FC<WaveformPlayerProps> = ({
           const ctx = new AudioCtx();
           audioContextRef.current = ctx;
 
+          // Analyser Node (Shared)
           const analyser = ctx.createAnalyser();
-          analyser.fftSize = 2048; // Higher resolution
+          analyser.fftSize = 2048;
           analyser.smoothingTimeConstant = 0.85;
+          analyser.connect(ctx.destination);
           analyserRef.current = analyser;
       }
 
@@ -366,21 +396,48 @@ export const WaveformPlayer: React.FC<WaveformPlayerProps> = ({
           ctx.resume();
       }
 
+      // Main Source Setup
       if (!sourceRef.current && audioRef.current) {
           try {
              const source = ctx.createMediaElementSource(audioRef.current);
-             source.connect(analyserRef.current!);
-             analyserRef.current!.connect(ctx.destination);
+             const gain = ctx.createGain();
+             source.connect(gain);
+             gain.connect(analyserRef.current!);
+
              sourceRef.current = source;
+             mainGainRef.current = gain;
+
+             // Initial state
+             gain.gain.setValueAtTime(isCompareActive ? 0 : 1, ctx.currentTime);
           } catch (e) {
-             console.error("Error creating MediaElementSource:", e);
+             console.error("Error creating MediaElementSource Main:", e);
+          }
+      }
+
+      // Compare Source Setup
+      if (compareSrc && compareAudioRef.current && !compareSourceRef.current) {
+          try {
+              const source = ctx.createMediaElementSource(compareAudioRef.current);
+              const gain = ctx.createGain();
+              source.connect(gain);
+              gain.connect(analyserRef.current!);
+
+              compareSourceRef.current = source;
+              compareGainRef.current = gain;
+
+              // Initial state
+              gain.gain.setValueAtTime(isCompareActive ? 1 : 0, ctx.currentTime);
+          } catch (e) {
+              console.error("Error creating MediaElementSource Compare:", e);
           }
       }
   };
 
   // ------------------------------------------------------------
-  // Efecto principal de dibujo (toggle entre estático y espectro)
+  // Effects
   // ------------------------------------------------------------
+
+  // Handle Playback State
   useEffect(() => {
     if (isPlaying) {
         initAudioContext();
@@ -391,7 +448,6 @@ export const WaveformPlayer: React.FC<WaveformPlayerProps> = ({
         }
         drawStaticWaveform();
     }
-
     return () => {
         if (requestRef.current) {
             cancelAnimationFrame(requestRef.current);
@@ -399,15 +455,38 @@ export const WaveformPlayer: React.FC<WaveformPlayerProps> = ({
     };
   }, [isPlaying, drawSpectrum, drawStaticWaveform]);
 
-  // Redraw static waveform when not playing but time/canvas changes
+  // Re-draw static when stopped and state changes
   useEffect(() => {
     if (!isPlaying) {
         drawStaticWaveform();
     }
-  }, [isPlaying, drawStaticWaveform, progress, peaks]); // Depend on relevant props
+  }, [isPlaying, drawStaticWaveform, progress, peaks]);
+
+  // Handle A/B Switching (Gain Control)
+  useEffect(() => {
+     const ctx = audioContextRef.current;
+     if (ctx && mainGainRef.current) {
+         const now = ctx.currentTime;
+         // Crossfade duration very short (instant but no pop)
+         const ramp = 0.05;
+
+         if (isCompareActive) {
+             mainGainRef.current.gain.setTargetAtTime(0, now, ramp);
+             if (compareGainRef.current) {
+                 compareGainRef.current.gain.setTargetAtTime(1, now, ramp);
+             }
+         } else {
+             mainGainRef.current.gain.setTargetAtTime(1, now, ramp);
+             if (compareGainRef.current) {
+                 compareGainRef.current.gain.setTargetAtTime(0, now, ramp);
+             }
+         }
+     }
+  }, [isCompareActive, compareSrc]); // Re-run if compare active toggles
+
 
   // ------------------------------------------------------------
-  // Interacción
+  // Interaction
   // ------------------------------------------------------------
   const togglePlay = () => {
     const audio = audioRef.current;
@@ -415,13 +494,20 @@ export const WaveformPlayer: React.FC<WaveformPlayerProps> = ({
 
     if (isPlaying) {
       audio.pause();
+      if (compareAudioRef.current) compareAudioRef.current.pause();
       setIsPlaying(false);
     } else {
-      // Ensure context is running (play must be triggered by user for AudioContext)
       if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
           audioContextRef.current.resume();
       }
-      void audio.play();
+
+      // Ensure sync before start
+      if (compareAudioRef.current) {
+          compareAudioRef.current.currentTime = audio.currentTime;
+          compareAudioRef.current.play().catch(e => console.error("Compare play failed", e));
+      }
+
+      audio.play().catch(e => console.error("Main play failed", e));
       setIsPlaying(true);
     }
   };
@@ -437,23 +523,27 @@ export const WaveformPlayer: React.FC<WaveformPlayerProps> = ({
     const x = e.clientX - rect.left;
     const ratio = x / rect.width;
     const newTime = Math.max(0, Math.min(duration * ratio, duration));
+
     audio.currentTime = newTime;
+    if (compareAudioRef.current) {
+        compareAudioRef.current.currentTime = newTime;
+    }
+
     setCurrentTime(newTime);
-    // If not playing, the useEffect for static waveform will redraw due to progress/currentTime change
   };
 
   const handleDownload = async () => {
-    if (!src || isDownloading) return;
+    if (!activeSrc || isDownloading) return;
 
     // Track download
     gaEvent("download_result", {
       file_name: downloadFileName || "mix.wav",
-      url: src,
+      url: activeSrc,
     });
 
     setIsDownloading(true);
     try {
-      const response = await fetch(src);
+      const response = await fetch(activeSrc);
       const blob = await response.blob();
       const url = window.URL.createObjectURL(blob);
 
@@ -469,9 +559,8 @@ export const WaveformPlayer: React.FC<WaveformPlayerProps> = ({
       document.body.removeChild(a);
     } catch (error) {
       console.error("Download failed:", error);
-      // Fallback: intentar navegación directa si falla el fetch (ej. CORS estricto)
       const a = document.createElement("a");
-      a.href = src;
+      a.href = activeSrc;
       a.download = downloadFileName || "mix.wav";
       a.target = "_blank";
       document.body.appendChild(a);
@@ -489,8 +578,13 @@ export const WaveformPlayer: React.FC<WaveformPlayerProps> = ({
         className,
       ].join(" ")}
     >
-      {/* Audio oculto para controlar playback - crossOrigin anonymous is crucial for Web Audio */}
+      {/* Audio principal - crossOrigin anonymous is crucial for Web Audio */}
       <audio ref={audioRef} src={src} crossOrigin="anonymous" className="hidden" />
+
+      {/* Audio comparativa (opcional) */}
+      {compareSrc && (
+          <audio ref={compareAudioRef} src={compareSrc} crossOrigin="anonymous" className="hidden" />
+      )}
 
       {/* Botón Play/Pause */}
       <button
