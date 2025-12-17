@@ -12,6 +12,7 @@ from .stages.stage import run_stage, set_active_contract_sequence
 from .utils.analysis_utils import get_temp_dir
 from .context import PipelineContext
 from .utils.job_store import update_job_status
+from .utils.waveform import compute_and_cache_peaks, ensure_preview_wav
 
 logger = logging.getLogger(__name__)
 
@@ -332,6 +333,18 @@ def run_pipeline_for_job(
         check=False,
     )
 
+    # Generar peaks para S0_SESSION_FORMAT, así si el usuario abre Studio antes de S6, ya están listos.
+    s0_format_dir = get_temp_dir("S0_SESSION_FORMAT", create=False)
+    if s0_format_dir.exists():
+        logger.info("[pipeline] Pre-calculating peaks for S0_SESSION_FORMAT...")
+        for stem_path in s0_format_dir.glob("*.wav"):
+            if stem_path.name.lower() == "full_song.wav":
+                continue
+            peaks_path = s0_format_dir / "peaks" / f"{stem_path.stem}.peaks.json"
+            preview_path = s0_format_dir / "previews" / f"{stem_path.stem}_preview.wav"
+            compute_and_cache_peaks(stem_path, peaks_path)
+            ensure_preview_wav(stem_path, preview_path)
+
     # ------------------------------------------------------------------
     # 3) Construir lista de contratos desde contracts.json
     # ------------------------------------------------------------------
@@ -456,6 +469,19 @@ def run_pipeline_for_job(
             if not has_corrections:
                 logger.info("[pipeline] Pausing pipeline for Manual Correction (S6)...")
 
+                # Antes de pausar, asegurarnos de que S6 tenga peaks generados.
+                # Como aún no corrió S6, los stems en S6_MANUAL_CORRECTION son la copia de S5.
+                s6_dir = get_temp_dir("S6_MANUAL_CORRECTION", create=False)
+                if s6_dir.exists():
+                    logger.info("[pipeline] Pre-calculating peaks for S6_MANUAL_CORRECTION (before pause)...")
+                    for stem_path in s6_dir.glob("*.wav"):
+                        if stem_path.name.lower() == "full_song.wav":
+                            continue
+                        peaks_path = s6_dir / "peaks" / f"{stem_path.stem}.peaks.json"
+                        preview_path = s6_dir / "previews" / f"{stem_path.stem}_preview.wav"
+                        compute_and_cache_peaks(stem_path, peaks_path)
+                        ensure_preview_wav(stem_path, preview_path)
+
                 # Set status to waiting_for_correction
                 if progress_cb:
                     progress_cb(
@@ -465,7 +491,7 @@ def run_pipeline_for_job(
                         "Waiting for manual correction in Studio..."
                     )
 
-                # Detenemos ejecuciИn del resto de stages hasta que lleguen correcciones.
+                # Detenemos ejecución del resto de stages hasta que lleguen correcciones.
                 return
             else:
                 logger.info(
