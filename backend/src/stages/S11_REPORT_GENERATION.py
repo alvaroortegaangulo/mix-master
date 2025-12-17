@@ -7,7 +7,6 @@ import sys
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 import json
-import shutil
 import traceback
 import numpy as np
 
@@ -62,18 +61,15 @@ METRIC_MAPPING = {
     "limiter_gr_db": "limiterReduction"
 }
 
-def _load_mix_audio_for_report(context: PipelineContext) -> tuple[Optional[np.ndarray], Optional[int]]:
+def _load_mix_audio_for_report(context: PipelineContext, stage_ids: List[str]) -> tuple[Optional[np.ndarray], Optional[int]]:
     """
-    Fallback para cargar el mix final desde disco cuando el contexto
-    no trae audio en memoria (pipeline actual). Prioriza el WAV mßs
-    reciente disponible.
+    Loads audio from the first matching stage in stage_ids.
     """
     job_root: Optional[Path] = None
     try:
         if getattr(context, "temp_root", None):
             job_root = Path(context.temp_root)
         else:
-            # Legacy fallback: usar el stage dir actual para resolver el job root
             job_root = get_temp_dir(context.stage_id or "S11_REPORT_GENERATION", create=False).parent
     except Exception:
         job_root = None
@@ -81,15 +77,8 @@ def _load_mix_audio_for_report(context: PipelineContext) -> tuple[Optional[np.nd
     if not job_root:
         return None, None
 
-    candidates = [
-        job_root / "S11_REPORT_GENERATION" / "full_song.wav",
-        job_root / "S10_MASTER_FINAL_LIMITS" / "full_song.wav",
-        job_root / "S6_MANUAL_CORRECTION" / "full_song.wav",
-        job_root / "S0_SESSION_FORMAT" / "full_song.wav",
-        job_root / "S0_MIX_ORIGINAL" / "full_song.wav",
-    ]
-
-    for wav_path in candidates:
+    for stage in stage_ids:
+        wav_path = job_root / stage / "full_song.wav"
         if not wav_path.exists():
             continue
         try:
@@ -118,7 +107,6 @@ def _load_stage_json(job_root: Path, stage_id: str, filename: str) -> Optional[D
 def _process_comparison_diff(stage_id: str, diff_file: Path) -> List[Dict[str, Any]]:
     """
     Processes the comparison JSON to extract meaningful changes for the report.
-    Returns a list of change objects: {key: str, value: Any, unit: str}
     """
     try:
         with diff_file.open("r", encoding="utf-8") as f:
@@ -127,35 +115,22 @@ def _process_comparison_diff(stage_id: str, diff_file: Path) -> List[Dict[str, A
         return []
 
     changes = []
-
-    # We mainly care about 'session' metrics for the summary
     session_diffs = diff_data.get("session", {})
-
-    # Sort by magnitude of change or just list them?
-    # User wants 3-5 lines. We should prioritize "changed" ones.
-
     relevant_items = []
     for k, v in session_diffs.items():
         if v.get("changed", False):
             relevant_items.append((k, v))
 
-    # If no changes marked, maybe show some important static ones?
-    # User said: "Si no ha cambiado ningún parámetro, indicar que la fase no ha realizado ningún cambio."
     if not relevant_items:
         return []
 
-    # Map keys and format values
     for k, v in relevant_items:
-        # Determine unit
         unit = ""
         if "db" in k.lower(): unit = "dB"
         elif "hz" in k.lower(): unit = "Hz"
         elif "percent" in k.lower(): unit = "%"
 
-        # Get mapped key
         mapped_key = METRIC_MAPPING.get(k, k)
-
-        # Format diff value
         diff_val = v.get("diff", 0)
         val_fmt = f"{diff_val:+.2f}"
 
@@ -165,16 +140,12 @@ def _process_comparison_diff(stage_id: str, diff_file: Path) -> List[Dict[str, A
             "unit": unit,
             "raw_key": k
         })
-
-    # Limit to top 5
-    # Ideally we'd sort by importance, but for now take first 5
     return changes[:5]
 
 def _enrich_report_with_parameters_and_images(report: Dict[str, Any], temp_dir: Path) -> None:
     """
     Enriches the report stages with parameter changes and image paths.
     """
-
     stages: List[Dict[str, Any]] = report.get("stages", [])
     job_root = temp_dir.parent
 
@@ -188,7 +159,6 @@ def _enrich_report_with_parameters_and_images(report: Dict[str, Any], temp_dir: 
         if not stage_dir.exists():
              stage_dir = job_root / contract_id
 
-        # --- Load Comparison Changes ---
         comparison_file = stage_dir / f"comparison_{contract_id}.json"
         if comparison_file.exists():
             changes = _process_comparison_diff(contract_id, comparison_file)
@@ -196,13 +166,10 @@ def _enrich_report_with_parameters_and_images(report: Dict[str, Any], temp_dir: 
         else:
             s["changes"] = []
 
-        # --- Legacy Parameters Logic (Keep for backward compatibility or extra details) ---
         params = s.get("parameters", {})
         if not params:
             params = {}
 
-        # (Existing specialized loading logic for S0-S10 kept for compatibility/details)
-        # S0_SESSION_FORMAT
         if "S0_SESSION_FORMAT" in contract_id:
             data = _load_stage_json(job_root, "S0_SESSION_FORMAT", "analysis_S0_SESSION_FORMAT.json")
             if data:
@@ -332,34 +299,17 @@ def _enrich_report_with_parameters_and_images(report: Dict[str, Any], temp_dir: 
 
         s["parameters"] = params
 
-        # 3. Find Interactive Comparison Data (replaces images)
-        # Look for comparison_interactive.json
         comp_json = "comparison_interactive.json"
-
-        # We might have a pre-copied version or need to copy it?
-        # Typically stage.py doesn't copy JSONs to temp_root unless explicit.
-        # But we can read it directly from stage_dir and embed it in the report,
-        # OR copy it to S11 folder and reference it.
-        # Embedding is cleaner if it's not too huge.
-        # The data is ~20KB. Embedding in the main report.json is fine.
-
         comp_data = _load_stage_json(job_root, stage_id_folder, comp_json)
         if not comp_data:
-             # Try contract_id
              comp_data = _load_stage_json(job_root, contract_id, comp_json)
-
         if comp_data:
             s["interactive_comparison"] = comp_data
 
-        # Remove image logic as requested by user ("Quitar la imagen...")
         s["images"] = {}
-
     pass
 
 def process(context: PipelineContext, *args) -> bool:
-    """
-    Standard entry point for stage.py orchestrator.
-    """
     contract_id = context.stage_id
     if not contract_id:
         if args:
@@ -393,7 +343,6 @@ def process(context: PipelineContext, *args) -> bool:
         logger.logger.info("[S11_REPORT_GENERATION] No se ha encontrado 'session.report' en el análisis.")
         report = {"stages": [], "final_metrics": {}, "error": "Report data missing"}
 
-    # --- ENRICH REPORT ---
     try:
         _enrich_report_with_parameters_and_images(report, temp_dir)
     except Exception as e:
@@ -405,13 +354,24 @@ def process(context: PipelineContext, *args) -> bool:
         audio_arr = getattr(context, "audio_mixdown", None)
         sample_rate = getattr(context, "sample_rate", None)
 
+        # Also try to get original audio
+        audio_original = getattr(context, "audio_original", None)
+
         if audio_arr is None or not sample_rate:
-            audio_arr, sample_rate = _load_mix_audio_for_report(context)
+            # Fallback to load from disk
+            # Try S10 or S9 first
+            audio_arr, sample_rate = _load_mix_audio_for_report(context, ["S11_REPORT_GENERATION", "S10_MASTER_FINAL_LIMITS", "S9_MASTER_GENERIC", "S6_MANUAL_CORRECTION"])
             if audio_arr is not None and sample_rate:
-                logger.logger.info(f"[S11] Loaded mix audio from disk for interactive charts (sr={sample_rate})")
+                logger.logger.info(f"[S11] Loaded mix audio from disk (sr={sample_rate})")
+
+        if audio_original is None:
+             # Load S0 or S0_MIX_ORIGINAL
+             audio_original, _ = _load_mix_audio_for_report(context, ["S0_MIX_ORIGINAL", "S0_SESSION_FORMAT"])
+             if audio_original is not None:
+                 logger.logger.info(f"[S11] Loaded original audio from disk")
 
         if audio_arr is not None and sample_rate:
-            chart_data = compute_interactive_data(audio_arr, int(sample_rate))
+            chart_data = compute_interactive_data(audio_arr, int(sample_rate), audio_original=audio_original)
             report["interactive_charts"] = chart_data
         else:
             logger.logger.warning("[S11] No mix audio available; interactive charts will be empty.")
@@ -443,13 +403,12 @@ def process(context: PipelineContext, *args) -> bool:
     _log_summary(report)
     return True
 
-
 def _log_summary(report: Dict[str, Any]) -> None:
-    # (Kept same logging logic)
+    # (Existing logging logic)
     logger.logger.info("\n==============================================")
     logger.logger.info("       RESUMEN DE PIPELINE DE MEZCLA/MASTER")
     logger.logger.info("==============================================")
-    # ... (rest of logging logic same as read_file, omitted for brevity in thought, included in overwrite)
+
     pipeline_version = report.get("pipeline_version", "desconocida")
     generated_at = report.get("generated_at_utc", "desconocida")
     style_preset = report.get("style_preset", "desconocido")
@@ -477,7 +436,6 @@ def _log_summary(report: Dict[str, Any]) -> None:
             logger.logger.info(f"  Descripción: {name}")
         logger.logger.info(f"  Estado: {status}")
 
-        # Log parameters if any
         params = s.get("parameters", {})
         if params:
             logger.logger.info("  Parámetros modificados:")
@@ -489,7 +447,6 @@ def _log_summary(report: Dict[str, Any]) -> None:
                 else:
                     logger.logger.info(f"    {k}: {v}")
 
-        # Log changes if any
         changes = s.get("changes", [])
         if changes:
              logger.logger.info("  Cambios detectados:")
@@ -521,25 +478,18 @@ def _log_summary(report: Dict[str, Any]) -> None:
     logger.logger.info(f"  Correlación estéreo:     {_fmt(corr, '.3f')}")
     logger.logger.info(f"  Dif. L/R (dB):           {_fmt(diff_lr)}")
     logger.logger.info(f"  Crest factor (dB):       {_fmt(crest)}")
-
     logger.logger.info("==============================================\n")
 
-
 def main() -> None:
-    """
-    Legacy entry point.
-    """
     if len(sys.argv) < 2:
         logger.logger.info("Uso: python S11_REPORT_GENERATION.py <CONTRACT_ID>")
         sys.exit(1)
 
-    contract_id = sys.argv[1]  # "S11_REPORT_GENERATION"
-
-    # Minimal context mock for legacy execution
+    contract_id = sys.argv[1]
     class MockContext:
         def __init__(self, stage_id):
             self.stage_id = stage_id
-            self.audio_mixdown = None # No audio in legacy mode
+            self.audio_mixdown = None
             self.sample_rate = 44100
         def get_stage_dir(self):
             return get_temp_dir(self.stage_id, create=False)
