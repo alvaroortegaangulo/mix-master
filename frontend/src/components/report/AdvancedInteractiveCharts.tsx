@@ -173,7 +173,12 @@ const LoudnessChart = ({
         <Tooltip
             contentStyle={{ backgroundColor: "#0f172a", borderColor: "#334155", color: "#f8fafc" }}
             labelFormatter={(l) => `Time: ${l}`}
-            formatter={(val: number) => [`${val.toFixed(1)} LUFS`, ""]}
+            formatter={(val?: number) => {
+              if (typeof val !== "number" || Number.isNaN(val)) {
+                return ["N/A", ""];
+              }
+              return [`${val.toFixed(1)} LUFS`, ""];
+            }}
         />
         {expanded && <Legend />}
 
@@ -241,7 +246,12 @@ const DynamicsChart = ({
           />
           <Tooltip
               contentStyle={{ backgroundColor: "#0f172a", borderColor: "#334155", color: "#f8fafc" }}
-              formatter={(val: number) => [`${val.toFixed(1)} dB`, ""]}
+              formatter={(val?: number) => {
+                if (typeof val !== "number" || Number.isNaN(val)) {
+                  return ["N/A", ""];
+                }
+                return [`${val.toFixed(1)} dB`, ""];
+              }}
           />
           {expanded && <Legend />}
 
@@ -304,7 +314,12 @@ const StereoChart = ({
           />
           <Tooltip
               contentStyle={{ backgroundColor: "#0f172a", borderColor: "#334155", color: "#f8fafc" }}
-              formatter={(val: number) => [val.toFixed(2), "Corr"]}
+              formatter={(val?: number) => {
+                if (typeof val !== "number" || Number.isNaN(val)) {
+                  return ["N/A", "Corr"];
+                }
+                return [val.toFixed(2), "Corr"];
+              }}
           />
           {expanded && <Legend />}
 
