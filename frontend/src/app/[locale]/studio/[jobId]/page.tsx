@@ -55,6 +55,21 @@ interface StemControl {
   status?: "idle" | "loading" | "ready" | "error";
 }
 
+function buildAuthHeaders(extra?: HeadersInit): HeadersInit {
+  const headers: Record<string, string> = {};
+  const apiKey = process.env.NEXT_PUBLIC_MIXMASTER_API_KEY;
+  if (apiKey) {
+    headers["X-API-Key"] = apiKey;
+  }
+  if (typeof window !== "undefined") {
+    const token = localStorage.getItem("access_token");
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+  }
+  return { ...headers, ...(extra || {}) };
+}
+
 export default function StudioPage() {
   const params = useParams();
   const jobId = params.jobId as string;
@@ -231,9 +246,7 @@ export default function StudioPage() {
         }
 
         const res = await fetch(`${baseUrl}/jobs/${jobId}/stems`, {
-          headers: {
-            "X-API-Key": process.env.NEXT_PUBLIC_MIXMASTER_API_KEY || "",
-          },
+          headers: buildAuthHeaders(),
         });
 
         let stemsFromApi: any[] = [];
@@ -611,25 +624,25 @@ export default function StudioPage() {
               pan: s.pan.enabled ? s.pan.value : 0,
               eq: s.eq.enabled ? s.eq : undefined,
               compression: s.compression.enabled ? s.compression : undefined,
-              reverb: s.reverb.enabled ? s.reverb : undefined,
-              mute: s.mute,
-              solo: s.solo
-          }));
+          reverb: s.reverb.enabled ? s.reverb : undefined,
+          mute: s.mute,
+          solo: s.solo
+        }));
 
-          const baseUrl = getBackendBaseUrl();
-          await fetch(`${baseUrl}/jobs/${jobId}/correction`, {
-              method: 'POST',
-              headers: {
-                  'Content-Type': 'application/json',
-                  "X-API-Key": process.env.NEXT_PUBLIC_MIXMASTER_API_KEY || "",
-              },
-              body: JSON.stringify({ corrections })
-          });
+        const baseUrl = getBackendBaseUrl();
+        const correctionRes = await fetch(`${baseUrl}/jobs/${jobId}/correction`, {
+            method: 'POST',
+            headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+            body: JSON.stringify({ corrections })
+        });
+        if (!correctionRes.ok) {
+            throw new Error(`Corrections failed (${correctionRes.status})`);
+        }
 
-          let stages: string[] = [];
-          if (proceedToMastering) {
-              stages = [
-                  "S6_MANUAL_CORRECTION",
+        let stages: string[] = [];
+        if (proceedToMastering) {
+            stages = [
+                "S6_MANUAL_CORRECTION",
                   "S7_MIXBUS_TONAL_BALANCE",
                   "S8_MIXBUS_COLOR_GENERIC",
                   "S9_MASTER_GENERIC",
@@ -639,18 +652,18 @@ export default function StudioPage() {
           } else {
               stages = [
                   "S6_MANUAL_CORRECTION",
-                  "S11_REPORT_GENERATION"
-              ];
-          }
+                "S11_REPORT_GENERATION"
+            ];
+        }
 
-          await fetch(`${baseUrl}/mix/${jobId}/start`, {
-               method: 'POST',
-               headers: {
-                   'Content-Type': 'application/json',
-                   "X-API-Key": process.env.NEXT_PUBLIC_MIXMASTER_API_KEY || ""
-               },
-               body: JSON.stringify({ stages })
-          });
+        const startRes = await fetch(`${baseUrl}/mix/${jobId}/start`, {
+             method: 'POST',
+             headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+             body: JSON.stringify({ stages })
+        });
+        if (!startRes.ok) {
+            throw new Error(`Pipeline restart failed (${startRes.status})`);
+        }
 
           router.push(`/${locale}/mix?jobId=${encodeURIComponent(jobId)}`);
       } catch (err) {
@@ -667,7 +680,7 @@ export default function StudioPage() {
           const baseUrl = getBackendBaseUrl();
           const url = `${baseUrl}/jobs/${jobId}/download-stems-zip`;
           const res = await fetch(url, {
-              headers: { "X-API-Key": process.env.NEXT_PUBLIC_MIXMASTER_API_KEY || "" }
+              headers: buildAuthHeaders()
           });
           if (!res.ok) throw new Error("Download failed");
           const blob = await res.blob();
@@ -692,7 +705,7 @@ export default function StudioPage() {
           const baseUrl = getBackendBaseUrl();
           const url = `${baseUrl}/jobs/${jobId}/download-mixdown`;
           const res = await fetch(url, {
-              headers: { "X-API-Key": process.env.NEXT_PUBLIC_MIXMASTER_API_KEY || "" }
+              headers: buildAuthHeaders()
           });
           if (!res.ok) throw new Error("Download failed");
           const blob = await res.blob();
