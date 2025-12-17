@@ -3,6 +3,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { gaEvent } from "../lib/ga";
+import { PlayIcon, PauseIcon, ArrowDownTrayIcon } from "@heroicons/react/24/solid";
 
 type WaveformPlayerProps = {
   src: string;
@@ -360,12 +361,9 @@ export const WaveformPlayer: React.FC<WaveformPlayerProps> = ({
         className="flex h-9 w-9 items-center justify-center rounded-full bg-amber-500 text-slate-950 shadow hover:bg-amber-400 transition"
       >
         {isPlaying ? (
-          <span className="h-3 w-3 flex items-center justify-between">
-            <span className="block h-3 w-[3px] bg-slate-950" />
-            <span className="block h-3 w-[3px] bg-slate-950" />
-          </span>
+          <PauseIcon className="h-5 w-5" />
         ) : (
-          <span className="ml-[2px] inline-block h-0 w-0 border-y-4 border-l-6 border-y-transparent border-l-slate-950" />
+          <PlayIcon className="h-5 w-5" />
         )}
       </button>
 
@@ -395,11 +393,9 @@ export const WaveformPlayer: React.FC<WaveformPlayerProps> = ({
         title="Download"
       >
         {isDownloading ? (
-           <span className="block h-3 w-3 animate-spin rounded-full border-2 border-slate-950 border-t-transparent"></span>
+           <span className="block h-4 w-4 animate-spin rounded-full border-2 border-slate-950 border-t-transparent"></span>
         ) : (
-          <span className="block h-3 w-[2px] bg-slate-950 relative">
-            <span className="absolute bottom-[-4px] left-1/2 h-0 w-0 -translate-x-1/2 border-x-4 border-t-4 border-x-transparent border-t-slate-950" />
-          </span>
+           <ArrowDownTrayIcon className="h-5 w-5" />
         )}
       </button>
     </div>
