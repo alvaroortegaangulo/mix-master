@@ -875,6 +875,7 @@ def _stream_file_response(
     """
     headers = {
         "Accept-Ranges": "bytes",
+        "Access-Control-Allow-Origin": "*",
         **(extra_headers or {}),
     }
     if cache_seconds > 0:
