@@ -520,6 +520,9 @@ export async function fetchJobStatus(jobId: string): Promise<JobStatus> {
     method: "GET",
     // Avoid any browser/proxy cache between pipeline updates
     cache: "no-store",
+    headers: {
+      ...authHeaders(),
+    },
   });
 
   if (!res.ok) {
