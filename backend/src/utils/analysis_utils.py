@@ -217,18 +217,37 @@ def compute_integrated_loudness_lufs(mono: np.ndarray, sr: int) -> float:
     if mono.size == 0:
         return float("-inf")
 
+    audio = mono.astype(np.float32)
+
     try:
         import essentia.standard as es
         loudness_algo = es.LoudnessEBUR128(sampleRate=sr)
-        _, _, integrated, _ = loudness_algo(mono.astype(np.float32))
+
+        # LoudnessEBUR128 espera VECTOR_STEREOSAMPLE; si llega 1D falla con
+        # "Cannot convert data from type VECTOR_REAL ...".  Duplicamos a 2
+        # canales (R en silencio para conservar energia) cuando sea mono.
+        if audio.ndim == 1:
+            audio_for_es = np.column_stack((audio, np.zeros_like(audio)))
+        elif audio.ndim == 2:
+            if audio.shape[1] == 1:
+                audio_for_es = np.column_stack((audio[:, 0], np.zeros_like(audio[:, 0])))
+            else:
+                audio_for_es = audio
+        else:
+            audio_for_es = audio.reshape(-1, 2)
+
+        _, _, integrated, _ = loudness_algo(audio_for_es)
         return float(integrated)
     except ImportError:
+        pass
+    except TypeError:
+        # Si Essentia esta disponible pero no acepta el input, seguimos con fallback.
         pass
 
     try:
         import pyloudnorm as pyln
         meter = pyln.Meter(sr)
-        lufs = meter.integrated_loudness(mono.astype(np.float32))
+        lufs = meter.integrated_loudness(audio)
         return float(lufs)
     except ImportError:
         pass
