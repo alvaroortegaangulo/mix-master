@@ -9,6 +9,7 @@ from typing import Dict, Any, List, Optional
 import json
 import shutil
 import traceback
+import numpy as np
 
 # --- hack sys.path para ejecutar como script suelto desde stage.py ---
 THIS_DIR = Path(__file__).resolve().parent
@@ -23,6 +24,129 @@ except ImportError:
     PipelineContext = Any
 
 from utils.analysis_utils import get_temp_dir, sanitize_json_floats
+
+
+def _compute_interactive_data(audio: np.ndarray, sr: int) -> Dict[str, Any]:
+    """
+    Generates data for interactive charts:
+    1. Dynamics: RMS & Peak over time (e.g. 100ms windows)
+    2. Spectrum: Average magnitude spectrum (log-spaced bands)
+    """
+    if audio is None or len(audio) == 0:
+        return {}
+
+    if audio.ndim > 1:
+        # Mix to mono for analysis
+        mono = np.mean(audio, axis=1)
+    else:
+        mono = audio
+
+    # --- Dynamics (RMS & Peak) ---
+    window_sec = 0.1  # 100ms
+    window_samples = int(sr * window_sec)
+    if window_samples == 0: window_samples = 1024
+
+    # Pad to multiple of window
+    pad_len = (window_samples - (len(mono) % window_samples)) % window_samples
+    if pad_len > 0:
+        mono_padded = np.pad(mono, (0, pad_len))
+    else:
+        mono_padded = mono
+
+    # Reshape
+    chunks = mono_padded.reshape(-1, window_samples)
+
+    # RMS per chunk
+    rms_vals = np.sqrt(np.mean(chunks**2, axis=1))
+    rms_db = 20 * np.log10(np.maximum(rms_vals, 1e-9))
+
+    # Peak per chunk
+    peak_vals = np.max(np.abs(chunks), axis=1)
+    peak_db = 20 * np.log10(np.maximum(peak_vals, 1e-9))
+
+    # Clean up limits
+    rms_db = np.clip(rms_db, -90, 0)
+    peak_db = np.clip(peak_db, -90, 0)
+
+    dynamics = {
+        "time_step": window_sec,
+        "rms_db": [round(float(x), 2) for x in rms_db],
+        "peak_db": [round(float(x), 2) for x in peak_db],
+        "duration_sec": len(mono) / sr
+    }
+
+    # --- Spectrum (Averaged Log Bands) ---
+    n_fft = 4096
+
+    # Take up to 100 chunks spread across the file to estimate average spectrum
+    step = len(mono) // 100
+    if step < n_fft:
+        step = n_fft
+
+    indices = np.arange(0, len(mono) - n_fft, step)
+    if len(indices) == 0:
+        # Fallback for short files
+        indices = [0]
+        if len(mono) < n_fft:
+            n_fft = len(mono)
+            if n_fft == 0:
+                return {"dynamics": dynamics}
+
+    magnitudes = []
+    window = np.hanning(n_fft)
+
+    for idx in indices:
+        if idx + n_fft > len(mono): break
+        chunk = mono[idx:idx+n_fft] * window
+        fft = np.fft.rfft(chunk)
+        mag = np.abs(fft)
+        magnitudes.append(mag)
+
+    if not magnitudes:
+        avg_mag = np.zeros(n_fft//2 + 1)
+    else:
+        avg_mag = np.mean(magnitudes, axis=0)
+
+    freqs = np.fft.rfftfreq(n_fft, 1/sr)
+
+    # Log Bins
+    min_freq = 20
+    max_freq = sr / 2
+    num_bands = 64
+
+    log_freqs = np.logspace(np.log10(min_freq), np.log10(max_freq), num_bands + 1)
+    band_energies = []
+    band_centers = []
+
+    for i in range(num_bands):
+        f_start = log_freqs[i]
+        f_end = log_freqs[i+1]
+        mask = (freqs >= f_start) & (freqs < f_end)
+
+        if np.any(mask):
+            # Mean Power
+            energy = np.mean(avg_mag[mask]**2)
+            db = 10 * np.log10(np.maximum(energy, 1e-12))
+            band_energies.append(db)
+        else:
+            band_energies.append(-90.0)
+
+        band_centers.append(np.sqrt(f_start * f_end))
+
+    # Normalize spectrum for display (relative to max)
+    max_db = max(band_energies) if band_energies else -90
+    # Or keep absolute? Absolute is hard to interpret without calibration.
+    # But relative is fine. Let's keep absolute dBFS-ish (calculated from normalized audio).
+
+    spectrum = {
+        "frequencies": [round(float(f), 1) for f in band_centers],
+        "magnitudes_db": [round(float(m), 2) for m in band_energies]
+    }
+
+    return {
+        "dynamics": dynamics,
+        "spectrum": spectrum
+    }
 
 
 def _enrich_report_with_parameters_and_images(report: Dict[str, Any], temp_dir: Path) -> None:
@@ -183,6 +307,19 @@ def process(context: PipelineContext, *args) -> bool:
         logger.logger.error(f"[S11] Error enriching report: {e}")
         traceback.print_exc()
 
+    # --- GENERATE INTERACTIVE CHART DATA ---
+    try:
+        if hasattr(context, "audio_mixdown") and context.audio_mixdown is not None:
+             logger.logger.info("[S11] Generating interactive chart data from in-memory mixdown...")
+             chart_data = _compute_interactive_data(context.audio_mixdown, context.sample_rate)
+             report["interactive_charts"] = chart_data
+        else:
+            logger.logger.warning("[S11] No audio_mixdown found in context. Interactive charts will be empty.")
+    except Exception as e:
+        logger.logger.error(f"[S11] Error generating chart data: {e}")
+        traceback.print_exc()
+
+
     # SANITIZE floats before dumping to JSON
     report = sanitize_json_floats(report)
     data["session"]["report"] = report
@@ -296,6 +433,8 @@ def main() -> None:
     class MockContext:
         def __init__(self, stage_id):
             self.stage_id = stage_id
+            self.audio_mixdown = None # No audio in legacy mode
+            self.sample_rate = 44100
         def get_stage_dir(self):
             return get_temp_dir(self.stage_id, create=False)
 
