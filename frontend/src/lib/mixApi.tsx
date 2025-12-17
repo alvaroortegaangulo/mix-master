@@ -129,7 +129,18 @@ function normalizeFilePath(jobId: string, filePath: string): string {
 
 function authHeaders(): HeadersInit {
   const key = process.env.NEXT_PUBLIC_MIXMASTER_API_KEY;
-  return key ? { "X-API-Key": key } : {};
+  const headers: HeadersInit = {};
+  if (key) {
+    headers["X-API-Key"] = key;
+  }
+  // Añadimos el JWT si existe en cliente para endpoints protegidos
+  if (typeof window !== "undefined") {
+    const token = localStorage.getItem("access_token");
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+  }
+  return headers;
 }
 
 export async function getStudioToken(jobId: string, ttlDays = 7): Promise<{ token: string; expires: number }> {
