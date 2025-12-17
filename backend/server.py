@@ -1213,14 +1213,18 @@ async def upload_file_for_job(
     Recibe un archivo para un job existente.
     SIN compresión. Copia en streaming usando aiofiles para no bloquear el loop.
     """
+    # Validar propietario y asegurar que las carpetas existen
+    data = _assert_job_owner(job_id, current_user)
     media_dir, temp_root = _get_job_dirs(job_id)
-
-    if not temp_root.exists():
-        raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
-
-    _assert_job_owner(job_id, current_user)
-
+    temp_root.mkdir(parents=True, exist_ok=True)
     media_dir.mkdir(parents=True, exist_ok=True)
+
+    # Si job_status existía pero el fs se limpió, reescribir estado mínimo para evitar 404 posteriores
+    if data and isinstance(data, dict):
+        try:
+            write_job_status(temp_root, data)
+        except Exception:
+            logger.warning("No se pudo reescribir job_status para job %s tras recrear carpetas", job_id)
 
     dest_path, safe_name = _prepare_upload_destination(media_dir, file)
     existing_total = _get_media_dir_size(media_dir)
@@ -1254,11 +1258,15 @@ async def start_mix_job_endpoint(
     """
     request_start_ts = time.time()
 
+    data = _assert_job_owner(job_id, current_user)
     media_dir, temp_root = _get_job_dirs(job_id)
-    if not media_dir.exists() or not temp_root.exists():
-        raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
-
-    _assert_job_owner(job_id, current_user)
+    media_dir.mkdir(parents=True, exist_ok=True)
+    temp_root.mkdir(parents=True, exist_ok=True)
+    if data and isinstance(data, dict):
+        try:
+            write_job_status(temp_root, data)
+        except Exception:
+            logger.warning("No se pudo reescribir job_status para job %s tras recrear carpetas", job_id)
 
     job_root = temp_root
     work_dir = job_root / "work"
