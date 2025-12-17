@@ -329,10 +329,16 @@ def _analyze_audio_series(audio: np.ndarray, sr: int) -> Dict[str, Any]:
 
         # hopSize is expressed in seconds for Essentia (not samples)
         loudness_algo = es.LoudnessEBUR128(sampleRate=sr, hopSize=0.1) # 100ms hop
-        # Essentia expects mono usually for this specific simple call?
-        # If we pass stereo, it might fail if shape is (N, 2).
-        # We will use the mono mixdown.
-        m, s, i, lra = loudness_algo(mono.astype(np.float32))
+        # Ensure stereo input; some Essentia builds require VECTOR_STEREOSAMPLE.
+        audio_for_es = audio.astype(np.float32, copy=False)
+        if audio_for_es.ndim == 1:
+            audio_for_es = np.column_stack((audio_for_es, np.zeros_like(audio_for_es)))
+        elif audio_for_es.shape[1] == 1:
+            audio_for_es = np.column_stack((audio_for_es[:, 0], np.zeros_like(audio_for_es[:, 0])))
+        elif audio_for_es.shape[1] > 2:
+            audio_for_es = audio_for_es[:, :2]
+
+        m, s, i, lra = loudness_algo(audio_for_es)
 
         # Downsample to ~500 points max for UI
         step = max(1, len(m) // 500)
