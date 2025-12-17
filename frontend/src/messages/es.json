@@ -372,7 +372,11 @@
       "finalReport": "Informe Final de Mezcla",
       "close": "Cerrar",
       "retry": "Reintentar cargar informe",
-      "unavailable": "Datos del informe no disponibles."
+      "unavailable": "Datos del informe no disponibles.",
+      "share": "Compartir",
+      "shareMix": "Compartir tu Mezcla",
+      "shareMixDesc": "Copia el enlace a continuación para compartir esta mezcla con clientes o amigos. El enlace proporciona acceso de solo lectura para escuchar el resultado.",
+      "copy": "Copiar"
     }
   },
   "Studio": {
