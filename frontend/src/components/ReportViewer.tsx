@@ -23,12 +23,20 @@ interface StageParameter {
   [key: string]: string | number | { [subKey: string]: string | number };
 }
 
+interface ReportChange {
+  key: string;
+  value: string;
+  unit: string;
+  raw_key: string;
+}
+
 interface StageReport {
   contract_id: string;
   stage_id?: string | null;
   name: string;
   status: string;
   parameters?: StageParameter;
+  changes?: ReportChange[];
   images?: {
     waveform?: string;
     spectrogram?: string;
@@ -73,7 +81,9 @@ const ReportStageCard = ({
   stage: StageReport;
   jobId: string;
 }) => {
-  const t = useTranslations("Report.stages");
+  const t = useTranslations("Report"); // Access common report translations (metrics etc)
+  const tStages = useTranslations("Report.stages"); // Access stage descriptions
+
   const [waveformUrl, setWaveformUrl] = useState("");
   const [spectrogramUrl, setSpectrogramUrl] = useState("");
   const images = stage.images || {};
@@ -94,7 +104,7 @@ const ReportStageCard = ({
     setSpectrogramUrl(buildUrl(images.spectrogram));
   }, [jobId, images.waveform, images.spectrogram]);
 
-  // Combine parameters and metrics for translation variables
+  // Combine parameters and metrics for translation variables (for legacy stage desc support)
   const params = {
     ...stage.parameters,
     ...stage.key_metrics,
@@ -108,25 +118,67 @@ const ReportStageCard = ({
       ? "No analysis data available for this stage."
       : stage.name || "Processing complete.";
 
-  const resolveTranslation = (key: string, fallback: string) =>
-    t.has(key as any) ? t(key as any, params) : fallback;
+  const resolveStageTranslation = (key: string, fallback: string) =>
+    tStages.has(key as any) ? tStages(key as any, params) : fallback;
 
-  const stageTitle = resolveTranslation(`${stageKey}.title`, fallbackTitle);
-  const stageDescription = resolveTranslation(
+  const stageTitle = resolveStageTranslation(`${stageKey}.title`, fallbackTitle);
+  const stageDescription = resolveStageTranslation(
     `${stageKey}.description`,
     fallbackDescription
   );
+
+  // --- Process Changes for Display ---
+  const changes = stage.changes || [];
+
+  // Also display important parameters if they are not in changes (Legacy support / static info)
+  // For now, if we have changes, we show them prominently.
+
+  const renderChangeLine = (c: ReportChange, index: number) => {
+    // Metric name: translate 'metric.noiseFloor' for example
+    // We assume backend sends "noiseFloor" which maps to "Report.metrics.noiseFloor"
+    const metricNameKey = `metrics.${c.key}`;
+    const metricName = t.has(metricNameKey as any) ? t(metricNameKey as any) : c.key;
+
+    // Direction text? We have the value "+0.45", we can just show: "Noise Floor: +0.45 dB"
+    // Or "Noise Floor changed by +0.45 dB"
+    // User wants "human explanation".
+    // Let's format as: "• [Metric Name]: [Value] [Unit]"
+    // Or if translation supports it: t('changeTemplate', { metric: ..., value: ... })
+
+    return (
+      <li key={index} className="text-sm text-slate-300">
+        <span className="font-semibold text-emerald-400">{metricName}</span>: <span className="font-mono text-emerald-200">{c.value} {c.unit}</span>
+      </li>
+    );
+  };
 
   return (
     <div className="mb-4 overflow-hidden rounded-lg border border-emerald-900/50 bg-slate-900/40 backdrop-blur-sm p-6">
       <div className="mb-4">
         <h3 className="text-base font-bold text-emerald-100">{stageTitle}</h3>
-        <p className="mt-2 text-sm text-slate-300 leading-relaxed">
+        {/* Original Description */}
+        <p className="mt-2 text-sm text-slate-400 italic mb-4">
           {stageDescription}
         </p>
+
+        {/* Changes Summary Block */}
+        <div className="rounded bg-black/30 p-4 border border-emerald-500/10">
+           <h4 className="text-xs font-bold text-emerald-500 uppercase tracking-widest mb-2">
+             {t("stageChangesTitle")}
+           </h4>
+           {changes.length > 0 ? (
+             <ul className="space-y-1 list-disc list-inside">
+               {changes.map((c, i) => renderChangeLine(c, i))}
+             </ul>
+           ) : (
+             <p className="text-sm text-slate-500">
+               {t("noChangesDetected")}
+             </p>
+           )}
+        </div>
       </div>
 
-      {/* Images Grid - Larger now */}
+      {/* Images Grid */}
       {hasImages && (
         <div className="mt-6 space-y-6">
           {images.waveform && (
@@ -317,9 +369,6 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
   if (!report) return null;
 
   // Filter only processed stages as requested
-  // Assuming 'processed' usually implies a successful execution or present data.
-  // The 'status' field in report stages usually is 'analyzed', 'processed', or 'skipped'.
-  // We'll filter out skipped ones if status indicates it.
   const processedStages = (report.stages || []).filter(
     (s) => s.status !== "skipped" && s.status !== "pending"
   );
@@ -331,22 +380,19 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
     setIsDownloading(true);
 
     try {
-      // Save current scroll position and scroll to top to ensure complete capture
       const scrollY = window.scrollY;
       window.scrollTo(0, 0);
 
-      // Delay to ensure rendering/scroll updates
       await new Promise((resolve) => setTimeout(resolve, 500));
 
       const canvas = await html2canvas(reportRef.current, {
         scale: 2,
         useCORS: true,
         logging: false,
-        backgroundColor: "#0f172a", // Match bg-slate-950
-        allowTaint: false, // Ensure we fail if images are tainted
+        backgroundColor: "#0f172a",
+        allowTaint: false,
       });
 
-      // Restore scroll
       window.scrollTo(0, scrollY);
 
       const imgData = canvas.toDataURL("image/png");
@@ -362,20 +408,13 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
 
       let heightLeft = pdfImgHeight;
 
-      // Add first page
       pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfImgHeight);
       heightLeft -= pdfHeight;
 
-      // Add subsequent pages
       while (heightLeft > 0) {
         pdf.addPage();
-        // Calculate the negative offset to shift the image up for the next page
-        // Page 1 (index 0): y = 0
-        // Page 2 (index 1): y = -pdfHeight
-        // Page 3 (index 2): y = -2 * pdfHeight
         const pageIndex = Math.ceil((pdfImgHeight - heightLeft) / pdfHeight);
         pdf.addImage(imgData, "PNG", 0, -(pageIndex * pdfHeight), pdfWidth, pdfImgHeight);
-
         heightLeft -= pdfHeight;
       }
 
