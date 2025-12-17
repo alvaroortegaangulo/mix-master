@@ -1,24 +1,18 @@
 {
-    # HTTP/3 está activado por defecto a partir de Caddy 2.6
-    # Simplemente necesitamos exponer también 443/udp en Docker.
-    # Opcional: forzar protocolos explícitos
-    # servers {
-    #     protocols h1 h2 h3
-    # }
+    # HTTP/3 is enabled by default since Caddy 2.6.
+    # To force protocols explicitly, use: servers { protocols h1 h2 h3 }
 }
 
 # Frontend (Next.js)
 music-mix-master.com {
     encode zstd gzip
 
-    # Forzar que el navegador NO cachee nada de la web
     header {
         Cache-Control "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0"
         Pragma "no-cache"
         Expires "0"
     }
 
-    # Proxy al contenedor frontend:3000
     reverse_proxy frontend:3000
 }
 
@@ -26,14 +20,12 @@ music-mix-master.com {
 api.music-mix-master.com {
     encode zstd gzip
 
-    # También sin caché para las respuestas de la API
     header {
         Cache-Control "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0"
         Pragma "no-cache"
         Expires "0"
     }
 
-    # Responder preflight CORS directamente para que el navegador reciba los headers
     @preflight {
         method OPTIONS
         path  /*
@@ -45,6 +37,5 @@ api.music-mix-master.com {
         header Access-Control-Allow-Credentials "true"
     }
 
-    # Proxy al contenedor web:8000
     reverse_proxy web:8000
 }
