@@ -624,12 +624,24 @@ async def _guard_heavy_endpoint(
     if not is_bearer:
         _require_api_key(key)
 
+    # No apliques rate limit al polling de estado (GET /jobs/{job_id})
+    if request.method.upper() == "GET" and str(request.url.path).startswith("/jobs/"):
+        return
+
     client_ip = request.client.host if request.client else "unknown"
     job_id = request.path_params.get("job_id") if isinstance(request.path_params, dict) else None
+    token_hash = None
+    if is_bearer:
+        try:
+            import hashlib
+            token_hash = hashlib.sha256(auth_header.encode("utf-8")).hexdigest()[:16]
+        except Exception:
+            token_hash = None
     limiter_key_parts = [
         f"api:{key}" if key else None,
         f"ip:{client_ip}",
         f"job:{job_id}" if job_id else None,
+        f"auth:{token_hash}" if token_hash else None,
         f"path:{request.url.path}",
     ]
     limiter_key = "|".join([p for p in limiter_key_parts if p])
