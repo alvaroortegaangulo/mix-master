@@ -435,7 +435,9 @@ useEffect(() => {
   };
 
   wsHandle = openJobStatusStream(activeJobId, {
-    onOpen: () => setLoading(true),
+    onOpen: () => {
+      if (!finished) setLoading(true);
+    },
     onStatus: (status) => {
       applyStatus(status);
     },
@@ -453,9 +455,8 @@ useEffect(() => {
     },
   });
 
-  if (!wsHandle) {
-    startPolling();
-  }
+  // Always poll as a fallback for reliability (e.g. dropped WS messages)
+  startPolling();
 
   return () => {
     cancelled = true;
