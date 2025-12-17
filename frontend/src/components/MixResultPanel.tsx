@@ -92,8 +92,6 @@ export function MixResultPanel({
     };
   }, [jobId, originalFullSongUrl, fullSongUrl]);
 
-  const currentSrc = showOriginal ? signedOriginalUrl : signedFullUrl;
-
   // Cargar reporte (con reintento manual)
   const loadReport = async () => {
     if (!jobId) return;
@@ -149,7 +147,11 @@ export function MixResultPanel({
           </p>
         </div>
 
-        <WaveformPlayer src={currentSrc} />
+        <WaveformPlayer
+          src={signedFullUrl}
+          compareSrc={signedOriginalUrl}
+          isCompareActive={showOriginal}
+        />
 
         <div className="mt-2 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
           <button
