@@ -270,7 +270,10 @@ const DynamicsChart = ({ data }: { data: NonNullable<InteractiveChartsData['dyna
                         contentStyle={{ backgroundColor: "#0f172a", borderColor: "#334155", color: "#f8fafc", fontSize: "12px" }}
                         itemStyle={{ color: "#10b981" }}
                         labelFormatter={(label) => `Time: ${label}s`}
-                        formatter={(value: number) => [`${value.toFixed(1)} dB`, ""]}
+                        formatter={(value?: number) => [
+                            typeof value === "number" ? `${value.toFixed(1)} dB` : "N/A",
+                            ""
+                        ]}
                     />
                     <Area
                         type="monotone"
@@ -326,7 +329,10 @@ const SpectrumChart = ({ data }: { data: NonNullable<InteractiveChartsData['spec
                         cursor={{fill: '#334155', opacity: 0.2}}
                         contentStyle={{ backgroundColor: "#0f172a", borderColor: "#334155", color: "#f8fafc", fontSize: "12px" }}
                         labelFormatter={(label) => `Freq: ${Number(label).toFixed(0)} Hz`}
-                        formatter={(value: number) => [`${value.toFixed(1)} dB`, "Magnitude"]}
+                        formatter={(value?: number) => [
+                            typeof value === "number" ? `${value.toFixed(1)} dB` : "N/A",
+                            "Magnitude"
+                        ]}
                     />
                     <Bar dataKey="mag" fill="#3b82f6" radius={[2, 2, 0, 0]} />
                 </BarChart>
