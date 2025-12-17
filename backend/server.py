@@ -334,8 +334,24 @@ def _assert_job_owner(job_id: str, current_user: User) -> Dict[str, Any]:
     Valida que el job pertenezca al usuario actual. Si no hay owner, lo asigna.
     """
     data = _load_job_status_from_fs(job_id)
+    job_root = JOBS_ROOT / job_id
+
     if data is None:
-        raise HTTPException(status_code=404, detail="Job not found")
+        # Si no existe estado, lo creamos con el propietario actual para permitir reintentos tras limpieza
+        status = {
+            "jobId": job_id,
+            "job_id": job_id,
+            "owner_email": current_user.email,
+            "status": "pending",
+            "stage_index": 0,
+            "total_stages": 0,
+            "stage_key": "queued",
+            "message": "Job pending in queue",
+            "progress": 0.0,
+        }
+        job_root.mkdir(parents=True, exist_ok=True)
+        write_job_status(job_root, status)
+        return status
 
     owner = data.get("owner_email")
     if owner and owner != current_user.email:
@@ -343,7 +359,6 @@ def _assert_job_owner(job_id: str, current_user: User) -> Dict[str, Any]:
 
     if not owner:
         # Asignar propietario y persistir
-        job_root = JOBS_ROOT / job_id
         data["owner_email"] = current_user.email
         try:
             write_job_status(job_root, data)
