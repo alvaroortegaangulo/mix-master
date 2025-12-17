@@ -58,6 +58,8 @@ from src.utils.job_store import (
     progress_channel_name,
     update_job_status,
     write_job_status,
+    set_share_token,
+    get_job_id_from_share_token,
 )
 from src.utils.security import SECRET_KEY, ALGORITHM
 from src.utils.waveform import compute_and_cache_peaks, ensure_preview_wav
@@ -2050,6 +2052,67 @@ async def sign_job_file_generic(
         raise HTTPException(status_code=400, detail="jobId y filePath requeridos")
     # reutiliza la lógica del endpoint específico
     return await sign_job_file(job_id, payload, request, None)
+
+
+@app.post("/jobs/{job_id}/share")
+async def create_share_link(
+    job_id: str,
+    _: None = Depends(_guard_heavy_endpoint),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Generates a unique share token for the job.
+    """
+    _assert_job_owner(job_id, current_user)
+    token = secrets.token_urlsafe(16)
+    # Default 7 days
+    if set_share_token(token, job_id, ttl_seconds=7 * 24 * 3600):
+        return {"token": token}
+    raise HTTPException(status_code=500, detail="Failed to create share link")
+
+
+@app.get("/share/{token}")
+async def get_shared_job(
+    token: str,
+    request: Request,
+):
+    """
+    Public endpoint to retrieve shared job details (audio URLs).
+    """
+    job_id = get_job_id_from_share_token(token)
+    if not job_id:
+        raise HTTPException(status_code=404, detail="Link expired or invalid")
+
+    data = _load_job_status_from_fs(job_id)
+    if not data:
+        # It's possible the job was cleaned up but token remains in Redis
+        raise HTTPException(status_code=404, detail="Job data not found")
+
+    result = {
+        "jobId": job_id,
+        "status": data.get("status"),
+    }
+
+    # Generate signed URLs valid for 1 hour for public consumption
+    if data.get("fullSongUrl"):
+        result["audio_url"] = _build_signed_url(
+            request, job_id, data["fullSongUrl"], expires_in=3600
+        )
+    elif data.get("full_song_url"):
+         result["audio_url"] = _build_signed_url(
+            request, job_id, data["full_song_url"], expires_in=3600
+        )
+
+    if data.get("originalFullSongUrl"):
+        result["original_url"] = _build_signed_url(
+            request, job_id, data["originalFullSongUrl"], expires_in=3600
+        )
+    elif data.get("original_full_song_url"):
+        result["original_url"] = _build_signed_url(
+            request, job_id, data["original_full_song_url"], expires_in=3600
+        )
+
+    return result
 
 
 @app.get("/pipeline/stages")

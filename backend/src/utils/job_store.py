@@ -152,3 +152,39 @@ def update_job_status(job_root: Path, status_update: Dict[str, Any]) -> None:
 
     except Exception as e:
         logger.error(f"Failed to update job status: {e}")
+
+
+def set_share_token(token: str, job_id: str, ttl_seconds: int = 7 * 24 * 3600) -> bool:
+    """
+    Stores a share token mapping to a job_id in Redis with an expiration.
+    """
+    client = _get_redis_client()
+    if not client:
+        return False
+    try:
+        key = f"share_token:{token}"
+        client.setex(key, ttl_seconds, job_id)
+        return True
+    except Exception as e:
+        logger.error(f"Failed to set share token: {e}")
+        return False
+
+
+def get_job_id_from_share_token(token: str) -> str | None:
+    """
+    Retrieves the job_id associated with a share token.
+    """
+    client = _get_redis_client()
+    if not client:
+        return None
+    try:
+        key = f"share_token:{token}"
+        job_id = client.get(key)
+        if job_id:
+            if isinstance(job_id, bytes):
+                return job_id.decode("utf-8")
+            return str(job_id)
+        return None
+    except Exception as e:
+        logger.error(f"Failed to get share token: {e}")
+        return None
