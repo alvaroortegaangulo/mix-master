@@ -33,6 +33,18 @@ api.music-mix-master.com {
         Expires "0"
     }
 
+    # Responder preflight CORS directamente para que el navegador reciba los headers
+    @preflight {
+        method OPTIONS
+        path  /*
+    }
+    respond @preflight 204 {
+        header Access-Control-Allow-Origin  {http.request.header.Origin}
+        header Access-Control-Allow-Methods "GET,POST,PUT,DELETE,OPTIONS"
+        header Access-Control-Allow-Headers "*"
+        header Access-Control-Allow-Credentials "true"
+    }
+
     # Proxy al contenedor web:8000
     reverse_proxy web:8000
 }
