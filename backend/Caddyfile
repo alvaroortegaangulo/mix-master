@@ -30,11 +30,12 @@ api.music-mix-master.com {
         method OPTIONS
         path  /*
     }
-    respond @preflight 204 {
+    handle @preflight {
         header Access-Control-Allow-Origin  {http.request.header.Origin}
         header Access-Control-Allow-Methods "GET,POST,PUT,DELETE,OPTIONS"
         header Access-Control-Allow-Headers "*"
         header Access-Control-Allow-Credentials "true"
+        respond 204
     }
 
     reverse_proxy web:8000
