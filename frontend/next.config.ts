@@ -50,7 +50,7 @@ const nextConfig: NextConfig = {
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: https://api.music-mix-master.com https://www.google-analytics.com https://region1.google-analytics.com https://www.googletagmanager.com",
               "font-src 'self'",
-              "connect-src 'self' blob: https://api.music-mix-master.com https://www.google-analytics.com https://region1.google-analytics.com https://www.googletagmanager.com https://accounts.google.com https://oauth2.googleapis.com",
+              "connect-src 'self' blob: https://api.music-mix-master.com wss://api.music-mix-master.com https://www.google-analytics.com https://region1.google-analytics.com https://www.googletagmanager.com https://accounts.google.com https://oauth2.googleapis.com ws://localhost:* ws://127.0.0.1:*",
               "media-src 'self' blob: https://api.music-mix-master.com",
               "frame-ancestors 'none'",
               "frame-src 'self' https://accounts.google.com",
