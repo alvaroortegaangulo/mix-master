@@ -49,6 +49,7 @@ from tasks import run_full_pipeline_task
 from src.database import engine, Base
 from src.routers import auth
 from src.utils.job_store import update_job_status, write_job_status
+from src.utils.waveform import compute_and_cache_peaks, ensure_preview_wav
 
 # ---------------------------------------------------------
 # Database
@@ -599,15 +600,6 @@ MAX_JOB_TOTAL_BYTES = 2 * 1024 * 1024 * 1024  # 2 GiB total por job
 SIGNED_URL_STEMS_TTL = int(os.environ.get("STEMS_SIGNED_URL_TTL", str(6 * 3600)))
 SIGNED_URL_STEMS_TTL = max(600, min(SIGNED_URL_STEMS_TTL, 24 * 3600))
 STEM_PEAKS_DESIRED_BARS = 800
-# Por defecto generamos meta (peaks/preview); se puede desactivar con STUDIO_GENERATE_WAVEFORM_META=0
-# [OPTIMIZATION] Defaults to "0" (False) to speed up studio loading. Frontend calculates waveforms.
-STEM_META_GENERATION_ENABLED = os.environ.get("STUDIO_GENERATE_WAVEFORM_META", "0") not in (
-    "0",
-    "false",
-    "False",
-    "",
-    None,
-)
 
 
 def _sanitize_filename(filename: str) -> str:
@@ -836,83 +828,6 @@ def _collect_stem_paths(stage_dir: Path) -> List[Path]:
     return sorted(wavs)
 
 
-def _compute_and_cache_peaks(
-    stem_path: Path, peaks_path: Path, desired_bars: int = STEM_PEAKS_DESIRED_BARS
-) -> List[float]:
-    """
-    Devuelve una lista de peaks RMS normalizados. Si existe un fichero cacheado, lo usa.
-    """
-    if peaks_path.exists():
-        try:
-            data = json.loads(peaks_path.read_text(encoding="utf-8"))
-            if isinstance(data, list) and data:
-                return [float(x) for x in data]
-        except Exception:
-            logger.warning("No se pudo leer peaks cacheados en %s", peaks_path)
-    if not STEM_META_GENERATION_ENABLED:
-        return []
-
-    try:
-        audio, _ = sf.read(stem_path, dtype="float32", always_2d=True)
-        if audio.ndim == 2 and audio.shape[1] > 1:
-            audio_mono = audio.mean(axis=1)
-        else:
-            audio_mono = audio.squeeze()
-
-        total_samples = len(audio_mono)
-        if total_samples == 0:
-            return []
-
-        bars = max(10, desired_bars)
-        samples_per_bar = max(1, total_samples // bars)
-        trim = (total_samples // samples_per_bar) * samples_per_bar
-        window = audio_mono[:trim].reshape(-1, samples_per_bar)
-        rms = np.sqrt(np.mean(np.square(window), axis=1))
-
-        max_peak = float(np.max(rms)) if rms.size else 1.0
-        norm = max_peak if max_peak > 0 else 1.0
-        peaks = (rms / norm).tolist()
-
-        peaks_path.parent.mkdir(parents=True, exist_ok=True)
-        peaks_path.write_text(json.dumps(peaks), encoding="utf-8")
-        return peaks
-    except Exception as exc:
-        logger.warning("No se pudo calcular peaks para %s: %s", stem_path.name, exc)
-        return []
-
-
-def _ensure_preview_wav(
-    stem_path: Path, preview_path: Path, target_sr: int = 32000
-) -> bool:
-    """
-    Genera un wav de preview mono/downsampleado si no existe.
-    """
-    if preview_path.exists():
-        return True
-    if not STEM_META_GENERATION_ENABLED:
-        return False
-    try:
-        audio, sr = sf.read(stem_path, dtype="float32", always_2d=True)
-        if audio.ndim == 2 and audio.shape[1] > 1:
-            mono = audio.mean(axis=1)
-        else:
-            mono = audio.squeeze()
-
-        if sr != target_sr and len(mono) > 0:
-            # Reescalar simple via interpolación lineal para evitar dependencias extra.
-            new_len = max(1, int(len(mono) * (target_sr / sr)))
-            x_old = np.linspace(0, 1, num=len(mono), endpoint=False)
-            x_new = np.linspace(0, 1, num=new_len, endpoint=False)
-            mono = np.interp(x_new, x_old, mono).astype("float32")
-        else:
-            mono = mono.astype("float32")
-
-        preview_path.parent.mkdir(parents=True, exist_ok=True)
-        sf.write(preview_path, mono, target_sr)
-        return True
-    except Exception as exc:
-        logger.warning("No se pudo generar preview para %s: %s", stem_path.name, exc)
-        return False
 
 
 @app.post("/mix")
@@ -1507,12 +1422,12 @@ def get_job_stems(
         )
 
         peaks_path = selected_stage / "peaks" / f"{stem_path.stem}.peaks.json"
-        peaks = _compute_and_cache_peaks(stem_path, peaks_path)
+        peaks = compute_and_cache_peaks(stem_path, peaks_path)
 
         preview_url = None
         preview_rel = f"{selected_stage.name}/previews/{stem_path.stem}_preview.wav"
         preview_path = selected_stage / "previews" / f"{stem_path.stem}_preview.wav"
-        if _ensure_preview_wav(stem_path, preview_path):
+        if ensure_preview_wav(stem_path, preview_path):
             preview_url = _build_signed_url(
                 request, job_id, preview_rel, expires_in=SIGNED_URL_STEMS_TTL
             )

@@ -978,5 +978,72 @@
         "content": "If you have any questions about this cookie policy, please contact us at: <br /><span class='text-teal-400'>privacy@audioalchemy.com</span>"
       }
     }
+  },
+  "UploadDropzone": {
+    "uploadSong": "Téléchargez Votre Chanson",
+    "uploadStems": "Téléchargez Vos Stems",
+    "songModeDesc": "Masterisez un seul rebond stéréo.",
+    "stemsModeDesc": "Téléchargez des pistes individuelles pour un mixage IA complet.",
+    "dragDropSong": "Glissez-déposez votre chanson ici, ou cliquez pour sélectionner un fichier",
+    "dragDropStems": "Glissez-déposez les stems ici, ou cliquez pour sélectionner des fichiers",
+    "supportedFormats": "Formats supportés : WAV",
+    "filesSelected": "{count} fichier{count, plural, =1 {} other {s}} audio sélectionné{count, plural, =1 {} other {s}}"
+  },
+  "PipelinePhases": {
+    "inputMetadata": {
+      "title": "Entrée & Métadonnées",
+      "body": "Nous préparons votre session en organisant tous les fichiers téléchargés et en normalisant les formats, les fréquences d'échantillonnage et les métadonnées de base pour que le reste du pipeline fonctionne de manière cohérente."
+    },
+    "technicalPreparation": {
+      "title": "Préparation Technique",
+      "body": "Nous corrigeons les problèmes techniques de base sur chaque stem : DC offset, sonie de travail et headroom initial pour garantir un point de départ propre et fiable pour le mixage."
+    },
+    "phasePolarityAlignment": {
+      "title": "Alignement de Phase & Polarité",
+      "body": "Nous analysons les groupes multi-micro (comme la batterie) pour aligner la phase et corriger la polarité, évitant les annulations et restaurant l'impact et la clarté des basses."
+    },
+    "staticMixRouting": {
+      "title": "Mixage Statique & Routage",
+      "body": "Nous établissons un équilibre statique et un routage de bus, en plaçant les faders et les positions panoramiques pour que tous les éléments soient entendus clairement avant tout traitement lourd."
+    },
+    "spectralCleanup": {
+      "title": "Nettoyage Spectral",
+      "body": "Nous nettoyons chaque stem en utilisant des filtres passe-haut et des filtres coupe-bande doux pour éliminer les grondements et les résonances agressives, libérant de l'espace dans le mix."
+    },
+    "dynamicsLevelAutomation": {
+      "title": "Dynamique & Automatisation de Niveau",
+      "body": "Nous contrôlons la dynamique en utilisant la compression, la limitation et l'automatisation de niveau, en gardant les performances expressives mais en empêchant les pics de sortir du mix."
+    },
+    "spaceDepthByBuses": {
+      "title": "Espace & Profondeur par Bus",
+      "body": "Nous envoyons les instruments vers des bus de réverbération et d'ambiance dédiés, en les plaçant plus près ou plus loin dans la scène sonore pour créer un sens de profondeur et d'espace."
+    },
+    "multibandEqTonalBalance": {
+      "title": "EQ Multibande & Équilibre Tonal",
+      "body": "Nous ajustons l'équilibre spectral global pour que le mix semble naturel et se traduise bien sur différents systèmes de lecture."
+    },
+    "mixBusColor": {
+      "title": "Couleur du Mix Bus",
+      "body": "Nous ajoutons une saturation douce et un traitement de bus pour lier le mix ensemble, améliorant la chaleur, le punch et la sonie perçue sans détruire la dynamique."
+    },
+    "mastering": {
+      "title": "Mastering",
+      "body": "Nous amenons la piste à sa sonie cible, ajustons l'EQ final, la largeur stéréo et la limitation pour qu'elle soit prête à être publiée sur les plateformes de streaming."
+    },
+    "masterStereoQc": {
+      "title": "Contrôle Qualité Master Stéréo",
+      "body": "Nous effectuons des contrôles de qualité finaux (true peak, sonie, image stéréo et équilibre) pour nous assurer que le master respecte les objectifs techniques."
+    },
+    "reporting": {
+      "title": "Rapport",
+      "body": "Nous générons un rapport technique et exportons le master final pour que vous puissiez revoir ce qui a été fait à chaque étape du pipeline."
+    }
+  },
+  "MixPipelinePanel": {
+    "title": "Pipeline",
+    "description": "Explorez comment le mix évolue à chaque phase en écoutant le résultat cumulatif après chaque bloc de traitement majeur.",
+    "loading": "Chargement de la définition du pipeline...",
+    "error": "Erreur lors du chargement de la définition du pipeline.",
+    "activeContract": "Contrat actif :"
   }
 }

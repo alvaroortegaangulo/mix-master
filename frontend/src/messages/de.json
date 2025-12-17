@@ -978,5 +978,72 @@
         "content": "If you have any questions about this cookie policy, please contact us at: <br /><span class='text-teal-400'>privacy@audioalchemy.com</span>"
       }
     }
+  },
+  "UploadDropzone": {
+    "uploadSong": "Laden Sie Ihren Song hoch",
+    "uploadStems": "Laden Sie Ihre Stems hoch",
+    "songModeDesc": "Mastern Sie einen einzelnen Stereo-Bounce.",
+    "stemsModeDesc": "Laden Sie einzelne Spuren für einen vollständigen KI-Mix hoch.",
+    "dragDropSong": "Ziehen Sie Ihren Song hierher oder klicken Sie, um eine Datei auszuwählen",
+    "dragDropStems": "Ziehen Sie Stems hierher oder klicken Sie, um Dateien auszuwählen",
+    "supportedFormats": "Unterstützte Formate: WAV",
+    "filesSelected": "{count} Audiodatei{count, plural, =1 {} other {en}} ausgewählt"
+  },
+  "PipelinePhases": {
+    "inputMetadata": {
+      "title": "Eingabe & Metadaten",
+      "body": "Wir bereiten Ihre Session vor, indem wir alle hochgeladenen Dateien organisieren und Formate, Abtastraten sowie grundlegende Metadaten normalisieren, damit der Rest der Pipeline konsistent arbeiten kann."
+    },
+    "technicalPreparation": {
+      "title": "Technische Vorbereitung",
+      "body": "Wir beheben grundlegende technische Probleme auf jedem Stem: DC-Offset, Arbeitslautstärke und anfänglicher Headroom, um einen sauberen, zuverlässigen Ausgangspunkt für das Mischen zu gewährleisten."
+    },
+    "phasePolarityAlignment": {
+      "title": "Phasen- & Polaritätsausrichtung",
+      "body": "Wir analysieren Multi-Mikrofon-Gruppen (wie Schlagzeug), um die Phase auszurichten und die Polarität zu korrigieren, wodurch Auslöschungen vermieden und Druck sowie Klarheit im Bassbereich wiederhergestellt werden."
+    },
+    "staticMixRouting": {
+      "title": "Statischer Mix & Routing",
+      "body": "Wir erstellen eine statische Balance und Bus-Routing, indem wir Fader und Pan-Positionen so einstellen, dass alle Elemente klar zu hören sind, bevor eine starke Bearbeitung erfolgt."
+    },
+    "spectralCleanup": {
+      "title": "Spektrale Bereinigung",
+      "body": "Wir bereinigen jeden Stem mit Hochpassfiltern und sanften Notch-Filtern, um Grollen und harsche Resonanzen zu entfernen und Platz im Mix zu schaffen."
+    },
+    "dynamicsLevelAutomation": {
+      "title": "Dynamik & Pegelautomation",
+      "body": "Wir kontrollieren die Dynamik durch Kompression, Limiting und Pegelautomation, wobei die Performance ausdrucksstark bleibt, aber Spitzen daran gehindert werden, aus dem Mix herauszuspringen."
+    },
+    "spaceDepthByBuses": {
+      "title": "Raum & Tiefe nach Bussen",
+      "body": "Wir senden Instrumente an dedizierte Hall- und Ambience-Busse und platzieren sie näher oder weiter weg im Klangbild, um ein Gefühl von Tiefe und Raum zu erzeugen."
+    },
+    "multibandEqTonalBalance": {
+      "title": "Multiband-EQ & Tonaler Ausgleich",
+      "body": "Wir stimmen die gesamte spektrale Balance fein ab, damit der Mix natürlich klingt und auf verschiedenen Wiedergabesystemen gut funktioniert."
+    },
+    "mixBusColor": {
+      "title": "Mix-Bus-Farbe",
+      "body": "Wir fügen sanfte Sättigung und Bus-Bearbeitung hinzu, um den Mix zusammenzufügen („Glue“), was Wärme, Druck und wahrgenommene Lautstärke verbessert, ohne die Dynamik zu zerstören."
+    },
+    "mastering": {
+      "title": "Mastering",
+      "body": "Wir bringen den Track auf seine Ziellautstärke, passen den finalen EQ, die Stereobreite und das Limiting an, damit er bereit für die Veröffentlichung auf Streaming-Plattformen ist."
+    },
+    "masterStereoQc": {
+      "title": "Master Stereo QC",
+      "body": "Wir führen letzte Qualitätsprüfungen durch (True Peak, Lautstärke, Stereobild und Balance), um sicherzustellen, dass das Master die technischen Ziele erfüllt."
+    },
+    "reporting": {
+      "title": "Berichterstattung",
+      "body": "Wir erstellen einen technischen Bericht und exportieren das finale Master, damit Sie überprüfen können, was in jeder Phase der Pipeline getan wurde."
+    }
+  },
+  "MixPipelinePanel": {
+    "title": "Pipeline",
+    "description": "Erkunden Sie, wie sich der Mix in jeder Phase entwickelt, indem Sie das kumulative Ergebnis nach jedem größeren Bearbeitungsblock anhören.",
+    "loading": "Lade Pipeline-Definition...",
+    "error": "Fehler beim Laden der Pipeline-Definition.",
+    "activeContract": "Aktiver Vertrag:"
   }
 }
