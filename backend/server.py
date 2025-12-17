@@ -328,6 +328,26 @@ def _load_job_status_from_fs(job_id: str) -> Optional[Dict[str, Any]]:
         )
         return None
 
+    try:
+        with status_path.open("r", encoding="utf-8") as f:
+            data = json.load(f)
+        if isinstance(data, dict):
+            data.setdefault("jobId", job_id)
+            data.setdefault("job_id", job_id)
+            return data
+        logger.warning(
+            "[_load_job_status_from_fs] job_status.json para job_id=%s no es un dict",
+            job_id,
+        )
+        return None
+    except Exception as exc:
+        logger.warning(
+            "No se pudo leer job_status.json para job_id=%s: %s",
+            job_id,
+            exc,
+        )
+        return None
+
 
 def _assert_job_owner(job_id: str, current_user: User) -> Dict[str, Any]:
     """
@@ -366,25 +386,6 @@ def _assert_job_owner(job_id: str, current_user: User) -> Dict[str, Any]:
             logger.warning("No se pudo persistir owner_email para job %s", job_id)
 
     return data
-    try:
-        with status_path.open("r", encoding="utf-8") as f:
-            data = json.load(f)
-        if isinstance(data, dict):
-            data.setdefault("jobId", job_id)
-            data.setdefault("job_id", job_id)
-            return data
-        logger.warning(
-            "[_load_job_status_from_fs] job_status.json para job_id=%s no es un dict",
-            job_id,
-        )
-        return None
-    except Exception as exc:
-        logger.warning(
-            "No se pudo leer job_status.json para job_id=%s: %s",
-            job_id,
-            exc,
-        )
-        return None
 
 
 PROFILES_PATH = SRC_DIR / "struct" / "profiles.json"
