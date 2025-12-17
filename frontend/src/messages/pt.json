@@ -978,5 +978,72 @@
         "content": "If you have any questions about this cookie policy, please contact us at: <br /><span class='text-teal-400'>privacy@audioalchemy.com</span>"
       }
     }
+  },
+  "UploadDropzone": {
+    "uploadSong": "Carregue Sua Música",
+    "uploadStems": "Carregue Seus Stems",
+    "songModeDesc": "Masterize um único arquivo estéreo.",
+    "stemsModeDesc": "Carregue faixas individuais para uma mixagem completa com IA.",
+    "dragDropSong": "Arraste e solte sua música aqui, ou clique para selecionar um arquivo",
+    "dragDropStems": "Arraste e solte stems aqui, ou clique para selecionar arquivos",
+    "supportedFormats": "Formatos suportados: WAV",
+    "filesSelected": "{count} arquivo{count, plural, =1 {} other {s}} de áudio selecionado{count, plural, =1 {} other {s}}"
+  },
+  "PipelinePhases": {
+    "inputMetadata": {
+      "title": "Entrada & Metadados",
+      "body": "Preparamos sua sessão organizando todos os arquivos carregados e normalizando formatos, taxas de amostragem e metadados básicos para que o restante do pipeline possa trabalhar de forma consistente."
+    },
+    "technicalPreparation": {
+      "title": "Preparação Técnica",
+      "body": "Corrigimos problemas técnicos básicos em cada stem: DC offset, loudness de trabalho e headroom inicial para garantir um ponto de partida limpo e confiável para a mixagem."
+    },
+    "phasePolarityAlignment": {
+      "title": "Alinhamento de Fase & Polaridade",
+      "body": "Analisamos grupos multi-microfone (como bateria) para alinhar a fase e corrigir a polaridade, evitando cancelamentos e restaurando impacto e clareza nos graves."
+    },
+    "staticMixRouting": {
+      "title": "Mixagem Estática & Roteamento",
+      "body": "Construímos um equilíbrio estático e roteamento de bus, posicionando faders e pan para que todos os elementos sejam ouvidos claramente antes de qualquer processamento pesado."
+    },
+    "spectralCleanup": {
+      "title": "Limpeza Espectral",
+      "body": "Limpamos cada stem usando filtros passa-alta e filtros notch suaves para remover estrondos e ressonâncias ásperas, liberando espaço na mixagem."
+    },
+    "dynamicsLevelAutomation": {
+      "title": "Dinâmica & Automação de Nível",
+      "body": "Controlamos a dinâmica usando compressão, limiting e automação de nível, mantendo as performances expressivas, mas impedindo que picos saltem para fora da mixagem."
+    },
+    "spaceDepthByBuses": {
+      "title": "Espaço & Profundidade por Buses",
+      "body": "Enviamos instrumentos para buses dedicados de reverb e ambiência, posicionando-os mais perto ou mais longe no palco sonoro para criar uma sensação de profundidade e espaço."
+    },
+    "multibandEqTonalBalance": {
+      "title": "EQ Multibanda & Balanço Tonal",
+      "body": "Ajustamos o balanço espectral geral para que a mixagem soe natural e se traduza bem em diferentes sistemas de reprodução."
+    },
+    "mixBusColor": {
+      "title": "Cor do Mix Bus",
+      "body": "Adicionamos saturação suave e processamento de bus para colar a mixagem, melhorando calor, punch e loudness percebido sem destruir a dinâmica."
+    },
+    "mastering": {
+      "title": "Masterização",
+      "body": "Trazemos a faixa para seu loudness alvo, ajustamos EQ final, largura estéreo e limiting para que esteja pronta para lançamento em plataformas de streaming."
+    },
+    "masterStereoQc": {
+      "title": "Controle de Qualidade Master Estéreo",
+      "body": "Executamos verificações de qualidade finais (true peak, loudness, imagem estéreo e balanço) para garantir que o master atenda aos objetivos técnicos."
+    },
+    "reporting": {
+      "title": "Relatórios",
+      "body": "Geramos um relatório técnico e exportamos o master final para que você possa revisar o que foi feito em cada etapa do pipeline."
+    }
+  },
+  "MixPipelinePanel": {
+    "title": "Pipeline",
+    "description": "Explore como a mixagem evolui em cada fase ouvindo o resultado cumulativo após cada grande bloco de processamento.",
+    "loading": "Carregando definição do pipeline...",
+    "error": "Erro ao carregar a definição do pipeline.",
+    "activeContract": "Contrato ativo:"
   }
 }
