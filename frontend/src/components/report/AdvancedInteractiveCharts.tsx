@@ -322,11 +322,12 @@ const StereoChart = ({
           />
           <Tooltip
               contentStyle={{ backgroundColor: "#0f172a", borderColor: "#334155", color: "#f8fafc" }}
-              formatter={(val?: number, name: string) => {
+              formatter={(val?: number, name?: string) => {
+                const label = name ?? "";
                 if (typeof val !== "number" || Number.isNaN(val)) {
-                  return ["N/A", name];
+                  return ["N/A", label];
                 }
-                return [val.toFixed(2), name];
+                return [val.toFixed(2), label];
               }}
           />
           {expanded && <Legend />}
