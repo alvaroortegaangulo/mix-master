@@ -600,8 +600,15 @@ def _build_signed_url(request: Request, job_id: str, relative_path: str, expires
 async def _guard_heavy_endpoint(
     request: Request, api_key: Optional[str] = Header(None, alias="X-API-Key")
 ) -> None:
+    # Si llega un Bearer token, asumimos que el endpoint validar‡ JWT v’a get_current_user;
+    # en ese caso no exigimos API key aqu’ para no bloquear tras login.
+    auth_header = request.headers.get("authorization", "")
+    is_bearer = auth_header.lower().startswith("bearer ")
+
     key = _extract_api_key(request, api_key)
-    _require_api_key(key)
+    if not is_bearer:
+        _require_api_key(key)
+
     client_ip = request.client.host if request.client else "unknown"
     job_id = request.path_params.get("job_id") if isinstance(request.path_params, dict) else None
     limiter_key_parts = [
