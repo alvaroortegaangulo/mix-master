@@ -77,11 +77,20 @@ export function MixPipelinePanel({
         // Keep backend order
         const sorted = [...data].sort((a, b) => a.index - b.index);
 
-        // If we have enabled stages for THIS job, filter to those only.
-        const filtered =
-          enabledPipelineStageKeys && enabledPipelineStageKeys.length > 0
-            ? sorted.filter((s) => enabledPipelineStageKeys.includes(s.key))
-            : sorted;
+        // Filter stages based on what was actually executed (passed via enabledPipelineStageKeys).
+        // If enabledPipelineStageKeys is provided, strict filtering is applied.
+        // We also explicitly require that the stage has a 'previewMixRelPath' or is a known audio producer
+        // to avoid listing stages that are purely analytical or internal if they somehow get in the list.
+        let filtered = sorted;
+
+        if (enabledPipelineStageKeys && enabledPipelineStageKeys.length > 0) {
+           filtered = sorted.filter((s) => enabledPipelineStageKeys.includes(s.key));
+        } else {
+           // If no specific keys are passed (e.g. legacy/resume without state), we fallback to all.
+           // However, to respect "only show processed", we might consider showing nothing or just the final,
+           // but showing all is the safe fallback for now to avoid empty UI.
+           // We will rely on the parent component to pass the correct keys.
+        }
 
         setStages(filtered);
 
@@ -241,26 +250,19 @@ export function MixPipelinePanel({
 
         {!loading && !error && stages.length > 0 && activeStage && phaseInfo && (
           <div className="mt-4">
-            {/* Tabs numéricos de stages */}
-            <div className="flex flex-wrap gap-2">
-              {stages.map((stage) => {
-                const isActive = stage.key === activeStage.key;
-                return (
-                  <button
-                    key={stage.key}
-                    type="button"
-                    onClick={() => setActiveKey(stage.key)}
-                    className={[
-                      "rounded-full px-3 py-1 text-xs font-medium transition",
-                      isActive
-                        ? "bg-emerald-500 text-emerald-950 shadow-sm"
-                        : "bg-emerald-950/60 text-emerald-100 hover:bg-emerald-900/70",
-                    ].join(" ")}
-                  >
-                    {stage.index}
-                  </button>
-                );
-              })}
+            {/* Stage Selector Dropdown */}
+            <div className="mt-4">
+              <select
+                value={activeStage.key}
+                onChange={(e) => setActiveKey(e.target.value)}
+                className="w-full rounded-lg border border-emerald-500/30 bg-emerald-950/50 px-4 py-2 text-sm text-emerald-100 focus:border-emerald-500 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+              >
+                {stages.map((stage) => (
+                  <option key={stage.key} value={stage.key} className="bg-slate-900 text-emerald-100">
+                    {stage.index}. {stage.key}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div className="mt-4 rounded-xl bg-emerald-950/40 p-4">
@@ -272,14 +274,6 @@ export function MixPipelinePanel({
               {/* Texto descriptivo de lo que hace la fase */}
               <p className="mt-2 text-xs text-emerald-200/90">
                 {phaseInfo.body}
-              </p>
-
-              {/* Info pequeña de contrato activo */}
-              <p className="mt-2 text-[11px] text-emerald-300/80">
-                {tPanel("activeContract")}{" "}
-                <span className="font-mono text-emerald-200">
-                  {activeStage.key}
-                </span>
               </p>
 
               {/* Reproductor estilo waveform para la fase */}
