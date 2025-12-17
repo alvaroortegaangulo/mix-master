@@ -1045,5 +1045,103 @@
     "loading": "Lade Pipeline-Definition...",
     "error": "Fehler beim Laden der Pipeline-Definition.",
     "activeContract": "Aktiver Vertrag:"
+  },
+  "Report": {
+    "title": "Mastering-Bericht",
+    "downloadPdf": "PDF herunterladen",
+    "generatingPdf": "PDF wird erstellt...",
+    "mixSummary": "Mix-Zusammenfassung",
+    "interactiveAnalysis": "Interaktive Analyse",
+    "detailedStageReport": "Detaillierter Stufenbericht",
+    "stages": {
+      "S0_SESSION_FORMAT": {
+        "title": "Eingabe & Metadaten",
+        "description": "Sitzung mit {count} Stems initialisiert. Format als {format} verifiziert. Abtastrate auf {sample_rate}Hz für konsistente Verarbeitung normalisiert."
+      },
+      "S0_SEPARATE_STEMS": {
+        "title": "Stem-Trennung",
+        "description": "Hochgeladene Dateien verarbeitet, um einzelne Stems für das Mixing vorzubereiten."
+      },
+      "S1_STEM_DC_OFFSET": {
+        "title": "DC-Offset-Korrektur",
+        "description": "Stems auf unhörbares DC-Offset-Rauschen analysiert. Korrigiert, um maximalen Headroom zu gewährleisten."
+      },
+      "S1_KEY_DETECTION": {
+        "title": "Tonarterkennung",
+        "description": "Globale Tonart als {key} mit {confidence}% Sicherheit erkannt."
+      },
+      "S1_VOX_TUNING": {
+        "title": "Gesangsstimmung",
+        "description": "Tonhöhenkorrektur auf Gesang angewendet, um der erkannten Tonart von {key} zu entsprechen."
+      },
+      "S1_MIXBUS_HEADROOM": {
+        "title": "Mixbus-Headroom",
+        "description": "Mixbus-Headroom auf {headroom_db}dB angepasst, um die Verarbeitung vorzubereiten."
+      },
+      "S1_STEM_WORKING_LOUDNESS": {
+        "title": "Arbeitslautheit",
+        "description": "Stem-Pegel auf eine konsistente Arbeitslautheit normalisiert."
+      },
+      "S2_GROUP_PHASE_DRUMS": {
+        "title": "Schlagzeug-Phasenausrichtung",
+        "description": "Phase für Schlagzeug-Gruppenspuren ausgerichtet, um Punch und Bassklarheit zu verbessern."
+      },
+      "S3_MIXBUS_HEADROOM": {
+        "title": "Mixbus-Headroom-Prüfung",
+        "description": "Headroom erneut auf {headroom_db}dB verifiziert."
+      },
+      "S3_LEADVOX_AUDIBILITY": {
+        "title": "Hauptstimmen-Balance",
+        "description": "Hauptstimmenpegel um {gain_db}dB für optimale Hörbarkeit gegen den Mix ausgeglichen."
+      },
+      "S4_STEM_HPF_LPF": {
+        "title": "Spektrale Bereinigung",
+        "description": "Hochpass-/Tiefpassfilter angewendet, um das Frequenzspektrum zu bereinigen."
+      },
+      "S4_STEM_RESONANCE_CONTROL": {
+        "title": "Resonanzkontrolle",
+        "description": "Harsche Resonanzen unterdrückt, Spitzen um bis zu {max_reduction_db}dB reduziert."
+      },
+      "S5_STEM_DYNAMICS_GENERIC": {
+        "title": "Stem-Dynamik",
+        "description": "Dynamikkontrolle auf Stems angewendet. Durchschnittliche Gain-Reduktion: {avg_gr_db}dB."
+      },
+      "S5_LEADVOX_DYNAMICS": {
+        "title": "Gesangsdynamik",
+        "description": "Gesangsdynamik mit {gr_db}dB Gain-Reduktion für eine konsistente Performance kontrolliert."
+      },
+      "S5_BUS_DYNAMICS_DRUMS": {
+        "title": "Schlagzeug-Bus-Kompression",
+        "description": "Glue-Kompression auf Schlagzeug-Bus angewendet. Gain-Reduktion: {gr_db}dB."
+      },
+      "S6_BUS_REVERB_STYLE": {
+        "title": "Räumliche Tiefe",
+        "description": "Räumliche Tiefe durch Verwendung des '{style}' Hallstils für Busse verbessert."
+      },
+      "S7_MIXBUS_TONAL_BALANCE": {
+        "title": "Tonale Balance",
+        "description": "Mixbus-Spektrum ausgeglichen. Maximale angewendete Korrektur: {max_correction_db}dB."
+      },
+      "S8_MIXBUS_COLOR_GENERIC": {
+        "title": "Mixbus-Sättigung",
+        "description": "Harmonische Sättigung zum Mixbus hinzugefügt. Drive-Menge: {drive_percent}%."
+      },
+      "S9_MASTER_GENERIC": {
+        "title": "Mastering-Limiter",
+        "description": "Endgültige Limitierung mit einer Obergrenze von {ceiling_db}dB für kommerzielle Lautheit angewendet."
+      },
+      "S10_MASTER_FINAL_LIMITS": {
+        "title": "Endgültige Qualitätskontrolle",
+        "description": "Standards verifiziert. Integrierte Lautheit: {lufs} LUFS, True Peak: {true_peak} dBTP."
+      },
+      "S11_REPORT_GENERATION": {
+        "title": "Berichterstellung",
+        "description": "Dieser Analysebericht wurde erstellt."
+      },
+      "S13_MANUAL_CORRECTION": {
+        "title": "Manuelle Korrektur",
+        "description": "Manuelle Anpassungen basierend auf Benutzerfeedback im Piroola Studio angewendet."
+      }
+    }
   }
 }

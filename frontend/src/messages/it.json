@@ -1045,5 +1045,103 @@
     "loading": "Caricamento definizione pipeline...",
     "error": "Errore nel caricamento della definizione pipeline.",
     "activeContract": "Contratto attivo:"
+  },
+  "Report": {
+    "title": "Rapporto di Mastering",
+    "downloadPdf": "Scarica PDF",
+    "generatingPdf": "Generazione PDF...",
+    "mixSummary": "Riepilogo Mix",
+    "interactiveAnalysis": "Analisi Interattiva",
+    "detailedStageReport": "Rapporto Dettagliato delle Fasi",
+    "stages": {
+      "S0_SESSION_FORMAT": {
+        "title": "Input & Metadati",
+        "description": "Sessione inizializzata con {count} stems. Formato verificato come {format}. Frequenza di campionamento normalizzata a {sample_rate}Hz per un'elaborazione coerente."
+      },
+      "S0_SEPARATE_STEMS": {
+        "title": "Separazione Stems",
+        "description": "File caricati elaborati per preparare stems individuali per il mixaggio."
+      },
+      "S1_STEM_DC_OFFSET": {
+        "title": "Correzione DC Offset",
+        "description": "Analizzati gli stems per rumore DC offset inudibile. Corretto per garantire il massimo headroom."
+      },
+      "S1_KEY_DETECTION": {
+        "title": "Rilevamento Tonalità",
+        "description": "Tonalità globale rilevata come {key} con {confidence}% di confidenza."
+      },
+      "S1_VOX_TUNING": {
+        "title": "Intonazione Vocale",
+        "description": "Applicata correzione dell'intonazione alle voci per corrispondere alla tonalità rilevata di {key}."
+      },
+      "S1_MIXBUS_HEADROOM": {
+        "title": "Headroom del Mixbus",
+        "description": "Headroom del mixbus regolato a {headroom_db}dB per preparare l'elaborazione."
+      },
+      "S1_STEM_WORKING_LOUDNESS": {
+        "title": "Loudness di Lavoro",
+        "description": "Livelli degli stem normalizzati a una loudness di lavoro coerente."
+      },
+      "S2_GROUP_PHASE_DRUMS": {
+        "title": "Allineamento Fase Batteria",
+        "description": "Fase allineata per le tracce del gruppo batteria per migliorare impatto e chiarezza dei bassi."
+      },
+      "S3_MIXBUS_HEADROOM": {
+        "title": "Verifica Headroom del Mixbus",
+        "description": "Headroom ri-verificato a {headroom_db}dB."
+      },
+      "S3_LEADVOX_AUDIBILITY": {
+        "title": "Bilanciamento Voce Principale",
+        "description": "Livello voce principale bilanciato di {gain_db}dB per un'udibilità ottimale contro il mix."
+      },
+      "S4_STEM_HPF_LPF": {
+        "title": "Pulizia Spettrale",
+        "description": "Applicati filtri passa-alto/passa-basso per pulire lo spettro di frequenza."
+      },
+      "S4_STEM_RESONANCE_CONTROL": {
+        "title": "Controllo Risonanza",
+        "description": "Soppresse risonanze aspre, riducendo i picchi fino a {max_reduction_db}dB."
+      },
+      "S5_STEM_DYNAMICS_GENERIC": {
+        "title": "Dinamica Stems",
+        "description": "Controllo dinamico applicato agli stems. Riduzione media del guadagno: {avg_gr_db}dB."
+      },
+      "S5_LEADVOX_DYNAMICS": {
+        "title": "Dinamica Vocale",
+        "description": "Dinamica vocale controllata con {gr_db}dB di riduzione del guadagno per una performance coerente."
+      },
+      "S5_BUS_DYNAMICS_DRUMS": {
+        "title": "Compressione Bus Batteria",
+        "description": "Compressione 'glue' applicata al bus batteria. Riduzione del guadagno: {gr_db}dB."
+      },
+      "S6_BUS_REVERB_STYLE": {
+        "title": "Profondità Spaziale",
+        "description": "Profondità spaziale migliorata usando lo stile di riverbero '{style}' per i bus."
+      },
+      "S7_MIXBUS_TONAL_BALANCE": {
+        "title": "Bilanciamento Tonale",
+        "description": "Spettro del mixbus bilanciato. Correzione massima applicata: {max_correction_db}dB."
+      },
+      "S8_MIXBUS_COLOR_GENERIC": {
+        "title": "Saturazione Mixbus",
+        "description": "Aggiunta saturazione armonica al mixbus. Quantità di drive: {drive_percent}%."
+      },
+      "S9_MASTER_GENERIC": {
+        "title": "Limitatore di Mastering",
+        "description": "Limitazione finale applicata con un soffitto di {ceiling_db}dB per loudness commerciale."
+      },
+      "S10_MASTER_FINAL_LIMITS": {
+        "title": "Controllo Qualità Finale",
+        "description": "Standard verificati. Loudness integrata: {lufs} LUFS, True Peak: {true_peak} dBTP."
+      },
+      "S11_REPORT_GENERATION": {
+        "title": "Generazione Rapporto",
+        "description": "Generato questo rapporto di analisi."
+      },
+      "S13_MANUAL_CORRECTION": {
+        "title": "Correzione Manuale",
+        "description": "Applicati aggiustamenti manuali basati sul feedback dell'utente in Piroola Studio."
+      }
+    }
   }
 }

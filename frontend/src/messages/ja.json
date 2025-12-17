@@ -1045,5 +1045,103 @@
     "loading": "パイプライン定義を読み込み中...",
     "error": "パイプライン定義の読み込み中にエラーが発生しました。",
     "activeContract": "アクティブな契約:"
+  },
+  "Report": {
+    "title": "マスタリングレポート",
+    "downloadPdf": "PDFをダウンロード",
+    "generatingPdf": "PDFを生成中...",
+    "mixSummary": "ミックス概要",
+    "interactiveAnalysis": "インタラクティブ分析",
+    "detailedStageReport": "詳細ステージレポート",
+    "stages": {
+      "S0_SESSION_FORMAT": {
+        "title": "入力＆メタデータ",
+        "description": "{count}個のステムでセッションを初期化しました。フォーマットは{format}として確認されました。一貫した処理のためにサンプリングレートを{sample_rate}Hzに正規化しました。"
+      },
+      "S0_SEPARATE_STEMS": {
+        "title": "ステム分離",
+        "description": "アップロードされたファイルを処理し、ミキシング用の個々のステムを準備しました。"
+      },
+      "S1_STEM_DC_OFFSET": {
+        "title": "DCオフセット補正",
+        "description": "ステムの不可聴DCオフセットノイズを分析しました。最大ヘッドルームを確保するために補正されました。"
+      },
+      "S1_KEY_DETECTION": {
+        "title": "キー検出",
+        "description": "グローバルキーは{key}、信頼度{confidence}%で検出されました。"
+      },
+      "S1_VOX_TUNING": {
+        "title": "ボーカルチューニング",
+        "description": "検出されたキー{key}に合わせてボーカルにピッチ補正を適用しました。"
+      },
+      "S1_MIXBUS_HEADROOM": {
+        "title": "ミックスバスヘッドルーム",
+        "description": "処理の準備のためにミックスバスヘッドルームを{headroom_db}dBに調整しました。"
+      },
+      "S1_STEM_WORKING_LOUDNESS": {
+        "title": "作業ラウドネス",
+        "description": "ステムレベルを一貫した作業ラウドネスに正規化しました。"
+      },
+      "S2_GROUP_PHASE_DRUMS": {
+        "title": "ドラム位相調整",
+        "description": "パンチと低音の明瞭さを向上させるために、ドラムグループトラックの位相を調整しました。"
+      },
+      "S3_MIXBUS_HEADROOM": {
+        "title": "ミックスバスヘッドルーム確認",
+        "description": "ヘッドルームを{headroom_db}dBで再確認しました。"
+      },
+      "S3_LEADVOX_AUDIBILITY": {
+        "title": "リードボーカルバランス",
+        "description": "ミックスに対して最適な聴こえやすさになるよう、リードボーカルレベルを{gain_db}dB調整しました。"
+      },
+      "S4_STEM_HPF_LPF": {
+        "title": "スペクトルクリーンアップ",
+        "description": "周波数スペクトルをクリーンアップするためにハイパス/ローパスフィルターを適用しました。"
+      },
+      "S4_STEM_RESONANCE_CONTROL": {
+        "title": "共鳴制御",
+        "description": "不快な共鳴を抑制し、ピークを最大{max_reduction_db}dB削減しました。"
+      },
+      "S5_STEM_DYNAMICS_GENERIC": {
+        "title": "ステムダイナミクス",
+        "description": "ステムにダイナミクスコントロールを適用しました。平均ゲインリダクション: {avg_gr_db}dB。"
+      },
+      "S5_LEADVOX_DYNAMICS": {
+        "title": "ボーカルダイナミクス",
+        "description": "一貫したパフォーマンスのために、{gr_db}dBのゲインリダクションでボーカルダイナミクスを制御しました。"
+      },
+      "S5_BUS_DYNAMICS_DRUMS": {
+        "title": "ドラムバスコンプレッション",
+        "description": "ドラムバスにグルーコンプレッションを適用しました。ゲインリダクション: {gr_db}dB。"
+      },
+      "S6_BUS_REVERB_STYLE": {
+        "title": "空間的奥行き",
+        "description": "バスに'{style}'リバーブスタイルを使用して空間的奥行きを強化しました。"
+      },
+      "S7_MIXBUS_TONAL_BALANCE": {
+        "title": "トーンバランス",
+        "description": "ミックスバススペクトルをバランスさせました。適用された最大補正: {max_correction_db}dB。"
+      },
+      "S8_MIXBUS_COLOR_GENERIC": {
+        "title": "ミックスバスサチュレーション",
+        "description": "ミックスバスに倍音サチュレーションを追加しました。ドライブ量: {drive_percent}%。"
+      },
+      "S9_MASTER_GENERIC": {
+        "title": "マスタリングリミッター",
+        "description": "商業的なラウドネスのために、{ceiling_db}dBのシーリングで最終リミッティングを適用しました。"
+      },
+      "S10_MASTER_FINAL_LIMITS": {
+        "title": "最終品質管理",
+        "description": "基準を確認しました。統合ラウドネス: {lufs} LUFS、トゥルーピーク: {true_peak} dBTP。"
+      },
+      "S11_REPORT_GENERATION": {
+        "title": "レポート生成",
+        "description": "この分析レポートを生成しました。"
+      },
+      "S13_MANUAL_CORRECTION": {
+        "title": "手動補正",
+        "description": "Piroola Studioでのユーザーフィードバックに基づいて手動調整を適用しました。"
+      }
+    }
   }
 }
