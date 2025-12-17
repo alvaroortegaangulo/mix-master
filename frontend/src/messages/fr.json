@@ -372,7 +372,11 @@
       "finalReport": "Rapport Final de Mixage",
       "close": "Fermer",
       "retry": "Réessayer de charger le rapport",
-      "unavailable": "Les données du rapport ne sont pas disponibles."
+      "unavailable": "Les données du rapport ne sont pas disponibles.",
+      "share": "Partager",
+      "shareMix": "Partager votre Mix",
+      "shareMixDesc": "Copiez le lien ci-dessous pour partager ce mix avec des clients ou des amis. Le lien offre un accès en lecture seule pour écouter le résultat.",
+      "copy": "Copier"
     }
   },
   "Studio": {

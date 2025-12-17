@@ -372,7 +372,11 @@
       "finalReport": "Rapporto Finale di Mixaggio",
       "close": "Chiudi",
       "retry": "Riprova caricamento rapporto",
-      "unavailable": "I dati del rapporto non sono disponibili."
+      "unavailable": "I dati del rapporto non sono disponibili.",
+      "share": "Condividi",
+      "shareMix": "Condividi il tuo Mix",
+      "shareMixDesc": "Copia il link qui sotto per condividere questo mix con clienti o amici. Il link fornisce accesso in sola lettura per ascoltare il risultato.",
+      "copy": "Copia"
     }
   },
   "Studio": {

@@ -372,7 +372,11 @@
       "finalReport": "Finaler Mix-Bericht",
       "close": "Schließen",
       "retry": "Bericht laden wiederholen",
-      "unavailable": "Berichtsdaten sind nicht verfügbar."
+      "unavailable": "Berichtsdaten sind nicht verfügbar.",
+      "share": "Teilen",
+      "shareMix": "Mix teilen",
+      "shareMixDesc": "Kopieren Sie den unten stehenden Link, um diesen Mix mit Kunden oder Freunden zu teilen. Der Link bietet nur Lesezugriff zum Anhören des Ergebnisses.",
+      "copy": "Kopieren"
     }
   },
   "Studio": {

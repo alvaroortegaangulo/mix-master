@@ -372,7 +372,11 @@
       "finalReport": "最终混音报告",
       "close": "关闭",
       "retry": "重试加载报告",
-      "unavailable": "报告数据不可用。"
+      "unavailable": "报告数据不可用。",
+      "share": "分享",
+      "shareMix": "分享您的混音",
+      "shareMixDesc": "复制下面的链接与客户或朋友分享此混音。该链接提供只读访问权限以收听结果。",
+      "copy": "复制"
     }
   },
   "Studio": {
