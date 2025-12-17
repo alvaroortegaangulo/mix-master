@@ -481,6 +481,11 @@ def _analyze_audio_series(audio: np.ndarray, sr: int) -> Dict[str, Any]:
             col = [round(float(x), 1) for x in mel_db[:, i]]
             spec_data.append(col)
 
+        # Compute Average Spectrum (Tonal Balance)
+        # Average across time (axis 1 of mel_db)
+        mean_spectrum = np.mean(mel_db, axis=1)
+        tonal_data = [round(float(x), 2) for x in mean_spectrum]
+
         spec_freqs = [int(f) for f in librosa.mel_frequencies(n_mels=n_mels, fmin=20, fmax=sr/2)]
         spec_times = [round(t * hop_length / sr, 2) for t in range(len(spec_data))] # approximate time check
 
@@ -488,6 +493,7 @@ def _analyze_audio_series(audio: np.ndarray, sr: int) -> Dict[str, Any]:
         spec_data = []
         spec_freqs = []
         spec_times = []
+        tonal_data = []
 
 
     return {
@@ -511,6 +517,10 @@ def _analyze_audio_series(audio: np.ndarray, sr: int) -> Dict[str, Any]:
             "data": spec_data,
             "freqs": spec_freqs,
             # "times": spec_times # derived in UI
+        },
+        "tonal": {
+            "spectrum": tonal_data,
+            "freqs": spec_freqs
         }
     }
 
