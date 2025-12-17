@@ -945,38 +945,105 @@
     }
   },
   "Cookie": {
-    "title": "Cookie Policy",
-    "lastUpdated": "Last updated: {date}",
+    "title": "Política de Cookies",
+    "lastUpdated": "Última atualização: {date}",
     "sections": {
       "0": {
-        "title": "1. What Are Cookies",
-        "content": "Cookies are small text files that are placed on your computer or mobile device when you browse websites. They are widely used to make websites work, or work more efficiently, as well as to provide information to the owners of the site."
+        "title": "1. O Que São Cookies",
+        "content": "Cookies são pequenos arquivos de texto que são colocados no seu computador ou dispositivo móvel quando você navega em sites. Eles são amplamente utilizados para fazer os sites funcionarem, ou funcionarem com mais eficiência, bem como para fornecer informações aos proprietários do site."
       },
       "1": {
-        "title": "2. How We Use Cookies",
-        "content": "We use cookies for a variety of reasons detailed below. Unfortunately, in most cases there are no industry standard options for disabling cookies without completely disabling the functionality and features they add to this site. It is recommended that you leave on all cookies if you are not sure whether you need them or not in case they are used to provide a service that you use."
+        "title": "2. Como Usamos Cookies",
+        "content": "Usamos cookies por vários motivos detalhados abaixo. Infelizmente, na maioria dos casos, não existem opções padrão da indústria para desativar cookies sem desativar completamente a funcionalidade e os recursos que eles adicionam a este site. É recomendável que você deixe todos os cookies ativados se não tiver certeza se precisa deles ou não, caso sejam usados para fornecer um serviço que você usa."
       },
       "2": {
-        "title": "3. The Cookies We Set",
+        "title": "3. Os Cookies Que Definimos",
         "list": {
-          "0": "<strong>Essential Cookies:</strong> These cookies are necessary for the website to function and cannot be switched off in our systems. They are usually only set in response to actions made by you which amount to a request for services, such as setting your privacy preferences, logging in or filling in forms.",
-          "1": "<strong>Functionality Cookies:</strong> These cookies enable the website to provide enhanced functionality and personalization. They may be set by us or by third party providers whose services we have added to our pages.",
-          "2": "<strong>Analytics Cookies:</strong> We use Google Analytics to understand how our visitors interact with the website. This helps us improve the user experience. These cookies track things such as how long you spend on the site and the pages that you visit."
+          "0": "<strong>Cookies Essenciais:</strong> Esses cookies são necessários para o funcionamento do site e não podem ser desativados em nossos sistemas. Eles geralmente são definidos apenas em resposta a ações feitas por você que equivalem a uma solicitação de serviços, como definir suas preferências de privacidade, fazer login ou preencher formulários.",
+          "1": "<strong>Cookies de Funcionalidade:</strong> Esses cookies permitem que o site forneça funcionalidade e personalização aprimoradas. Eles podem ser definidos por nós ou por provedores terceirizados cujos serviços adicionamos às nossas páginas.",
+          "2": "<strong>Cookies Analíticos:</strong> Usamos o Google Analytics para entender como nossos visitantes interagem com o site. Isso nos ajuda a melhorar a experiência do usuário. Esses cookies rastreiam coisas como quanto tempo você passa no site e as páginas que visita."
         }
       },
       "3": {
-        "title": "4. Third Party Cookies",
-        "content": "In some special cases we also use cookies provided by trusted third parties. The following section details which third party cookies you might encounter through this site.",
-        "p2": "This site uses Google Analytics which is one of the most widespread and trusted analytics solutions on the web for helping us to understand how you use the site and ways that we can improve your experience. These cookies may track things such as how long you spend on the site and the pages that you visit so we can continue to produce engaging content."
+        "title": "4. Cookies de Terceiros",
+        "content": "Em alguns casos especiais, também usamos cookies fornecidos por terceiros confiáveis. A seção a seguir detalha quais cookies de terceiros você pode encontrar através deste site.",
+        "p2": "Este site usa o Google Analytics, que é uma das soluções de análise mais difundidas e confiáveis na web para nos ajudar a entender como você usa o site e como podemos melhorar sua experiência. Esses cookies podem rastrear coisas como quanto tempo você passa no site e as páginas que visita para que possamos continuar produzindo conteúdo envolvente."
       },
       "4": {
-        "title": "5. Managing Cookies",
-        "content": "You can prevent the setting of cookies by adjusting the settings on your browser (see your browser Help for how to do this). Be aware that disabling cookies will affect the functionality of this and many other websites that you visit. Disabling cookies will usually result in also disabling certain functionality and features of this site. Therefore it is recommended that you do not disable cookies."
+        "title": "5. Gerenciando Cookies",
+        "content": "Você pode impedir a configuração de cookies ajustando as configurações do seu navegador (consulte a Ajuda do seu navegador para saber como fazer isso). Esteja ciente de que desativar cookies afetará a funcionalidade deste e de muitos outros sites que você visita. A desativação de cookies geralmente resultará também na desativação de certas funcionalidades e recursos deste site. Portanto, é recomendável que você não desative os cookies."
       },
       "5": {
-        "title": "6. Contact Details",
-        "content": "If you have any questions about this cookie policy, please contact us at: <br /><span class='text-teal-400'>privacy@audioalchemy.com</span>"
+        "title": "6. Detalhes de Contato",
+        "content": "Se você tiver alguma dúvida sobre esta política de cookies, entre em contato conosco em: <br /><span class='text-teal-400'>privacy@audioalchemy.com</span>"
       }
     }
+  },
+  "UploadDropzone": {
+    "uploadSong": "Envie sua Música",
+    "uploadStems": "Envie seus Stems",
+    "songModeDesc": "Masterize um único mix estéreo.",
+    "stemsModeDesc": "Envie faixas individuais para uma mixagem completa com IA.",
+    "dragDropSong": "Arraste e solte sua música aqui, ou clique para selecionar um arquivo",
+    "dragDropStems": "Arraste e solte stems aqui, ou clique para selecionar arquivos",
+    "supportedFormats": "Formatos suportados: WAV",
+    "filesSelected": "{count} arquivo{count, plural, =1 {} other {s}} de áudio selecionado{count, plural, =1 {} other {s}}"
+  },
+  "PipelinePhases": {
+    "inputMetadata": {
+      "title": "Entrada & Metadados",
+      "body": "Preparamos sua sessão organizando todos os arquivos enviados e normalizando formatos, taxas de amostragem e metadados básicos para que o restante do pipeline possa funcionar de forma consistente."
+    },
+    "technicalPreparation": {
+      "title": "Preparação Técnica",
+      "body": "Corrigimos problemas técnicos básicos em cada stem: deslocamento DC, volume de trabalho e headroom inicial para garantir um ponto de partida limpo e confiável para a mixagem."
+    },
+    "phasePolarityAlignment": {
+      "title": "Alinhamento de Fase & Polaridade",
+      "body": "Analisamos grupos de vários microfones (como bateria) para alinhar a fase e corrigir a polaridade, evitando cancelamentos e restaurando o impacto e a clareza dos graves."
+    },
+    "staticMixRouting": {
+      "title": "Mixagem Estática & Roteamento",
+      "body": "Construímos um equilíbrio estático e roteamento de barramento, posicionando faders e panorâmicas para que todos os elementos sejam ouvidos claramente antes de qualquer processamento pesado."
+    },
+    "spectralCleanup": {
+      "title": "Limpeza Espectral",
+      "body": "Limpamos cada stem usando filtros passa-alta e filtros notch suaves para remover estrondos e ressonâncias ásperas, liberando espaço na mixagem."
+    },
+    "dynamicsLevelAutomation": {
+      "title": "Dinâmica & Automação de Nível",
+      "body": "Controlamos a dinâmica usando compressão, limitação e automação de nível, mantendo as performances expressivas, mas impedindo que os picos saltem para fora da mixagem."
+    },
+    "spaceDepthByBuses": {
+      "title": "Espaço & Profundidade por Barramentos",
+      "body": "Enviamos instrumentos para barramentos dedicados de reverberação e ambiência, colocando-os mais perto ou mais longe no palco sonoro para criar uma sensação de profundidade e espaço."
+    },
+    "multibandEqTonalBalance": {
+      "title": "EQ Multibanda & Equilíbrio Tonal",
+      "body": "Afinamos o equilíbrio espectral geral para que a mixagem pareça natural e se traduza bem em diferentes sistemas de reprodução."
+    },
+    "mixBusColor": {
+      "title": "Cor do Mix Bus",
+      "body": "Adicionamos saturação suave e processamento de barramento para unir a mixagem, melhorando o calor, o impacto e o volume percebido sem destruir a dinâmica."
+    },
+    "mastering": {
+      "title": "Masterização",
+      "body": "Trazemos a faixa para o volume alvo, ajustamos o EQ final, a largura estéreo e a limitação para que esteja pronta para lançamento em plataformas de streaming."
+    },
+    "masterStereoQc": {
+      "title": "Controle de Qualidade Estéreo Master",
+      "body": "Executamos verificações finais de qualidade (pico real, volume, imagem estéreo e equilíbrio) para garantir que a master atenda aos objetivos técnicos."
+    },
+    "reporting": {
+      "title": "Relatórios",
+      "body": "Geramos um relatório técnico e exportamos a master final para que você possa revisar o que foi feito em cada etapa do pipeline."
+    }
+  },
+  "MixPipelinePanel": {
+    "title": "Pipeline",
+    "description": "Explore como a mixagem evolui em cada fase ouvindo o resultado cumulativo após cada grande bloco de processamento.",
+    "loading": "Carregando definição do pipeline...",
+    "error": "Erro ao carregar a definição do pipeline.",
+    "activeContract": "Contrato ativo:"
   }
 }
