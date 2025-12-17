@@ -48,6 +48,8 @@ from fastapi.responses import StreamingResponse
 from tasks import run_full_pipeline_task
 from src.database import engine, Base
 from src.routers import auth
+from src.routers.auth import get_current_user
+from src.models.user import User
 from src.utils.job_store import update_job_status, write_job_status
 from src.utils.waveform import compute_and_cache_peaks, ensure_preview_wav
 
@@ -291,13 +293,14 @@ def _build_pipeline_stages() -> list[dict[str, Any]]:
     return result
 
 
-def _write_initial_job_status(job_id: str, temp_root: Path) -> None:
+def _write_initial_job_status(job_id: str, temp_root: Path, owner_email: Optional[str] = None) -> None:
     """
     Crea un job_status.json inicial en estado 'pending'.
     """
     status = {
         "jobId": job_id,
         "job_id": job_id,
+        "owner_email": owner_email,
         "status": "pending",
         "stage_index": 0,
         "total_stages": 0,
@@ -324,6 +327,30 @@ def _load_job_status_from_fs(job_id: str) -> Optional[Dict[str, Any]]:
             job_id,
         )
         return None
+
+
+def _assert_job_owner(job_id: str, current_user: User) -> Dict[str, Any]:
+    """
+    Valida que el job pertenezca al usuario actual. Si no hay owner, lo asigna.
+    """
+    data = _load_job_status_from_fs(job_id)
+    if data is None:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    owner = data.get("owner_email")
+    if owner and owner != current_user.email:
+        raise HTTPException(status_code=403, detail="Job does not belong to current user")
+
+    if not owner:
+        # Asignar propietario y persistir
+        job_root = JOBS_ROOT / job_id
+        data["owner_email"] = current_user.email
+        try:
+            write_job_status(job_root, data)
+        except Exception:
+            logger.warning("No se pudo persistir owner_email para job %s", job_id)
+
+    return data
     try:
         with status_path.open("r", encoding="utf-8") as f:
             data = json.load(f)
@@ -375,19 +402,11 @@ class RedisRateLimiter:
         self.key_prefix = key_prefix
         self.max_requests = max_requests
         self.window_ms = int(window_seconds * 1000)
-        self.client = aioredis.from_url(redis_url, decode_responses=False) if aioredis else None
-        self._warned = False
+        if not aioredis:
+            raise RuntimeError("redis.asyncio es obligatorio para rate limiting distribuido")
+        self.client = aioredis.from_url(redis_url, decode_responses=False)
 
     async def hit(self, key: str) -> None:
-        if not self.client:
-            if not self._warned:
-                logger.warning(
-                    "Rate limiter usando memoria local (redis.asyncio no disponible); limites no globales."
-                )
-                self._warned = True
-            await _memory_rate_limiter.hit(key)
-            return
-
         now_ms = int(time.time() * 1000)
         bucket_key = f"{self.key_prefix}{key}"
         member = f"{now_ms}-{uuid.uuid4().hex}"
@@ -405,9 +424,12 @@ class RedisRateLimiter:
                 )
         except HTTPException:
             raise
-        except Exception as exc:  # fallback ante errores de Redis
-            logger.warning("Rate limiter Redis fallo (%s); usando memoria local.", exc)
-            await _memory_rate_limiter.hit(key)
+        except Exception as exc:  # no fallback silencioso: observabilidad y bloqueo
+            logger.error("Rate limiter Redis fallo; rechazando peticion para proteger el servicio: %s", exc)
+            raise HTTPException(
+                status_code=503,
+                detail="Rate limiting unavailable; try again later",
+            )
 
 
 class SlidingWindowRateLimiter:
@@ -580,7 +602,15 @@ async def _guard_heavy_endpoint(
 ) -> None:
     key = _extract_api_key(request, api_key)
     _require_api_key(key)
-    limiter_key = key or (request.client.host if request.client else "unknown")
+    client_ip = request.client.host if request.client else "unknown"
+    job_id = request.path_params.get("job_id") if isinstance(request.path_params, dict) else None
+    limiter_key_parts = [
+        f"api:{key}" if key else None,
+        f"ip:{client_ip}",
+        f"job:{job_id}" if job_id else None,
+        f"path:{request.url.path}",
+    ]
+    limiter_key = "|".join([p for p in limiter_key_parts if p])
     await rate_limiter.hit(limiter_key)
 
 
@@ -838,6 +868,7 @@ async def mix_tracks(
     space_depth_bus_styles_json: Optional[str] = Form(None),
     upload_mode: str = Form("song"),
     _: None = Depends(_guard_heavy_endpoint),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Endpoint clásico: un solo POST con todos los WAV.
@@ -861,38 +892,11 @@ async def mix_tracks(
         temp_root,
     )
 
-    _write_initial_job_status(job_id, temp_root)
-
-    # Modo de subida
-    raw_mode = (upload_mode or "song").strip().lower()
-    is_stems_upload = raw_mode in {
-        "stems",
-        "upload_stems",
-        "stems_true",
-        "true",
-        "1",
-    }
-    normalized_mode = "stems" if is_stems_upload else "song"
+    _write_initial_job_status(job_id, temp_root, owner_email=current_user.email)
 
     job_root = temp_root
     work_dir = job_root / "work"
     work_dir.mkdir(parents=True, exist_ok=True)
-    upload_info_path = work_dir / "upload_mode.json"
-
-    upload_info = {
-        "upload_mode": normalized_mode,
-        "stems": is_stems_upload,
-    }
-    upload_info_path.write_text(
-        json.dumps(upload_info, indent=2, ensure_ascii=False),
-        encoding="utf-8",
-    )
-    logger.info(
-        "[/mix] upload_mode.json escrito para job_id=%s: %s (stems=%s)",
-        job_id,
-        normalized_mode,
-        is_stems_upload,
-    )
 
     # Perfiles de stems
     profiles_by_name: Dict[str, str] = {}
@@ -1016,9 +1020,11 @@ async def mix_tracks(
                 str(temp_root),
                 enabled_stage_keys,
                 profiles_by_name,
-            ],
-            task_id=job_id,
+            ]
         )
+        task_id = getattr(result, "id", None)
+        if task_id:
+            update_job_status(temp_root, {"celery_task_id": task_id})
     except Exception as exc:
         logger.exception(
             "[/mix] Error en apply_async para job_id=%s",
@@ -1053,6 +1059,7 @@ async def init_mix_job(
     space_depth_bus_styles_json: Optional[str] = Form(None),
     upload_mode: str = Form("song"),
     _: None = Depends(_guard_heavy_endpoint),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Inicializa un job SIN subir todavía los WAV.
@@ -1077,37 +1084,12 @@ async def init_mix_job(
         temp_root,
     )
 
-    _write_initial_job_status(job_id, temp_root)
+    _write_initial_job_status(job_id, temp_root, owner_email=current_user.email)
 
     job_root = temp_root
     work_dir = job_root / "work"
     work_dir.mkdir(parents=True, exist_ok=True)
 
-    # Modo de subida
-    raw_mode = (upload_mode or "song").strip().lower()
-    is_stems_upload = raw_mode in {
-        "stems",
-        "upload_stems",
-        "stems_true",
-        "true",
-        "1",
-    }
-    normalized_mode = "stems" if is_stems_upload else "song"
-    upload_info_path = work_dir / "upload_mode.json"
-    upload_info = {
-        "upload_mode": normalized_mode,
-        "stems": is_stems_upload,
-    }
-    upload_info_path.write_text(
-        json.dumps(upload_info, indent=2, ensure_ascii=False),
-        encoding="utf-8",
-    )
-    logger.info(
-        "[/mix/init] upload_mode.json escrito para job_id=%s: %s (stems=%s)",
-        job_id,
-        normalized_mode,
-        is_stems_upload,
-    )
 
     # Perfiles de stems
     raw_profiles: List[Dict[str, str]] = []
@@ -1218,6 +1200,7 @@ async def upload_file_for_job(
     job_id: str,
     file: UploadFile = File(...),
     _: None = Depends(_guard_heavy_endpoint),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Recibe un archivo para un job existente.
@@ -1227,6 +1210,8 @@ async def upload_file_for_job(
 
     if not temp_root.exists():
         raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
+
+    _assert_job_owner(job_id, current_user)
 
     media_dir.mkdir(parents=True, exist_ok=True)
 
@@ -1253,7 +1238,8 @@ async def upload_file_for_job(
 async def start_mix_job_endpoint(
     job_id: str,
     stages_override: Optional[Dict[str, List[str]]] = None,
-    _: None = Depends(_guard_heavy_endpoint)
+    _: None = Depends(_guard_heavy_endpoint),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Lanza la tarea Celery para un job ya inicializado y con WAVs subidos.
@@ -1264,6 +1250,8 @@ async def start_mix_job_endpoint(
     media_dir, temp_root = _get_job_dirs(job_id)
     if not media_dir.exists() or not temp_root.exists():
         raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
+
+    _assert_job_owner(job_id, current_user)
 
     job_root = temp_root
     work_dir = job_root / "work"
@@ -1344,9 +1332,11 @@ async def start_mix_job_endpoint(
                 str(temp_root),
                 enabled_stage_keys,
                 profiles_by_name,
-            ],
-            task_id=job_id,
+            ]
         )
+        task_id = getattr(result, "id", None)
+        if task_id:
+            update_job_status(temp_root, {"celery_task_id": task_id})
     except Exception as exc:
         logger.exception(
             "[/mix/%s/start] Error en apply_async",
@@ -1371,7 +1361,10 @@ async def start_mix_job_endpoint(
 
 @app.get("/jobs/{job_id}/stems")
 def get_job_stems(
-    job_id: str, request: Request, _: None = Depends(_guard_heavy_endpoint)
+    job_id: str,
+    request: Request,
+    _: None = Depends(_guard_heavy_endpoint),
+    current_user: User = Depends(get_current_user),
 ) -> Dict[str, Any]:
     """
     Devuelve stems con URL firmada + preview + peaks, priorizando S6_MANUAL_CORRECTION.
@@ -1379,6 +1372,8 @@ def get_job_stems(
     _, temp_root = _get_job_dirs(job_id)
     if not temp_root.exists():
         raise HTTPException(status_code=404, detail="Job not found")
+
+    _assert_job_owner(job_id, current_user)
 
     preferred_stage_ids = [
         "S6_MANUAL_CORRECTION",
@@ -1449,13 +1444,19 @@ def get_job_stems(
     }
 
 @app.get("/jobs/{job_id}/download-stems-zip")
-async def download_stems_zip(job_id: str, _: None = Depends(_guard_heavy_endpoint)):
+async def download_stems_zip(
+    job_id: str,
+    _: None = Depends(_guard_heavy_endpoint),
+    current_user: User = Depends(get_current_user),
+):
     """
     Zips current stems and returns file.
     """
     _, temp_root = _get_job_dirs(job_id)
     if not temp_root.exists():
         raise HTTPException(status_code=404, detail="Job not found")
+
+    _assert_job_owner(job_id, current_user)
 
     # Reuse logic to find best stems
     def _get_best_stage_dir() -> Optional[Path]:
@@ -1493,13 +1494,19 @@ async def download_stems_zip(job_id: str, _: None = Depends(_guard_heavy_endpoin
     return FileResponse(zip_path, filename=zip_filename, media_type='application/zip')
 
 @app.get("/jobs/{job_id}/download-mixdown")
-async def download_mixdown_endpoint(job_id: str, _: None = Depends(_guard_heavy_endpoint)):
+async def download_mixdown_endpoint(
+    job_id: str,
+    _: None = Depends(_guard_heavy_endpoint),
+    current_user: User = Depends(get_current_user),
+):
     """
     Runs mixdown_stems and downloads the result.
     """
     _, temp_root = _get_job_dirs(job_id)
     if not temp_root.exists():
         raise HTTPException(status_code=404, detail="Job not found")
+
+    _assert_job_owner(job_id, current_user)
 
     # Determine best stage to mixdown
     best_stage_dir = None
@@ -1565,7 +1572,8 @@ async def download_mixdown_endpoint(job_id: str, _: None = Depends(_guard_heavy_
 async def post_job_correction(
     job_id: str,
     payload: Dict[str, Any],
-    _: None = Depends(_guard_heavy_endpoint)
+    _: None = Depends(_guard_heavy_endpoint),
+    current_user: User = Depends(get_current_user),
 ):
     """
     Recibe parametros de correccion manual y los guarda en work/manual_corrections.json
@@ -1574,6 +1582,8 @@ async def post_job_correction(
     _, temp_root = _get_job_dirs(job_id)
     if not temp_root.exists():
         raise HTTPException(status_code=404, detail="Job not found")
+
+    _assert_job_owner(job_id, current_user)
 
     corrections = payload.get("corrections")
     # Allow empty list (no corrections)
@@ -1600,9 +1610,15 @@ async def post_job_correction(
 
 
 @app.get("/jobs/{job_id}")
-def get_job_status(job_id: str, request: Request, response: Response) -> Dict[str, Any]:
+def get_job_status(
+    job_id: str,
+    request: Request,
+    response: Response,
+    _: None = Depends(_guard_heavy_endpoint),
+    current_user: User = Depends(get_current_user),
+) -> Dict[str, Any]:
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
-    data = _load_job_status_from_fs(job_id)
+    data = _assert_job_owner(job_id, current_user)
     if data is None:
         logger.info(
             "[/jobs/%s] job_status.json no encontrado; devolviendo estado pending.",

@@ -1,13 +1,12 @@
 from __future__ import annotations
 
 import json
-import sys
-import subprocess
 import shutil
 import logging
 from pathlib import Path
 from typing import Callable, Dict, Any, List, Optional
 
+from .utils import mixdown_stems, copy_stems
 from .stages.stage import run_stage, set_active_contract_sequence
 from .utils.analysis_utils import get_temp_dir
 from .context import PipelineContext
@@ -15,6 +14,50 @@ from .utils.job_store import update_job_status
 from .utils.waveform import compute_and_cache_peaks, ensure_preview_wav
 
 logger = logging.getLogger(__name__)
+
+def _mark_job_failure(temp_root: Optional[Path], message: str, job_id: Optional[str] = None) -> None:
+    """
+    Actualiza job_status a failure con un mensaje claro si hay temp_root disponible.
+    """
+    if job_id:
+        logger.error("[%s] %s", job_id, message)
+    else:
+        logger.error("%s", message)
+
+    if temp_root:
+        try:
+            update_job_status(
+                temp_root,
+                {
+                    "status": "failure",
+                    "stage_key": "error",
+                    "message": message,
+                },
+            )
+        except Exception as exc:
+            logger.warning("No se pudo actualizar job_status tras fallo: %s", exc)
+
+
+def _run_processing_step(
+    description: str,
+    func: Callable[..., bool],
+    *,
+    context: PipelineContext,
+    args: List[Any],
+    job_id: Optional[str] = None,
+    temp_root: Optional[Path] = None,
+) -> None:
+    """
+    Ejecuta una funcion de etapa (process) y marca el job como fallo si devuelve False o lanza.
+    """
+    try:
+        res = func(context, *args)
+        if res is False:
+            raise RuntimeError("returned False")
+    except Exception as exc:
+        msg = f"{description} fallo: {exc}"
+        _mark_job_failure(temp_root, msg, job_id)
+        raise
 
 
 # -------------------------------------------------------------------
@@ -63,21 +106,28 @@ def _run_copy_and_mixdown(src_stage: str, dst_stage: str) -> None:
 
     Se deja por compatibilidad. No es job-aware.
     """
-    base_dir = Path(__file__).resolve().parent      # .../src
-    utils_dir = base_dir / "utils"
-    copy_script = utils_dir / "copy_stems.py"
-    mixdown_script = utils_dir / "mixdown_stems.py"
+    temp_root = get_temp_dir(src_stage, create=True).parent
+    job_id = temp_root.name if temp_root else None
+    context = PipelineContext(stage_id=src_stage, job_id=job_id, temp_root=temp_root)
 
     # 1) Copiar stems src -> dst
-    subprocess.run(
-        [sys.executable, str(copy_script), src_stage, dst_stage],
-        check=False,
+    _run_processing_step(
+        f"Copiar stems {src_stage} -> {dst_stage}",
+        copy_stems.process,
+        context=context,
+        args=[src_stage, dst_stage],
+        job_id=job_id,
+        temp_root=temp_root,
     )
 
     # 2) Mixdown de los stems en la carpeta origen
-    subprocess.run(
-        [sys.executable, str(mixdown_script), src_stage],
-        check=False,
+    _run_processing_step(
+        f"Mixdown de {src_stage}",
+        mixdown_stems.process,
+        context=context,
+        args=[src_stage],
+        job_id=job_id,
+        temp_root=temp_root,
     )
 
 
@@ -228,12 +278,6 @@ def run_pipeline_for_job(
       - Antes de ejecutar cada contrato llama a progress_cb(stage_index, total_stages, stage_key, message)
         indicando el stage que está EN PROGRESO.
     """
-    base_dir = Path(__file__).resolve().parent      # .../src
-
-    utils_dir = base_dir / "utils"
-    copy_script = utils_dir / "copy_stems.py"
-    mixdown_script = utils_dir / "mixdown_stems.py"
-
     logger.info(
         "[pipeline] run_pipeline_for_job: job_id=%s media_dir=%s temp_root=%s enabled_stage_keys=%s",
         job_id,
@@ -319,18 +363,27 @@ def run_pipeline_for_job(
     # 1) Mixdown de S0_MIX_ORIGINAL (full_song.wav original)
     # ------------------------------------------------------------------
     logger.info("[pipeline] Mixdown de S0_MIX_ORIGINAL...")
-    subprocess.run(
-        [sys.executable, str(mixdown_script), "S0_MIX_ORIGINAL"],
-        check=False,
+    context = PipelineContext(stage_id="S0_MIX_ORIGINAL", job_id=job_id, temp_root=temp_root)
+    _run_processing_step(
+        "Mixdown de S0_MIX_ORIGINAL",
+        mixdown_stems.process,
+        context=context,
+        args=["S0_MIX_ORIGINAL"],
+        job_id=job_id,
+        temp_root=temp_root,
     )
 
     # ------------------------------------------------------------------
     # 2) Copiar stems a S0_SESSION_FORMAT
     # ------------------------------------------------------------------
     logger.info("[pipeline] Copiando stems S0_MIX_ORIGINAL -> S0_SESSION_FORMAT...")
-    subprocess.run(
-        [sys.executable, str(copy_script), "S0_MIX_ORIGINAL", "S0_SESSION_FORMAT"],
-        check=False,
+    _run_processing_step(
+        "Copiar stems S0_MIX_ORIGINAL -> S0_SESSION_FORMAT",
+        copy_stems.process,
+        context=context,
+        args=["S0_MIX_ORIGINAL", "S0_SESSION_FORMAT"],
+        job_id=job_id,
+        temp_root=temp_root,
     )
 
     # Generar peaks para S0_SESSION_FORMAT, así si el usuario abre Studio antes de S6, ya están listos.
@@ -419,9 +472,14 @@ def run_pipeline_for_job(
                 source_stage,
                 first_stage,
             )
-            subprocess.run(
-                [sys.executable, str(copy_script), source_stage, first_stage],
-                check=False,
+            bootstrap_context = PipelineContext(stage_id=source_stage, job_id=job_id, temp_root=temp_root)
+            _run_processing_step(
+                f"Copia inicial {source_stage} -> {first_stage}",
+                copy_stems.process,
+                context=bootstrap_context,
+                args=[source_stage, first_stage],
+                job_id=job_id,
+                temp_root=temp_root,
             )
 
     # Callback inicial de progreso (antes de cualquier stage)
