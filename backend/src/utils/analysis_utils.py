@@ -327,7 +327,8 @@ def _analyze_audio_series(audio: np.ndarray, sr: int) -> Dict[str, Any]:
         # Let's stick to mono for "Loudness" approx or if Essentia handles it.
         # Wait, Essentia has `LoudnessEBUR128`.
 
-        loudness_algo = es.LoudnessEBUR128(sampleRate=sr, hopSize=int(sr * 0.1)) # 100ms hop
+        # hopSize is expressed in seconds for Essentia (not samples)
+        loudness_algo = es.LoudnessEBUR128(sampleRate=sr, hopSize=0.1) # 100ms hop
         # Essentia expects mono usually for this specific simple call?
         # If we pass stereo, it might fail if shape is (N, 2).
         # We will use the mono mixdown.
