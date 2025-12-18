@@ -257,7 +257,14 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
 
         <div ref={reportRef} id="report-content" className="space-y-6 p-4 bg-slate-950 text-slate-200">
             {/* Mix Summary Section */}
-            <section className="rounded-xl border border-emerald-500/20 bg-gradient-to-br from-emerald-900/20 to-slate-900/40 p-5 shadow-lg">
+            <section
+              className="rounded-xl border border-emerald-500/20 p-5 shadow-lg"
+              style={{
+                // Use explicit rgba gradient to avoid html2canvas "lab" parsing errors.
+                backgroundImage:
+                  "linear-gradient(to bottom right, rgba(6, 78, 59, 0.2), rgba(15, 23, 42, 0.4))",
+              }}
+            >
                 <h2 className="mb-4 text-lg font-bold text-emerald-100 tracking-tight">
                 {t("mixSummary")}
                 </h2>
