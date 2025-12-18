@@ -534,75 +534,75 @@ def run_pipeline_for_job(
         )
 
         for idx, contract_id in enumerate(contract_ids, start=1):
-        current_stage_index = resume_stage_index_offset + idx
-        # Check for mandatory pause before S6 if we just finished S5
-        # The contract_id logic: we iterate. S5 finishes, loop continues to S6.
-        # But we want to PAUSE BEFORE S6 starts if manual correction is enabled.
-        # So we check if current contract_id is S6_MANUAL_CORRECTION.
+            current_stage_index = resume_stage_index_offset + idx
+            # Check for mandatory pause before S6 if we just finished S5
+            # The contract_id logic: we iterate. S5 finishes, loop continues to S6.
+            # But we want to PAUSE BEFORE S6 starts if manual correction is enabled.
+            # So we check if current contract_id is S6_MANUAL_CORRECTION.
 
-        if contract_id == "S6_MANUAL_CORRECTION":
-            # Solo pausamos si AUN no hay correcciones guardadas. Si el usuario ya
-            # enviAІ ajustes desde Studio, debemos continuar con S6 y el resto del pipeline.
-            corrections_path = temp_root / "work" / "manual_corrections.json"
-            has_corrections = False
-            try:
-                if corrections_path.exists():
-                    raw = json.loads(corrections_path.read_text(encoding="utf-8"))
-                    if isinstance(raw, dict) and isinstance(raw.get("corrections"), list):
-                        has_corrections = True
-            except Exception:
-                logger.warning(
-                    "[pipeline] No se pudo leer manual_corrections.json en %s",
-                    corrections_path,
-                )
+            if contract_id == "S6_MANUAL_CORRECTION":
+                # Solo pausamos si AUN no hay correcciones guardadas. Si el usuario ya
+                # enviAІ ajustes desde Studio, debemos continuar con S6 y el resto del pipeline.
+                corrections_path = temp_root / "work" / "manual_corrections.json"
+                has_corrections = False
+                try:
+                    if corrections_path.exists():
+                        raw = json.loads(corrections_path.read_text(encoding="utf-8"))
+                        if isinstance(raw, dict) and isinstance(raw.get("corrections"), list):
+                            has_corrections = True
+                except Exception:
+                    logger.warning(
+                        "[pipeline] No se pudo leer manual_corrections.json en %s",
+                        corrections_path,
+                    )
 
-            if not has_corrections:
-                logger.info("[pipeline] Pausing pipeline for Manual Correction (S6)...")
+                if not has_corrections:
+                    logger.info("[pipeline] Pausing pipeline for Manual Correction (S6)...")
 
-                # Antes de pausar, asegurarnos de que S6 tenga peaks generados.
-                # Como aún no corrió S6, los stems en S6_MANUAL_CORRECTION son la copia de S5.
-                s6_dir = get_temp_dir("S6_MANUAL_CORRECTION", create=False)
-                if s6_dir.exists():
-                    logger.info("[pipeline] Pre-calculating peaks for S6_MANUAL_CORRECTION (before pause)...")
-                    for stem_path in s6_dir.glob("*.wav"):
-                        if stem_path.name.lower() == "full_song.wav":
-                            continue
-                        peaks_path = s6_dir / "peaks" / f"{stem_path.stem}.peaks.json"
-                        preview_path = s6_dir / "previews" / f"{stem_path.stem}_preview.wav"
-                        compute_and_cache_peaks(stem_path, peaks_path)
-                        ensure_preview_wav(stem_path, preview_path)
+                    # Antes de pausar, asegurarnos de que S6 tenga peaks generados.
+                    # Como aún no corrió S6, los stems en S6_MANUAL_CORRECTION son la copia de S5.
+                    s6_dir = get_temp_dir("S6_MANUAL_CORRECTION", create=False)
+                    if s6_dir.exists():
+                        logger.info("[pipeline] Pre-calculating peaks for S6_MANUAL_CORRECTION (before pause)...")
+                        for stem_path in s6_dir.glob("*.wav"):
+                            if stem_path.name.lower() == "full_song.wav":
+                                continue
+                            peaks_path = s6_dir / "peaks" / f"{stem_path.stem}.peaks.json"
+                            preview_path = s6_dir / "previews" / f"{stem_path.stem}_preview.wav"
+                            compute_and_cache_peaks(stem_path, peaks_path)
+                            ensure_preview_wav(stem_path, preview_path)
 
-                # Set status to waiting_for_correction
-                _emit_progress(
-                    current_stage_index,
-                    effective_total_stages,
-                    "waiting_for_correction",
-                    "Waiting for manual correction in Studio..."
-                )
+                    # Set status to waiting_for_correction
+                    _emit_progress(
+                        current_stage_index,
+                        effective_total_stages,
+                        "waiting_for_correction",
+                        "Waiting for manual correction in Studio..."
+                    )
 
-                # Detenemos ejecución del resto de stages hasta que lleguen correcciones.
-                return
-            else:
-                logger.info(
-                    "[pipeline] Correcciones manuales encontradas (%s); continuando con S6 y mastering.",
-                    corrections_path,
-                )
+                    # Detenemos ejecución del resto de stages hasta que lleguen correcciones.
+                    return
+                else:
+                    logger.info(
+                        "[pipeline] Correcciones manuales encontradas (%s); continuando con S6 y mastering.",
+                        corrections_path,
+                    )
 
-        logger.info(
-            "[pipeline] Ejecutando contrato %s (%d/%d)",
-            contract_id,
-            idx,
-            total_stages,
-        )
+            logger.info(
+                "[pipeline] Ejecutando contrato %s (%d/%d)",
+                contract_id,
+                idx,
+                total_stages,
+            )
 
-        # Avisamos ANTES de ejecutar el stage para que el frontend
-        # muestre el stage que está EN PROGRESO.
-        _emit_progress(
-            current_stage_index,
-            effective_total_stages,
-            contract_id,
-            f"Running stage {contract_id}...",
-        )
+            # Avisamos ANTES de ejecutar el stage para que el frontend
+            # muestre el stage que está EN PROGRESO.
+            _emit_progress(
+                current_stage_index,
+                effective_total_stages,
+                contract_id,
+                f"Running stage {contract_id}...",
+            )
 
             # Ejecuta análisis, stage y check con reintentos, copia al siguiente contrato, etc.
             run_stage(contract_id, context=context)
