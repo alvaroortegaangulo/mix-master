@@ -11,6 +11,7 @@ from .stages.stage import run_stage, set_active_contract_sequence
 from .utils.analysis_utils import get_temp_dir
 from .context import PipelineContext
 from .utils.job_store import update_job_status
+from .utils.logger import logger as pipeline_logger
 from .utils.waveform import compute_and_cache_peaks, ensure_preview_wav
 
 logger = logging.getLogger(__name__)
@@ -520,7 +521,8 @@ def run_pipeline_for_job(
 
     # Configurar logging a archivo para este job
     log_file = temp_root / "pipeline.log"
-    file_handler = logger.add_file_handler(str(log_file))
+    file_handler = pipeline_logger.add_file_handler(str(log_file))
+    logger.addHandler(file_handler)
 
     try:
         # ------------------------------------------------------------------
@@ -607,7 +609,8 @@ def run_pipeline_for_job(
             # Ejecuta análisis, stage y check con reintentos, copia al siguiente contrato, etc.
             run_stage(contract_id, context=context)
     finally:
-        logger.remove_file_handler(file_handler)
+        logger.removeHandler(file_handler)
+        pipeline_logger.remove_file_handler(file_handler)
 
 
 if __name__ == "__main__":
