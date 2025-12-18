@@ -518,17 +518,22 @@ def run_pipeline_for_job(
         "Inicializando pipeline de mezcla...",
     )
 
-    # ------------------------------------------------------------------
-    # 4) Ejecutar cada contrato en orden
-    # ------------------------------------------------------------------
-    # Crear contexto único para todo el job
-    context = PipelineContext(
-        stage_id="", # Se actualizará en cada iteración
-        job_id=job_id,
-        temp_root=temp_root
-    )
+    # Configurar logging a archivo para este job
+    log_file = temp_root / "pipeline.log"
+    file_handler = logger.add_file_handler(str(log_file))
 
-    for idx, contract_id in enumerate(contract_ids, start=1):
+    try:
+        # ------------------------------------------------------------------
+        # 4) Ejecutar cada contrato en orden
+        # ------------------------------------------------------------------
+        # Crear contexto único para todo el job
+        context = PipelineContext(
+            stage_id="", # Se actualizará en cada iteración
+            job_id=job_id,
+            temp_root=temp_root
+        )
+
+        for idx, contract_id in enumerate(contract_ids, start=1):
         current_stage_index = resume_stage_index_offset + idx
         # Check for mandatory pause before S6 if we just finished S5
         # The contract_id logic: we iterate. S5 finishes, loop continues to S6.
@@ -599,8 +604,10 @@ def run_pipeline_for_job(
             f"Running stage {contract_id}...",
         )
 
-        # Ejecuta análisis, stage y check con reintentos, copia al siguiente contrato, etc.
-        run_stage(contract_id, context=context)
+            # Ejecuta análisis, stage y check con reintentos, copia al siguiente contrato, etc.
+            run_stage(contract_id, context=context)
+    finally:
+        logger.remove_file_handler(file_handler)
 
 
 if __name__ == "__main__":

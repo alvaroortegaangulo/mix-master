@@ -242,17 +242,139 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
     }
   };
 
+  const handleDownloadLogs = async () => {
+    try {
+      // 1. Fetch the log file (via signed URL)
+      // Since we don't have a direct "get log text" method in mixApi usually,
+      // we'll use the file signing mechanism to get a URL, then fetch the text.
+      const { url } = await signJobFile(jobId, "pipeline.log", 600);
+      const response = await fetch(url);
+      if (!response.ok) throw new Error("Failed to fetch logs");
+      const text = await response.text();
+
+      // 2. Generate PDF with jsPDF
+      const doc = new jsPDF();
+
+      // Set background to black
+      doc.setFillColor(0, 0, 0);
+      doc.rect(0, 0, doc.internal.pageSize.width, doc.internal.pageSize.height, "F");
+
+      // Set font to monospace (Courier)
+      doc.setFont("Courier", "normal");
+      doc.setFontSize(10);
+
+      let cursorY = 10;
+      const margin = 10;
+      const lineHeight = 5;
+      const pageHeight = doc.internal.pageSize.height;
+
+      // Split lines
+      const lines = text.split("\n");
+
+      // Regex for ANSI codes: \033[...m
+      // We handle basic colors: 30-37 (foreground), 1 (bold - ignore or map to bold font?)
+      // Simplification: we map specific known codes from logger.py to RGB.
+      const ansiRegex = /\u001b\[(\d+(?:;\d+)*)m/g;
+
+      // Color map based on logger.py
+      const colorMap: Record<string, [number, number, number]> = {
+        "0": [255, 255, 255], // Reset -> White
+        "30": [0, 0, 0],       // Black
+        "31": [255, 85, 85],   // Red
+        "32": [80, 250, 123],  // Green
+        "33": [241, 250, 140], // Yellow
+        "34": [189, 147, 249], // Blue
+        "35": [255, 121, 198], // Magenta
+        "36": [139, 233, 253], // Cyan
+        "37": [255, 255, 255], // White
+        "1": [255, 255, 255],  // Bold -> White (ignore bold weight for simplicity or just keep current color)
+      };
+
+      let currentColor: [number, number, number] = [255, 255, 255]; // Start white
+
+      for (const line of lines) {
+        // Reset X
+        let cursorX = margin;
+
+        // We need to parse the line into segments of (text, color)
+        let lastIndex = 0;
+        let match;
+
+        // Create a temporary "clean" line for wrapping calculation?
+        // Wrapping with mixed colors is complex. We'll assume logs generally fit or simple wrap.
+        // For accurate wrapping with colors, we'd need to measure segments.
+        // For now, let's assume no wrapping needed for typical log lines, or truncate.
+        // Actually, logs can be long. Let's do simple char-based processing or naive segmenting.
+
+        const segments: { text: string; color: [number, number, number] }[] = [];
+
+        while ((match = ansiRegex.exec(line)) !== null) {
+          const textSegment = line.substring(lastIndex, match.index);
+          if (textSegment) {
+            segments.push({ text: textSegment, color: [...currentColor] });
+          }
+
+          const codes = match[1].split(";");
+          for (const code of codes) {
+            if (code === "0") {
+              currentColor = [255, 255, 255];
+            } else if (colorMap[code]) {
+              currentColor = colorMap[code];
+            }
+          }
+          lastIndex = ansiRegex.lastIndex;
+        }
+        // Remaining text
+        if (lastIndex < line.length) {
+          segments.push({ text: line.substring(lastIndex), color: [...currentColor] });
+        }
+
+        // Print segments
+        for (const seg of segments) {
+           doc.setTextColor(seg.color[0], seg.color[1], seg.color[2]);
+           doc.text(seg.text, cursorX, cursorY);
+           // Advance X - this is tricky without measuring. Courier is monospaced!
+           // 10pt Courier approx width?
+           // doc.getTextWidth(seg.text) works.
+           cursorX += doc.getTextWidth(seg.text);
+        }
+
+        cursorY += lineHeight;
+        if (cursorY > pageHeight - margin) {
+          doc.addPage();
+          doc.setFillColor(0, 0, 0);
+          doc.rect(0, 0, doc.internal.pageSize.width, doc.internal.pageSize.height, "F");
+          cursorY = margin;
+        }
+      }
+
+      doc.save(`Piroola_Logs_${jobId}.pdf`);
+
+    } catch (err) {
+      console.error("Failed to download logs:", err);
+      // Optional: show toast error
+    }
+  };
+
   return (
     <div className="w-full space-y-6">
         <div className="flex justify-between items-center px-1">
              <h1 className="text-xl font-bold text-emerald-400">{t("title")}</h1>
-             <button
-                onClick={handleDownloadPdf}
-                disabled={isDownloading}
-                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold rounded shadow transition-colors disabled:opacity-50"
-             >
-                {isDownloading ? t("generatingPdf") : t("downloadPdf")}
-             </button>
+             <div className="flex gap-2">
+               <button
+                  onClick={handleDownloadLogs}
+                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-sm font-bold rounded shadow transition-colors"
+               >
+                  {t("downloadLogs")}
+               </button>
+               <button
+                  onClick={handleDownloadPdf}
+                  disabled={isDownloading}
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold rounded shadow transition-colors disabled:opacity-50"
+               >
+                  {isDownloading ? t("generatingPdf") : t("downloadPdf")}
+               </button>
+             </div>
         </div>
 
         <div ref={reportRef} id="report-content" className="space-y-6 p-4 bg-slate-950 text-slate-200">

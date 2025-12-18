@@ -1062,6 +1062,7 @@
   "Report": {
     "title": "Mastering Report",
     "downloadPdf": "Download PDF",
+    "downloadLogs": "Download Logs",
     "generatingPdf": "Generating PDF...",
     "mixSummary": "Mix Summary",
     "interactiveAnalysis": "Interactive Analysis",

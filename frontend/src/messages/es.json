@@ -1053,6 +1053,7 @@
   "Report": {
     "title": "Informe de Masterización",
     "downloadPdf": "Descargar PDF",
+    "downloadLogs": "Descargar Logs",
     "generatingPdf": "Generando PDF...",
     "mixSummary": "Resumen de Mezcla",
     "interactiveAnalysis": "Análisis Interactivo",
