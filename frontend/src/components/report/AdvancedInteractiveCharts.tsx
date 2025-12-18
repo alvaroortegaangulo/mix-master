@@ -14,9 +14,9 @@ import {
   Tooltip,
   ResponsiveContainer,
   ReferenceLine,
-  Legend
+  Legend,
+  ReferenceArea
 } from "recharts";
-import { useTranslations } from "next-intl";
 
 // --- Types (matching backend) ---
 
@@ -41,6 +41,9 @@ export interface DynamicsData {
 export interface StereoData {
   correlation: number[];
   width?: number[];
+  width_low?: number[];
+  width_mid?: number[];
+  width_high?: number[];
   time: number[];
 }
 
@@ -60,6 +63,7 @@ export interface AnalysisData {
   stereo?: StereoData;
   spectrogram?: SpectrogramData;
   tonal?: TonalData;
+  vectorscope?: number[][]; // 64x64 density matrix
 }
 
 export interface AdvancedChartsProps {
@@ -144,8 +148,6 @@ const LoudnessChart = ({
   original?: LoudnessData;
   expanded?: boolean;
 }) => {
-  // Combine data
-  // Assuming same time axis for simplicity, or we prioritize 'data' time
   const chartData = data.time.map((t, i) => ({
     time: t,
     timeLabel: formatTime(t),
@@ -187,8 +189,6 @@ const LoudnessChart = ({
             }}
         />
         {expanded && <Legend />}
-
-        {/* Original */}
         {original && (
              <Area
              type="monotone"
@@ -200,8 +200,6 @@ const LoudnessChart = ({
              name="Short-term (Original)"
            />
         )}
-
-        {/* Result */}
         <Area
           type="monotone"
           dataKey="s_res"
@@ -210,9 +208,7 @@ const LoudnessChart = ({
           strokeWidth={2}
           name="Short-term (Result)"
         />
-
         <ReferenceLine y={data.integrated} stroke="#34d399" strokeDasharray="3 3" label={{ position: 'right', value: 'I', fill: '#34d399', fontSize: 10 }} />
-
       </AreaChart>
     </ResponsiveContainer>
   );
@@ -260,7 +256,6 @@ const DynamicsChart = ({
               }}
           />
           {expanded && <Legend />}
-
           {original && (
             <Line
               type="monotone"
@@ -272,7 +267,6 @@ const DynamicsChart = ({
               name="Crest Factor (Original)"
             />
           )}
-
           <Line
             type="monotone"
             dataKey="crest_res"
@@ -286,7 +280,7 @@ const DynamicsChart = ({
     );
   };
 
-// 3. Stereo (Correlation)
+// 3. Stereo (Correlation & Width)
 const StereoChart = ({
     data,
     original,
@@ -296,6 +290,9 @@ const StereoChart = ({
     original?: StereoData;
     expanded?: boolean;
   }) => {
+    // Toggles for multiband
+    const [showBands, setShowBands] = useState(false);
+
     const chartData = data.time.map((t, i) => ({
       time: t,
       timeLabel: formatTime(t),
@@ -303,84 +300,106 @@ const StereoChart = ({
       corr_orig: original?.correlation[i] ?? 0,
       width_res: data.width?.[i] ?? 0,
       width_orig: original?.width?.[i] ?? 0,
+      width_low: data.width_low?.[i] ?? 0,
+      width_mid: data.width_mid?.[i] ?? 0,
+      width_high: data.width_high?.[i] ?? 0,
     }));
 
+    // Gradient for correlation: Blue above 0, Red below 0
+    // Domain [-1, 1], so 0 is at 50%
+    const gradientOffset = 0.5;
+
     return (
-      <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={chartData}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
-          <XAxis
-            dataKey="timeLabel"
-            stroke="#64748b"
-            tick={{ fill: "#64748b", fontSize: 10 }}
-            minTickGap={30}
-          />
-          <YAxis
-            stroke="#64748b"
-            tick={{ fill: "#64748b", fontSize: 10 }}
-            domain={[-1, 1]}
-          />
-          <Tooltip
-              contentStyle={{ backgroundColor: "#0f172a", borderColor: "#334155", color: "#f8fafc" }}
-              formatter={(val?: number, name?: string) => {
-                const label = name ?? "";
-                if (typeof val !== "number" || Number.isNaN(val)) {
-                  return ["N/A", label];
-                }
-                return [val.toFixed(2), label];
-              }}
-          />
-          {expanded && <Legend />}
-
-          <ReferenceLine y={0} stroke="#ef4444" strokeOpacity={0.5} />
-
-          {original && (
-            <Line
-              type="monotone"
-              dataKey="corr_orig"
-              stroke="#64748b"
-              strokeWidth={1}
-              strokeDasharray="4 4"
-              dot={false}
-              name="Correlation (Orig)"
-            />
+      <div className="w-full h-full relative">
+          {expanded && (
+             <div className="absolute top-0 right-0 z-10 p-2">
+                 <label className="flex items-center space-x-2 text-xs text-slate-300 bg-slate-800 p-1 rounded cursor-pointer">
+                     <input type="checkbox" checked={showBands} onChange={(e) => setShowBands(e.target.checked)} />
+                     <span>Show Width Bands (L/M/H)</span>
+                 </label>
+             </div>
           )}
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={chartData}>
+            <defs>
+                <linearGradient id="corrGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#3b82f6" />
+                    <stop offset="50%" stopColor="#3b82f6" />
+                    <stop offset="50%" stopColor="#ef4444" />
+                    <stop offset="100%" stopColor="#ef4444" />
+                </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
+            <XAxis
+                dataKey="timeLabel"
+                stroke="#64748b"
+                tick={{ fill: "#64748b", fontSize: 10 }}
+                minTickGap={30}
+            />
+            <YAxis
+                stroke="#64748b"
+                tick={{ fill: "#64748b", fontSize: 10 }}
+                domain={[-1, 1]}
+            />
+            <Tooltip
+                contentStyle={{ backgroundColor: "#0f172a", borderColor: "#334155", color: "#f8fafc" }}
+                formatter={(val?: number, name?: string) => {
+                    const label = name ?? "";
+                    if (typeof val !== "number" || Number.isNaN(val)) return ["N/A", label];
+                    return [val.toFixed(2), label];
+                }}
+            />
+            {expanded && <Legend />}
 
-          <Line
-            type="monotone"
-            dataKey="corr_res"
-            stroke="#3b82f6"
-            strokeWidth={2}
-            dot={false}
-            name="Correlation (Res)"
-          />
-           {/* Width lines - only if present */}
-           {expanded && (
-             <>
-               {original && (
-                   <Line
-                   type="monotone"
-                   dataKey="width_orig"
-                   stroke="#94a3b8"
-                   strokeWidth={1}
-                   strokeDasharray="2 2"
-                   dot={false}
-                   name="Width (Orig)"
-                   />
-               )}
+            <ReferenceLine y={0} stroke="#475569" strokeDasharray="3 3" />
+
+            {/* Highlight negative correlation areas - tricky with LineChart, better use gradient line color */}
+
+            {original && (
                 <Line
-                   type="monotone"
-                   dataKey="width_res"
-                   stroke="#ec4899"
-                   strokeWidth={2}
-                   strokeDasharray="2 2"
-                   dot={false}
-                   name="Width (Res)"
+                type="monotone"
+                dataKey="corr_orig"
+                stroke="#64748b"
+                strokeWidth={1}
+                strokeDasharray="4 4"
+                dot={false}
+                name="Correlation (Orig)"
                 />
-             </>
-           )}
-        </LineChart>
-      </ResponsiveContainer>
+            )}
+
+            <Line
+                type="monotone"
+                dataKey="corr_res"
+                stroke="url(#corrGradient)"
+                strokeWidth={2}
+                dot={false}
+                name="Correlation (Res)"
+            />
+
+            {/* Global Width */}
+            <Line
+                type="monotone"
+                dataKey="width_res"
+                stroke="#d946ef" // Fuchsia
+                strokeWidth={2}
+                strokeDasharray="2 2"
+                dot={false}
+                name="Width (Global)"
+                hide={!expanded}
+            />
+
+            {/* Multiband Width */}
+            {expanded && showBands && (
+                <>
+                    <Line type="monotone" dataKey="width_low" stroke="#f87171" strokeWidth={1} dot={false} name="Width (Low)" />
+                    <Line type="monotone" dataKey="width_mid" stroke="#4ade80" strokeWidth={1} dot={false} name="Width (Mid)" />
+                    <Line type="monotone" dataKey="width_high" stroke="#60a5fa" strokeWidth={1} dot={false} name="Width (High)" />
+                </>
+            )}
+
+            </LineChart>
+        </ResponsiveContainer>
+      </div>
     );
   };
 
@@ -412,28 +431,17 @@ const SpectrogramCanvas = ({
 
         ctx.clearRect(0,0,w,h);
 
-        // Find min/max for normalization
+        // Find min/max for normalization (approx)
         let minDb = -80;
         let maxDb = 0;
 
         for (let i = 0; i < numTimeSteps; i++) {
             for (let j = 0; j < numFreqBins; j++) {
                 const val = data.data[i][j];
-                // Map val (db) to color
-                // -80 (black) to 0 (yellow/white)
                 const norm = Math.max(0, Math.min(1, (val - minDb) / (maxDb - minDb)));
-
-                // Heatmap color: Blue -> Cyan -> Green -> Yellow -> Red
-                const hue = (1 - norm) * 240;
+                const hue = (1 - norm) * 240; // Blue to Red
                 ctx.fillStyle = `hsl(${hue}, 100%, 50%)`;
-
-                // Draw rect
-                // Freq 0 is low freq (bottom), but index 0 in list is usually low freq?
-                // data.freqs is typically sorted low to high.
-                // So j=0 is bottom.
-                // Canvas y=0 is top. So we flip y.
                 const y = h - (j + 1) * cellH;
-
                 ctx.fillRect(i * cellW, y, cellW + 1, cellH + 1);
             }
         }
@@ -450,7 +458,112 @@ const SpectrogramCanvas = ({
     );
 }
 
-// 5. Tonal Balance (Spectrum)
+// 5. Vectorscope (Density Plot)
+const VectorscopeChart = ({
+    data,
+    original,
+    expanded
+}: {
+    data: number[][]; // 64x64
+    original?: number[][];
+    expanded?: boolean;
+}) => {
+    const canvasRef = useRef<HTMLCanvasElement>(null);
+    const [mode, setMode] = useState<'result' | 'original'>('result');
+
+    const activeData = (mode === 'result' ? data : original) || data;
+
+    useEffect(() => {
+        const canvas = canvasRef.current;
+        if (!canvas || !activeData) return;
+
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        const size = activeData.length; // 64
+        const w = canvas.width;
+        const h = canvas.height;
+
+        ctx.clearRect(0, 0, w, h);
+
+        // Draw grid/background
+        ctx.strokeStyle = '#334155';
+        ctx.lineWidth = 1;
+
+        // M/S Diagonals
+        ctx.beginPath();
+        ctx.moveTo(0, h); ctx.lineTo(w, 0); // L=R (Mid)
+        ctx.moveTo(0, 0); ctx.lineTo(w, h); // L=-R (Side)
+        ctx.stroke();
+
+        // Draw density
+        // activeData[y][x] where y is row (0..63), x is col (0..63)
+        // y=0 corresponds to R=-1 (bottom), y=63 to R=1 (top)
+        // x=0 corresponds to L=-1 (left), x=63 to L=1 (right)
+
+        const cellW = w / size;
+        const cellH = h / size;
+
+        for (let y = 0; y < size; y++) {
+            for (let x = 0; x < size; x++) {
+                const val = activeData[y][x]; // Normalized 0-1
+                if (val < 0.01) continue;
+
+                // Heatmap color: Green-ish for result
+                // Opacity based on density
+                const alpha = Math.min(1, val * 2); // Boost visibility
+                const intensity = Math.floor(val * 255);
+
+                // Use Emerald for result, Slate/White for generic
+                // Or standard Green scope
+                ctx.fillStyle = `rgba(16, 185, 129, ${alpha})`;
+
+                // Draw rect. Y needs flip if canvas 0 is top
+                // y index 0 is bottom (-1).
+                // So canvas y = h - (y+1)*cellH
+                const cy = h - (y + 1) * cellH;
+                const cx = x * cellW;
+
+                // Slightly larger to fill gaps
+                ctx.fillRect(cx, cy, cellW + 0.5, cellH + 0.5);
+            }
+        }
+
+    }, [activeData, expanded, mode]);
+
+    return (
+        <div className="w-full h-full flex flex-col items-center justify-center relative">
+            <canvas
+                ref={canvasRef}
+                width={expanded ? 400 : 200}
+                height={expanded ? 400 : 200}
+                className="bg-slate-950 rounded-full border border-slate-800"
+                style={{ aspectRatio: '1/1' }}
+            />
+            {expanded && original && (
+                <div className="absolute top-4 right-4 flex space-x-2">
+                     <button
+                        onClick={() => setMode('result')}
+                        className={`px-2 py-1 text-xs rounded ${mode==='result' ? 'bg-emerald-600 text-white' : 'bg-slate-800 text-slate-400'}`}
+                     >
+                        Result
+                     </button>
+                     <button
+                        onClick={() => setMode('original')}
+                        className={`px-2 py-1 text-xs rounded ${mode==='original' ? 'bg-slate-600 text-white' : 'bg-slate-800 text-slate-400'}`}
+                     >
+                        Original
+                     </button>
+                </div>
+            )}
+            <div className="absolute bottom-2 text-[10px] text-slate-500 font-mono">
+                L &lt;-- Stereo Image --&gt; R
+            </div>
+        </div>
+    );
+}
+
+// 6. Tonal Balance (Spectrum)
 const SpectrumChart = ({
     data,
     original,
@@ -460,8 +573,6 @@ const SpectrumChart = ({
     original?: TonalData;
     expanded?: boolean;
   }) => {
-    // data.spectrum is array of db values.
-    // data.freqs is array of freq values.
     const chartData = data.spectrum.map((val, i) => ({
       freq: data.freqs[i],
       val_res: val,
@@ -505,7 +616,6 @@ const SpectrumChart = ({
               }}
           />
           {expanded && <Legend />}
-
           {original && (
              <Area
              type="monotone"
@@ -517,7 +627,6 @@ const SpectrumChart = ({
              name="Original"
            />
           )}
-
           <Area
             type="monotone"
             dataKey="val_res"
@@ -559,10 +668,17 @@ export const AdvancedInteractiveCharts: React.FC<AdvancedChartsProps> = ({
     },
     {
         id: "stereo",
-        title: "Stereo Correlation",
+        title: "Stereo Correlation & Width",
         component: <StereoChart data={result.stereo!} original={original?.stereo} />,
         expandedComponent: <StereoChart data={result.stereo!} original={original?.stereo} expanded />,
         hasData: !!result.stereo
+    },
+    {
+        id: "vectorscope",
+        title: "Vectorscope (L/R Density)",
+        component: <VectorscopeChart data={result.vectorscope!} original={original?.vectorscope} />,
+        expandedComponent: <VectorscopeChart data={result.vectorscope!} original={original?.vectorscope} expanded />,
+        hasData: !!result.vectorscope // New field
     },
     {
         id: "spectrogram",

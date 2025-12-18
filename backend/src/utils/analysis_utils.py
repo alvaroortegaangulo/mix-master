@@ -11,6 +11,7 @@ import numpy as np
 import soundfile as sf
 import math
 import traceback
+import scipy.signal
 
 # Límite global de segundos para análisis (se puede sobrescribir con MIX_ANALYSIS_MAX_SECONDS)
 # Solo se aplica en helpers de análisis; NO se toca el comportamiento global de soundfile.read
@@ -262,6 +263,99 @@ def compute_integrated_loudness_lufs(mono: np.ndarray, sr: int) -> float:
     return float(20.0 * np.log10(rms) - 0.691)
 
 
+def _compute_multiband_width(audio: np.ndarray, sr: int, target_len: int) -> Dict[str, List[float]]:
+    """
+    Splits audio into Low/Mid/High bands and computes width for each.
+    Returns lists of length `target_len` (resampled).
+    """
+    if audio.ndim == 1:
+        zeros = [0.0] * target_len
+        return {"low": zeros, "mid": zeros, "high": zeros}
+
+    # Crossovers: Low-Mid: 250 Hz, Mid-High: 4000 Hz
+    # Using 2nd order Butterworth (filters applied forward-backward -> zero phase)
+    try:
+        sos_low = scipy.signal.butter(2, 250, 'low', fs=sr, output='sos')
+        sos_mid = scipy.signal.butter(2, [250, 4000], 'band', fs=sr, output='sos')
+        sos_high = scipy.signal.butter(2, 4000, 'high', fs=sr, output='sos')
+
+        low = scipy.signal.sosfiltfilt(sos_low, audio, axis=0)
+        mid = scipy.signal.sosfiltfilt(sos_mid, audio, axis=0)
+        high = scipy.signal.sosfiltfilt(sos_high, audio, axis=0)
+    except Exception:
+        # Fallback if filter fails
+        zeros = [0.0] * target_len
+        return {"low": zeros, "mid": zeros, "high": zeros}
+
+    w_samp = int(sr * 0.1) # 100ms window
+    if w_samp < 1: w_samp = 1
+
+    def compute_width_series(sig):
+        # We process chunks to get exactly target_len points
+        widths = []
+        if len(sig) < w_samp:
+             return [0.0] * target_len
+
+        indices = np.linspace(0, len(sig) - w_samp, target_len, dtype=int)
+
+        for i in indices:
+            chunk = sig[i : i + w_samp]
+            L = chunk[:, 0]
+            R = chunk[:, 1]
+
+            M = (L + R) * 0.5
+            S = (L - R) * 0.5
+
+            rms_m = np.sqrt(np.mean(M**2))
+            rms_s = np.sqrt(np.mean(S**2))
+
+            if rms_m < 1e-9:
+                w = 0.0
+            else:
+                w = rms_s / (rms_m + 1e-9)
+
+            widths.append(round(float(w), 3))
+        return widths
+
+    return {
+        "low": compute_width_series(low),
+        "mid": compute_width_series(mid),
+        "high": compute_width_series(high)
+    }
+
+def _compute_vectorscope_density(audio: np.ndarray) -> List[List[float]]:
+    """
+    Computes 2D density of L vs R (Vectorscope) for the whole track.
+    Returns 64x64 grid (normalized 0-1).
+    """
+    if audio.ndim == 1:
+        L = audio
+        R = audio
+    else:
+        L = audio[:, 0]
+        R = audio[:, 1]
+
+    # Normalize peaks to maximize dynamic range of the plot
+    peak = np.max(np.abs(audio))
+    if peak > 1e-9:
+        L = L / peak
+        R = R / peak
+
+    # 2D Histogram: 64x64
+    H, _, _ = np.histogram2d(L, R, bins=64, range=[[-1, 1], [-1, 1]], density=True)
+
+    # Log compression for visibility
+    H = np.log1p(H)
+
+    # Normalize 0-1
+    mx = H.max()
+    if mx > 0:
+        H = H / mx
+
+    # Transpose to match image coordinates (row=y, col=x)
+    return H.T.tolist()
+
+
 def sanitize_json_floats(obj: Any) -> Any:
     """
     Recursively replaces Infinity, -Infinity, and NaN with None
@@ -508,6 +602,11 @@ def _analyze_audio_series(audio: np.ndarray, sr: int) -> Dict[str, Any]:
         spec_times = []
         tonal_data = []
 
+    # --- 5. New Interactive Analysis (Vectorscope & Multiband Width) ---
+    vectorscope_data = _compute_vectorscope_density(stereo)
+
+    target_len = len(dyn_time)
+    multiband_widths = _compute_multiband_width(stereo, sr, target_len)
 
     return {
         "loudness": {
@@ -524,6 +623,9 @@ def _analyze_audio_series(audio: np.ndarray, sr: int) -> Dict[str, Any]:
         "stereo": {
             "correlation": corr_vals,
             "width": width_vals,
+            "width_low": multiband_widths["low"],
+            "width_mid": multiband_widths["mid"],
+            "width_high": multiband_widths["high"],
             "time": dyn_time
         },
         "spectrogram": {
@@ -534,7 +636,8 @@ def _analyze_audio_series(audio: np.ndarray, sr: int) -> Dict[str, Any]:
         "tonal": {
             "spectrum": tonal_data,
             "freqs": spec_freqs
-        }
+        },
+        "vectorscope": vectorscope_data
     }
 
 
