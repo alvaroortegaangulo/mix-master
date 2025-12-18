@@ -90,7 +90,7 @@ const ChartCard = ({
   children: React.ReactNode;
   onExpand: () => void;
 }) => (
-  <div className="flex flex-col rounded-lg border border-slate-800 bg-slate-900/50 p-4 shadow-sm transition-all hover:border-emerald-500/30">
+  <div className="flex flex-col rounded-lg border border-slate-800 bg-[rgba(15,23,42,0.5)] p-4 shadow-sm transition-all hover:border-[rgba(16,185,129,0.3)]">
     <div className="mb-3 flex items-center justify-between">
       <h3 className="text-sm font-bold uppercase tracking-wide text-slate-300">
         {title}
@@ -119,7 +119,7 @@ const Modal = ({
 }) => {
   if (!isOpen) return null;
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(0,0,0,0.8)] p-4 backdrop-blur-sm">
       <div className="flex h-[90vh] w-full max-w-6xl flex-col rounded-xl border border-slate-700 bg-slate-900 shadow-2xl">
         <div className="flex items-center justify-between border-b border-slate-800 p-4">
           <h2 className="text-xl font-bold text-emerald-400">{title}</h2>

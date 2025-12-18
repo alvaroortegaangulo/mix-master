@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useState, useRef } from "react";
-import { appendApiKeyParam, getBackendBaseUrl } from "../lib/mixApi";
+import { appendApiKeyParam, getBackendBaseUrl, signFileUrl } from "../lib/mixApi";
 import { useTranslations } from "next-intl";
 import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
@@ -121,14 +121,14 @@ const ReportStageCard = ({
   };
 
   return (
-    <div className="mb-4 overflow-hidden rounded-lg border border-emerald-900/50 bg-slate-900/40 backdrop-blur-sm p-6">
+    <div className="mb-4 overflow-hidden rounded-lg border border-[rgba(6,78,59,0.5)] bg-[rgba(15,23,42,0.4)] backdrop-blur-sm p-6">
       <div className="mb-4">
         <h3 className="text-base font-bold text-emerald-100">{stageTitle}</h3>
         <p className="mt-2 text-sm text-slate-400 italic mb-4">
           {stageDescription}
         </p>
 
-        <div className="rounded bg-black/30 p-4 border border-emerald-500/10">
+        <div className="rounded bg-[rgba(0,0,0,0.3)] p-4 border border-[rgba(16,185,129,0.1)]">
            <h4 className="text-xs font-bold text-emerald-500 uppercase tracking-widest mb-2">
              {t("stageChangesTitle")}
            </h4>
@@ -150,7 +150,7 @@ const ReportStageCard = ({
             <p className="text-xs font-bold text-slate-400 uppercase tracking-wide">
               Waveform Comparison (Image)
             </p>
-            <div className="rounded border border-emerald-500/20 bg-black/40 p-1">
+            <div className="rounded border border-[rgba(16,185,129,0.2)] bg-[rgba(0,0,0,0.4)] p-1">
               <img
                 src={waveformUrl}
                 alt="Waveform"
@@ -247,7 +247,7 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
       // 1. Fetch the log file (via signed URL)
       // Since we don't have a direct "get log text" method in mixApi usually,
       // we'll use the file signing mechanism to get a URL, then fetch the text.
-      const { url } = await signJobFile(jobId, "pipeline.log", 600);
+      const url = await signFileUrl(jobId, "pipeline.log");
       const response = await fetch(url);
       if (!response.ok) throw new Error("Failed to fetch logs");
       const text = await response.text();
@@ -380,7 +380,7 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
         <div ref={reportRef} id="report-content" className="space-y-6 p-4 bg-slate-950 text-slate-200">
             {/* Mix Summary Section */}
             <section
-              className="rounded-xl border border-emerald-500/20 p-5 shadow-lg"
+              className="rounded-xl border border-[rgba(16,185,129,0.2)] p-5 shadow-lg"
               style={{
                 // Use explicit rgba gradient to avoid html2canvas "lab" parsing errors.
                 backgroundImage:
@@ -393,8 +393,8 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
 
                 <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
                 <div className="md:col-span-1 space-y-3">
-                    <div className="rounded-lg bg-black/20 border border-emerald-500/10 p-3">
-                    <p className="text-[10px] text-emerald-400/70 uppercase tracking-widest font-bold mb-1">
+                    <div className="rounded-lg bg-[rgba(0,0,0,0.2)] border border-[rgba(16,185,129,0.1)] p-3">
+                    <p className="text-[10px] text-[rgba(52,211,153,0.7)] uppercase tracking-widest font-bold mb-1">
                         Style Preset
                     </p>
                     <p className="text-base font-medium text-emerald-50">
@@ -408,8 +408,8 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
                     )}
                 </div>
 
-                <div className="md:col-span-2 rounded-lg border border-emerald-500/10 bg-black/20 p-4">
-                    <h3 className="mb-3 text-[10px] font-bold uppercase tracking-widest text-emerald-400/70">
+                <div className="md:col-span-2 rounded-lg border border-[rgba(16,185,129,0.1)] bg-[rgba(0,0,0,0.2)] p-4">
+                    <h3 className="mb-3 text-[10px] font-bold uppercase tracking-widest text-[rgba(52,211,153,0.7)]">
                     Final Master Metrics
                     </h3>
                     <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
@@ -427,7 +427,7 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
                         </span>
                         <span className="font-mono text-sm text-emerald-300 font-bold">
                         {report.final_metrics?.true_peak_dbtp?.toFixed(2) ?? "N/A"}{" "}
-                        <span className="text-[10px] font-normal text-emerald-500/50">
+                        <span className="text-[10px] font-normal text-[rgba(16,185,129,0.5)]">
                             dBTP
                         </span>
                         </span>
@@ -479,8 +479,8 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
 
             {/* Advanced Interactive Charts Section */}
             {displayResult && (
-                <section className="rounded-xl border border-emerald-500/20 bg-slate-900/40 p-5">
-                <h2 className="mb-4 text-sm font-bold uppercase tracking-widest text-emerald-500/80">
+                <section className="rounded-xl border border-[rgba(16,185,129,0.2)] bg-[rgba(15,23,42,0.4)] p-5">
+                <h2 className="mb-4 text-sm font-bold uppercase tracking-widest text-[rgba(16,185,129,0.8)]">
                     {t("interactiveAnalysis")}
                 </h2>
 
@@ -495,7 +495,7 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
             {/* Detailed Stage Report */}
             <section>
                 <div className="mb-3 flex items-center justify-between px-1">
-                <h2 className="text-sm font-bold uppercase tracking-widest text-emerald-500/80">
+                <h2 className="text-sm font-bold uppercase tracking-widest text-[rgba(16,185,129,0.8)]">
                     {t("detailedStageReport")}
                 </h2>
                 <span className="text-[10px] text-slate-500">
