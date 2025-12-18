@@ -236,6 +236,9 @@ def compute_integrated_loudness_lufs(mono: np.ndarray, sr: int) -> float:
         else:
             audio_for_es = audio.reshape(-1, 2)
 
+        # Essentia necesita C-contiguous float32 array para convertir a VECTOR_STEREOSAMPLE
+        audio_for_es = np.ascontiguousarray(audio_for_es, dtype=np.float32)
+
         _, _, integrated, _ = loudness_algo(audio_for_es)
         return float(integrated)
     except ImportError:
@@ -337,6 +340,9 @@ def _analyze_audio_series(audio: np.ndarray, sr: int) -> Dict[str, Any]:
             audio_for_es = np.column_stack((audio_for_es[:, 0], np.zeros_like(audio_for_es[:, 0])))
         elif audio_for_es.shape[1] > 2:
             audio_for_es = audio_for_es[:, :2]
+
+        # Essentia necesita C-contiguous float32 array para convertir a VECTOR_STEREOSAMPLE
+        audio_for_es = np.ascontiguousarray(audio_for_es, dtype=np.float32)
 
         m, s, i, lra = loudness_algo(audio_for_es)
 

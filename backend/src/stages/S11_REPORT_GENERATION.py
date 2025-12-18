@@ -187,6 +187,26 @@ def _enrich_report_with_parameters_and_images(report: Dict[str, Any], temp_dir: 
                 conf = session.get("key_detection_confidence", 0)
                 params["confidence"] = int(float(conf) * 100)
 
+        elif "S2_GROUP_PHASE_DRUMS" in contract_id:
+            data = _load_stage_json(job_root, "S2_GROUP_PHASE_DRUMS", "analysis_S2_GROUP_PHASE_DRUMS.json")
+            if data:
+                stems = data.get("stems", [])
+                corrections = []
+                for s in stems:
+                    lag = float(s.get("lag_ms", 0.0))
+                    flip = s.get("use_polarity_flip", False)
+                    # Solo listamos si hay un shift significativo o flip
+                    if abs(lag) > 0.1 or flip:
+                        parts = []
+                        if abs(lag) > 0.1:
+                            parts.append(f"{lag:+.1f}ms")
+                        if flip:
+                            parts.append("Flip")
+                        corrections.append(f"{s.get('file_name', 'stem')}: {' '.join(parts)}")
+
+                if corrections:
+                    params["phase_corrections"] = corrections
+
         elif "S1_VOX_TUNING" in contract_id:
              data = _load_stage_json(job_root, "S1_KEY_DETECTION", "analysis_S1_KEY_DETECTION.json")
              if data:
@@ -210,6 +230,12 @@ def _enrich_report_with_parameters_and_images(report: Dict[str, Any], temp_dir: 
              if data:
                  limits = data.get("limits_from_contract", {})
                  params["max_reduction_db"] = limits.get("max_resonant_cuts_db", "6.0")
+
+                 stems = data.get("stems", [])
+                 total_res = 0
+                 for s in stems:
+                     total_res += len(s.get("resonances", []))
+                 params["total_resonances_detected"] = total_res
              else:
                  params["max_reduction_db"] = "6.0"
 
