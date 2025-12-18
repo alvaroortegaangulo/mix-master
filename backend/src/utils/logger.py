@@ -191,6 +191,17 @@ class PipelineLogger:
         # Color the whole block/text
         self.print_header(f"Stage {stage_id} Completed: {res}", color=color)
 
+    def add_file_handler(self, filepath: str) -> logging.FileHandler:
+        handler = logging.FileHandler(filepath, mode='w', encoding='utf-8')
+        # We want the raw message with ANSI codes in the file for the PDF generator
+        handler.setFormatter(logging.Formatter("%(message)s"))
+        self.logger.addHandler(handler)
+        return handler
+
+    def remove_file_handler(self, handler: logging.FileHandler):
+        self.logger.removeHandler(handler)
+        handler.close()
+
     # Method to filter verbose logs
     def info(self, msg: str, *args, **kwargs):
         # Silence logs starting with [S...] or specific tags unless they are warnings/errors (handled separately usually)
