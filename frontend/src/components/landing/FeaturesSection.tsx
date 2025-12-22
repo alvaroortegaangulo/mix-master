@@ -40,7 +40,7 @@ export function FeaturesSection({ className }: { className?: string }) {
       setActiveStep((prev) => (prev + 1) % features.length);
     }, 7000);
     return () => clearInterval(timer);
-  }, [features.length]);
+  }, [features.length, activeStep]);
 
   return (
     <section className={`py-12 md:py-24 ${className || 'bg-slate-950'}`} id="features">
