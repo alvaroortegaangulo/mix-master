@@ -7,6 +7,7 @@ import { useAuth } from "../context/AuthContext";
 import { useGoogleLogin } from "@react-oauth/google";
 import { gaEvent } from "../lib/ga";
 import { useTranslations } from "next-intl";
+import { useRouter } from "../i18n/routing";
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -22,6 +23,7 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const t = useTranslations('AuthModal');
+  const router = useRouter();
 
   const handleGoogleLogin = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
@@ -53,6 +55,7 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
         login(data.access_token);
         gaEvent("login", { method: "google" });
         onClose();
+        router.push("/mix");
       } catch (err: any) {
         setError(err.message || "An error occurred");
       } finally {
@@ -97,6 +100,7 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
         login(data.access_token);
         gaEvent(isLogin ? "login" : "sign_up", { method: "email" });
         onClose();
+        router.push("/mix");
       } else {
         // Should not happen if backend returns token on register
         if (!isLogin) {
