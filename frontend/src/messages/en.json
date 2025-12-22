@@ -51,17 +51,20 @@
     }
   },
   "BenefitsSection": {
-    "speedTitle": "Hours of work, done in minutes.",
+    "efficiencyBadge": "AI EFFICIENCY",
+    "speedTitle": "Hours of work, <highlight>done in minutes.</highlight>",
     "speedDescription": "Forget about tedious gain staging, phase alignment, and resonance cleanup. Piroola handles the technical heavy lifting so you can focus on the creative vibe.",
     "speedPoints": [
       "Instant session setup and routing",
       "Automated corrective EQ",
       "Real-time loudness compliance check"
     ],
-    "qualityTitle": "Studio Quality, accessible to everyone.",
+    "qualityBadge": "PREMIUM QUALITY",
+    "qualityTitle": "Studio Quality, <highlight>accessible to everyone.</highlight>",
     "qualityDescription": "You don't need a million-dollar studio or decades of experience to get a professional sound. Our algorithms are trained on hit records to deliver commercially competitive results.",
-    "spotifyReady": "Spotify Ready",
-    "appleMusicReady": "Apple Music Ready"
+    "readyFor": "READY FOR",
+    "spotifyReady": "Spotify",
+    "appleMusicReady": "Apple Music"
   },
   "LiveSoundAnalysis": {
     "label": "Live Analytics Engine",
