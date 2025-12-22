@@ -66,7 +66,6 @@ const ReportStageCard = ({
   stage: StageReport;
   jobId: string;
 }) => {
-  const t = useTranslations("Report"); // Access common report translations (metrics etc)
   const tStages = useTranslations("Report.stages"); // Access stage descriptions
 
   const [waveformUrl, setWaveformUrl] = useState("");
@@ -85,11 +84,24 @@ const ReportStageCard = ({
     setWaveformUrl(buildUrl(images.waveform));
   }, [jobId, images.waveform]);
 
-  // Combine parameters and metrics for translation variables
-  const params = {
+  // Build params
+  const rawParams = {
     ...stage.parameters,
     ...stage.key_metrics,
   };
+
+  // Process changes to add them to params
+  const changesParams: Record<string, any> = {};
+  if (stage.changes) {
+    stage.changes.forEach((c) => {
+      // Use the key from the change (e.g. 'gain_db')
+      // Pass the raw value. The translation string template should contain the unit if desired.
+      // e.g. "Gain was <green>{gain_db}</green>dB"
+      changesParams[c.key] = c.value;
+    });
+  }
+
+  const combinedParams = { ...rawParams, ...changesParams };
 
   const stageKey = stage.contract_id || stage.stage_id || "stage";
   const fallbackTitle = stage.name || stage.stage_id || stage.contract_id;
@@ -98,50 +110,29 @@ const ReportStageCard = ({
       ? "No analysis data available for this stage."
       : stage.name || "Processing complete.";
 
-  const resolveStageTranslation = (key: string, fallback: string) =>
-    tStages.has(key as any) ? tStages(key as any, params) : fallback;
+  // Use rich translation
+  // We pass a 'green' tag function to style the variables
+  const stageTitle = tStages.has(`${stageKey}.title` as any)
+    ? tStages(`${stageKey}.title` as any, combinedParams)
+    : fallbackTitle;
 
-  const stageTitle = resolveStageTranslation(`${stageKey}.title`, fallbackTitle);
-  const stageDescription = resolveStageTranslation(
-    `${stageKey}.description`,
-    fallbackDescription
-  );
-
-  const changes = stage.changes || [];
-
-  const renderChangeLine = (c: ReportChange, index: number) => {
-    const metricNameKey = `metrics.${c.key}`;
-    const metricName = t.has(metricNameKey as any) ? t(metricNameKey as any) : c.key;
-
-    return (
-      <li key={index} className="text-sm text-slate-300">
-        <span className="font-semibold text-emerald-400">{metricName}</span>: <span className="font-mono text-emerald-200">{c.value} {c.unit}</span>
-      </li>
-    );
-  };
+  // Check if key exists to avoid error
+  const hasDescription = tStages.has(`${stageKey}.description` as any);
 
   return (
     <div className="mb-4 overflow-hidden rounded-lg border border-[rgba(6,78,59,0.5)] bg-[rgba(15,23,42,0.4)] backdrop-blur-sm p-6">
       <div className="mb-4">
-        <h3 className="text-base font-bold text-emerald-100">{stageTitle}</h3>
-        <p className="mt-2 text-sm text-slate-400 italic mb-4">
-          {stageDescription}
+        <h3 className="text-base font-bold text-emerald-100 mb-3">{stageTitle}</h3>
+        <p className="text-sm text-slate-300 leading-relaxed text-justify">
+          {hasDescription ? tStages.rich(`${stageKey}.description` as any, {
+              ...combinedParams,
+              green: (chunks) => (
+                <span className="font-mono font-bold text-emerald-400 bg-[rgba(16,185,129,0.1)] px-1 rounded mx-0.5">
+                  {chunks}
+                </span>
+              )
+          }) : fallbackDescription}
         </p>
-
-        <div className="rounded bg-[rgba(0,0,0,0.3)] p-4 border border-[rgba(16,185,129,0.1)]">
-           <h4 className="text-xs font-bold text-emerald-500 uppercase tracking-widest mb-2">
-             {t("stageChangesTitle")}
-           </h4>
-           {changes.length > 0 ? (
-             <ul className="space-y-1 list-disc list-inside">
-               {changes.map((c, i) => renderChangeLine(c, i))}
-             </ul>
-           ) : (
-             <p className="text-sm text-slate-500">
-               {t("noChangesDetected")}
-             </p>
-           )}
-        </div>
       </div>
 
       {hasImages && images.waveform && !stage.interactive_comparison && (
