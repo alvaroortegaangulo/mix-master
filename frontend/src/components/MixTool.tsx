@@ -1004,7 +1004,7 @@ useEffect(() => {
               </section>
 
               {isProcessing && (
-                <div className="flex justify-center">
+                <div className="mt-12 flex justify-center">
                   <video
                     src="/loading.mp4"
                     autoPlay
@@ -1012,7 +1012,7 @@ useEffect(() => {
                     muted
                     playsInline
                     aria-label="Processing your mix..."
-                    className="h-24 w-auto rounded-lg"
+                    className="h-12 w-auto rounded-lg"
                   />
                 </div>
               )}
