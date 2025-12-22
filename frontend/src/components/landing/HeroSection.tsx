@@ -1,6 +1,7 @@
 import Image from "next/image";
 import { PlayCircleIcon, StarIcon, ExclamationTriangleIcon } from "@heroicons/react/24/solid";
 import { useTranslations } from 'next-intl';
+import { Link } from '../../i18n/routing';
 
 export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
   const t = useTranslations('HeroSection');
@@ -67,13 +68,13 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
           </button>
 
           {/* Button 2: Escuchar Demos */}
-          <button
-             onClick={() => document.getElementById('benefits')?.scrollIntoView({ behavior: 'smooth' })}
+          <Link
+             href="/examples"
              className="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-full bg-slate-800/80 px-8 py-4 text-lg font-semibold text-white transition-all hover:bg-slate-700 hover:scale-105 focus:outline-none focus:ring-4 focus:ring-purple-500/30 border border-slate-700"
           >
             <PlayCircleIcon className="h-6 w-6 text-white" />
             <span>{t('listenToDemos')}</span>
-          </button>
+          </Link>
         </div>
 
         {/* Rating Section */}
