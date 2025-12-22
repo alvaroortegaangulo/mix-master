@@ -1096,91 +1096,91 @@
     "stages": {
       "S0_SESSION_FORMAT": {
         "title": "Input & Metadata",
-        "description": "Session initialized with {count} stems. Format verified as {format}. Normalized sample rate to {sample_rate}Hz for consistent processing."
+        "description": "Session started with <green>{count}</green> stems imported. Format verification and sample rate unification to <green>{sample_rate}</green>Hz have been performed to ensure maximum fidelity throughout the processing pipeline."
       },
       "S0_SEPARATE_STEMS": {
         "title": "Stem Separation",
-        "description": "Processed uploaded file(s) to prepare individual stems for mixing."
+        "description": "Processed uploaded files to prepare individual stems for mixing."
       },
       "S1_STEM_DC_OFFSET": {
         "title": "DC Offset Correction",
-        "description": "Analyzed stems for inaudible DC offset noise. Corrected to ensure maximum headroom."
+        "description": "Deep technical analysis performed to detect inaudible DC offset noise. Corrected to ensure maximum headroom and prevent phase issues."
       },
       "S1_KEY_DETECTION": {
         "title": "Key Detection",
-        "description": "Detected global key as {key} with {confidence}% confidence."
+        "description": "Harmonic analysis engine determined the global key is <green>{key}</green> with <green>{confidence}</green>% confidence. This informs melodic tuning and frequency resonance decisions."
       },
       "S1_VOX_TUNING": {
         "title": "Vocal Tuning",
-        "description": "Applied pitch correction to vocals to match the detected key of {key}."
+        "description": "Transparent pitch correction applied to vocals to match the detected key of <green>{key}</green>, maintaining natural performance while ensuring perfect tuning."
       },
       "S1_MIXBUS_HEADROOM": {
         "title": "Mixbus Headroom",
-        "description": "Adjusted mixbus headroom to {headroom_db}dB to prepare for processing."
+        "description": "Initial mixbus gain structure adjusted to establish <green>{headroom_db}</green>dB safety headroom, providing dynamic space for subsequent processing."
       },
       "S1_STEM_WORKING_LOUDNESS": {
         "title": "Working Loudness",
-        "description": "Normalized stem levels to a consistent working loudness."
+        "description": "Working loudness normalized for each stem, ensuring all faders start at a balanced point for predictable compressor behavior."
       },
       "S2_GROUP_PHASE_DRUMS": {
         "title": "Drum Phase Alignment",
-        "description": "Aligned phase for drum group tracks to improve punch and low-end clarity."
+        "description": "Phase coherence analyzed across drum microphones. Time alignment and polarity correction applied to recover lost low-end energy and impact."
       },
       "S3_MIXBUS_HEADROOM": {
         "title": "Mixbus Headroom Check",
-        "description": "Re-verified headroom to {headroom_db}dB."
+        "description": "Mixbus headroom re-verified to <green>{headroom_db}</green>dB to ensure summing integrity before critical mixing."
       },
       "S3_LEADVOX_AUDIBILITY": {
         "title": "Lead Vocal Balance",
-        "description": "Balanced lead vocal level by {gain_db}dB for optimal audibility against the mix."
+        "description": "Lead vocal level balanced by <green>{gain_db}</green>dB to sit correctly against the instrumental backing, ensuring intelligibility."
       },
       "S4_STEM_HPF_LPF": {
         "title": "Spectral Cleanup",
-        "description": "Applied High-Pass/Low-Pass filters to clean up the frequency spectrum."
+        "description": "Surgical High-Pass and Low-Pass filters applied to clean the frequency spectrum, removing subsonic rumble and ultrasonic hiss."
       },
       "S4_STEM_RESONANCE_CONTROL": {
         "title": "Resonance Control",
-        "description": "Suppressed harsh resonances, reducing peaks by up to {max_reduction_db}dB."
+        "description": "Harsh frequency resonances suppressed, reducing peaks by up to <green>{max_reduction_db}</green>dB for a smoother, less fatiguing sound."
       },
       "S5_STEM_DYNAMICS_GENERIC": {
         "title": "Stem Dynamics",
-        "description": "Applied dynamic control to stems. Average gain reduction: {avg_gr_db}dB."
+        "description": "Individual dynamic control applied to stems. Average gain reduction of <green>{avg_gr_db}</green>dB achieved for consistent levels without killing micro-dynamics."
       },
       "S5_LEADVOX_DYNAMICS": {
         "title": "Vocal Dynamics",
-        "description": "Controlled vocal dynamics with {gr_db}dB gain reduction for a consistent performance."
+        "description": "Lead vocal processed with dedicated compression, applying <green>{gr_db}</green>dB reduction to keep the vocal firm and upfront."
       },
       "S5_BUS_DYNAMICS_DRUMS": {
         "title": "Drum Bus Compression",
-        "description": "Applied glue compression to drum bus. Gain reduction: {gr_db}dB."
+        "description": "Glue compression applied to the drum bus with <green>{gr_db}</green>dB reduction, unifying the kit into a cohesive, punchy instrument."
       },
       "S6_BUS_REVERB_STYLE": {
         "title": "Spatial Depth",
-        "description": "Enhanced spatial depth using '{style}' reverb style for buses."
+        "description": "Spatial dimension added using '<green>{style}</green>' reverb style, placing instruments in their own acoustic space for depth."
       },
       "S7_MIXBUS_TONAL_BALANCE": {
         "title": "Tonal Balance",
-        "description": "Balanced the mixbus spectrum. Max correction applied: {max_correction_db}dB."
+        "description": "Global frequency spectrum analyzed and corrected by up to <green>{max_correction_db}</green>dB. Tonal balance sculpted to match genre standards, ensuring clear bass, mids, and highs."
       },
       "S8_MIXBUS_COLOR_GENERIC": {
         "title": "Mixbus Saturation",
-        "description": "Added harmonic saturation to the mixbus. Drive amount: {drive_percent}%."
+        "description": "Analog character injected via soft saturation (<green>{drive_percent}</green>%) acting as sonic glue. This increased density (RMS <green>{diff_inputLoudness}</green>dB) and raised the noise floor by <green>{diff_noiseFloor}</green>dB for rich texture."
       },
       "S9_MASTER_GENERIC": {
         "title": "Mastering Limiter",
-        "description": "Applied final limiting with a {ceiling_db}dB ceiling for commercial loudness."
+        "description": "Loudness maximized for commercial competition with a <green>{ceiling_db}</green>dB safety ceiling. Dynamics controlled for a large, present sound while preserving transient punch."
       },
       "S10_MASTER_FINAL_LIMITS": {
-        "title": "Final Quality Control",
-        "description": "Verified standards. Integrated Loudness: {lufs} LUFS, True Peak: {true_peak} dBTP."
+        "title": "Final QC",
+        "description": "Final Quality Control passed. Integrated loudness of <green>{lufs}</green> LUFS and True Peak of <green>{true_peak}</green> dBTP achieved, ensuring distortion-free streaming playback."
       },
       "S11_REPORT_GENERATION": {
         "title": "Report Generation",
-        "description": "Generated this analysis report."
+        "description": "Comprehensive technical report generated."
       },
       "S13_MANUAL_CORRECTION": {
         "title": "Manual Correction",
-        "description": "Applied manual adjustments based on user feedback in Piroola Studio."
+        "description": "Manual adjustments applied based on user feedback in Piroola Studio."
       }
     }
   }
