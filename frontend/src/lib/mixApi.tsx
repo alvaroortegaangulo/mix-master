@@ -728,7 +728,10 @@ export async function fetchJobReport(jobId: string): Promise<any> {
   const rel = `/files/${jobId}/S11_REPORT_GENERATION/report.json`;
   const url = appendApiKeyParam(`${baseUrl}${rel}`);
 
-  const res = await fetch(url);
+  const separator = url.includes("?") ? "&" : "?";
+  const urlWithTime = `${url}${separator}_t=${Date.now()}`;
+
+  const res = await fetch(urlWithTime, { cache: "no-store" });
   if (!res.ok) {
     throw new Error(`Failed to fetch report: ${res.statusText}`);
   }
