@@ -22,26 +22,32 @@ interface StudioDB extends DBSchema {
 }
 
 export class StudioCache {
-  private dbPromise: Promise<IDBPDatabase<StudioDB>>;
+  private dbPromise: Promise<IDBPDatabase<StudioDB>> | null = null;
 
-  constructor() {
-    this.dbPromise = openDB<StudioDB>('piroola-studio-cache', 1, {
-      upgrade(db) {
-        const store = db.createObjectStore('audio_buffers', { keyPath: 'fileName' });
-        store.createIndex('by-filename', 'fileName');
-      },
-    });
+  private getDB() {
+    if (typeof window === 'undefined') return null;
+    if (!this.dbPromise) {
+      this.dbPromise = openDB<StudioDB>('piroola-studio-cache', 1, {
+        upgrade(db) {
+          const store = db.createObjectStore('audio_buffers', { keyPath: 'fileName' });
+          store.createIndex('by-filename', 'fileName');
+        },
+      });
+    }
+    return this.dbPromise;
   }
 
   async getAudioBuffer(fileName: string): Promise<AudioBufferData | undefined> {
-    const db = await this.dbPromise;
-    const result = await db.get('audio_buffers', fileName);
+    const db = this.getDB();
+    if (!db) return undefined;
+    const result = await (await db).get('audio_buffers', fileName);
     return result?.data;
   }
 
   async setAudioBuffer(fileName: string, data: AudioBufferData): Promise<void> {
-    const db = await this.dbPromise;
-    await db.put('audio_buffers', {
+    const db = this.getDB();
+    if (!db) return;
+    await (await db).put('audio_buffers', {
       fileName,
       data,
       timestamp: Date.now(),
@@ -49,8 +55,9 @@ export class StudioCache {
   }
 
   async clear(): Promise<void> {
-    const db = await this.dbPromise;
-    await db.clear('audio_buffers');
+    const db = this.getDB();
+    if (!db) return;
+    await (await db).clear('audio_buffers');
   }
 }
 
