@@ -1005,9 +1005,13 @@ useEffect(() => {
 
               {isProcessing && (
                 <div className="flex justify-center">
-                  <img
-                    src="/miner.webp"
-                    alt="Processing your mix..."
+                  <video
+                    src="/loading.mp4"
+                    autoPlay
+                    loop
+                    muted
+                    playsInline
+                    aria-label="Processing your mix..."
                     className="h-24 w-auto rounded-lg"
                   />
                 </div>
