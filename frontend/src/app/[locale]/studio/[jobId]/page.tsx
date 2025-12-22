@@ -1043,41 +1043,43 @@ export default function StudioPage() {
                         </div>
                     </div>
 
-                    {/* Pan */}
-                    <div className="bg-[#1e2336] rounded-xl p-4 border border-white/5 shadow-lg">
-                        <div className="flex justify-between items-center mb-4">
-                            <div className="flex items-center gap-2">
-                                <input
-                                    type="checkbox"
-                                    checked={selectedStem.pan.enabled}
-                                    onChange={(e) => updateStem(selectedStemIndex, { pan: {...selectedStem.pan, enabled: e.target.checked}})}
-                                    className="rounded border-slate-600 bg-slate-800 text-blue-500 focus:ring-blue-500"
-                                />
-                                <span className={`text-xs font-bold ${selectedStem.pan.enabled ? 'text-blue-400' : 'text-slate-500'}`}>{t('panning')}</span>
+                    <div className="flex gap-2">
+                        {/* Pan */}
+                        <div className="flex-1 bg-[#1e2336] rounded-xl p-3 border border-white/5 shadow-lg min-w-0">
+                            <div className="flex justify-between items-center mb-4">
+                                <div className="flex items-center gap-2 overflow-hidden">
+                                    <input
+                                        type="checkbox"
+                                        checked={selectedStem.pan.enabled}
+                                        onChange={(e) => updateStem(selectedStemIndex, { pan: {...selectedStem.pan, enabled: e.target.checked}})}
+                                        className="shrink-0 rounded border-slate-600 bg-slate-800 text-blue-500 focus:ring-blue-500"
+                                    />
+                                    <span className={`text-xs font-bold truncate ${selectedStem.pan.enabled ? 'text-blue-400' : 'text-slate-500'}`}>{t('panning')}</span>
+                                </div>
+                                <SpeakerWaveIcon className="w-4 h-4 text-slate-600 shrink-0" />
                             </div>
-                            <SpeakerWaveIcon className="w-4 h-4 text-slate-600" />
+                            <div className={`flex justify-center transition-opacity ${selectedStem.pan.enabled ? 'opacity-100' : 'opacity-40 pointer-events-none'}`}>
+                                <Knob label="L / R" value={selectedStem.pan.value} min={-1} max={1} step={0.1} onChange={(v) => updateStem(selectedStemIndex, { pan: {...selectedStem.pan, value: v}})} />
+                            </div>
                         </div>
-                        <div className={`flex justify-center transition-opacity ${selectedStem.pan.enabled ? 'opacity-100' : 'opacity-40 pointer-events-none'}`}>
-                             <Knob label="L / R" value={selectedStem.pan.value} min={-1} max={1} step={0.1} onChange={(v) => updateStem(selectedStemIndex, { pan: {...selectedStem.pan, value: v}})} />
-                        </div>
-                    </div>
 
-                    {/* Reverb */}
-                    <div className="bg-[#1e2336] rounded-xl p-4 border border-white/5 shadow-lg">
-                        <div className="flex justify-between items-center mb-4">
-                            <div className="flex items-center gap-2">
-                                <input
-                                    type="checkbox"
-                                    checked={selectedStem.reverb.enabled}
-                                    onChange={(e) => updateStem(selectedStemIndex, { reverb: {...selectedStem.reverb, enabled: e.target.checked}})}
-                                    className="rounded border-slate-600 bg-slate-800 text-purple-500 focus:ring-purple-500"
-                                />
-                                <span className={`text-xs font-bold ${selectedStem.reverb.enabled ? 'text-purple-400' : 'text-slate-500'}`}>{t('reverb')}</span>
+                        {/* Reverb */}
+                        <div className="flex-1 bg-[#1e2336] rounded-xl p-3 border border-white/5 shadow-lg min-w-0">
+                            <div className="flex justify-between items-center mb-4">
+                                <div className="flex items-center gap-2 overflow-hidden">
+                                    <input
+                                        type="checkbox"
+                                        checked={selectedStem.reverb.enabled}
+                                        onChange={(e) => updateStem(selectedStemIndex, { reverb: {...selectedStem.reverb, enabled: e.target.checked}})}
+                                        className="shrink-0 rounded border-slate-600 bg-slate-800 text-purple-500 focus:ring-purple-500"
+                                    />
+                                    <span className={`text-xs font-bold truncate ${selectedStem.reverb.enabled ? 'text-purple-400' : 'text-slate-500'}`}>{t('reverb')}</span>
+                                </div>
+                                <SparklesIcon className="w-4 h-4 text-slate-600 shrink-0" />
                             </div>
-                            <SparklesIcon className="w-4 h-4 text-slate-600" />
-                        </div>
-                        <div className={`flex justify-center transition-opacity ${selectedStem.reverb.enabled ? 'opacity-100' : 'opacity-40 pointer-events-none'}`}>
-                             <Knob label="AMOUNT" value={selectedStem.reverb.amount} min={0} max={100} onChange={(v) => updateStem(selectedStemIndex, { reverb: {...selectedStem.reverb, amount: v}})} />
+                            <div className={`flex justify-center transition-opacity ${selectedStem.reverb.enabled ? 'opacity-100' : 'opacity-40 pointer-events-none'}`}>
+                                <Knob label="AMOUNT" value={selectedStem.reverb.amount} min={0} max={100} onChange={(v) => updateStem(selectedStemIndex, { reverb: {...selectedStem.reverb, amount: v}})} />
+                            </div>
                         </div>
                     </div>
 
