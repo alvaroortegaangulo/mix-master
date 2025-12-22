@@ -127,7 +127,7 @@ const ReportStageCard = ({
           {hasDescription ? tStages.rich(`${stageKey}.description` as any, {
               ...combinedParams,
               green: (chunks) => (
-                <span className="font-mono font-bold text-emerald-400 bg-[rgba(16,185,129,0.1)] px-1 rounded mx-0.5">
+                <span className="font-mono font-bold text-amber-400 bg-[rgba(251,191,36,0.1)] px-1 rounded mx-0.5">
                   {chunks}
                 </span>
               )
