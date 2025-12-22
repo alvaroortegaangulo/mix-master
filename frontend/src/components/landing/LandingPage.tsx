@@ -35,20 +35,20 @@ export function LandingPage() {
       {/* 1. Hero: Dark (bg-slate-950) - Default */}
       <HeroSection onTryIt={handleTryIt} />
 
-      {/* 2. Features: Light (bg-slate-900) */}
-      <FeaturesSection className="bg-slate-900" />
+      {/* 2. Pipeline: Light (bg-slate-900) */}
+      <PipelineInteractiveDiagram className="bg-slate-900" />
 
       {/* 3. Live Analysis: Dark (bg-slate-950) */}
       <LiveSoundAnalysis className="bg-slate-950" />
 
-      {/* 4. Benefits: Light (bg-slate-900) */}
-      <BenefitsSection className="bg-slate-900" />
+      {/* 4. Features (DAW to World): Light (bg-slate-900) */}
+      <FeaturesSection className="bg-slate-900" />
 
       {/* 5. Tech Specs (Power & Precision): Dark (bg-slate-950) */}
       <TechSpecsSection className="bg-slate-950" />
 
-      {/* 6. Pipeline: Light (bg-slate-900) */}
-      <PipelineInteractiveDiagram className="bg-slate-900" />
+      {/* 6. Benefits (Hours in minutes): Light (bg-slate-900) */}
+      <BenefitsSection className="bg-slate-900" />
 
       {/* Bottom CTA */}
       <section className="py-12 md:py-24 bg-gradient-to-t from-teal-900/20 to-slate-950 text-center px-4">
