@@ -667,19 +667,10 @@ export default function StudioPage() {
             throw new Error(`Corrections failed (${correctionRes.status})`);
         }
 
-        let stages: string[] = [];
-        if (proceedToMastering) {
-            stages = [
+        const stagesPayload: { stages?: string[] } = {};
+        if (!proceedToMastering) {
+            stagesPayload.stages = [
                 "S6_MANUAL_CORRECTION",
-                  "S7_MIXBUS_TONAL_BALANCE",
-                  "S8_MIXBUS_COLOR_GENERIC",
-                  "S9_MASTER_GENERIC",
-                  "S10_MASTER_FINAL_LIMITS",
-                  "S11_REPORT_GENERATION"
-              ];
-          } else {
-              stages = [
-                  "S6_MANUAL_CORRECTION",
                 "S11_REPORT_GENERATION"
             ];
         }
@@ -687,7 +678,7 @@ export default function StudioPage() {
         const startRes = await fetch(`${baseUrl}/mix/${jobId}/start`, {
              method: 'POST',
              headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
-             body: JSON.stringify({ stages })
+             body: JSON.stringify(stagesPayload)
         });
         if (!startRes.ok) {
             throw new Error(`Pipeline restart failed (${startRes.status})`);
