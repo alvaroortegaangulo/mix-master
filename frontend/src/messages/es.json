@@ -1087,7 +1087,7 @@
     "stages": {
       "S0_SESSION_FORMAT": {
         "title": "Entrada y Metadatos",
-        "description": "Sesión inicializada con {count} stems. Formato verificado como {format}. Frecuencia de muestreo normalizada a {sample_rate}Hz para un procesamiento consistente."
+        "description": "Sesión iniciada con {count} stems. Se ha verificado el formato y unificado la frecuencia de muestreo a {sample_rate}Hz para garantizar la máxima fidelidad durante todo el proceso de procesamiento."
       },
       "S0_SEPARATE_STEMS": {
         "title": "Separación de Stems",
@@ -1151,19 +1151,19 @@
       },
       "S7_MIXBUS_TONAL_BALANCE": {
         "title": "Balance Tonal",
-        "description": "Espectro del mixbus balanceado. Corrección máxima aplicada: {max_correction_db}dB."
+        "description": "Piroola ha analizado el espectro de frecuencias y ha aplicado correcciones (hasta {max_correction_db} dB) para esculpir el balance tonal. El objetivo ha sido alinear tu mezcla con el perfil sónico del género, asegurando que los graves, medios y agudos convivan en armonía sin que ninguna banda enmascare a las demás."
       },
       "S8_MIXBUS_COLOR_GENERIC": {
         "title": "Saturación del Mixbus",
-        "description": "Se añadió saturación armónica al mixbus. Cantidad de drive: {drive_percent}%."
+        "description": "Piroola ha inyectado vida y carácter a la mezcla mediante una saturación suave ({drive_percent}%) que actúa como 'pegamento' para unir los instrumentos. Este proceso ha conllevado un aumento general de energía: la canción ahora suena mucho más potente y sólida (RMS {diff_inputLoudness} dB) y con picos más impactantes. Como efecto secundario natural, los detalles más sutiles y el fondo (piso de ruido) también se han elevado ({diff_noiseFloor} dB), dando una sensación de mayor densidad y textura analógica al conjunto."
       },
       "S9_MASTER_GENERIC": {
         "title": "Limitador de Masterización",
-        "description": "Limitación final aplicada con un techo de {ceiling_db}dB para sonoridad comercial."
+        "description": "En la etapa final de masterización, Piroola ha maximizado la sonoridad para alcanzar estándares comerciales competitivos, estableciendo un techo de seguridad de {ceiling_db} dB. Se ha controlado la dinámica para garantizar que la canción suene grande y presente en cualquier sistema de reproducción sin sacrificar la pegada de los transitorios."
       },
       "S10_MASTER_FINAL_LIMITS": {
         "title": "Control de Calidad Final",
-        "description": "Estándares verificados. Sonoridad integrada: {lufs} LUFS, True Peak: {true_peak} dBTP."
+        "description": "Control de calidad superado. La mezcla final cumple con los estándares de la industria con una sonoridad integrada de {lufs} LUFS y un pico verdadero de {true_peak} dBTP, garantizando una reproducción segura y sin distorsión en plataformas de streaming."
       },
       "S11_REPORT_GENERATION": {
         "title": "Generación de Informe",

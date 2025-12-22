@@ -142,6 +142,38 @@ def _process_comparison_diff(stage_id: str, diff_file: Path) -> List[Dict[str, A
         })
     return changes[:5]
 
+def _extract_diff_params(diff_file: Path) -> Dict[str, str]:
+    """
+    Extracts all diff values from comparison JSON into a flat dict for narrative interpolation.
+    Ensures common metrics are present even if not changed (defaulting to +0.00).
+    """
+    try:
+        with diff_file.open("r", encoding="utf-8") as f:
+            diff_data = json.load(f)
+    except Exception:
+        return {}
+
+    diff_params = {}
+    session_diffs = diff_data.get("session", {})
+
+    # Pre-populate common keys with 0.00 to ensure narrative templates don't break
+    common_keys = ["noise_floor_dbfs", "pre_rms_dbfs", "pre_true_peak_dbtp"]
+    for k in common_keys:
+        mapped_key = METRIC_MAPPING.get(k, k)
+        diff_params[f"diff_{mapped_key}"] = "+0.00"
+
+    for k, v in session_diffs.items():
+        mapped_key = METRIC_MAPPING.get(k, k) # e.g. noise_floor_dbfs -> noiseFloor
+
+        diff_val = v.get("diff", 0.0)
+        # Always format with sign
+        val_fmt = f"{diff_val:+.2f}"
+
+        # Key for params: "diff_noiseFloor", "diff_inputLoudness"
+        diff_params[f"diff_{mapped_key}"] = val_fmt
+
+    return diff_params
+
 def _enrich_report_with_parameters_and_images(report: Dict[str, Any], temp_dir: Path) -> None:
     """
     Enriches the report stages with parameter changes and image paths.
@@ -159,16 +191,20 @@ def _enrich_report_with_parameters_and_images(report: Dict[str, Any], temp_dir: 
         if not stage_dir.exists():
              stage_dir = job_root / contract_id
 
+        params = s.get("parameters", {})
+        if not params:
+            params = {}
+
         comparison_file = stage_dir / f"comparison_{contract_id}.json"
         if comparison_file.exists():
             changes = _process_comparison_diff(contract_id, comparison_file)
             s["changes"] = changes
+
+            # Inject diff parameters for narrative
+            diff_params = _extract_diff_params(comparison_file)
+            params.update(diff_params)
         else:
             s["changes"] = []
-
-        params = s.get("parameters", {})
-        if not params:
-            params = {}
 
         if "S0_SESSION_FORMAT" in contract_id:
             data = _load_stage_json(job_root, "S0_SESSION_FORMAT", "analysis_S0_SESSION_FORMAT.json")
@@ -192,9 +228,9 @@ def _enrich_report_with_parameters_and_images(report: Dict[str, Any], temp_dir: 
             if data:
                 stems = data.get("stems", [])
                 corrections = []
-                for s in stems:
-                    lag = float(s.get("lag_ms", 0.0))
-                    flip = s.get("use_polarity_flip", False)
+                for s_stem in stems:
+                    lag = float(s_stem.get("lag_ms", 0.0))
+                    flip = s_stem.get("use_polarity_flip", False)
                     # Solo listamos si hay un shift significativo o flip
                     if abs(lag) > 0.1 or flip:
                         parts = []
@@ -202,7 +238,7 @@ def _enrich_report_with_parameters_and_images(report: Dict[str, Any], temp_dir: 
                             parts.append(f"{lag:+.1f}ms")
                         if flip:
                             parts.append("Flip")
-                        corrections.append(f"{s.get('file_name', 'stem')}: {' '.join(parts)}")
+                        corrections.append(f"{s_stem.get('file_name', 'stem')}: {' '.join(parts)}")
 
                 if corrections:
                     params["phase_corrections"] = corrections
@@ -233,8 +269,8 @@ def _enrich_report_with_parameters_and_images(report: Dict[str, Any], temp_dir: 
 
                  stems = data.get("stems", [])
                  total_res = 0
-                 for s in stems:
-                     total_res += len(s.get("resonances", []))
+                 for s_stem in stems:
+                     total_res += len(s_stem.get("resonances", []))
                  params["total_resonances_detected"] = total_res
              else:
                  params["max_reduction_db"] = "6.0"
