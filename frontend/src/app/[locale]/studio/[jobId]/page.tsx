@@ -16,9 +16,7 @@ import {
   StopIcon,
   ArrowDownTrayIcon,
   CheckIcon,
-  XMarkIcon,
-  SpeakerWaveIcon,
-  SparklesIcon
+  XMarkIcon
 } from "@heroicons/react/24/solid";
 import { useTranslations } from "next-intl";
 
@@ -980,7 +978,7 @@ export default function StudioPage() {
              </div>
           </main>
 
-          <aside className="w-80 bg-[#161b2e] border-l border-white/5 flex flex-col shrink-0 p-6 space-y-6 overflow-y-auto">
+          <aside className="w-80 bg-[#161b2e] border-l border-white/5 flex flex-col shrink-0 p-4 space-y-3 overflow-y-auto">
 
               <div>
                   <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">{t('selectedChannel')}</div>
@@ -995,8 +993,8 @@ export default function StudioPage() {
               {selectedStem && (
                   <>
                     {/* EQ */}
-                    <div className="bg-[#1e2336] rounded-xl p-4 border border-white/5 shadow-lg">
-                        <div className="flex justify-between items-center mb-4">
+                    <div className="bg-[#1e2336] rounded-xl p-3 border border-white/5 shadow-lg">
+                        <div className="flex justify-between items-center mb-2">
                              <div className="flex items-center gap-2">
                                 <Toggle
                                     checked={selectedStem.eq.enabled}
@@ -1016,8 +1014,8 @@ export default function StudioPage() {
                     </div>
 
                     {/* Compressor */}
-                    <div className="bg-[#1e2336] rounded-xl p-4 border border-white/5 shadow-lg">
-                        <div className="flex justify-between items-center mb-4">
+                    <div className="bg-[#1e2336] rounded-xl p-3 border border-white/5 shadow-lg">
+                        <div className="flex justify-between items-center mb-2">
                             <div className="flex items-center gap-2">
                                 <Toggle
                                     checked={selectedStem.compression.enabled}
@@ -1027,7 +1025,7 @@ export default function StudioPage() {
                              </div>
                         </div>
 
-                        <div className={`flex justify-around mb-4 transition-opacity ${selectedStem.compression.enabled ? 'opacity-100' : 'opacity-40 pointer-events-none'}`}>
+                        <div className={`flex justify-around mb-1 transition-opacity ${selectedStem.compression.enabled ? 'opacity-100' : 'opacity-40 pointer-events-none'}`}>
                              <Knob label="THRESH" value={selectedStem.compression.threshold} min={-60} max={0} onChange={(v) => updateStem(selectedStemIndex, { compression: {...selectedStem.compression, threshold: v}})} />
                              <Knob label="RATIO" value={selectedStem.compression.ratio} min={1} max={20} onChange={(v) => updateStem(selectedStemIndex, { compression: {...selectedStem.compression, ratio: v}})} />
                         </div>
@@ -1036,7 +1034,7 @@ export default function StudioPage() {
                     <div className="flex gap-2">
                         {/* Pan */}
                         <div className="flex-1 bg-[#1e2336] rounded-xl p-3 border border-white/5 shadow-lg min-w-0">
-                            <div className="flex justify-between items-center mb-4">
+                            <div className="flex justify-between items-center mb-2">
                                 <div className="flex items-center gap-2 overflow-hidden">
                                     <Toggle
                                         checked={selectedStem.pan.enabled}
@@ -1045,7 +1043,6 @@ export default function StudioPage() {
                                     />
                                     <span className={`text-xs font-bold truncate ${selectedStem.pan.enabled ? 'text-blue-400' : 'text-slate-500'}`}>{t('panning')}</span>
                                 </div>
-                                <SpeakerWaveIcon className="w-4 h-4 text-slate-600 shrink-0" />
                             </div>
                             <div className={`flex justify-center transition-opacity ${selectedStem.pan.enabled ? 'opacity-100' : 'opacity-40 pointer-events-none'}`}>
                                 <Knob label="L / R" value={selectedStem.pan.value} min={-1} max={1} step={0.1} onChange={(v) => updateStem(selectedStemIndex, { pan: {...selectedStem.pan, value: v}})} />
@@ -1054,7 +1051,7 @@ export default function StudioPage() {
 
                         {/* Reverb */}
                         <div className="flex-1 bg-[#1e2336] rounded-xl p-3 border border-white/5 shadow-lg min-w-0">
-                            <div className="flex justify-between items-center mb-4">
+                            <div className="flex justify-between items-center mb-2">
                                 <div className="flex items-center gap-2 overflow-hidden">
                                     <Toggle
                                         checked={selectedStem.reverb.enabled}
@@ -1063,7 +1060,6 @@ export default function StudioPage() {
                                     />
                                     <span className={`text-xs font-bold truncate ${selectedStem.reverb.enabled ? 'text-purple-400' : 'text-slate-500'}`}>{t('reverb')}</span>
                                 </div>
-                                <SparklesIcon className="w-4 h-4 text-slate-600 shrink-0" />
                             </div>
                             <div className={`flex justify-center transition-opacity ${selectedStem.reverb.enabled ? 'opacity-100' : 'opacity-40 pointer-events-none'}`}>
                                 <Knob label="AMOUNT" value={selectedStem.reverb.amount} min={0} max={100} onChange={(v) => updateStem(selectedStemIndex, { reverb: {...selectedStem.reverb, amount: v}})} />
@@ -1134,13 +1130,13 @@ function Knob({ label, value, min, max, step, onChange }: { label: string, value
     const rotation = -135 + (pct * 270);
 
     return (
-        <div className="flex flex-col items-center gap-2 group select-none">
+        <div className="flex flex-col items-center gap-1 group select-none">
             <div
                 onMouseDown={handleMouseDown}
-                className="w-12 h-12 rounded-full bg-[#11131f] relative cursor-ns-resize shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)] border border-slate-700 hover:border-slate-500 transition-colors"
+                className="w-9 h-9 rounded-full bg-[#11131f] relative cursor-ns-resize shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)] border border-slate-700 hover:border-slate-500 transition-colors"
             >
                 <div
-                    className="absolute top-1/2 left-1/2 w-0.5 h-4 bg-emerald-400 origin-bottom -translate-x-1/2 -translate-y-full rounded-full shadow-[0_0_5px_rgba(52,211,153,0.5)]"
+                    className="absolute top-1/2 left-1/2 w-0.5 h-3 bg-emerald-400 origin-bottom -translate-x-1/2 -translate-y-full rounded-full shadow-[0_0_5px_rgba(52,211,153,0.5)]"
                     style={{ transform: `translate(-50%, -50%) rotate(${rotation}deg)` }}
                 ></div>
             </div>
