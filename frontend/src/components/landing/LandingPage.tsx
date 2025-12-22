@@ -51,7 +51,7 @@ export function LandingPage() {
       <PipelineInteractiveDiagram className="bg-slate-900" />
 
       {/* Bottom CTA */}
-      <section className="py-24 bg-gradient-to-t from-teal-900/20 to-slate-950 text-center px-4">
+      <section className="py-12 md:py-24 bg-gradient-to-t from-teal-900/20 to-slate-950 text-center px-4">
         <h2 className="text-3xl md:text-5xl font-bold text-white mb-8">
           {t('readyToElevate')}
         </h2>

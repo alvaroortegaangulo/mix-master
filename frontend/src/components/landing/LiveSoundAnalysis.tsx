@@ -63,7 +63,7 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
   }, []);
 
   return (
-    <section className={`py-24 border-t border-slate-900 relative overflow-hidden ${className || 'bg-slate-950'}`}>
+    <section className={`py-12 md:py-24 border-t border-slate-900 relative overflow-hidden ${className || 'bg-slate-950'}`}>
         {/* Background Gradients */}
         <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
             <div className="absolute top-1/4 -left-64 w-96 h-96 bg-cyan-900/10 rounded-full blur-3xl"></div>
@@ -91,7 +91,7 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
           {/* LEFT PANEL: Frequency Spectrum */}
-          <div className="lg:col-span-2 bg-slate-900/50 rounded-3xl border border-slate-800 p-6 flex flex-col justify-between min-h-[500px] shadow-2xl relative overflow-hidden">
+          <div className="lg:col-span-2 bg-slate-900/50 rounded-3xl border border-slate-800 p-4 md:p-6 flex flex-col justify-between min-h-[400px] md:min-h-[500px] shadow-2xl relative overflow-hidden">
 
              {/* Top Bar of Panel */}
              <div className="flex justify-between items-start mb-8 relative z-10">

@@ -40,10 +40,10 @@ export function FeaturesSection({ className }: { className?: string }) {
       setActiveStep((prev) => (prev + 1) % features.length);
     }, 7000);
     return () => clearInterval(timer);
-  }, [features.length]);
+  }, [features.length, activeStep]);
 
   return (
-    <section className={`py-24 ${className || 'bg-slate-950'}`} id="features">
+    <section className={`py-12 md:py-24 ${className || 'bg-slate-950'}`} id="features">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="text-center mb-12">
@@ -57,7 +57,7 @@ export function FeaturesSection({ className }: { className?: string }) {
         </div>
 
         {/* Carousel Container */}
-        <div className="relative w-full aspect-video md:aspect-[21/9] lg:h-[600px] bg-slate-900 rounded-3xl overflow-hidden shadow-2xl border border-slate-800 group">
+        <div className="relative w-full h-[600px] md:h-auto md:aspect-[21/9] lg:h-[600px] bg-slate-900 rounded-3xl overflow-hidden shadow-2xl border border-slate-800 group">
 
           {/* Slides */}
           {features.map((feature, idx) => (
@@ -79,7 +79,7 @@ export function FeaturesSection({ className }: { className?: string }) {
               </div>
 
               {/* Content Overlay */}
-              <div className="absolute inset-0 flex flex-col items-center justify-center p-8 md:p-12 text-center z-20">
+              <div className="absolute inset-0 flex flex-col items-center justify-center p-6 md:p-12 text-center z-20">
                 {/* Top: Title */}
                 <div className="mb-auto mt-8 md:mt-12 animate-in fade-in slide-in-from-top-4 duration-700 delay-300 fill-mode-both">
                    <div className="mb-4">
