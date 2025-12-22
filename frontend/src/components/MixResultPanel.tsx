@@ -126,11 +126,11 @@ export function MixResultPanel({
   const loadReport = async () => {
     if (!jobId) return;
     setLoadingReport(true);
+    setIsReportOpen(true);
     try {
       const data = await fetchJobReport(jobId);
       setReport(data);
       setProcessedStageKeys(deriveProcessedStageKeys(data));
-      setIsReportOpen(true);
     } catch (err) {
       console.error("Failed to load report", err);
     } finally {
