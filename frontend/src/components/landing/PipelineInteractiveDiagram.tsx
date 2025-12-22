@@ -83,7 +83,7 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
   };
 
   return (
-    <section className={`py-24 ${className || 'bg-slate-900'}`}>
+    <section className={`py-12 md:py-24 ${className || 'bg-slate-900'}`}>
     <div className="w-full max-w-7xl mx-auto px-4 md:px-8 relative z-10">
       {/* Header */}
       <header className="text-center mx-auto mb-16 relative z-10 max-w-4xl">
@@ -151,7 +151,12 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
 
                 {/* Floating Detail Popup */}
                 {isActive && (
-                  <div className={`absolute z-50 top-full pt-4 w-full md:w-[600px] ${getPopupPositionClass(index)}`}>
+                  <div className={`
+                    z-50 w-full lg:w-[600px]
+                    ${/* Mobile: Relative (Accordion) */ "relative top-0 mt-4"}
+                    ${/* Desktop: Absolute (Popup) */ "lg:absolute lg:top-full lg:mt-4"}
+                    ${getPopupPositionClass(index)}
+                  `}>
                     <div className="relative bg-slate-900/95 border border-slate-700/50 rounded-2xl p-6 shadow-2xl backdrop-blur-xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
                       {/* Decorative Background Elements */}
                       <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/10 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
