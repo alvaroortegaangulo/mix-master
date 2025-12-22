@@ -9,11 +9,11 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
     const t = useTranslations('BenefitsSection');
 
     return (
-      <section className={`py-24 overflow-hidden ${className || 'bg-slate-950'}`}>
+      <section className={`py-12 md:py-24 overflow-hidden ${className || 'bg-slate-950'}`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
           {/* Benefit 1: Speed */}
-          <div className="flex flex-col lg:flex-row items-center gap-16 mb-24">
+          <div className="flex flex-col lg:flex-row items-center gap-10 md:gap-16 mb-12 md:mb-24">
             <div className="flex-1 order-2 lg:order-1">
                {/* Image Placeholder */}
                <div className="w-full aspect-video rounded-2xl bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 flex items-center justify-center relative shadow-2xl overflow-hidden group">
