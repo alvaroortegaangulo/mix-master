@@ -95,6 +95,9 @@ const ChartCard = ({
       <h3 className="text-sm font-bold uppercase tracking-wide text-slate-300">
         {title}
       </h3>
+    </div>
+    <div className="h-40 w-full relative mb-2">{children}</div>
+    <div className="flex justify-end">
       <button
         onClick={onExpand}
         className="text-[10px] uppercase font-bold text-emerald-500 hover:text-emerald-400"
@@ -102,7 +105,6 @@ const ChartCard = ({
         Expand
       </button>
     </div>
-    <div className="h-40 w-full relative">{children}</div>
   </div>
 );
 
