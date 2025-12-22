@@ -1104,6 +1104,18 @@ async def mix_tracks(
             job_id,
         )
 
+    if enabled_stage_keys is not None:
+        enabled_path = work_dir / "enabled_stages.json"
+        enabled_path.write_text(
+            json.dumps(enabled_stage_keys, indent=2, ensure_ascii=False),
+            encoding="utf-8",
+        )
+        logger.info(
+            "[/mix] enabled_stages.json escrito para job_id=%s con %d entradas",
+            job_id,
+            len(enabled_stage_keys),
+        )
+
     # Encolar tarea Celery
     pre_enqueue_ts = time.time()
     logger.info(
