@@ -51,17 +51,20 @@
     }
   },
   "BenefitsSection": {
-    "speedTitle": "Horas de trabajo, hechas en minutos.",
+    "efficiencyBadge": "EFICIENCIA IA",
+    "speedTitle": "Horas de trabajo, <highlight>hechas en minutos.</highlight>",
     "speedDescription": "Olvídate de la tediosa ganancia, alineación de fase y limpieza de resonancias. Piroola se encarga del trabajo técnico pesado para que puedas concentrarte en la vibra creativa.",
     "speedPoints": [
       "Configuración de sesión y enrutamiento instantáneos",
       "EQ correctivo automatizado",
       "Verificación de cumplimiento de sonoridad en tiempo real"
     ],
-    "qualityTitle": "Calidad de Estudio, accesible para todos.",
+    "qualityBadge": "CALIDAD PREMIUM",
+    "qualityTitle": "Calidad de Estudio, <highlight>accesible para todos.</highlight>",
     "qualityDescription": "No necesitas un estudio de un millón de dólares o décadas de experiencia para obtener un sonido profesional. Nuestros algoritmos están entrenados con éxitos discográficos para ofrecer resultados comercialmente competitivos.",
-    "spotifyReady": "Listo para Spotify",
-    "appleMusicReady": "Listo para Apple Music"
+    "readyFor": "LISTO PARA",
+    "spotifyReady": "Spotify",
+    "appleMusicReady": "Apple Music"
   },
   "LiveSoundAnalysis": {
     "label": "Motor de Análisis en Vivo",
