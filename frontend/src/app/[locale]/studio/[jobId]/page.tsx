@@ -889,61 +889,8 @@ export default function StudioPage() {
           </aside>
 
           <main className="flex-1 flex flex-col relative bg-[#0f111a]">
-             <div className="absolute inset-0 pointer-events-none opacity-5"
-                style={{
-                    backgroundImage: 'linear-gradient(to right, #ffffff 1px, transparent 1px), linear-gradient(to bottom, #ffffff 1px, transparent 1px)',
-                    backgroundSize: '40px 40px'
-                }}>
-             </div>
-
-             <div className="flex-1 relative flex items-center justify-center p-10">
-
-                 {/* Interactive Waveform Main Display */}
-                 <div className="w-full h-[300px] opacity-80 cursor-pointer">
-                 <CanvasWaveform
-                    audioBuffer={currentVisualBuffer || null}
-                    peaksData={currentVisualPeaks || null}
-                    currentTime={currentTime}
-                    duration={duration}
-                    onSeek={seek}
-                    analyser={masterAnalyserNodeRef.current}
-                    isPlaying={isPlaying}
-                 />
-                 </div>
-
-                 {!currentVisualBuffer && !currentVisualPeaks && (
-                     <div className="absolute inset-0 flex items-center justify-center text-slate-600 font-mono pointer-events-none">
-                         {loadingStems ? "Loading..." : t('selectTrack')}
-                     </div>
-                 )}
-             </div>
-
-             {/* Footer Transport Section */}
-             <div className="h-28 bg-[#11131f] border-t border-white/5 flex flex-col shrink-0 z-20">
-
-                 {/* New Timeline Bar placement */}
-                 <div
-                     className="h-6 w-full bg-[#0f111a] border-b border-white/5 relative cursor-pointer group select-none hover:bg-[#161b2e] transition-colors"
-                     onClick={handleTimelineClick}
-                 >
-                     {/* Background Grid */}
-                     <div className="absolute inset-0 opacity-20 flex justify-between px-2">
-                         {Array.from({length: 40}).map((_, i) => (
-                             <div key={i} className="w-px h-full bg-white/20"></div>
-                         ))}
-                     </div>
-
-                     {/* Progress Fill */}
-                     <div className="absolute top-0 left-0 bottom-0 bg-emerald-500/20 pointer-events-none transition-all duration-75" style={{ width: `${duration ? (currentTime / duration) * 100 : 0}%` }}></div>
-
-                     {/* Playhead */}
-                     <div className="absolute top-0 bottom-0 w-0.5 bg-yellow-400 z-10 pointer-events-none shadow-[0_0_10px_rgba(250,204,21,0.5)] transition-all duration-75" style={{ left: `${duration ? (currentTime / duration) * 100 : 0}%` }}></div>
-
-                     <div className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] font-mono text-emerald-500">
-                         {formatTime(currentTime)} / {formatTime(duration)}
-                     </div>
-                 </div>
-
+             {/* Transport Section Moved to Top */}
+             <div className="h-20 bg-[#11131f] border-b border-white/5 flex flex-col shrink-0 z-20">
                  <div className="flex-1 px-6 flex items-center justify-between">
                      <div className="flex flex-col gap-1 w-48">
                          <div className="flex justify-between text-[10px] text-slate-500 font-mono">
@@ -956,6 +903,10 @@ export default function StudioPage() {
                      </div>
 
                      <div className="flex flex-col items-center gap-2">
+                        {/* Time Display added to controls */}
+                        <div className="text-[10px] font-mono text-emerald-500 mb-1">
+                             {formatTime(currentTime)} / {formatTime(duration)}
+                        </div>
                          <div className="flex items-center gap-4">
                             <button onClick={() => { setIsPlaying(false); stopAllSources(); setCurrentTime(0); pauseTimeRef.current = 0; }} className="text-slate-500 hover:text-white transition-colors"><StopIcon className="w-4 h-4" /></button>
                             <button
@@ -977,6 +928,55 @@ export default function StudioPage() {
                          />
                      </div>
                  </div>
+
+                 {/* Spotify-style Progress Bar */}
+                 <div
+                     className="h-1.5 w-full bg-slate-800/50 relative cursor-pointer group select-none"
+                     onClick={handleTimelineClick}
+                 >
+                     {/* Background Track */}
+                     <div className="absolute inset-0 bg-white/10 group-hover:bg-white/20 transition-colors rounded-r-full"></div>
+
+                     {/* Progress Fill */}
+                     <div
+                         className="absolute top-0 left-0 bottom-0 bg-white group-hover:bg-emerald-400 transition-colors"
+                         style={{ width: `${duration ? (currentTime / duration) * 100 : 0}%` }}
+                     ></div>
+
+                     {/* Scrubber Handle (Circle) */}
+                     <div
+                         className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full shadow-lg opacity-100 group-hover:scale-125 transition-transform"
+                          style={{ left: `${duration ? (currentTime / duration) * 100 : 0}%`, marginLeft: '-6px' }}
+                     ></div>
+                 </div>
+             </div>
+
+             <div className="absolute inset-0 pointer-events-none opacity-5"
+                style={{
+                    backgroundImage: 'linear-gradient(to right, #ffffff 1px, transparent 1px), linear-gradient(to bottom, #ffffff 1px, transparent 1px)',
+                    backgroundSize: '40px 40px'
+                }}>
+             </div>
+
+             <div className="flex-1 relative flex items-center justify-center p-10">
+                 {/* Interactive Waveform Main Display */}
+                 <div className="w-full h-[300px] opacity-80 cursor-pointer">
+                 <CanvasWaveform
+                    audioBuffer={currentVisualBuffer || null}
+                    peaksData={currentVisualPeaks || null}
+                    currentTime={currentTime}
+                    duration={duration}
+                    onSeek={seek}
+                    analyser={masterAnalyserNodeRef.current}
+                    isPlaying={isPlaying}
+                 />
+                 </div>
+
+                 {!currentVisualBuffer && !currentVisualPeaks && (
+                     <div className="absolute inset-0 flex items-center justify-center text-slate-600 font-mono pointer-events-none">
+                         {loadingStems ? "Loading..." : t('selectTrack')}
+                     </div>
+                 )}
              </div>
           </main>
 
@@ -998,23 +998,15 @@ export default function StudioPage() {
                     <div className="bg-[#1e2336] rounded-xl p-4 border border-white/5 shadow-lg">
                         <div className="flex justify-between items-center mb-4">
                              <div className="flex items-center gap-2">
-                                <input
-                                    type="checkbox"
+                                <Toggle
                                     checked={selectedStem.eq.enabled}
-                                    onChange={(e) => updateStem(selectedStemIndex, { eq: {...selectedStem.eq, enabled: e.target.checked}})}
-                                    className="rounded border-slate-600 bg-slate-800 text-emerald-500 focus:ring-emerald-500"
+                                    onChange={(v) => updateStem(selectedStemIndex, { eq: {...selectedStem.eq, enabled: v}})}
                                 />
                                 <span className={`text-xs font-bold ${selectedStem.eq.enabled ? 'text-emerald-400' : 'text-slate-500'}`}>{t('parametricEq')}</span>
                              </div>
                         </div>
                         <div className={`transition-opacity ${selectedStem.eq.enabled ? 'opacity-100' : 'opacity-40 pointer-events-none'}`}>
-                             {/* ... visualizer placeholder ... */}
-                             <div className="h-20 bg-[#11131f] rounded-lg mb-4 border border-white/5 relative overflow-hidden">
-                                <div className="absolute inset-0 bg-gradient-to-t from-emerald-500/5 to-transparent"></div>
-                                <svg className="absolute inset-0 w-full h-full text-emerald-500/30" preserveAspectRatio="none">
-                                    <path d="M0,80 C20,80 40,60 80,60 C120,60 140,80 160,80 C200,80 220,40 260,40 C300,40 320,80 320,80 L320,80 L0,80 Z" fill="currentColor" />
-                                </svg>
-                            </div>
+                            {/* Visualizer Removed */}
                             <div className="flex justify-between px-2">
                                 <Knob label="LOW" value={selectedStem.eq.low} min={-12} max={12} onChange={(v) => updateStem(selectedStemIndex, { eq: {...selectedStem.eq, low: v}})} />
                                 <Knob label="MID" value={selectedStem.eq.mid} min={-12} max={12} onChange={(v) => updateStem(selectedStemIndex, { eq: {...selectedStem.eq, mid: v}})} />
@@ -1027,11 +1019,9 @@ export default function StudioPage() {
                     <div className="bg-[#1e2336] rounded-xl p-4 border border-white/5 shadow-lg">
                         <div className="flex justify-between items-center mb-4">
                             <div className="flex items-center gap-2">
-                                <input
-                                    type="checkbox"
+                                <Toggle
                                     checked={selectedStem.compression.enabled}
-                                    onChange={(e) => updateStem(selectedStemIndex, { compression: {...selectedStem.compression, enabled: e.target.checked}})}
-                                    className="rounded border-slate-600 bg-slate-800 text-emerald-500 focus:ring-emerald-500"
+                                    onChange={(v) => updateStem(selectedStemIndex, { compression: {...selectedStem.compression, enabled: v}})}
                                 />
                                 <span className={`text-xs font-bold ${selectedStem.compression.enabled ? 'text-emerald-400' : 'text-slate-500'}`}>{t('compressor')}</span>
                              </div>
@@ -1048,11 +1038,10 @@ export default function StudioPage() {
                         <div className="flex-1 bg-[#1e2336] rounded-xl p-3 border border-white/5 shadow-lg min-w-0">
                             <div className="flex justify-between items-center mb-4">
                                 <div className="flex items-center gap-2 overflow-hidden">
-                                    <input
-                                        type="checkbox"
+                                    <Toggle
                                         checked={selectedStem.pan.enabled}
-                                        onChange={(e) => updateStem(selectedStemIndex, { pan: {...selectedStem.pan, enabled: e.target.checked}})}
-                                        className="shrink-0 rounded border-slate-600 bg-slate-800 text-blue-500 focus:ring-blue-500"
+                                        onChange={(v) => updateStem(selectedStemIndex, { pan: {...selectedStem.pan, enabled: v}})}
+                                        colorClass="bg-blue-500"
                                     />
                                     <span className={`text-xs font-bold truncate ${selectedStem.pan.enabled ? 'text-blue-400' : 'text-slate-500'}`}>{t('panning')}</span>
                                 </div>
@@ -1067,11 +1056,10 @@ export default function StudioPage() {
                         <div className="flex-1 bg-[#1e2336] rounded-xl p-3 border border-white/5 shadow-lg min-w-0">
                             <div className="flex justify-between items-center mb-4">
                                 <div className="flex items-center gap-2 overflow-hidden">
-                                    <input
-                                        type="checkbox"
+                                    <Toggle
                                         checked={selectedStem.reverb.enabled}
-                                        onChange={(e) => updateStem(selectedStemIndex, { reverb: {...selectedStem.reverb, enabled: e.target.checked}})}
-                                        className="shrink-0 rounded border-slate-600 bg-slate-800 text-purple-500 focus:ring-purple-500"
+                                        onChange={(v) => updateStem(selectedStemIndex, { reverb: {...selectedStem.reverb, enabled: v}})}
+                                        colorClass="bg-purple-500"
                                     />
                                     <span className={`text-xs font-bold truncate ${selectedStem.reverb.enabled ? 'text-purple-400' : 'text-slate-500'}`}>{t('reverb')}</span>
                                 </div>
@@ -1091,6 +1079,17 @@ export default function StudioPage() {
       <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
     </div>
   );
+}
+
+function Toggle({ checked, onChange, colorClass = "bg-emerald-500" }: { checked: boolean, onChange: (v: boolean) => void, colorClass?: string }) {
+    return (
+        <div
+            onClick={(e) => { e.stopPropagation(); onChange(!checked); }}
+            className={`w-10 h-5 rounded-full p-1 cursor-pointer transition-colors duration-200 ease-in-out flex items-center ${checked ? colorClass : 'bg-slate-700'}`}
+        >
+            <div className={`w-3 h-3 bg-white rounded-full shadow-sm transform transition-transform duration-200 ${checked ? 'translate-x-5' : 'translate-x-0'}`} />
+        </div>
+    );
 }
 
 function formatTime(s: number) {
