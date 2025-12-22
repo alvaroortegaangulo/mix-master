@@ -7,6 +7,7 @@ import { useAuth } from "../context/AuthContext";
 import { useModal } from "../context/ModalContext";
 import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
+import { ArrowRightIcon } from "@heroicons/react/20/solid";
 
 export function Header() {
   const pathname = usePathname();
@@ -75,12 +76,16 @@ export function Header() {
                    <div className="flex items-center gap-4">
                        {/* If we are NOT in the tool view, show Go to App */}
                        {!isMixTool && (
-                           <button
-                              onClick={handleGoToApp}
-                              className="text-sm font-semibold text-white hover:text-teal-400 transition"
-                           >
-                               {tNav('goToApp')}
-                           </button>
+                           <div className="relative group">
+                             <div className="absolute -inset-0.5 bg-gradient-to-r from-cyan-500 to-purple-600 rounded-full blur opacity-60 group-hover:opacity-100 transition duration-200"></div>
+                             <button
+                                onClick={handleGoToApp}
+                                className="relative flex items-center gap-2 px-4 py-2 bg-slate-950 text-white text-sm font-semibold rounded-full leading-none hover:bg-slate-900 transition-colors duration-200"
+                             >
+                                 {tNav('goToApp')}
+                                 <ArrowRightIcon className="w-4 h-4 text-white" />
+                             </button>
+                           </div>
                        )}
                        <Link href="/profile" className="flex h-9 w-9 items-center justify-center rounded-full bg-purple-600 font-bold text-white shadow-md ring-2 ring-slate-800/50 hover:ring-teal-500/50 transition">
                           {user.full_name ? user.full_name.charAt(0).toUpperCase() : user.email.charAt(0).toUpperCase()}
