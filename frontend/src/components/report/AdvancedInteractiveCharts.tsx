@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import {
   LineChart,
   Line,
@@ -78,6 +78,51 @@ const formatTime = (seconds: number) => {
   const s = Math.floor(seconds % 60);
   return `${m}:${s.toString().padStart(2, "0")}`;
 };
+
+// Simple Magma-like colormap (Black -> Purple -> Orange -> Yellow -> White)
+const getMagmaColor = (t: number): string => {
+  // t is 0..1
+  if (t < 0) t = 0;
+  if (t > 1) t = 1;
+
+  // Keypoints:
+  // 0.0: 0, 0, 0 (Black)
+  // 0.25: 64, 15, 80 (Deep Purple)
+  // 0.5: 180, 50, 60 (Reddish)
+  // 0.75: 250, 150, 40 (Orange)
+  // 1.0: 255, 255, 220 (White-ish Yellow)
+
+  let r, g, b;
+
+  if (t < 0.25) {
+      // 0.0 -> 0.25
+      const p = t / 0.25;
+      r = 64 * p;
+      g = 15 * p;
+      b = 80 * p;
+  } else if (t < 0.5) {
+      // 0.25 -> 0.5
+      const p = (t - 0.25) / 0.25;
+      r = 64 + (180 - 64) * p;
+      g = 15 + (50 - 15) * p;
+      b = 80 + (60 - 80) * p;
+  } else if (t < 0.75) {
+      // 0.5 -> 0.75
+      const p = (t - 0.5) / 0.25;
+      r = 180 + (250 - 180) * p;
+      g = 50 + (150 - 50) * p;
+      b = 60 + (40 - 60) * p;
+  } else {
+      // 0.75 -> 1.0
+      const p = (t - 0.75) / 0.25;
+      r = 250 + (255 - 250) * p;
+      g = 150 + (255 - 150) * p;
+      b = 40 + (220 - 40) * p;
+  }
+
+  return `rgb(${Math.floor(r)}, ${Math.floor(g)}, ${Math.floor(b)})`;
+};
+
 
 // --- Sub-Components ---
 
@@ -307,10 +352,6 @@ const StereoChart = ({
       width_high: data.width_high?.[i] ?? 0,
     }));
 
-    // Gradient for correlation: Blue above 0, Red below 0
-    // Domain [-1, 1], so 0 is at 50%
-    const gradientOffset = 0.5;
-
     return (
       <div className="w-full h-full relative">
           {expanded && (
@@ -354,8 +395,6 @@ const StereoChart = ({
             {expanded && <Legend />}
 
             <ReferenceLine y={0} stroke="#475569" strokeDasharray="3 3" />
-
-            {/* Highlight negative correlation areas - tricky with LineChart, better use gradient line color */}
 
             {original && (
                 <Line
@@ -405,16 +444,21 @@ const StereoChart = ({
     );
   };
 
-// 4. Spectrogram (Canvas)
+// 4. Spectrogram (Interactive)
 const SpectrogramCanvas = ({
     data,
+    duration,
     expanded
 }: {
     data: SpectrogramData;
+    duration: number;
     expanded?: boolean;
 }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
+    const [hoverInfo, setHoverInfo] = useState<{ x: number, y: number, time: number, freq: number, db: number } | null>(null);
 
+    // Draw the spectrogram
     useEffect(() => {
         const canvas = canvasRef.current;
         if (!canvas || !data || !data.data.length) return;
@@ -422,45 +466,133 @@ const SpectrogramCanvas = ({
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
 
+        // Resize canvas to match container explicitly for crisp rendering
+        // or rely on CSS. Let's use internal resolution.
+        const width = expanded ? 800 : 300;
+        const height = expanded ? 400 : 150;
+
+        // Ensure canvas element dimensions match
+        if (canvas.width !== width || canvas.height !== height) {
+             canvas.width = width;
+             canvas.height = height;
+        }
+
         const numTimeSteps = data.data.length;
         const numFreqBins = data.data[0].length;
+        const cellW = width / numTimeSteps;
+        const cellH = height / numFreqBins;
 
-        const w = canvas.width;
-        const h = canvas.height;
+        ctx.clearRect(0,0,width,height);
 
-        const cellW = w / numTimeSteps;
-        const cellH = h / numFreqBins;
-
-        ctx.clearRect(0,0,w,h);
-
-        // Find min/max for normalization (approx)
-        let minDb = -80;
-        let maxDb = 0;
+        // Find min/max for normalization approx
+        // We assume approx -80dB to 0dB range for display normalization
+        const minDb = -80;
+        const maxDb = 0;
 
         for (let i = 0; i < numTimeSteps; i++) {
             for (let j = 0; j < numFreqBins; j++) {
                 const val = data.data[i][j];
                 const norm = Math.max(0, Math.min(1, (val - minDb) / (maxDb - minDb)));
-                const hue = (1 - norm) * 240; // Blue to Red
-                ctx.fillStyle = `hsl(${hue}, 100%, 50%)`;
-                const y = h - (j + 1) * cellH;
-                ctx.fillRect(i * cellW, y, cellW + 1, cellH + 1);
+
+                ctx.fillStyle = getMagmaColor(norm);
+
+                // j=0 is lowest freq (bottom), j=max is highest.
+                // In canvas 0,0 is top-left.
+                // So lowest freq should be at h - cellH
+                const y = height - (j + 1) * cellH;
+                const x = i * cellW;
+
+                // Draw slightly larger to avoid gaps
+                ctx.fillRect(x, y, cellW + 0.5, cellH + 0.5);
             }
         }
 
     }, [data, expanded]);
 
+    // Handle Interaction
+    const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+        if (!containerRef.current || !data) return;
+        const rect = containerRef.current.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
+        const width = rect.width;
+        const height = rect.height;
+
+        // Normalize
+        const normX = Math.max(0, Math.min(1, x / width));
+        const normY = Math.max(0, Math.min(1, 1 - (y / height))); // Flip Y for frequency
+
+        // Find data indices
+        const numTimeSteps = data.data.length;
+        const numFreqBins = data.data[0].length;
+
+        const timeIndex = Math.floor(normX * numTimeSteps);
+        const freqIndex = Math.floor(normY * numFreqBins);
+
+        if (timeIndex >= 0 && timeIndex < numTimeSteps && freqIndex >= 0 && freqIndex < numFreqBins) {
+            const val = data.data[timeIndex][freqIndex];
+            const time = normX * duration;
+            // Map freq index to Hz (approx or use freqs array)
+            const freq = data.freqs[freqIndex] || 0;
+
+            setHoverInfo({ x, y, time, freq, db: val });
+        }
+    };
+
+    const handleMouseLeave = () => {
+        setHoverInfo(null);
+    };
+
     return (
-        <canvas
-            ref={canvasRef}
-            width={expanded ? 800 : 300}
-            height={expanded ? 400 : 150}
-            className="w-full h-full object-cover rounded bg-black"
-        />
+        <div
+            ref={containerRef}
+            className="relative w-full h-full cursor-crosshair group overflow-hidden"
+            onMouseMove={handleMouseMove}
+            onMouseLeave={handleMouseLeave}
+        >
+            <canvas
+                ref={canvasRef}
+                // Width/Height controlled by useEffect but set default here
+                width={expanded ? 800 : 300}
+                height={expanded ? 400 : 150}
+                className="w-full h-full object-cover bg-black"
+            />
+
+            {/* Overlay Axes Labels (Minimal) */}
+            <div className="absolute left-1 bottom-1 text-[10px] text-slate-400 bg-black/50 px-1 rounded pointer-events-none">
+                 Time
+            </div>
+            <div className="absolute left-1 top-1 text-[10px] text-slate-400 bg-black/50 px-1 rounded pointer-events-none">
+                 Freq
+            </div>
+
+            {/* Hover Tooltip & Crosshair */}
+            {hoverInfo && (
+                <>
+                    {/* Crosshair Lines */}
+                    <div className="absolute top-0 bottom-0 border-l border-white/50 pointer-events-none" style={{ left: hoverInfo.x }} />
+                    <div className="absolute left-0 right-0 border-t border-white/50 pointer-events-none" style={{ top: hoverInfo.y }} />
+
+                    {/* Tooltip */}
+                    <div
+                        className="absolute bg-slate-900/90 border border-slate-700 p-2 rounded shadow-lg text-xs text-white pointer-events-none z-10 whitespace-nowrap"
+                        style={{
+                            left: hoverInfo.x + 10 > containerRef.current!.offsetWidth - 100 ? hoverInfo.x - 110 : hoverInfo.x + 10,
+                            top: hoverInfo.y + 10 > containerRef.current!.offsetHeight - 60 ? hoverInfo.y - 70 : hoverInfo.y + 10
+                        }}
+                    >
+                        <div className="font-bold text-emerald-400">{formatTime(hoverInfo.time)}</div>
+                        <div>{hoverInfo.freq >= 1000 ? (hoverInfo.freq/1000).toFixed(1) + ' kHz' : hoverInfo.freq.toFixed(0) + ' Hz'}</div>
+                        <div className="text-slate-400">{hoverInfo.db.toFixed(1)} dB</div>
+                    </div>
+                </>
+            )}
+        </div>
     );
 }
 
-// 5. Vectorscope (Density Plot)
+// 5. Vectorscope (Interactive Density Plot)
 const VectorscopeChart = ({
     data,
     original,
@@ -471,7 +603,9 @@ const VectorscopeChart = ({
     expanded?: boolean;
 }) => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
     const [mode, setMode] = useState<'result' | 'original'>('result');
+    const [hoverInfo, setHoverInfo] = useState<{ x: number, y: number, L: number, R: number, density: number } | null>(null);
 
     const activeData = (mode === 'result' ? data : original) || data;
 
@@ -483,83 +617,171 @@ const VectorscopeChart = ({
         if (!ctx) return;
 
         const size = activeData.length; // 64
-        const w = canvas.width;
-        const h = canvas.height;
+        // Use higher res for drawing to look smooth
+        const w = expanded ? 400 : 200;
+        const h = expanded ? 400 : 200;
+
+        if (canvas.width !== w || canvas.height !== h) {
+            canvas.width = w;
+            canvas.height = h;
+        }
 
         ctx.clearRect(0, 0, w, h);
 
-        // Draw grid/background
+        // --- Draw Background Grid ---
+        const cx = w/2;
+        const cy = h/2;
+        const maxR = w/2 - 2;
+
         ctx.strokeStyle = '#334155';
         ctx.lineWidth = 1;
 
-        // M/S Diagonals
+        // Polar Circles
+        [0.25, 0.5, 0.75, 1.0].forEach(r => {
+            ctx.beginPath();
+            ctx.arc(cx, cy, maxR * r, 0, Math.PI * 2);
+            ctx.stroke();
+        });
+
+        // Diagonals (Mid/Side)
         ctx.beginPath();
         ctx.moveTo(0, h); ctx.lineTo(w, 0); // L=R (Mid)
+        ctx.strokeStyle = '#475569'; // Slightly brighter
+        ctx.stroke();
+
+        ctx.beginPath();
         ctx.moveTo(0, 0); ctx.lineTo(w, h); // L=-R (Side)
         ctx.stroke();
 
-        // Draw density
-        // activeData[y][x] where y is row (0..63), x is col (0..63)
-        // y=0 corresponds to R=-1 (bottom), y=63 to R=1 (top)
-        // x=0 corresponds to L=-1 (left), x=63 to L=1 (right)
+        // Axes
+        ctx.beginPath();
+        ctx.moveTo(cx, 0); ctx.lineTo(cx, h); // Vertical
+        ctx.moveTo(0, cy); ctx.lineTo(w, cy); // Horizontal
+        ctx.strokeStyle = '#1e293b';
+        ctx.stroke();
 
+        // --- Draw Density Map ---
         const cellW = w / size;
         const cellH = h / size;
 
         for (let y = 0; y < size; y++) {
             for (let x = 0; x < size; x++) {
                 const val = activeData[y][x]; // Normalized 0-1
-                if (val < 0.01) continue;
+                if (val < 0.001) continue;
 
-                // Heatmap color: Green-ish for result
-                // Opacity based on density
-                const alpha = Math.min(1, val * 2); // Boost visibility
-                const intensity = Math.floor(val * 255);
+                // Use Magma Color Map
+                // Boost low values for visibility
+                const boost = Math.pow(val, 0.5);
+                ctx.fillStyle = getMagmaColor(boost);
 
-                // Use Emerald for result, Slate/White for generic
-                // Or standard Green scope
-                ctx.fillStyle = `rgba(16, 185, 129, ${alpha})`;
+                // y index 0 is R=-1 (bottom), y=63 is R=1 (top)
+                // canvas 0 is top.
+                const drawY = h - (y + 1) * cellH;
+                const drawX = x * cellW;
 
-                // Draw rect. Y needs flip if canvas 0 is top
-                // y index 0 is bottom (-1).
-                // So canvas y = h - (y+1)*cellH
-                const cy = h - (y + 1) * cellH;
-                const cx = x * cellW;
-
-                // Slightly larger to fill gaps
-                ctx.fillRect(cx, cy, cellW + 0.5, cellH + 0.5);
+                // Slightly overlap to avoid grid lines
+                ctx.fillRect(drawX, drawY, cellW + 0.5, cellH + 0.5);
             }
         }
 
+        // Clip circle overlay (make corners black/transparent to simulate circular scope)
+        // optional, but looks pro. Let's just draw a border.
+        ctx.strokeStyle = '#64748b';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(cx, cy, maxR, 0, Math.PI * 2);
+        ctx.stroke();
+
     }, [activeData, expanded, mode]);
+
+    const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+        if (!containerRef.current) return;
+        const rect = containerRef.current.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+
+        // Coordinates -1 to 1
+        // x=0 -> L=-1, x=w -> L=1
+        // y=0 -> R=1, y=h -> R=-1 (Note: Y is inverted in canvas vs plot)
+
+        const w = rect.width;
+        const h = rect.height;
+
+        const L = (mouseX / w) * 2 - 1;
+        const R = ((h - mouseY) / h) * 2 - 1;
+
+        // Lookup density
+        // Map L,R back to 0..63 indices
+        const size = activeData.length;
+        // L = (idx / size)*2 - 1  => idx = (L+1)/2 * size
+        const idxX = Math.floor((L + 1) / 2 * size);
+        const idxY = Math.floor((R + 1) / 2 * size);
+
+        let density = 0;
+        if (idxX >= 0 && idxX < size && idxY >= 0 && idxY < size) {
+             density = activeData[idxY][idxX];
+        }
+
+        setHoverInfo({ x: mouseX, y: mouseY, L, R, density });
+    };
 
     return (
         <div className="w-full h-full flex flex-col items-center justify-center relative">
-            <canvas
-                ref={canvasRef}
-                width={expanded ? 400 : 200}
-                height={expanded ? 400 : 200}
-                className="bg-slate-950 rounded-full border border-slate-800"
-                style={{ aspectRatio: '1/1' }}
-            />
+            <div
+                ref={containerRef}
+                className="relative cursor-crosshair group rounded-full overflow-hidden shadow-2xl bg-black border border-slate-800"
+                style={{ width: expanded ? 400 : 200, height: expanded ? 400 : 200 }}
+                onMouseMove={handleMouseMove}
+                onMouseLeave={() => setHoverInfo(null)}
+            >
+                <canvas
+                    ref={canvasRef}
+                    className="w-full h-full"
+                />
+
+                {/* Crosshair */}
+                {hoverInfo && (
+                    <>
+                         <div className="absolute top-0 bottom-0 border-l border-white/30 pointer-events-none" style={{ left: hoverInfo.x }} />
+                         <div className="absolute left-0 right-0 border-t border-white/30 pointer-events-none" style={{ top: hoverInfo.y }} />
+
+                         {/* Tooltip (Fixed position or floating) */}
+                         <div className="absolute top-2 left-2 bg-black/80 text-[10px] text-white p-1 rounded border border-slate-700 pointer-events-none">
+                            <div>L: {hoverInfo.L.toFixed(2)}</div>
+                            <div>R: {hoverInfo.R.toFixed(2)}</div>
+                            {/* Calculate M/S roughly */}
+                            <div className="text-slate-400 mt-1">
+                                M: {((hoverInfo.L + hoverInfo.R)/2).toFixed(2)}
+                            </div>
+                            <div className="text-slate-400">
+                                S: {((hoverInfo.L - hoverInfo.R)/2).toFixed(2)}
+                            </div>
+                         </div>
+                    </>
+                )}
+            </div>
+
             {expanded && original && (
-                <div className="absolute top-4 right-4 flex space-x-2">
+                <div className="absolute top-4 right-4 flex space-x-2 z-10">
                      <button
                         onClick={() => setMode('result')}
-                        className={`px-2 py-1 text-xs rounded ${mode==='result' ? 'bg-emerald-600 text-white' : 'bg-slate-800 text-slate-400'}`}
+                        className={`px-2 py-1 text-xs rounded border border-transparent ${mode==='result' ? 'bg-emerald-600 text-white shadow' : 'bg-slate-800 text-slate-400 hover:border-slate-600'}`}
                      >
                         Result
                      </button>
                      <button
                         onClick={() => setMode('original')}
-                        className={`px-2 py-1 text-xs rounded ${mode==='original' ? 'bg-slate-600 text-white' : 'bg-slate-800 text-slate-400'}`}
+                        className={`px-2 py-1 text-xs rounded border border-transparent ${mode==='original' ? 'bg-slate-600 text-white shadow' : 'bg-slate-800 text-slate-400 hover:border-slate-600'}`}
                      >
                         Original
                      </button>
                 </div>
             )}
-            <div className="absolute bottom-2 text-[10px] text-slate-500 font-mono">
-                L &lt;-- Stereo Image --&gt; R
+
+            <div className="absolute bottom-1 w-full flex justify-between px-8 text-[10px] text-slate-500 font-mono pointer-events-none">
+                <span>-S</span>
+                <span>M</span>
+                <span>+S</span>
             </div>
         </div>
     );
@@ -653,6 +875,12 @@ export const AdvancedInteractiveCharts: React.FC<AdvancedChartsProps> = ({
 
   if (!result) return null;
 
+  // Determine total duration for Spectrogram X-Axis mapping
+  // Use Loudness time axis as reference
+  const duration = result.loudness?.time?.length
+    ? result.loudness.time[result.loudness.time.length - 1]
+    : 100; // default fallback
+
   const charts = [
     {
       id: "loudness",
@@ -685,8 +913,8 @@ export const AdvancedInteractiveCharts: React.FC<AdvancedChartsProps> = ({
     {
         id: "spectrogram",
         title: "Spectrogram",
-        component: <SpectrogramCanvas data={result.spectrogram!} />,
-        expandedComponent: <SpectrogramCanvas data={result.spectrogram!} expanded />,
+        component: <SpectrogramCanvas data={result.spectrogram!} duration={duration} />,
+        expandedComponent: <SpectrogramCanvas data={result.spectrogram!} duration={duration} expanded />,
         hasData: !!result.spectrogram
     },
     {
@@ -719,7 +947,7 @@ export const AdvancedInteractiveCharts: React.FC<AdvancedChartsProps> = ({
         onClose={() => setModalChart(null)}
         title={activeModal?.title || ""}
       >
-        <div className="w-full h-full p-4 bg-slate-900">
+        <div className="w-full h-full p-4 bg-slate-900 flex items-center justify-center">
            {activeModal?.expandedComponent}
         </div>
       </Modal>
