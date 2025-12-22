@@ -1,12 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import {
-  ArrowUpTrayIcon,
-  CpuChipIcon,
-  AdjustmentsHorizontalIcon,
-  RocketLaunchIcon,
-} from "@heroicons/react/24/outline";
 import { LazyVideo } from "../LazyVideo";
 import { useTranslations } from "next-intl";
 
@@ -19,32 +13,24 @@ export function FeaturesSection({ className }: { className?: string }) {
       id: 0,
       title: t('steps.0.title'),
       description: t('steps.0.description'),
-      icon: ArrowUpTrayIcon,
-      colorClass: "text-cyan-400",
       videoUrl: "/intelligent_analysis.webm",
     },
     {
       id: 1,
       title: t('steps.1.title'),
       description: t('steps.1.description'),
-      icon: CpuChipIcon,
-      colorClass: "text-purple-400",
       videoUrl: "/precision_mixing.webm",
     },
     {
       id: 2,
       title: t('steps.2.title'),
       description: t('steps.2.description'),
-      icon: AdjustmentsHorizontalIcon,
-      colorClass: "text-pink-400",
       videoUrl: "/creative_control.webm",
     },
     {
       id: 3,
       title: t('steps.3.title'),
       description: t('steps.3.description'),
-      icon: RocketLaunchIcon,
-      colorClass: "text-amber-400",
       videoUrl: "/mastering_grade_polish.webm",
     },
   ];
@@ -96,8 +82,7 @@ export function FeaturesSection({ className }: { className?: string }) {
               <div className="absolute inset-0 flex flex-col items-center justify-center p-8 md:p-12 text-center z-20">
                 {/* Top: Title */}
                 <div className="mb-auto mt-8 md:mt-12 animate-in fade-in slide-in-from-top-4 duration-700 delay-300 fill-mode-both">
-                   <div className={`flex items-center justify-center gap-3 mb-4 ${feature.colorClass}`}>
-                      <feature.icon className="w-8 h-8 md:w-10 md:h-10" />
+                   <div className="mb-4">
                       <h3 className="text-3xl md:text-4xl font-bold text-white tracking-tight">
                         {feature.title}
                       </h3>
