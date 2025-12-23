@@ -14,8 +14,10 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
           src="/background_hero.webp"
           alt="Hero Background"
           fill
+          sizes="100vw"
           className="object-cover opacity-20"
-          priority
+          quality={60}
+          loading="lazy"
         />
       </div>
 
@@ -39,6 +41,7 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
             alt="Piroola logo"
             width={96}
             height={96}
+            sizes="96px"
             className="h-24 w-24"
             priority
           />

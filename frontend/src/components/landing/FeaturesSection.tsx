@@ -14,24 +14,28 @@ export function FeaturesSection({ className }: { className?: string }) {
       title: t('steps.0.title'),
       description: t('steps.0.description'),
       videoUrl: "/intelligent_analysis.webm",
+      poster: "/analysis.webp",
     },
     {
       id: 1,
       title: t('steps.1.title'),
       description: t('steps.1.description'),
       videoUrl: "/precision_mixing.webm",
+      poster: "/processing.webp",
     },
     {
       id: 2,
       title: t('steps.2.title'),
       description: t('steps.2.description'),
       videoUrl: "/creative_control.webm",
+      poster: "/space_depth.webp",
     },
     {
       id: 3,
       title: t('steps.3.title'),
       description: t('steps.3.description'),
       videoUrl: "/mastering_grade_polish.webm",
+      poster: "/mastering.webp",
     },
   ];
 
@@ -71,6 +75,7 @@ export function FeaturesSection({ className }: { className?: string }) {
               <div className="absolute inset-0">
                 <LazyVideo
                   src={feature.videoUrl}
+                  poster={feature.poster}
                   className="w-full h-full object-cover opacity-60"
                   isActive={activeStep === idx}
                 />

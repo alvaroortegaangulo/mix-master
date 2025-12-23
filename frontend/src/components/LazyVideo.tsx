@@ -40,7 +40,7 @@ export function LazyVideo({
           }
         });
       },
-      { threshold: 0.25 }
+      { threshold: 0.25, rootMargin: "200px" }
     );
 
     observer.observe(element);
@@ -94,12 +94,16 @@ export function LazyVideo({
     }
   }, [src, shouldLoad]);
 
+  const hasPoster = Boolean(poster);
+  const isVisible = shouldLoad && (isReady || hasPoster);
+  const resolvedPoster = shouldLoad ? poster : undefined;
+
   return (
     <video
       ref={videoRef}
-      className={`transition-opacity duration-500 ease-out ${isReady ? "opacity-100" : "opacity-0"} ${className}`}
+      className={`transition-opacity duration-500 ease-out ${isVisible ? "opacity-100" : "opacity-0"} ${className}`}
       src={shouldLoad ? src : undefined}
-      poster={poster}
+      poster={resolvedPoster}
       loop={loop}
       muted={muted}
       playsInline={playsInline}
