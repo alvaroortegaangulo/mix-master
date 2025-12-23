@@ -221,6 +221,8 @@ export function MixTool({ resumeJobId }: MixToolProps) {
   );
   const pipelineRef = useRef<HTMLDivElement | null>(null);
 
+  const t = useTranslations('MixTool');
+
   const songModeStageKeys = useMemo(
     () => getSongModeStages(availableStages),
     [availableStages],
@@ -236,8 +238,6 @@ export function MixTool({ resumeJobId }: MixToolProps) {
       })),
     [t],
   );
-
-  const t = useTranslations('MixTool');
   // Use router from next-intl/routing to ensure locale preservation
   const { useRouter } = require("@/i18n/routing");
   const router = useRouter();
