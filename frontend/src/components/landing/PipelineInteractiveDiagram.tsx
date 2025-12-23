@@ -11,9 +11,9 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
     {
       title: t('steps.0.title'),
       icon: "/icon_analysis.webp",
-      colorClass: "text-cyan-400",
-      bgClass: "bg-cyan-900/30",
-      borderClass: "border-cyan-800",
+      colorClass: "text-teal-400",
+      bgClass: "bg-teal-900/30",
+      borderClass: "border-teal-800",
       shortDesc: t('steps.0.shortDesc'),
       desc: t('steps.0.desc'),
       tools: [t('steps.0.tools.0'), t('steps.0.tools.1'), t('steps.0.tools.2')],
@@ -23,9 +23,9 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
     {
       title: t('steps.1.title'),
       icon: "/icon_correction.webp",
-      colorClass: "text-purple-400",
-      bgClass: "bg-purple-900/30",
-      borderClass: "border-purple-800",
+      colorClass: "text-violet-400",
+      bgClass: "bg-violet-900/30",
+      borderClass: "border-violet-800",
       shortDesc: t('steps.1.shortDesc'),
       desc: t('steps.1.desc'),
       tools: [t('steps.1.tools.0'), t('steps.1.tools.1'), t('steps.1.tools.2')],
@@ -35,9 +35,9 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
     {
       title: t('steps.2.title'),
       icon: "/icon_dynamics.webp",
-      colorClass: "text-orange-400",
-      bgClass: "bg-orange-900/30",
-      borderClass: "border-orange-800",
+      colorClass: "text-teal-400",
+      bgClass: "bg-teal-900/30",
+      borderClass: "border-teal-800",
       shortDesc: t('steps.2.shortDesc'),
       desc: t('steps.2.desc'),
       tools: [t('steps.2.tools.0'), t('steps.2.tools.1'), t('steps.2.tools.2'), t('steps.2.tools.3')],
@@ -47,9 +47,9 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
     {
       title: t('steps.3.title'),
       icon: "/icon_spatial.webp",
-      colorClass: "text-pink-400",
-      bgClass: "bg-pink-900/30",
-      borderClass: "border-pink-800",
+      colorClass: "text-violet-400",
+      bgClass: "bg-violet-900/30",
+      borderClass: "border-violet-800",
       shortDesc: t('steps.3.shortDesc'),
       desc: t('steps.3.desc'),
       tools: [t('steps.3.tools.0'), t('steps.3.tools.1'), t('steps.3.tools.2'), t('steps.3.tools.3')],
@@ -59,9 +59,9 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
     {
       title: t('steps.4.title'),
       icon: "/icon_mastering.webp",
-      colorClass: "text-yellow-400",
-      bgClass: "bg-yellow-900/30",
-      borderClass: "border-yellow-800",
+      colorClass: "text-teal-400",
+      bgClass: "bg-teal-900/30",
+      borderClass: "border-teal-800",
       shortDesc: t('steps.4.shortDesc'),
       desc: t('steps.4.desc'),
       tools: [t('steps.4.tools.0'), t('steps.4.tools.1'), t('steps.4.tools.2'), t('steps.4.tools.3')],
@@ -87,10 +87,10 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
     <div className="w-full max-w-7xl mx-auto px-4 md:px-8 relative z-10">
       {/* Header */}
       <header className="text-center mx-auto mb-16 relative z-10 max-w-4xl">
-        <div className="inline-block mb-4 px-4 py-1.5 rounded-full border border-cyan-500/30 bg-cyan-500/10 text-cyan-300 text-xs font-semibold tracking-wider uppercase">
+        <div className="inline-block mb-4 px-4 py-1.5 rounded-full border border-teal-500/30 bg-teal-500/10 text-teal-300 text-xs font-semibold tracking-wider uppercase">
           {t('label')}
         </div>
-        <h2 className="text-4xl md:text-6xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-white via-cyan-200 to-indigo-200 drop-shadow-lg">
+        <h2 className="text-4xl md:text-6xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-white via-teal-200 to-violet-200 drop-shadow-lg">
           {t('title')}
         </h2>
         <p className="text-slate-300 text-lg max-w-2xl mx-auto">
@@ -117,8 +117,8 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
                 <div
                   className={`step-card cursor-pointer rounded-2xl p-3 h-full flex flex-col transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] backdrop-blur-xl border border-white/10
                     ${isActive
-                      ? 'border-cyan-400 bg-slate-800/70 shadow-[0_0_30px_rgba(34,211,238,0.15)] opacity-100 scale-105 -translate-y-2'
-                      : 'bg-slate-800/40 opacity-70 group-hover:-translate-y-2 group-hover:scale-105 group-hover:border-indigo-500/50 group-hover:shadow-xl'
+                      ? 'border-teal-400 bg-slate-800/70 shadow-[0_0_30px_rgba(45,212,191,0.15)] opacity-100 scale-105 -translate-y-2'
+                      : 'bg-slate-800/40 opacity-70 group-hover:-translate-y-2 group-hover:scale-105 group-hover:border-violet-500/50 group-hover:shadow-xl'
                     }`}
                 >
                   <div className="relative h-40 w-full overflow-hidden rounded-xl mb-4">
@@ -136,7 +136,7 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
                       />
                     </div>
                   </div>
-                  <h3 className={`text-xl font-bold text-white mb-1 transition-colors ${isActive ? step.colorClass : 'group-hover:text-indigo-300'}`}>
+                  <h3 className={`text-xl font-bold text-white mb-1 transition-colors ${isActive ? step.colorClass : 'group-hover:text-violet-300'}`}>
                     {index + 1}. {step.title}
                   </h3>
                   <p className="text-sm text-slate-300 line-clamp-2">
@@ -159,8 +159,8 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
                   `}>
                     <div className="relative bg-slate-900/95 border border-slate-700/50 rounded-2xl p-6 shadow-2xl backdrop-blur-xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
                       {/* Decorative Background Elements */}
-                      <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/10 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
-                      <div className="absolute bottom-0 left-0 w-32 h-32 bg-indigo-500/10 rounded-full blur-2xl -ml-10 -mb-10 pointer-events-none"></div>
+                      <div className="absolute top-0 right-0 w-32 h-32 bg-teal-500/10 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
+                      <div className="absolute bottom-0 left-0 w-32 h-32 bg-violet-500/10 rounded-full blur-2xl -ml-10 -mb-10 pointer-events-none"></div>
 
                       <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-6">
                         {/* Text Info */}

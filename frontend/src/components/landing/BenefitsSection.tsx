@@ -53,14 +53,14 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
                </div>
             </div>
             <div className="flex-1 order-1 lg:order-2">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 text-xs font-semibold tracking-wider mb-6">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-500/10 border border-teal-500/20 text-teal-400 text-xs font-semibold tracking-wider mb-6">
                  <BoltIcon className="w-4 h-4" aria-hidden="true" />
                  {t('efficiencyBadge')}
               </div>
 
               <h2 className="text-4xl sm:text-5xl font-bold text-white mb-6 leading-[1.05] tracking-[-0.02em]">
                 {t.rich('speedTitle', {
-                  highlight: (chunks) => <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">{chunks}</span>
+                  highlight: (chunks) => <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-violet-500">{chunks}</span>
                 })}
               </h2>
               <p className="text-lg text-slate-300 mb-8 leading-[1.7]">
@@ -68,15 +68,15 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
               </p>
               <ul className="space-y-4 text-slate-300">
                 <li className="flex items-center gap-3">
-                  <span className="h-2 w-2 rounded-full bg-cyan-500 shadow-[0_0_10px_rgba(6,182,212,0.5)]" />
+                  <span className="h-2 w-2 rounded-full bg-teal-500 shadow-[0_0_10px_rgba(20,184,166,0.5)]" />
                   {t('speedPoints.0')}
                 </li>
                 <li className="flex items-center gap-3">
-                  <span className="h-2 w-2 rounded-full bg-cyan-500 shadow-[0_0_10px_rgba(6,182,212,0.5)]" />
+                  <span className="h-2 w-2 rounded-full bg-teal-500 shadow-[0_0_10px_rgba(20,184,166,0.5)]" />
                   {t('speedPoints.1')}
                 </li>
                 <li className="flex items-center gap-3">
-                  <span className="h-2 w-2 rounded-full bg-cyan-500 shadow-[0_0_10px_rgba(6,182,212,0.5)]" />
+                  <span className="h-2 w-2 rounded-full bg-teal-500 shadow-[0_0_10px_rgba(20,184,166,0.5)]" />
                   {t('speedPoints.2')}
                 </li>
               </ul>
@@ -86,14 +86,14 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
           {/* Benefit 2: Quality */}
           <div className="flex flex-col lg:flex-row items-center gap-16">
             <div className="flex-1">
-               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-500/10 border border-purple-500/20 text-purple-400 text-xs font-semibold tracking-wider mb-6">
+               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-violet-500/10 border border-violet-500/20 text-violet-400 text-xs font-semibold tracking-wider mb-6">
                  <StarIcon className="w-4 h-4" aria-hidden="true" />
                  {t('qualityBadge')}
               </div>
 
               <h2 className="text-4xl sm:text-5xl font-bold text-white mb-6 leading-[1.05] tracking-[-0.02em]">
                  {t.rich('qualityTitle', {
-                    highlight: (chunks) => <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500">{chunks}</span>
+                    highlight: (chunks) => <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-violet-500">{chunks}</span>
                   })}
               </h2>
               <p className="text-lg text-slate-300 mb-8 leading-[1.7]">
@@ -122,7 +122,7 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
             </div>
             <div className="flex-1">
                {/* Image Placeholder */}
-               <div className="w-full aspect-video rounded-2xl bg-gradient-to-br from-purple-900/20 to-slate-900 border border-slate-700 flex items-center justify-center relative shadow-2xl overflow-hidden">
+               <div className="w-full aspect-video rounded-2xl bg-gradient-to-br from-violet-900/20 to-slate-900 border border-slate-700 flex items-center justify-center relative shadow-2xl overflow-hidden">
                   <LazyVideo
                     src="/spectral_analysis.webm"
                     poster="/analysis.webp"

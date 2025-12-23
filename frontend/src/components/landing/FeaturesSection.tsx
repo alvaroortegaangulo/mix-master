@@ -51,7 +51,7 @@ export function FeaturesSection({ className }: { className?: string }) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="text-center mb-12">
-          <div className="inline-block px-3 py-1 mb-6 text-xs font-semibold tracking-wider text-cyan-400 uppercase rounded-full bg-cyan-950/50 border border-cyan-800/50">
+          <div className="inline-block px-3 py-1 mb-6 text-xs font-semibold tracking-wider text-teal-400 uppercase rounded-full bg-teal-950/50 border border-teal-800/50">
             {t('workflow')}
           </div>
           <h2 className="text-4xl md:text-5xl font-bold tracking-[-0.02em] leading-[1.05] text-white mb-6" dangerouslySetInnerHTML={{ __html: t.raw('title') }} />
@@ -115,7 +115,7 @@ export function FeaturesSection({ className }: { className?: string }) {
                 onClick={() => setActiveStep(idx)}
                 className={`h-2.5 rounded-full transition-all duration-300 ${
                   activeStep === idx
-                    ? "w-8 bg-cyan-400"
+                    ? "w-8 bg-teal-400"
                     : "w-2.5 bg-slate-600 hover:bg-slate-500"
                 }`}
                 aria-label={`Go to slide ${idx + 1}`}

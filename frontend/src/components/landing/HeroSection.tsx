@@ -25,7 +25,7 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
       {/* Background gradients/blobs */}
       <div className="absolute top-0 left-0 h-full w-full overflow-hidden pointer-events-none z-0">
         <div className="absolute -top-[20%] -left-[10%] h-[50%] w-[50%] rounded-full bg-teal-500/10 blur-[120px]" />
-        <div className="absolute top-[40%] -right-[10%] h-[60%] w-[60%] rounded-full bg-purple-600/10 blur-[120px]" />
+        <div className="absolute top-[40%] -right-[10%] h-[60%] w-[60%] rounded-full bg-violet-600/10 blur-[120px]" />
       </div>
 
       <div className="relative z-10 max-w-5xl space-y-8 flex flex-col items-center">
@@ -53,7 +53,7 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
           <span className="text-white leading-[0.95]">
             {t('studioSound')}
           </span>
-          <span className="bg-gradient-to-r from-teal-400 to-purple-500 bg-clip-text text-transparent leading-[0.95]">
+          <span className="bg-gradient-to-r from-teal-400 to-violet-500 bg-clip-text text-transparent leading-[0.95]">
             {t('perfectedByAI')}
           </span>
         </h1>
@@ -87,7 +87,7 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
           {/* Button 2: Escuchar Demos */}
           <Link
              href="/examples"
-             className="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-full bg-slate-800/80 px-8 py-4 text-lg font-semibold text-white transition-all hover:bg-slate-700 hover:scale-105 focus:outline-none focus:ring-4 focus:ring-purple-500/30 border border-slate-700"
+             className="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-full bg-slate-800/80 px-8 py-4 text-lg font-semibold text-white transition-all hover:bg-slate-700 hover:scale-105 focus:outline-none focus:ring-4 focus:ring-violet-500/30 border border-slate-700"
           >
             <PlayCircleIcon className="h-6 w-6 text-white" aria-hidden="true" />
             <span>{t('listenToDemos')}</span>
@@ -96,7 +96,7 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
 
         {/* Rating Section */}
         <div className="flex items-center gap-2 text-sm font-medium text-slate-300 mt-2 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-300 fill-mode-backwards">
-            <div className="flex items-center gap-1 text-yellow-400">
+            <div className="flex items-center gap-1 text-teal-300">
                 <StarIcon className="h-5 w-5" aria-hidden="true" />
                 <span>{t('rating')}</span>
             </div>

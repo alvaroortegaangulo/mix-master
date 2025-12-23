@@ -66,8 +66,8 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
     <section className={`py-12 md:py-24 border-t border-slate-900 relative overflow-hidden ${className || 'bg-slate-950'}`}>
         {/* Background Gradients */}
         <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-            <div className="absolute top-1/4 -left-64 w-96 h-96 bg-cyan-900/10 rounded-full blur-3xl"></div>
-            <div className="absolute bottom-1/4 -right-64 w-96 h-96 bg-purple-900/10 rounded-full blur-3xl"></div>
+            <div className="absolute top-1/4 -left-64 w-96 h-96 bg-teal-900/10 rounded-full blur-3xl"></div>
+            <div className="absolute bottom-1/4 -right-64 w-96 h-96 bg-violet-900/10 rounded-full blur-3xl"></div>
         </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
@@ -196,8 +196,8 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
 
                      {/* Visual representation of Stereo Field (Circle) */}
                      <div className="h-12 w-12 rounded-full border border-slate-700 bg-slate-950 relative flex items-center justify-center overflow-hidden">
-                        <div className="absolute inset-0 bg-purple-500/20 animate-pulse rounded-full transform scale-75"></div>
-                        <div className="w-8 h-4 border border-purple-400/50 rounded-[100%] transform -rotate-12 opacity-80"></div>
+                        <div className="absolute inset-0 bg-violet-500/20 animate-pulse rounded-full transform scale-75"></div>
+                        <div className="w-8 h-4 border border-violet-400/50 rounded-[100%] transform -rotate-12 opacity-80"></div>
                         <div className="w-8 h-4 border border-teal-400/50 rounded-[100%] absolute transform rotate-12 opacity-80"></div>
                      </div>
                  </div>
@@ -216,10 +216,10 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
 
                  {/* Mini Histogram */}
                  <div className="flex items-end gap-1 h-10">
-                    <div className="w-2 bg-purple-900/40 h-4 rounded-sm"></div>
-                    <div className="w-2 bg-purple-800/60 h-6 rounded-sm"></div>
-                    <div className="w-2 bg-purple-500 h-10 rounded-sm shadow-[0_0_10px_rgba(168,85,247,0.4)]"></div>
-                    <div className="w-2 bg-purple-800/60 h-7 rounded-sm"></div>
+                    <div className="w-2 bg-violet-900/40 h-4 rounded-sm"></div>
+                    <div className="w-2 bg-violet-800/60 h-6 rounded-sm"></div>
+                    <div className="w-2 bg-violet-500 h-10 rounded-sm shadow-[0_0_10px_rgba(139,92,246,0.4)]"></div>
+                    <div className="w-2 bg-violet-800/60 h-7 rounded-sm"></div>
                  </div>
              </div>
 
