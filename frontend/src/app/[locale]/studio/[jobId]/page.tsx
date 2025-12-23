@@ -762,8 +762,8 @@ export default function StudioPage() {
 
   if (loadingStems) {
       return (
-        <div className="h-screen bg-[#0f111a] flex flex-col items-center justify-center text-emerald-500 font-mono gap-3">
-            <div className="h-10 w-10 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+        <div className="h-screen bg-[#0f111a] flex flex-col items-center justify-center text-teal-500 font-mono gap-3">
+            <div className="h-10 w-10 border-2 border-teal-500 border-t-transparent rounded-full animate-spin" />
             <div>{t('loading')}</div>
             <div className="text-xs text-slate-500">{t('loadingStems')}</div>
         </div>
@@ -771,11 +771,11 @@ export default function StudioPage() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-[#0f111a] text-slate-300 font-sans overflow-hidden selection:bg-emerald-500/30">
+    <div className="flex flex-col h-screen bg-[#0f111a] text-slate-300 font-sans overflow-hidden selection:bg-teal-500/30">
 
       <header className="h-14 bg-[#1e293b]/50 border-b border-white/5 flex items-center justify-between px-4 shrink-0 backdrop-blur-md">
          <div className="flex items-center gap-6">
-             <div className="flex items-center gap-2 text-emerald-400 font-bold tracking-wider">
+             <div className="flex items-center gap-2 text-teal-400 font-bold tracking-wider">
                  <AdjustmentsHorizontalIcon className="w-5 h-5" />
                  <span>{t('title')}</span>
              </div>
@@ -790,14 +790,14 @@ export default function StudioPage() {
                  <button onClick={downloadStems} disabled={downloadingStems} className="px-3 py-1.5 text-xs font-medium text-slate-400 hover:text-white border border-white/10 rounded hover:bg-white/5 transition-colors flex items-center gap-2">
                      <ArrowDownTrayIcon className="w-3 h-3" /> {t('stemsZip')}
                  </button>
-                 {downloadingStems && <span className="text-[10px] text-emerald-500 animate-pulse mt-1">{t('downloading')}</span>}
+                 {downloadingStems && <span className="text-[10px] text-teal-500 animate-pulse mt-1">{t('downloading')}</span>}
              </div>
 
              <div className="flex flex-col items-end">
                  <button onClick={downloadMixdown} disabled={downloadingMixdown} className="px-3 py-1.5 text-xs font-medium text-slate-400 hover:text-white border border-white/10 rounded hover:bg-white/5 transition-colors flex items-center gap-2">
                      <ArrowDownTrayIcon className="w-3 h-3" /> {t('mixdown')}
                  </button>
-                 {downloadingMixdown && <span className="text-[10px] text-emerald-500 animate-pulse mt-1">{t('downloading')}</span>}
+                 {downloadingMixdown && <span className="text-[10px] text-teal-500 animate-pulse mt-1">{t('downloading')}</span>}
              </div>
 
              <div className="h-6 w-px bg-white/10 mx-2"></div>
@@ -813,7 +813,7 @@ export default function StudioPage() {
              <button
                 onClick={() => handleApplyCorrection(true)}
                 disabled={rendering}
-                className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded shadow-lg shadow-emerald-900/20 transition-all flex items-center gap-2"
+                className="px-4 py-1.5 bg-teal-600 hover:bg-teal-500 text-white text-xs font-bold rounded shadow-lg shadow-teal-900/20 transition-all flex items-center gap-2"
              >
                 {rendering ? <ArrowPathIcon className="w-3 h-3 animate-spin" /> : <CheckIcon className="w-3 h-3" />}
                 {t('proceedMastering')}
@@ -834,13 +834,13 @@ export default function StudioPage() {
                         onClick={() => setSelectedStemIndex(i)}
                         className={`p-3 rounded-lg border transition-all cursor-pointer group ${
                             selectedStemIndex === i
-                            ? 'bg-slate-800/80 border-emerald-500/30 shadow-lg shadow-emerald-900/10'
+                            ? 'bg-slate-800/80 border-teal-500/30 shadow-lg shadow-teal-900/10'
                             : 'bg-[#161b2e] border-transparent hover:bg-slate-800 hover:border-slate-700'
                         }`}
                      >
                          <div className="flex items-center justify-between mb-2">
                              <div className="flex items-center gap-2">
-                                 <div className={`w-2 h-2 rounded-full ${selectedStemIndex === i ? 'bg-emerald-400' : 'bg-slate-600'}`}></div>
+                                 <div className={`w-2 h-2 rounded-full ${selectedStemIndex === i ? 'bg-teal-400' : 'bg-slate-600'}`}></div>
                                  <span className={`text-sm font-medium truncate max-w-[120px] ${selectedStemIndex === i ? 'text-white' : 'text-slate-400 group-hover:text-slate-300'}`}>
                                      {stem.name}
                                  </span>
@@ -863,7 +863,7 @@ export default function StudioPage() {
                                 value={stem.volume}
                                 onClick={(e) => e.stopPropagation()}
                                 onChange={(e) => updateStem(i, { volume: parseFloat(e.target.value) })}
-                                className="w-full h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-emerald-500"
+                                className="w-full h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-teal-500"
                              />
                          </div>
                      </div>
@@ -881,13 +881,13 @@ export default function StudioPage() {
                              <span>{(masterVolume * 20 - 20).toFixed(1)} dB</span>
                          </div>
                          <div className="h-2 bg-slate-800 rounded-full overflow-hidden relative">
-                             <div className="absolute top-0 left-0 bottom-0 bg-gradient-to-r from-emerald-600 to-emerald-400" style={{ width: `${masterVolume * 100}%` }}></div>
+                             <div className="absolute top-0 left-0 bottom-0 bg-gradient-to-r from-teal-600 to-teal-400" style={{ width: `${masterVolume * 100}%` }}></div>
                          </div>
                      </div>
 
                      <div className="flex flex-col items-center gap-2">
                         {/* Time Display added to controls */}
-                        <div className="text-[10px] font-mono text-emerald-500 mb-1">
+                        <div className="text-[10px] font-mono text-teal-500 mb-1">
                              {formatTime(currentTime)} / {formatTime(duration)}
                         </div>
                          <div className="flex items-center gap-4">
@@ -922,7 +922,7 @@ export default function StudioPage() {
 
                      {/* Progress Fill */}
                      <div
-                         className="absolute top-0 left-0 bottom-0 bg-white group-hover:bg-emerald-400 transition-colors"
+                         className="absolute top-0 left-0 bottom-0 bg-white group-hover:bg-teal-400 transition-colors"
                          style={{ width: `${duration ? (currentTime / duration) * 100 : 0}%` }}
                      ></div>
 
@@ -968,7 +968,7 @@ export default function StudioPage() {
               <div>
                   <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">{t('selectedChannel')}</div>
                   <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded bg-emerald-500/10 flex items-center justify-center text-emerald-500">
+                      <div className="w-8 h-8 rounded bg-teal-500/10 flex items-center justify-center text-teal-500">
                           <MusicalNoteIcon className="w-5 h-5" />
                       </div>
                       <h2 className="text-xl font-bold text-white truncate" title={selectedStem?.name}>{selectedStem?.name || t('noTrackSelected')}</h2>
@@ -985,7 +985,7 @@ export default function StudioPage() {
                                     checked={selectedStem.eq.enabled}
                                     onChange={(v) => updateStem(selectedStemIndex, { eq: {...selectedStem.eq, enabled: v}})}
                                 />
-                                <span className={`text-xs font-bold ${selectedStem.eq.enabled ? 'text-emerald-400' : 'text-slate-500'}`}>{t('parametricEq')}</span>
+                                <span className={`text-xs font-bold ${selectedStem.eq.enabled ? 'text-teal-400' : 'text-slate-500'}`}>{t('parametricEq')}</span>
                              </div>
                         </div>
                         <div className={`transition-opacity ${selectedStem.eq.enabled ? 'opacity-100' : 'opacity-40 pointer-events-none'}`}>
@@ -1006,7 +1006,7 @@ export default function StudioPage() {
                                     checked={selectedStem.compression.enabled}
                                     onChange={(v) => updateStem(selectedStemIndex, { compression: {...selectedStem.compression, enabled: v}})}
                                 />
-                                <span className={`text-xs font-bold ${selectedStem.compression.enabled ? 'text-emerald-400' : 'text-slate-500'}`}>{t('compressor')}</span>
+                                <span className={`text-xs font-bold ${selectedStem.compression.enabled ? 'text-teal-400' : 'text-slate-500'}`}>{t('compressor')}</span>
                              </div>
                         </div>
 
@@ -1061,7 +1061,7 @@ export default function StudioPage() {
   );
 }
 
-function Toggle({ checked, onChange, colorClass = "bg-emerald-500" }: { checked: boolean, onChange: (v: boolean) => void, colorClass?: string }) {
+function Toggle({ checked, onChange, colorClass = "bg-teal-500" }: { checked: boolean, onChange: (v: boolean) => void, colorClass?: string }) {
     return (
         <div
             onClick={(e) => { e.stopPropagation(); onChange(!checked); }}
@@ -1120,13 +1120,13 @@ function Knob({ label, value, min, max, step, onChange }: { label: string, value
                 className="w-9 h-9 rounded-full bg-[#11131f] relative cursor-ns-resize shadow-[inset_0_2px_4px_rgba(0,0,0,0.5)] border border-slate-700 hover:border-slate-500 transition-colors"
             >
                 <div
-                    className="absolute top-1/2 left-1/2 w-0.5 h-3 bg-emerald-400 origin-bottom -translate-x-1/2 -translate-y-full rounded-full shadow-[0_0_5px_rgba(52,211,153,0.5)]"
+                    className="absolute top-1/2 left-1/2 w-0.5 h-3 bg-teal-400 origin-bottom -translate-x-1/2 -translate-y-full rounded-full shadow-[0_0_5px_rgba(45,212,191,0.5)]"
                     style={{ transform: `translate(-50%, -50%) rotate(${rotation}deg)` }}
                 ></div>
             </div>
             <div className="text-center">
                 <span className="text-[9px] font-bold text-slate-500 block mb-0.5 tracking-wider">{label}</span>
-                <span className={`text-[10px] font-mono transition-colors ${dragging ? 'text-emerald-400' : 'text-slate-600'}`}>{value.toFixed(step && step < 1 ? 2 : 1)}</span>
+                <span className={`text-[10px] font-mono transition-colors ${dragging ? 'text-teal-400' : 'text-slate-600'}`}>{value.toFixed(step && step < 1 ? 2 : 1)}</span>
             </div>
         </div>
     );
