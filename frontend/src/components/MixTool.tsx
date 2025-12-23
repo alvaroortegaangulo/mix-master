@@ -853,8 +853,8 @@ export function MixTool({ resumeJobId }: MixToolProps) {
                                                 ? `bg-slate-900 ${theme.border} ${theme.shadow}`
                                                 : 'bg-slate-950 border-slate-800 shadow-none'}
                                         `}>
-                                            <Icon className={`w-6 h-6 ${isSelected ? theme.text : 'text-slate-600'}`} />
-                                            {isSelected && <div className={`absolute inset-0 bg-opacity-5 ${theme.bg.replace('bg-', 'bg-')} rounded-xl`} />}
+                                            {isSelected && <div className={`absolute inset-0 ${theme.bg}/10 rounded-xl`} />}
+                                            <Icon className={`w-6 h-6 relative z-20 ${isSelected ? theme.text : 'text-slate-600'}`} />
                                         </div>
 
                                         {/* Content */}
