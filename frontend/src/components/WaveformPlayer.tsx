@@ -273,7 +273,7 @@ export const WaveformPlayer: React.FC<WaveformPlayerProps> = ({
     const totalBars = Math.min(maxBars, peaks.length);
     const peaksPerBar = Math.max(1, Math.floor(peaks.length / totalBars));
     const midY = height / 2;
-    const topMaxHeight = height * 0.45;
+    const topMaxHeight = height * 0.35;
     const reflectFactor = 0.5;
 
     ctx.strokeStyle = "rgba(0,0,0,0.85)";
