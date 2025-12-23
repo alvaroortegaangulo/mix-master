@@ -210,6 +210,7 @@
     "runningStage": "Ejecutando etapa",
     "stageGroups": {
       "technicalPreparation": "Preparación Técnica",
+      "technicalCalibrationEq": "Calibración Técnica y EQ",
       "phaseAlignment": "Fase y Alineación",
       "mixBusPrep": "Preparación del MixBus",
       "spectralCleanup": "Limpieza Espectral",

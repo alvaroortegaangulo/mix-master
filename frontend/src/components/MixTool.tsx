@@ -15,19 +15,14 @@ import { getSongModeStages } from "../lib/mixUtils";
 import dynamic from "next/dynamic";
 import Script from "next/script";
 import { UploadDropzone } from "./UploadDropzone";
-import { type SpaceBus } from "./SpaceDepthStylePanel";
 import { gaEvent } from "../lib/ga";
 import { useTranslations } from "next-intl";
 import {
   WrenchIcon,
-  ArrowsRightLeftIcon,
-  RectangleStackIcon,
   SparklesIcon,
   SpeakerWaveIcon,
-  GlobeAltIcon,
   HandRaisedIcon,
   MusicalNoteIcon,
-  CheckCircleIcon,
   LockClosedIcon,
   ChevronDownIcon
 } from "@heroicons/react/24/outline";
@@ -60,12 +55,6 @@ const MixResultPanel = dynamic(
 const StemsProfilePanel = dynamic(
   () => import("./StemsProfilePanel").then((mod) => mod.StemsProfilePanel)
 );
-const SpaceDepthStylePanel = dynamic(
-  () =>
-    import("./SpaceDepthStylePanel").then(
-      (mod) => mod.SpaceDepthStylePanel
-    )
-);
 
 type StemProfile = {
   id: string;
@@ -73,8 +62,6 @@ type StemProfile = {
   extension: string;
   profile: string;
 };
-
-type SpaceDepthBus = SpaceBus;
 
 type StageUiInfo = {
   label: string;
@@ -95,15 +82,15 @@ const STAGE_TO_GROUP: Record<string, string> = {
   S1_KEY_DETECTION: "TECHNICAL_PREPARATION",
   S1_VOX_TUNING: "TECHNICAL_PREPARATION",
   S1_MIXBUS_HEADROOM: "TECHNICAL_PREPARATION",
-  S2_GROUP_PHASE_DRUMS: "PHASE_ALIGNMENT",
-  S3_MIXBUS_HEADROOM: "MIXBUS_PREP",
-  S3_LEADVOX_AUDIBILITY: "MIXBUS_PREP",
-  S4_STEM_HPF_LPF: "SPECTRAL_CLEANUP",
-  S4_STEM_RESONANCE_CONTROL: "SPECTRAL_CLEANUP",
+  S2_GROUP_PHASE_DRUMS: "TECHNICAL_CALIBRATION_EQ", // Was PHASE_ALIGNMENT
+  S3_MIXBUS_HEADROOM: "TECHNICAL_CALIBRATION_EQ", // Was MIXBUS_PREP
+  S3_LEADVOX_AUDIBILITY: "TECHNICAL_CALIBRATION_EQ", // Was MIXBUS_PREP
+  S4_STEM_HPF_LPF: "TECHNICAL_CALIBRATION_EQ", // Was SPECTRAL_CLEANUP
+  S4_STEM_RESONANCE_CONTROL: "TECHNICAL_CALIBRATION_EQ", // Was SPECTRAL_CLEANUP
   S5_STEM_DYNAMICS_GENERIC: "DYNAMICS",
   S5_LEADVOX_DYNAMICS: "DYNAMICS",
   S5_BUS_DYNAMICS_DRUMS: "DYNAMICS",
-  S6_BUS_REVERB_STYLE: "SPACE",
+  S6_BUS_REVERB_STYLE: "HIDDEN", // Was SPACE. Now Hidden.
   S6_MANUAL_CORRECTION: "MANUAL_CORRECTION",
   S7_MIXBUS_TONAL_BALANCE: "MASTERING",
   S8_MIXBUS_COLOR_GENERIC: "MASTERING",
@@ -140,47 +127,54 @@ type GroupConfig = {
   id: string;
   labelKey: string; // Key within 'MixTool.stageGroups'
   icon: any;
+  theme: string;
 };
 
 const GROUPS_CONFIG: GroupConfig[] = [
-  { id: "TECHNICAL_PREPARATION", labelKey: "technicalPreparation", icon: WrenchIcon },
-  { id: "PHASE_ALIGNMENT", labelKey: "phaseAlignment", icon: ArrowsRightLeftIcon },
-  { id: "MIXBUS_PREP", labelKey: "mixBusPrep", icon: RectangleStackIcon },
-  { id: "SPECTRAL_CLEANUP", labelKey: "spectralCleanup", icon: SparklesIcon }, // ChartBar not available in outline? using Sparkles
-  { id: "DYNAMICS", labelKey: "dynamics", icon: SpeakerWaveIcon },
-  { id: "SPACE", labelKey: "space", icon: GlobeAltIcon },
-  { id: "MANUAL_CORRECTION", labelKey: "manualCorrection", icon: HandRaisedIcon },
-  { id: "MASTERING", labelKey: "mastering", icon: MusicalNoteIcon },
+  { id: "TECHNICAL_PREPARATION", labelKey: "technicalPreparation", icon: WrenchIcon, theme: "cyan" },
+  { id: "TECHNICAL_CALIBRATION_EQ", labelKey: "technicalCalibrationEq", icon: SparklesIcon, theme: "purple" },
+  { id: "DYNAMICS", labelKey: "dynamics", icon: SpeakerWaveIcon, theme: "orange" },
+  { id: "MASTERING", labelKey: "mastering", icon: MusicalNoteIcon, theme: "rose" },
+  { id: "MANUAL_CORRECTION", labelKey: "manualCorrection", icon: HandRaisedIcon, theme: "amber" },
 ];
 
-function mapStemProfileToBusKey(profile: string): string {
-  switch (profile) {
-    case "Kick":
-    case "Snare":
-      return "drums";
-    case "Percussion":
-      return "percussion";
-    case "Bass_Electric":
-      return "bass";
-    case "Acoustic_Guitar":
-    case "Electric_Guitar_Rhythm":
-      return "guitars";
-    case "Keys_Piano":
-    case "Synth_Pads":
-      return "keys_synths";
-    case "Lead_Vocal_Melodic":
-    case "Lead_Vocal_Rap":
-      return "lead_vocal";
-    case "Backing_Vocals":
-      return "bkg_vocals";
-    case "FX_EarCandy":
-      return "fx";
-    case "Ambience_Atmos":
-      return "ambience";
-    default:
-      return "other";
+const THEME_STYLES: Record<string, any> = {
+  cyan: {
+    text: "text-cyan-400",
+    bg: "bg-cyan-500",
+    border: "border-cyan-500/50",
+    shadow: "shadow-cyan-500/10",
+    toggle: "peer-checked:bg-cyan-500"
+  },
+  purple: {
+    text: "text-purple-400",
+    bg: "bg-purple-500",
+    border: "border-purple-500/50",
+    shadow: "shadow-purple-500/10",
+    toggle: "peer-checked:bg-purple-500"
+  },
+  orange: {
+    text: "text-orange-400",
+    bg: "bg-orange-500",
+    border: "border-orange-500/50",
+    shadow: "shadow-orange-500/10",
+    toggle: "peer-checked:bg-orange-500"
+  },
+  rose: {
+    text: "text-rose-400",
+    bg: "bg-rose-500",
+    border: "border-rose-500/50",
+    shadow: "shadow-rose-500/10",
+    toggle: "peer-checked:bg-rose-500"
+  },
+  amber: {
+    text: "text-amber-400",
+    bg: "bg-amber-500",
+    border: "border-amber-500/50",
+    shadow: "shadow-amber-500/10",
+    toggle: "peer-checked:bg-amber-500"
   }
-}
+};
 
 export function MixTool({ resumeJobId }: MixToolProps) {
   const [uploadMode, setUploadMode] = useState<"song" | "stems">("stems");
@@ -207,10 +201,6 @@ export function MixTool({ resumeJobId }: MixToolProps) {
   const isSongMode = uploadMode === "song";
 
   const t = useTranslations('MixTool');
-
-  const [spaceBusStyles, setSpaceBusStyles] = useState<Record<string, string>>(
-     {},
-  );
 
   const serviceJsonLd = useMemo(
     () => ({
@@ -253,19 +243,6 @@ export function MixTool({ resumeJobId }: MixToolProps) {
         return acc;
     }, {} as Record<string, StageUiInfo>)
   };
-
-  const SPACE_DEPTH_BUSES: SpaceDepthBus[] = [
-    { key: "drums", label: t('spaceDepthBuses.drums.label'), description: t('spaceDepthBuses.drums.description') },
-    { key: "percussion", label: t('spaceDepthBuses.percussion.label'), description: t('spaceDepthBuses.percussion.description') },
-    { key: "bass", label: t('spaceDepthBuses.bass.label'), description: t('spaceDepthBuses.bass.description') },
-    { key: "guitars", label: t('spaceDepthBuses.guitars.label'), description: t('spaceDepthBuses.guitars.description') },
-    { key: "keys_synths", label: t('spaceDepthBuses.keys_synths.label'), description: t('spaceDepthBuses.keys_synths.description') },
-    { key: "lead_vocal", label: t('spaceDepthBuses.lead_vocal.label'), description: t('spaceDepthBuses.lead_vocal.description') },
-    { key: "backing_vocals", label: t('spaceDepthBuses.backing_vocals.label'), description: t('spaceDepthBuses.backing_vocals.description') },
-    { key: "fx", label: t('spaceDepthBuses.fx.label'), description: t('spaceDepthBuses.fx.description') },
-    { key: "ambience", label: t('spaceDepthBuses.ambience.label'), description: t('spaceDepthBuses.ambience.description') },
-    { key: "other", label: t('spaceDepthBuses.other.label'), description: t('spaceDepthBuses.other.description') },
-  ];
 
   useEffect(() => {
     if (resumeJobId) return;
@@ -504,28 +481,6 @@ export function MixTool({ resumeJobId }: MixToolProps) {
     }));
   };
 
-  const visibleSpaceDepthBuses = useMemo(() => {
-    if (!stemProfiles.length) return [];
-    const usedBusKeys = new Set<string>();
-    for (const stem of stemProfiles) {
-      const busKey = mapStemProfileToBusKey(stem.profile || "auto");
-      usedBusKeys.add(busKey);
-    }
-    return SPACE_DEPTH_BUSES.filter((bus) => usedBusKeys.has(bus.key));
-  }, [stemProfiles]);
-
-  const handleBusStyleChange = (busKey: string, style: string) => {
-    setSpaceBusStyles((prev) => {
-      const next = { ...prev };
-      if (style === "auto") {
-        delete next[busKey];
-      } else {
-        next[busKey] = style;
-      }
-      return next;
-    });
-  };
-
   const handleModeChange = (mode: "song" | "stems") => {
     setUploadMode(mode);
     setFiles([]);
@@ -534,7 +489,6 @@ export function MixTool({ resumeJobId }: MixToolProps) {
     setLoading(false);
     setError(null);
     setStemProfiles([]);
-    setSpaceBusStyles({});
     setSelectionWarning(null);
   };
 
@@ -545,7 +499,6 @@ export function MixTool({ resumeJobId }: MixToolProps) {
     setError(null);
     setSelectionWarning(null);
     setShowStageSelector(true);
-    setSpaceBusStyles({});
     setFiles([]);
     setStemProfiles([]);
 
@@ -662,20 +615,15 @@ export function MixTool({ resumeJobId }: MixToolProps) {
         }),
       );
 
-      const spaceDepthBusStylesPayload =
-        Object.keys(spaceBusStyles).length > 0
-          ? { ...spaceBusStyles }
-          : undefined;
-
       setStemProfiles([]);
       setShowStageSelector(false);
-      setSpaceBusStyles({});
 
       const { jobId } = await startMixJob(
         files,
         enabled,
         stemProfilesPayload,
-        spaceDepthBusStylesPayload,
+        // No spaceBusStylesPayload anymore
+        undefined,
       );
 
       gaEvent("mix_job_started", {
@@ -862,11 +810,10 @@ export function MixTool({ resumeJobId }: MixToolProps) {
                                : stages.map(s => s.key);
 
                             const isDisabled = relevantKeys.length === 0;
-                            const isSelected = !isDisabled && relevantKeys.every(k => selectedStageKeys.includes(k));
+                            // Update logic: toggle is selected if ANY of the stages is selected (unless disabled)
+                            const isSelected = !isDisabled && relevantKeys.some(k => selectedStageKeys.includes(k));
                             const Icon = group.icon;
-
-                            // If group has no stages in current mode, we might want to grey it out completely
-                            // But keeping it visible maintains the "Pipeline" structure logic.
+                            const theme = THEME_STYLES[group.theme] || THEME_STYLES.cyan;
 
                             return (
                                 <div key={group.id} className={`relative flex items-start gap-4 group ${isDisabled ? 'opacity-30 grayscale' : 'opacity-100'}`}>
@@ -874,12 +821,11 @@ export function MixTool({ resumeJobId }: MixToolProps) {
                                     <div className={`
                                         relative z-10 flex items-center justify-center w-14 h-14 rounded-2xl border-2 shadow-lg transition-all duration-300 shrink-0
                                         ${isSelected
-                                            ? 'bg-slate-900 border-teal-500/50 shadow-teal-500/10'
+                                            ? `bg-slate-900 ${theme.border} ${theme.shadow}`
                                             : 'bg-slate-950 border-slate-800 shadow-none'}
                                     `}>
-                                        <Icon className={`w-6 h-6 ${isSelected ? 'text-teal-400' : 'text-slate-600'}`} />
-                                        {isSelected && <div className="absolute inset-0 bg-teal-500/5 rounded-xl animate-pulse" />}
-                                        {/* Dot indicator on right of box? No, image has a dot inside or next to it. */}
+                                        <Icon className={`w-6 h-6 ${isSelected ? theme.text : 'text-slate-600'}`} />
+                                        {isSelected && <div className={`absolute inset-0 bg-opacity-5 ${theme.bg.replace('bg-', 'bg-')} rounded-xl animate-pulse`} />}
                                     </div>
 
                                     {/* Content */}
@@ -891,8 +837,6 @@ export function MixTool({ resumeJobId }: MixToolProps) {
                                                     {t(`stageGroups.${group.labelKey}`)}
                                                 </h4>
                                                 <p className="text-xs text-slate-500 mt-0.5 leading-relaxed line-clamp-2">
-                                                    {/* We can use the description from the first stage or a generic one */}
-                                                    {/* Or simply listing stage count */}
                                                     {stages.length > 0
                                                         ? `${stages.length} pasos: ${stages.slice(0, 2).map(s => HUMAN_STAGE_TEXT[s.key]?.title).join(", ")}${stages.length > 2 ? '...' : ''}`
                                                         : "No active stages"
@@ -903,7 +847,7 @@ export function MixTool({ resumeJobId }: MixToolProps) {
                                                 {stages.length > 0 && (
                                                     <button
                                                         onClick={() => toggleGroupExpand(group.id)}
-                                                        className="mt-2 text-[10px] text-slate-600 hover:text-teal-400 flex items-center gap-1 transition-colors w-fit"
+                                                        className={`mt-2 text-[10px] flex items-center gap-1 transition-colors w-fit ${isSelected ? theme.text : 'text-slate-600 hover:text-white'}`}
                                                     >
                                                         {expandedGroups[group.id] ? "Ocultar detalles" : "Ver detalles"}
                                                         <ChevronDownIcon className={`w-3 h-3 transition-transform ${expandedGroups[group.id] ? 'rotate-180' : ''}`} />
@@ -920,7 +864,7 @@ export function MixTool({ resumeJobId }: MixToolProps) {
                                                     onChange={() => toggleGroup(group.id)}
                                                     disabled={isDisabled}
                                                 />
-                                                <div className="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-400 after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-500 peer-checked:after:bg-white"></div>
+                                                <div className={`w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-400 after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all ${theme.toggle} peer-checked:after:bg-white`}></div>
                                             </label>
                                         </div>
 
@@ -938,7 +882,7 @@ export function MixTool({ resumeJobId }: MixToolProps) {
                                                            </span>
                                                             <input
                                                                 type="checkbox"
-                                                                className="rounded border-slate-700 bg-slate-800 text-teal-500 focus:ring-teal-500/50 h-3 w-3"
+                                                                className={`rounded border-slate-700 bg-slate-800 ${theme.text} focus:ring-opacity-50 h-3 w-3`}
                                                                 checked={isStageSelected}
                                                                 onChange={() => toggleStage(stage.key)}
                                                                 disabled={isStageDisabled}
@@ -1045,17 +989,6 @@ export function MixTool({ resumeJobId }: MixToolProps) {
 
         {/* SECONDARY PANELS ROW */}
         <div className="w-full max-w-6xl mt-8 grid grid-cols-1 md:grid-cols-2 gap-8">
-             {/* Space Panel */}
-            {stemProfiles.length > 0 && visibleSpaceDepthBuses.length > 0 && (
-                <div>
-                   <SpaceDepthStylePanel
-                    buses={visibleSpaceDepthBuses}
-                    value={spaceBusStyles}
-                    onChange={handleBusStyleChange}
-                  />
-                </div>
-            )}
-
             {/* Stems Panel */}
             {stemProfiles.length > 0 && (
                 <div>
