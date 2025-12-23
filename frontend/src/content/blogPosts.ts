@@ -1168,3 +1168,12 @@ export function getBlogPosts(locale: BlogLocale): LocalizedBlogPost[] {
     ...(post.translations[locale] ?? post.translations[defaultBlogLocale]),
   }));
 }
+
+export function getBlogTags(locale: BlogLocale): string[] {
+  const posts = getBlogPosts(locale);
+  const tags = new Set<string>();
+  posts.forEach((post) => {
+    post.tags.forEach((tag) => tags.add(tag));
+  });
+  return Array.from(tags);
+}
