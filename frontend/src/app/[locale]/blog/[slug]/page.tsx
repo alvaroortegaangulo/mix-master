@@ -2,8 +2,14 @@ import type { Metadata } from "next";
 import Script from "next/script";
 import { notFound } from "next/navigation";
 import { Link } from "../../../../i18n/routing";
-import { blogPostSlugs, getBlogPost } from "../../../../content/blogPosts";
-import { blogPostContent } from "../../../../content/blogPostContent";
+import {
+  blogLocales,
+  blogPostSlugs,
+  getBlogPost,
+  resolveBlogLocale,
+} from "../../../../content/blogPosts";
+import { getBlogPostContent } from "../../../../content/blogPostContent";
+import { getBlogCopy } from "../../../../content/blogCopy";
 
 const fallbackSiteUrl = "https://music-mix-master.com";
 const siteUrl = (() => {
@@ -21,16 +27,21 @@ type Props = {
 };
 
 export function generateStaticParams() {
-  return blogPostSlugs.map((slug) => ({ slug }));
+  return blogLocales.flatMap((locale) =>
+    blogPostSlugs.map((slug) => ({ locale, slug }))
+  );
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { slug } = await params;
-  const post = getBlogPost(slug);
+  const { slug, locale } = await params;
+  const blogLocale = resolveBlogLocale(locale);
+  const post = getBlogPost(slug, blogLocale);
+  const copy = getBlogCopy(blogLocale).post;
+
   if (!post) {
     return {
-      title: "Blog técnico",
-      description: "Artículos técnicos de mezcla y mastering con IA.",
+      title: copy.metaFallbackTitle,
+      description: copy.metaFallbackDescription,
     };
   }
 
@@ -38,20 +49,22 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: post.title,
     description: post.description,
     keywords: post.keywords,
-    alternates: { canonical: `/blog/${post.slug}` },
+    alternates: { canonical: `/${blogLocale}/blog/${post.slug}` },
     openGraph: {
       title: post.title,
       description: post.description,
-      url: `${siteUrl}/blog/${post.slug}`,
+      url: `${siteUrl}/${blogLocale}/blog/${post.slug}`,
       type: "article",
     },
   };
 }
 
 export default async function BlogPostPage({ params }: Props) {
-  const { slug } = await params;
-  const post = getBlogPost(slug);
-  const content = blogPostContent[slug];
+  const { slug, locale } = await params;
+  const blogLocale = resolveBlogLocale(locale);
+  const post = getBlogPost(slug, blogLocale);
+  const content = getBlogPostContent(slug, blogLocale);
+  const copy = getBlogCopy(blogLocale).post;
 
   if (!post || !content) {
     notFound();
@@ -76,7 +89,7 @@ export default async function BlogPostPage({ params }: Props) {
         url: `${siteUrl}/logo.webp`,
       },
     },
-    mainEntityOfPage: `${siteUrl}/blog/${post.slug}`,
+    mainEntityOfPage: `${siteUrl}/${blogLocale}/blog/${post.slug}`,
   };
 
   return (
@@ -86,23 +99,23 @@ export default async function BlogPostPage({ params }: Props) {
           href="/blog"
           className="text-sm font-medium text-slate-400 transition hover:text-teal-300"
         >
-          ← Volver al blog
+          {copy.backLink}
         </Link>
 
         <div className="mt-6">
           <p className="mb-3 inline-flex items-center gap-2 rounded-full border border-teal-500/30 bg-teal-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-wider text-teal-300">
-            Guía técnica
+            {copy.badge}
           </p>
           <h1 className="text-4xl font-bold text-white md:text-5xl">
             {post.title}
           </h1>
           <p className="mt-4 text-lg text-slate-300">{post.description}</p>
           <div className="mt-4 flex flex-wrap items-center gap-3 text-sm text-slate-400">
-            <span>{post.dateLabel}</span>
-            <span>·</span>
+            <span>{post.publishedAtLabel}</span>
+            <span>•</span>
             <span>{post.readingTime}</span>
-            <span>·</span>
-            <span className="text-teal-300">{post.tags.join(" · ")}</span>
+            <span>•</span>
+            <span className="text-teal-300">{post.tags.join(" • ")}</span>
           </div>
         </div>
 
@@ -114,7 +127,7 @@ export default async function BlogPostPage({ params }: Props) {
           <aside className="hidden lg:block">
             <div className="sticky top-24 rounded-2xl border border-slate-800 bg-slate-900/60 p-5">
               <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-300">
-                En este artículo
+                {copy.tocTitle}
               </h2>
               <ul className="mt-4 space-y-2 text-sm text-slate-400">
                 {post.toc.map((item) => (
@@ -134,24 +147,23 @@ export default async function BlogPostPage({ params }: Props) {
 
         <div className="mt-12 rounded-2xl border border-slate-800 bg-slate-900/60 p-8">
           <h2 className="text-2xl font-semibold text-white">
-            ¿Quieres ver esto aplicado a tus stems?
+            {copy.ctaTitle}
           </h2>
           <p className="mt-3 max-w-2xl text-slate-300">
-            Piroola ejecuta estos pasos dentro del pipeline y entrega un informe
-            técnico con métricas antes y después.
+            {copy.ctaBody}
           </p>
           <div className="mt-6 flex flex-wrap gap-4">
             <Link
               href="/mix"
               className="inline-flex items-center justify-center rounded-full bg-teal-500 px-6 py-3 text-sm font-bold text-slate-950 shadow-lg shadow-teal-500/20 transition hover:bg-teal-400"
             >
-              Probar Piroola
+              {copy.ctaPrimary}
             </Link>
             <Link
               href="/docs"
               className="inline-flex items-center justify-center rounded-full border border-slate-700 px-6 py-3 text-sm font-semibold text-slate-100 transition hover:border-teal-400 hover:text-teal-200"
             >
-              Ver cómo funciona
+              {copy.ctaSecondary}
             </Link>
           </div>
         </div>

@@ -100,6 +100,7 @@ export async function generateMetadata({params}: {params: Promise<{locale: strin
     { name: tNav('faq'), url: `${siteUrl}/${locale}/faq` },
     { name: tNav('howItWorks'), url: `${siteUrl}/${locale}/docs` },
     { name: tNav('blog'), url: `${siteUrl}/${locale}/blog` },
+    { name: tNav('rss'), url: `${siteUrl}/${locale}/rss.xml` },
     { name: tNav('support'), url: `${siteUrl}/${locale}/support` },
   ];
 
@@ -184,6 +185,7 @@ export default async function LocaleLayout({
     { name: tNav('faq'), url: `${siteUrl}/${locale}/faq` },
     { name: tNav('howItWorks'), url: `${siteUrl}/${locale}/docs` },
     { name: tNav('blog'), url: `${siteUrl}/${locale}/blog` },
+    { name: tNav('rss'), url: `${siteUrl}/${locale}/rss.xml` },
     { name: tNav('support'), url: `${siteUrl}/${locale}/support` },
   ];
 

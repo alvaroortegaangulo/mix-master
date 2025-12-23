@@ -1,4 +1,6 @@
 import type { MetadataRoute } from "next";
+import { routing } from "../i18n/routing";
+import { blogPostSlugs } from "../content/blogPosts";
 
 const fallbackSiteUrl = "https://music-mix-master.com";
 const siteUrl = (() => {
@@ -14,78 +16,39 @@ const siteUrl = (() => {
 export default function sitemap(): MetadataRoute.Sitemap {
   const lastModified = new Date();
 
-  return [
-    {
-      url: `${siteUrl}/`,
+  const staticRoutes = [
+    { path: "", changeFrequency: "weekly", priority: 1.0 },
+    { path: "/examples", changeFrequency: "monthly", priority: 0.8 },
+    { path: "/pricing", changeFrequency: "monthly", priority: 0.9 },
+    { path: "/docs", changeFrequency: "weekly", priority: 0.8 },
+    { path: "/blog", changeFrequency: "weekly", priority: 0.8 },
+    { path: "/support", changeFrequency: "monthly", priority: 0.7 },
+    { path: "/faq", changeFrequency: "monthly", priority: 0.7 },
+    { path: "/terms-of-service", changeFrequency: "yearly", priority: 0.3 },
+    { path: "/privacy-policy", changeFrequency: "yearly", priority: 0.3 },
+    { path: "/cookie-policy", changeFrequency: "yearly", priority: 0.3 },
+  ] as const;
+
+  const blogRoutes = blogPostSlugs.map((slug) => ({
+    path: `/blog/${slug}`,
+    changeFrequency: "monthly" as const,
+    priority: 0.7,
+  }));
+
+  return routing.locales.flatMap((locale) => {
+    const baseUrl = `${siteUrl}/${locale}`;
+    const staticEntries = staticRoutes.map((route) => ({
+      url: `${baseUrl}${route.path}`,
       lastModified,
-      changeFrequency: 'weekly',
-      priority: 1.0,
-    },
-    {
-      url: `${siteUrl}/examples`,
+      changeFrequency: route.changeFrequency,
+      priority: route.priority,
+    }));
+    const blogEntries = blogRoutes.map((route) => ({
+      url: `${baseUrl}${route.path}`,
       lastModified,
-      changeFrequency: 'monthly',
-      priority: 0.8,
-    },
-    {
-      url: `${siteUrl}/pricing`,
-      lastModified,
-      changeFrequency: 'monthly',
-      priority: 0.9,
-    },
-    {
-      url: `${siteUrl}/docs`,
-      lastModified,
-      changeFrequency: 'weekly',
-      priority: 0.8,
-    },
-    {
-      url: `${siteUrl}/blog`,
-      lastModified,
-      changeFrequency: 'weekly',
-      priority: 0.8,
-    },
-    {
-      url: `${siteUrl}/blog/como-eliminar-dc-offset-en-stems`,
-      lastModified,
-      changeFrequency: 'monthly',
-      priority: 0.7,
-    },
-    {
-      url: `${siteUrl}/blog/compresion-bus-bateria-punch-glue`,
-      lastModified,
-      changeFrequency: 'monthly',
-      priority: 0.7,
-    },
-    {
-      url: `${siteUrl}/support`,
-      lastModified,
-      changeFrequency: 'monthly',
-      priority: 0.7,
-    },
-    {
-      url: `${siteUrl}/faq`,
-      lastModified,
-      changeFrequency: 'monthly',
-      priority: 0.7,
-    },
-    {
-      url: `${siteUrl}/terms-of-service`,
-      lastModified,
-      changeFrequency: 'yearly',
-      priority: 0.3,
-    },
-    {
-      url: `${siteUrl}/privacy-policy`,
-      lastModified,
-      changeFrequency: 'yearly',
-      priority: 0.3,
-    },
-    {
-      url: `${siteUrl}/cookie-policy`,
-      lastModified,
-      changeFrequency: 'yearly',
-      priority: 0.3,
-    },
-  ];
+      changeFrequency: route.changeFrequency,
+      priority: route.priority,
+    }));
+    return [...staticEntries, ...blogEntries];
+  });
 }

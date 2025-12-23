@@ -9,6 +9,7 @@
     "faq": "常见问题",
     "howItWorks": "如何运作",
     "blog": "博客",
+    "rss": "RSS",
     "support": "支持",
     "goToApp": "转到应用",
     "logIn": "登录",
@@ -170,6 +171,7 @@
     "privacy": "隐私",
     "cookies": "Cookie",
     "contact": "联系",
+    "rss": "RSS",
     "copyright": "© 2025 Piroola."
   },
   "AuthModal": {

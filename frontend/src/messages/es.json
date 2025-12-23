@@ -9,6 +9,7 @@
     "faq": "FAQ",
     "howItWorks": "Cómo funciona",
     "blog": "Blog",
+    "rss": "RSS",
     "support": "Soporte",
     "goToApp": "Ir a la App",
     "logIn": "Iniciar Sesión",
@@ -173,6 +174,7 @@
     "privacy": "Privacidad",
     "cookies": "Cookies",
     "contact": "Contacto",
+    "rss": "RSS",
     "copyright": "© 2025 Piroola."
   },
   "AuthModal": {

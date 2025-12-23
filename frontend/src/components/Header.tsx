@@ -23,6 +23,7 @@ export function Header() {
     { label: tNav('faq'), href: "/faq" },
     { label: tNav('howItWorks'), href: "/docs" },
     { label: tNav('blog'), href: "/blog" },
+    { label: tNav('rss'), href: "/rss.xml" },
     { label: tNav('support'), href: "/support" },
   ];
 

@@ -17,6 +17,7 @@ export function Footer() {
           <Link href="/privacy-policy" className="hover:text-white transition">{t('privacy')}</Link>
           <Link href="/cookie-policy" className="hover:text-white transition">{t('cookies')}</Link>
           <Link href="/support" className="hover:text-white transition">{t('contact')}</Link>
+          <Link href="/rss.xml" className="hover:text-white transition">{t('rss')}</Link>
         </div>
         <div>
             {t('copyright')}
