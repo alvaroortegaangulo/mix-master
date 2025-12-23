@@ -92,7 +92,7 @@ export function UploadDropzone({
 
       <button
         type="button"
-        className="px-6 py-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-medium transition-colors border border-slate-700 shadow-sm"
+        className="px-6 py-2.5 rounded-lg bg-teal-500 hover:bg-teal-400 text-slate-950 text-sm font-bold transition-colors shadow-[0_0_15px_rgba(20,184,166,0.3)]"
       >
         {t("orSelectFiles")}
       </button>

@@ -18,11 +18,11 @@ import { UploadDropzone } from "./UploadDropzone";
 import { gaEvent } from "../lib/ga";
 import { useTranslations } from "next-intl";
 import {
-  WrenchIcon,
-  SparklesIcon,
-  SpeakerWaveIcon,
+  PresentationChartLineIcon,
+  AdjustmentsVerticalIcon,
+  ArrowsPointingInIcon,
   HandRaisedIcon,
-  MusicalNoteIcon,
+  BoltIcon,
   LockClosedIcon,
   ChevronDownIcon
 } from "@heroicons/react/24/outline";
@@ -131,11 +131,11 @@ type GroupConfig = {
 };
 
 const GROUPS_CONFIG: GroupConfig[] = [
-  { id: "TECHNICAL_PREPARATION", labelKey: "technicalPreparation", icon: WrenchIcon, theme: "cyan" },
-  { id: "TECHNICAL_CALIBRATION_EQ", labelKey: "technicalCalibrationEq", icon: SparklesIcon, theme: "purple" },
-  { id: "DYNAMICS", labelKey: "dynamics", icon: SpeakerWaveIcon, theme: "orange" },
+  { id: "TECHNICAL_PREPARATION", labelKey: "technicalPreparation", icon: PresentationChartLineIcon, theme: "cyan" },
+  { id: "TECHNICAL_CALIBRATION_EQ", labelKey: "technicalCalibrationEq", icon: AdjustmentsVerticalIcon, theme: "purple" },
+  { id: "DYNAMICS", labelKey: "dynamics", icon: ArrowsPointingInIcon, theme: "orange" },
   { id: "MANUAL_CORRECTION", labelKey: "manualCorrection", icon: HandRaisedIcon, theme: "amber" },
-  { id: "MASTERING", labelKey: "mastering", icon: MusicalNoteIcon, theme: "rose" },
+  { id: "MASTERING", labelKey: "mastering", icon: BoltIcon, theme: "rose" },
 ];
 
 const THEME_STYLES: Record<string, any> = {
@@ -144,35 +144,40 @@ const THEME_STYLES: Record<string, any> = {
     bg: "bg-cyan-500",
     border: "border-cyan-500/50",
     shadow: "shadow-cyan-500/10",
-    toggle: "peer-checked:bg-cyan-500"
+    toggle: "peer-checked:bg-cyan-500",
+    cardBorder: "group-hover:border-cyan-500/30"
   },
   purple: {
     text: "text-purple-400",
     bg: "bg-purple-500",
     border: "border-purple-500/50",
     shadow: "shadow-purple-500/10",
-    toggle: "peer-checked:bg-purple-500"
+    toggle: "peer-checked:bg-purple-500",
+    cardBorder: "group-hover:border-purple-500/30"
   },
   orange: {
     text: "text-orange-400",
     bg: "bg-orange-500",
     border: "border-orange-500/50",
     shadow: "shadow-orange-500/10",
-    toggle: "peer-checked:bg-orange-500"
+    toggle: "peer-checked:bg-orange-500",
+    cardBorder: "group-hover:border-orange-500/30"
   },
   rose: {
     text: "text-rose-400",
     bg: "bg-rose-500",
     border: "border-rose-500/50",
     shadow: "shadow-rose-500/10",
-    toggle: "peer-checked:bg-rose-500"
+    toggle: "peer-checked:bg-rose-500",
+    cardBorder: "group-hover:border-rose-500/30"
   },
   amber: {
     text: "text-amber-400",
     bg: "bg-amber-500",
     border: "border-amber-500/50",
     shadow: "shadow-amber-500/10",
-    toggle: "peer-checked:bg-amber-500"
+    toggle: "peer-checked:bg-amber-500",
+    cardBorder: "group-hover:border-amber-500/30"
   }
 };
 
@@ -719,7 +724,7 @@ export function MixTool({ resumeJobId }: MixToolProps) {
                             onClick={() => handleModeChange("song")}
                             className={`rounded-md px-8 py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-200 ${
                                 uploadMode === "song"
-                                ? "bg-slate-800 text-white shadow-sm ring-1 ring-slate-700"
+                                ? "bg-teal-500 text-slate-950 shadow-sm ring-1 ring-teal-500"
                                 : "text-slate-500 hover:text-slate-300"
                             }`}
                         >
@@ -730,7 +735,7 @@ export function MixTool({ resumeJobId }: MixToolProps) {
                             onClick={() => handleModeChange("stems")}
                             className={`rounded-md px-8 py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-200 ${
                                 uploadMode === "stems"
-                                ? "bg-slate-800 text-white shadow-sm ring-1 ring-slate-700"
+                                ? "bg-teal-500 text-slate-950 shadow-sm ring-1 ring-teal-500"
                                 : "text-slate-500 hover:text-slate-300"
                             }`}
                         >
@@ -800,7 +805,7 @@ export function MixTool({ resumeJobId }: MixToolProps) {
                     {/* Vertical Line */}
                     <div className="absolute left-[1.65rem] top-4 bottom-4 w-px bg-slate-800" />
 
-                    <div className="space-y-6 pb-6">
+                    <div className="space-y-4 pb-6">
                         {GROUPS_CONFIG.map((group, idx) => {
                             const stages = groupedStages[group.id] || [];
                             // For visualization, assume if stages exist, the group is relevant.
@@ -816,84 +821,93 @@ export function MixTool({ resumeJobId }: MixToolProps) {
                             const theme = THEME_STYLES[group.theme] || THEME_STYLES.cyan;
 
                             return (
-                                <div key={group.id} className={`relative flex items-start gap-4 group ${isDisabled ? 'opacity-30 grayscale' : 'opacity-100'}`}>
-                                    {/* Icon */}
-                                    <div className={`
-                                        relative z-10 flex items-center justify-center w-14 h-14 rounded-2xl border-2 transition-all duration-300 shrink-0
-                                        group-hover:shadow-[0_0_15px_rgba(20,184,166,0.15)]
-                                        ${isSelected
-                                            ? `bg-slate-900 ${theme.border} ${theme.shadow}`
-                                            : 'bg-slate-950 border-slate-800 shadow-none'}
-                                    `}>
-                                        <Icon className={`w-6 h-6 ${isSelected ? theme.text : 'text-slate-600'}`} />
-                                        {isSelected && <div className={`absolute inset-0 bg-opacity-5 ${theme.bg.replace('bg-', 'bg-')} rounded-xl`} />}
-                                    </div>
-
-                                    {/* Content */}
-                                    <div className="flex-1 pt-1.5 min-w-0">
-                                        <div className="flex items-start justify-between gap-4">
-                                            <div className="flex flex-col">
-                                                <h4 className={`text-sm font-bold ${isSelected ? 'text-white' : 'text-slate-500'}`}>
-                                                    {/* @ts-ignore */}
-                                                    {t(`stageGroups.${group.labelKey}`)}
-                                                </h4>
-                                                <p className="text-xs text-slate-500 mt-0.5 leading-relaxed line-clamp-2">
-                                                    {stages.length > 0
-                                                        ? `${stages.length} pasos: ${stages.slice(0, 2).map(s => HUMAN_STAGE_TEXT[s.key]?.title).join(", ")}${stages.length > 2 ? '...' : ''}`
-                                                        : "No active stages"
-                                                    }
-                                                </p>
-
-                                                {/* Expand Button */}
-                                                {stages.length > 0 && (
-                                                    <button
-                                                        onClick={() => toggleGroupExpand(group.id)}
-                                                        className={`mt-2 text-[10px] flex items-center gap-1 transition-colors w-fit ${isSelected ? theme.text : 'text-slate-600 hover:text-white'}`}
-                                                    >
-                                                        {expandedGroups[group.id] ? "Ocultar detalles" : "Ver detalles"}
-                                                        <ChevronDownIcon className={`w-3 h-3 transition-transform ${expandedGroups[group.id] ? 'rotate-180' : ''}`} />
-                                                    </button>
-                                                )}
-                                            </div>
-
-                                            {/* Toggle */}
-                                            <label className="relative inline-flex items-center cursor-pointer shrink-0">
-                                                <input
-                                                    type="checkbox"
-                                                    className="sr-only peer"
-                                                    checked={isSelected}
-                                                    onChange={() => toggleGroup(group.id)}
-                                                    disabled={isDisabled}
-                                                />
-                                                <div className={`w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-400 after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all ${theme.toggle} peer-checked:after:bg-white`}></div>
-                                            </label>
+                                <div
+                                    key={group.id}
+                                    className={`relative group rounded-2xl border transition-all duration-300 ${
+                                        isSelected
+                                        ? 'bg-slate-900/40 border-slate-700/50'
+                                        : 'bg-transparent border-transparent'
+                                    } ${isDisabled ? 'opacity-30 grayscale' : 'opacity-100'} ${theme.cardBorder || ''}`}
+                                >
+                                    <div className="relative flex items-center p-3 gap-4">
+                                        {/* Icon */}
+                                        <div className={`
+                                            relative z-10 flex items-center justify-center w-12 h-12 rounded-xl border transition-all duration-300 shrink-0
+                                            group-hover:shadow-[0_0_15px_rgba(20,184,166,0.15)]
+                                            ${isSelected
+                                                ? `bg-slate-900 ${theme.border} ${theme.shadow}`
+                                                : 'bg-slate-950 border-slate-800 shadow-none'}
+                                        `}>
+                                            <Icon className={`w-6 h-6 ${isSelected ? theme.text : 'text-slate-600'}`} />
+                                            {isSelected && <div className={`absolute inset-0 bg-opacity-5 ${theme.bg.replace('bg-', 'bg-')} rounded-xl`} />}
                                         </div>
 
-                                        {/* Expanded Stages List */}
-                                        {expandedGroups[group.id] && (
-                                            <div className="mt-3 pl-2 border-l border-slate-800 space-y-2 animate-in slide-in-from-top-2 duration-200">
-                                                {stages.map(stage => {
-                                                   const isStageSelected = selectedStageKeys.includes(stage.key);
-                                                   const isStageDisabled = isSongMode && !songModeStageKeys.includes(stage.key);
+                                        {/* Content */}
+                                        <div className="flex-1 min-w-0">
+                                            <div className="flex items-center justify-between gap-4">
+                                                <div className="flex flex-col">
+                                                    <h4 className={`text-sm font-bold ${isSelected ? 'text-white' : 'text-slate-500'}`}>
+                                                        {/* @ts-ignore */}
+                                                        {t(`stageGroups.${group.labelKey}`)}
+                                                    </h4>
+                                                    <p className="text-[10px] text-slate-500 mt-0.5 leading-relaxed">
+                                                        {stages.length > 0
+                                                            ? `${stages.length} pasos: ${stages.slice(0, 2).map(s => HUMAN_STAGE_TEXT[s.key]?.title).join(", ")}${stages.length > 2 ? '...' : ''}`
+                                                            : "No active stages"
+                                                        }
+                                                    </p>
+                                                </div>
 
-                                                   return (
-                                                       <div key={stage.key} className="flex items-center justify-between text-xs group/stage">
-                                                           <span className={`${isStageSelected ? 'text-slate-300' : 'text-slate-600'}`}>
-                                                               {HUMAN_STAGE_TEXT[stage.key]?.title || stage.label}
-                                                           </span>
-                                                            <input
-                                                                type="checkbox"
-                                                                className={`rounded border-slate-700 bg-slate-800 ${theme.text} focus:ring-opacity-50 h-3 w-3`}
-                                                                checked={isStageSelected}
-                                                                onChange={() => toggleStage(stage.key)}
-                                                                disabled={isStageDisabled}
-                                                            />
-                                                       </div>
-                                                   );
-                                                })}
+                                                {/* Toggle */}
+                                                <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                                                    <input
+                                                        type="checkbox"
+                                                        className="sr-only peer"
+                                                        checked={isSelected}
+                                                        onChange={() => toggleGroup(group.id)}
+                                                        disabled={isDisabled}
+                                                    />
+                                                    <div className={`w-9 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-400 after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all ${theme.toggle} peer-checked:after:bg-white`}></div>
+                                                </label>
                                             </div>
-                                        )}
+
+                                            {/* Expand Button */}
+                                            {stages.length > 0 && (
+                                                <button
+                                                    onClick={() => toggleGroupExpand(group.id)}
+                                                    className={`mt-1 text-[10px] flex items-center gap-1 transition-colors w-fit ${isSelected ? theme.text : 'text-slate-600 hover:text-white'}`}
+                                                >
+                                                    {expandedGroups[group.id] ? "Ocultar detalles" : "Ver detalles"}
+                                                    <ChevronDownIcon className={`w-3 h-3 transition-transform ${expandedGroups[group.id] ? 'rotate-180' : ''}`} />
+                                                </button>
+                                            )}
+                                        </div>
                                     </div>
+
+                                    {/* Expanded Stages List */}
+                                    {expandedGroups[group.id] && (
+                                        <div className="px-3 pb-3 pt-0 ml-[3.5rem] space-y-2 animate-in slide-in-from-top-2 duration-200">
+                                            {stages.map(stage => {
+                                               const isStageSelected = selectedStageKeys.includes(stage.key);
+                                               const isStageDisabled = isSongMode && !songModeStageKeys.includes(stage.key);
+
+                                               return (
+                                                   <div key={stage.key} className="flex items-center justify-between text-xs group/stage">
+                                                       <span className={`${isStageSelected ? 'text-slate-300' : 'text-slate-600'}`}>
+                                                           {HUMAN_STAGE_TEXT[stage.key]?.title || stage.label}
+                                                       </span>
+                                                        <input
+                                                            type="checkbox"
+                                                            className={`rounded border-slate-700 bg-slate-800 ${theme.text} focus:ring-opacity-50 h-3 w-3`}
+                                                            checked={isStageSelected}
+                                                            onChange={() => toggleStage(stage.key)}
+                                                            disabled={isStageDisabled}
+                                                        />
+                                                   </div>
+                                               );
+                                            })}
+                                        </div>
+                                    )}
                                 </div>
                             );
                         })}
