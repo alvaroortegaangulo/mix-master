@@ -67,6 +67,8 @@ export function MixResultPageContent({ jobId }: Props) {
   const [showOriginal, setShowOriginal] = useState(false);
   const [signedFullUrl, setSignedFullUrl] = useState("");
   const [signedOriginalUrl, setSignedOriginalUrl] = useState("");
+  const [stagePreviewUrl, setStagePreviewUrl] = useState("");
+  const [stagePreviewLoading, setStagePreviewLoading] = useState(false);
 
   // Pipeline State
   const [stages, setStages] = useState<PipelineStage[]>([]);
@@ -304,6 +306,51 @@ export function MixResultPageContent({ jobId }: Props) {
       };
   }, [activeStageKey, stages, tPhases]);
 
+  // --- Active Stage Preview Audio ---
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!activeStageKey || !stages.length || !jobStatus?.result) {
+      setStagePreviewUrl("");
+      setStagePreviewLoading(false);
+      return () => {};
+    }
+
+    const stage = stages.find(s => s.key === activeStageKey);
+    const relPath = stage?.previewMixRelPath || "";
+
+    if (!relPath) {
+      setStagePreviewUrl("");
+      setStagePreviewLoading(false);
+      return () => {};
+    }
+
+    async function signStagePreview() {
+      setStagePreviewLoading(true);
+      setStagePreviewUrl("");
+      try {
+        const signed = await signFileUrl(jobId, relPath);
+        if (!cancelled) {
+          setStagePreviewUrl(signed || "");
+        }
+      } catch (err) {
+        console.warn("Could not sign stage preview", err);
+        if (!cancelled) {
+          setStagePreviewUrl("");
+        }
+      } finally {
+        if (!cancelled) {
+          setStagePreviewLoading(false);
+        }
+      }
+    }
+
+    signStagePreview();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeStageKey, stages, jobStatus?.result, jobId]);
+
   // --- Handlers ---
   const handleShare = async () => {
     setLoadingShare(true);
@@ -473,7 +520,7 @@ export function MixResultPageContent({ jobId }: Props) {
                     compareSrc={signedOriginalUrl}
                     isCompareActive={showOriginal}
                     accentColor={showOriginal ? "#64748b" : "#f59e0b"} // Slate for original, Amber for Master
-                    className="bg-transparent shadow-none border-none p-0 !gap-0 h-40 overflow-hidden"
+                    className="bg-transparent shadow-none border-none p-0 !gap-0 h-48 md:h-56 overflow-hidden"
                     canvasClassName="h-full"
                     hideDownload={true}
                   />
@@ -545,24 +592,51 @@ export function MixResultPageContent({ jobId }: Props) {
                             <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-6">Paso Seleccionado</p>
 
                             {activeStageInfo ? (
-                                <div className="bg-slate-900 rounded-2xl p-6 border border-slate-800 relative overflow-hidden">
-                                     {/* Decorative bg number */}
-                                     <span className="absolute top-2 right-4 text-6xl font-black text-slate-800/30 pointer-events-none opacity-20">{activeStageInfo.index}</span>
+                                <div>
+                                    <div className="bg-slate-900 rounded-2xl p-6 border border-slate-800 relative overflow-hidden">
+                                         {/* Decorative bg number */}
+                                         <span className="absolute top-2 right-4 text-6xl font-black text-slate-800/30 pointer-events-none opacity-20">{activeStageInfo.index}</span>
 
-                                     <div className="flex items-center gap-3 mb-4">
-                                         <span className="text-emerald-500 font-mono text-sm">#{activeStageInfo.index}</span>
-                                         <h4 className="text-white font-bold text-lg">{activeStageInfo.id}</h4>
-                                     </div>
-                                     <p className="text-slate-300 text-sm leading-relaxed mb-6">
-                                         {activeStageInfo.description}
-                                     </p>
+                                         <div className="flex items-center gap-3 mb-4">
+                                             <span className="text-emerald-500 font-mono text-sm">#{activeStageInfo.index}</span>
+                                             <h4 className="text-white font-bold text-lg">{activeStageInfo.id}</h4>
+                                         </div>
+                                         <p className="text-slate-300 text-sm leading-relaxed mb-6">
+                                             {activeStageInfo.description}
+                                         </p>
 
-                                     {/* Mini visualization placeholder as in image */}
-                                     <div className="h-12 w-full flex items-end gap-1 opacity-50">
-                                         {[40, 70, 50, 90, 60, 30, 80].map((h, i) => (
-                                             <div key={i} style={{height: `${h}%`}} className="flex-1 bg-emerald-500/50 rounded-t-sm"></div>
-                                         ))}
-                                     </div>
+                                         {/* Mini visualization placeholder as in image */}
+                                         <div className="h-12 w-full flex items-end gap-1 opacity-50">
+                                             {[40, 70, 50, 90, 60, 30, 80].map((h, i) => (
+                                                 <div key={i} style={{height: `${h}%`}} className="flex-1 bg-emerald-500/50 rounded-t-sm"></div>
+                                             ))}
+                                         </div>
+                                    </div>
+
+                                    <div className="mt-6">
+                                        <div className="flex items-center justify-between mb-3">
+                                            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Preview de etapa</p>
+                                            <span className="text-[10px] text-slate-600">#{activeStageInfo.index} {activeStageInfo.id}</span>
+                                        </div>
+
+                                        {stagePreviewLoading && (
+                                            <div className="text-xs text-slate-500">Cargando audio...</div>
+                                        )}
+
+                                        {!stagePreviewLoading && stagePreviewUrl && (
+                                            <WaveformPlayer
+                                                src={stagePreviewUrl}
+                                                accentColor="#10b981"
+                                                className="bg-slate-950/60 border border-slate-800/80 shadow-none p-2 !gap-2 rounded-2xl"
+                                                canvasClassName="h-12"
+                                                hideDownload={true}
+                                            />
+                                        )}
+
+                                        {!stagePreviewLoading && !stagePreviewUrl && (
+                                            <div className="text-xs text-slate-500">Audio no disponible para este paso.</div>
+                                        )}
+                                    </div>
                                 </div>
                             ) : (
                                 <div className="text-slate-500 text-sm">Selecciona un paso para ver detalles.</div>
