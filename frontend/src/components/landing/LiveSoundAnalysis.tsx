@@ -82,7 +82,7 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
           <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-white mb-6">
             {t('title')}
           </h2>
-          <p className="max-w-2xl text-lg text-slate-400 leading-relaxed">
+          <p className="max-w-2xl text-lg text-slate-300 leading-relaxed">
             {t('description')}
           </p>
         </div>
@@ -97,7 +97,7 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
              <div className="flex justify-between items-start mb-8 relative z-10">
                  <div className="flex items-center gap-2">
                      <div className="bg-teal-500/20 p-1.5 rounded-lg">
-                        <svg className="w-5 h-5 text-teal-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <svg className="w-5 h-5 text-teal-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true" focusable="false">
                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
                         </svg>
                      </div>
@@ -150,10 +150,10 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
              {/* Controls / Header for Right Column */}
              <div className="flex justify-end gap-3 mb-2">
                  <button className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-700 bg-slate-900/50 text-xs font-medium text-slate-300 hover:bg-slate-800 transition">
-                    <ArrowPathIcon className="w-3 h-3" />
+                    <ArrowPathIcon className="w-3 h-3" aria-hidden="true" />
                     {t('controls.reScan')}
                  </button>
-                 <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-700 bg-slate-900/50 text-xs font-mono text-slate-400">
+                 <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-700 bg-slate-900/50 text-xs font-mono text-slate-300">
                     <span>{t('controls.target')}:</span>
                     <span className="text-teal-400">-14 LUFS</span>
                  </div>
@@ -163,7 +163,7 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
              <div className="bg-slate-900/50 rounded-2xl border border-slate-800 p-6 shadow-lg relative group overflow-hidden">
                 <div className="flex justify-between items-start mb-2">
                     <div className="text-[10px] font-mono uppercase tracking-wider text-slate-300">{t('metrics.loudness')}</div>
-                    <SpeakerWaveIcon className="w-4 h-4 text-teal-500/50" />
+                    <SpeakerWaveIcon className="w-4 h-4 text-teal-500/50" aria-hidden="true" />
                 </div>
                 <div className="text-4xl font-bold text-white mb-1 tabular-nums tracking-tight">
                     {lufs.toFixed(1)} <span className="text-lg font-normal text-slate-200">LUFS</span>
@@ -180,7 +180,7 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
                 </div>
 
                 <div className="flex items-center gap-2 text-teal-400 text-xs font-medium bg-teal-950/30 p-2 rounded-lg border border-teal-900/50 inline-block">
-                    <CheckCircleIcon className="w-4 h-4" />
+                    <CheckCircleIcon className="w-4 h-4" aria-hidden="true" />
                     {t('spectrum.optimal')}
                 </div>
              </div>
@@ -191,7 +191,7 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
                      <div>
                         <div className="text-[10px] font-mono uppercase tracking-wider text-slate-300 mb-1">{t('metrics.stereoImage')}</div>
                         <div className="text-2xl font-bold text-white mb-1">{t('metrics.wide')}</div>
-                        <div className="text-sm font-mono text-slate-400 mb-3 tabular-nums">{t('metrics.correlation')}: <span className="text-white">+{correlation.toFixed(2)}</span></div>
+                        <div className="text-sm font-mono text-slate-300 mb-3 tabular-nums">{t('metrics.correlation')}: <span className="text-white">+{correlation.toFixed(2)}</span></div>
                      </div>
 
                      {/* Visual representation of Stereo Field (Circle) */}

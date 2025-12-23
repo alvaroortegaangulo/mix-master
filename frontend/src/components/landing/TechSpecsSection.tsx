@@ -12,19 +12,19 @@ export function TechSpecsSection({ className }: { className?: string }) {
           <div className="max-w-4xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8">
              <div className="p-6">
                 <div className="text-4xl font-bold text-teal-400 mb-2">96k</div>
-                <div className="text-sm font-medium text-slate-400 uppercase tracking-wide">{t('internalProcessing')}</div>
+                <div className="text-sm font-medium text-slate-300 uppercase tracking-wide">{t('internalProcessing')}</div>
              </div>
              <div className="p-6">
                 <div className="text-4xl font-bold text-purple-400 mb-2">32-bit</div>
-                <div className="text-sm font-medium text-slate-400 uppercase tracking-wide">{t('floatDepth')}</div>
+                <div className="text-sm font-medium text-slate-300 uppercase tracking-wide">{t('floatDepth')}</div>
              </div>
              <div className="p-6">
                 <div className="text-4xl font-bold text-amber-400 mb-2">10+</div>
-                <div className="text-sm font-medium text-slate-400 uppercase tracking-wide">{t('processingStages')}</div>
+                <div className="text-sm font-medium text-slate-300 uppercase tracking-wide">{t('processingStages')}</div>
              </div>
              <div className="p-6">
                 <div className="text-4xl font-bold text-rose-400 mb-2">0s</div>
-                <div className="text-sm font-medium text-slate-400 uppercase tracking-wide">{t('latency')}</div>
+                <div className="text-sm font-medium text-slate-300 uppercase tracking-wide">{t('latency')}</div>
              </div>
           </div>
         </div>

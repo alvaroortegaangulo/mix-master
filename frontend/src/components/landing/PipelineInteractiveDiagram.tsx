@@ -93,7 +93,7 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
         <h2 className="text-4xl md:text-6xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-white via-cyan-200 to-indigo-200 drop-shadow-lg">
           {t('title')}
         </h2>
-        <p className="text-slate-400 text-lg max-w-2xl mx-auto">
+        <p className="text-slate-300 text-lg max-w-2xl mx-auto">
           {t('description')}
         </p>
       </header>
@@ -139,7 +139,7 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
                   <h3 className={`text-xl font-bold text-white mb-1 transition-colors ${isActive ? step.colorClass : 'group-hover:text-indigo-300'}`}>
                     {index + 1}. {step.title}
                   </h3>
-                  <p className="text-sm text-slate-400 line-clamp-2">
+                  <p className="text-sm text-slate-300 line-clamp-2">
                     {step.shortDesc}
                   </p>
                 </div>
@@ -171,16 +171,16 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
                               alt=""
                               className="w-8 h-8 object-contain"
                             />
-                            <h2 className="text-2xl font-bold text-white font-display leading-tight">
+                            <h3 className="text-2xl font-bold text-white font-display leading-tight">
                               {step.title}
-                            </h2>
+                            </h3>
                           </div>
                           <p className="text-slate-300 text-sm leading-relaxed mb-4">
                             {step.desc}
                           </p>
 
                           <div className="bg-slate-800/50 rounded-lg p-3 border border-slate-700">
-                            <h3 className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">
+                            <h3 className="text-[10px] font-bold uppercase tracking-widest text-slate-300 mb-2">
                               {t('keyTools')}
                             </h3>
                             <div className="flex flex-wrap gap-1.5">

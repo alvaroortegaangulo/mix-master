@@ -55,7 +55,7 @@ export function FeaturesSection({ className }: { className?: string }) {
             {t('workflow')}
           </div>
           <h2 className="text-4xl md:text-5xl font-bold tracking-[-0.02em] leading-[1.05] text-white mb-6" dangerouslySetInnerHTML={{ __html: t.raw('title') }} />
-          <p className="max-w-3xl mx-auto text-lg md:text-xl text-slate-400 leading-[1.7]">
+          <p className="max-w-3xl mx-auto text-lg md:text-xl text-slate-300 leading-[1.7]">
             {t('subtitle')}
           </p>
         </div>
@@ -119,6 +119,7 @@ export function FeaturesSection({ className }: { className?: string }) {
                     : "w-2.5 bg-slate-600 hover:bg-slate-500"
                 }`}
                 aria-label={`Go to slide ${idx + 1}`}
+                aria-current={activeStep === idx ? "true" : undefined}
               />
             ))}
           </div>
