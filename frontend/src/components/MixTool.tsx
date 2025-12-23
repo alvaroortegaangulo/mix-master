@@ -973,9 +973,6 @@ export function MixTool({ resumeJobId }: MixToolProps) {
                                             <p className="text-lg font-semibold text-white max-w-xl">
                                                 {readyMessageText}
                                             </p>
-                                            <p className="text-xs font-semibold uppercase tracking-wider text-teal-200">
-                                                {t("uploadSteps.labels.busSelection")}
-                                            </p>
                                             <button
                                                 type="button"
                                                 onClick={handleGenerateMix}
@@ -984,9 +981,6 @@ export function MixTool({ resumeJobId }: MixToolProps) {
                                             >
                                                 {t("generateMix")}
                                             </button>
-                                            <p className="text-[11px] text-slate-400">
-                                                {t("uploadSteps.notes.buses")}
-                                            </p>
                                         </div>
                                     ) : (
                                         <UploadDropzone
