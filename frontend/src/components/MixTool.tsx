@@ -703,6 +703,15 @@ export function MixTool({ resumeJobId }: MixToolProps) {
       />
 
       <main className="flex flex-1 flex-col items-center px-4 py-8">
+        <div className="text-center mb-8 max-w-2xl">
+          <h1 className="text-3xl md:text-4xl font-bold text-white mb-4">
+            {t("title")}
+          </h1>
+          <p className="text-slate-400 text-base md:text-lg">
+            {t("subtitle")}
+          </p>
+        </div>
+
         {/* MAIN CARD CONTAINER */}
         <div className="w-full max-w-6xl rounded-3xl bg-slate-950 border border-slate-800 shadow-2xl shadow-black overflow-hidden grid grid-cols-1 lg:grid-cols-[1.5fr_1fr]">
 

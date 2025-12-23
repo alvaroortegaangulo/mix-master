@@ -194,6 +194,8 @@
     "alreadyHaveAccount": "Already have an account?"
   },
   "MixTool": {
+    "title": "Upload Center",
+    "subtitle": "Drag your audio files to start. Our AI engine will automatically analyze, mix, and master your tracks.",
     "loadingStudio": "Loading studio...",
     "loadingResult": "Loading result...",
     "spaceDepthSettings": "Space & Depth Settings",
