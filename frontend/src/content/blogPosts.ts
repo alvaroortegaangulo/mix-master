@@ -31,18 +31,21 @@ export type BlogPostTranslation = {
 
 export type BlogPost = {
   slug: string;
+  image?: string;
   publishedAt: string;
   translations: Record<BlogLocale, BlogPostTranslation>;
 };
 
 export type LocalizedBlogPost = BlogPostTranslation & {
   slug: string;
+  image?: string;
   publishedAt: string;
 };
 
 export const blogPosts: BlogPost[] = [
   {
     slug: "como-eliminar-dc-offset-en-stems",
+    image: "/blog/blog_eliminarDC.png",
     publishedAt: "2025-01-10",
     translations: {
       en: {
@@ -281,12 +284,13 @@ export const blogPosts: BlogPost[] = [
   },
   {
     slug: "compresion-bus-bateria-punch-glue",
+    image: "/blog/blog_compresionBus.png",
     publishedAt: "2025-01-10",
     translations: {
       en: {
         title: "The definitive guide to drum bus compression",
         description:
-          "How to get punch and glue without killing transients: crest factor, ratio, attack, release, and when to apply bus compression.",
+          "How to get punch and glue without killing transients: crest factor, ratio, attack, and release, and when to apply bus compression.",
         excerpt:
           "Drum bus compression can save or ruin your mix. Here is a technical, repeatable method.",
         publishedAtLabel: "Jan 10, 2025",
@@ -495,6 +499,7 @@ export const blogPosts: BlogPost[] = [
   },
   {
     slug: "alineacion-fase-bateria-multimic",
+    image: "/blog/blog_alineacionFase.png",
     publishedAt: "2025-01-12",
     translations: {
       en: {
@@ -709,6 +714,7 @@ export const blogPosts: BlogPost[] = [
   },
   {
     slug: "control-resonancias-stems",
+    image: "/blog/blog_resonancias.png",
     publishedAt: "2025-01-14",
     translations: {
       en: {
@@ -1137,6 +1143,7 @@ export const blogPosts: BlogPost[] = [
   },
   {
     slug: "ia-en-produccion-musical-aliado-enemigo",
+    image: "/blog/blog_ia.png",
     publishedAt: "2025-01-20",
     translations: {
       en: {
@@ -1351,6 +1358,7 @@ export const blogPosts: BlogPost[] = [
   },
   {
     slug: "tratamiento-acustico-vs-calibracion-dsp",
+    image: "/blog/blog_dsp.png",
     publishedAt: "2025-01-22",
     translations: {
       en: {
@@ -1576,6 +1584,7 @@ export function getBlogPost(
     post.translations[locale] ?? post.translations[defaultBlogLocale];
   return {
     slug: post.slug,
+    image: post.image,
     publishedAt: post.publishedAt,
     ...translation,
   };
@@ -1584,6 +1593,7 @@ export function getBlogPost(
 export function getBlogPosts(locale: BlogLocale): LocalizedBlogPost[] {
   return blogPosts.map((post) => ({
     slug: post.slug,
+    image: post.image,
     publishedAt: post.publishedAt,
     ...(post.translations[locale] ?? post.translations[defaultBlogLocale]),
   }));
