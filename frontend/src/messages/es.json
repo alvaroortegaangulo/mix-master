@@ -194,6 +194,8 @@
     "alreadyHaveAccount": "¿Ya tienes una cuenta?"
   },
   "MixTool": {
+    "title": "Centro de Carga",
+    "subtitle": "Arrastra tus archivos de audio para comenzar. Nuestro motor de IA analizará, mezclará y masterizará tus pistas automáticamente.",
     "loadingStudio": "Cargando estudio...",
     "loadingResult": "Cargando resultado...",
     "spaceDepthSettings": "Configuración de Espacio y Profundidad",
