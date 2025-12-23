@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useTranslations } from "next-intl";
+import { CloudArrowUpIcon } from "@heroicons/react/24/solid";
 
 type UploadMode = "song" | "stems";
 
@@ -68,48 +69,36 @@ export function UploadDropzone({
       onDragLeave={handleDragLeave}
       className={[
         "flex flex-col items-center justify-center rounded-2xl border-2 border-dashed",
-        "border-slate-700/80 bg-slate-900/40 px-8 py-6 cursor-pointer transition",
+        "border-slate-800 bg-slate-950/20 px-8 py-12 cursor-pointer transition min-h-[400px]",
         disabled
           ? "opacity-60 cursor-not-allowed"
           : isDragging
           ? "border-teal-400 bg-slate-900/70"
-          : "hover:border-teal-400/70 hover:bg-slate-900/70",
+          : "hover:border-teal-500/50 hover:bg-slate-900/40",
       ].join(" ")}
     >
-      {/* Cabecera: título dinámico según modo */}
-      <div className="mb-4 w-full text-center">
-        <p className="text-base font-semibold text-slate-50">
-          {isSongUpload ? t("uploadSong") : t("uploadStems")}
-        </p>
-        <p className="text-xs text-slate-400">
-          {isSongUpload
-            ? t("songModeDesc")
-            : t("stemsModeDesc")}
-        </p>
-      </div>
-
-      <div className="mt-4 flex justify-center">
-        <img
-          src="/upload.webp"
-          alt="Upload your mix..."
-          className="h-18 w-auto rounded-lg"
-          width="72"
-          height="72"
-        />
+      <div className="relative flex items-center justify-center w-24 h-24 mb-8 rounded-full bg-slate-900 shadow-2xl ring-1 ring-slate-800">
+        <div className="absolute inset-0 bg-gradient-to-tr from-cyan-500/20 to-blue-500/10 rounded-full blur-xl" />
+        <CloudArrowUpIcon className="w-10 h-10 text-cyan-400 drop-shadow-[0_0_8px_rgba(34,211,238,0.5)]" />
       </div>
 
       {/* Texto principal del dropzone, adaptado al modo */}
-      <p className="text-sm font-semibold text-slate-50 mb-1 text-center">
-        {isSongUpload
-          ? t("dragDropSong")
-          : t("dragDropStems")}
+      <p className="text-lg font-medium text-white mb-3 text-center tracking-wide">
+        {isSongUpload ? t("dragDropSong") : t("dragDropStems")}
       </p>
-      <p className="text-xs text-slate-400 mb-2 text-center">
+      <p className="text-xs font-medium text-slate-500 mb-8 text-center uppercase tracking-wider">
         {t("supportedFormats")}
       </p>
 
+      <button
+        type="button"
+        className="px-6 py-2.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-medium transition-colors border border-slate-700 shadow-sm"
+      >
+        {t("orSelectFiles")}
+      </button>
+
       {filesCount > 0 && (
-        <p className="mt-1 text-xs text-teal-300">
+        <p className="mt-6 text-sm font-medium text-teal-400 animate-in fade-in slide-in-from-bottom-2">
           {t("filesSelected", { count: filesCount })}
         </p>
       )}

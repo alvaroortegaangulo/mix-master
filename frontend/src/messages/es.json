@@ -219,7 +219,7 @@
       "spectralCleanup": "Limpieza Espectral",
       "dynamics": "Dinámica",
       "space": "Espacio y Profundidad",
-      "mastering": "MASTERIZACIÓN",
+      "mastering": "Masterización",
       "manualCorrection": "Corrección Manual",
       "other": "Otros"
     },
@@ -1006,9 +1006,10 @@
     "uploadStems": "Sube tus Pistas",
     "songModeDesc": "Masteriza una mezcla estéreo única.",
     "stemsModeDesc": "Sube pistas individuales para una mezcla completa con IA.",
-    "dragDropSong": "Arrastra y suelta tu canción aquí, o haz clic para seleccionar un archivo",
-    "dragDropStems": "Arrastra y suelta pistas aquí, o haz clic para seleccionar archivos",
-    "supportedFormats": "Formatos soportados: WAV, AIFF, MP3",
+    "dragDropSong": "Arrastra y suelta tu canción aquí",
+    "dragDropStems": "Arrastra y suelta tus pistas aquí",
+    "orSelectFiles": "O selecciona archivos",
+    "supportedFormats": "Soporta WAV, AIFF, MP3 (Max 500MB)",
     "filesSelected": "{count} archivo{count, plural, =1 {} other {s}} de audio seleccionado{count, plural, =1 {} other {s}}"
   },
   "PipelinePhases": {

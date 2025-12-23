@@ -134,8 +134,8 @@ const GROUPS_CONFIG: GroupConfig[] = [
   { id: "TECHNICAL_PREPARATION", labelKey: "technicalPreparation", icon: WrenchIcon, theme: "cyan" },
   { id: "TECHNICAL_CALIBRATION_EQ", labelKey: "technicalCalibrationEq", icon: SparklesIcon, theme: "purple" },
   { id: "DYNAMICS", labelKey: "dynamics", icon: SpeakerWaveIcon, theme: "orange" },
-  { id: "MASTERING", labelKey: "mastering", icon: MusicalNoteIcon, theme: "rose" },
   { id: "MANUAL_CORRECTION", labelKey: "manualCorrection", icon: HandRaisedIcon, theme: "amber" },
+  { id: "MASTERING", labelKey: "mastering", icon: MusicalNoteIcon, theme: "rose" },
 ];
 
 const THEME_STYLES: Record<string, any> = {
@@ -239,7 +239,7 @@ export function MixTool({ resumeJobId }: MixToolProps) {
 
   const STAGE_UI_INFO: Record<string, StageUiInfo> = {
      ...Object.entries(HUMAN_STAGE_TEXT).reduce((acc, [key, val]) => {
-        acc[key] = { label: val.title.toUpperCase(), description: val.description };
+        acc[key] = { label: val.title, description: val.description };
         return acc;
     }, {} as Record<string, StageUiInfo>)
   };
@@ -713,14 +713,14 @@ export function MixTool({ resumeJobId }: MixToolProps) {
 
                 {/* Top: Mode Switcher */}
                 <div className="relative z-10 w-full flex justify-center mb-8">
-                    <div className="inline-flex rounded-lg bg-slate-900/80 p-1.5 border border-slate-800">
+                    <div className="inline-flex rounded-lg bg-slate-950 p-1 border border-slate-800 shadow-inner">
                         <button
                             type="button"
                             onClick={() => handleModeChange("song")}
-                            className={`rounded-md px-6 py-2.5 text-sm font-semibold transition-all duration-200 ${
+                            className={`rounded-md px-8 py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-200 ${
                                 uploadMode === "song"
-                                ? "bg-teal-500 text-slate-950 shadow-lg shadow-teal-500/20 scale-105"
-                                : "text-slate-400 hover:text-slate-200"
+                                ? "bg-slate-800 text-white shadow-sm ring-1 ring-slate-700"
+                                : "text-slate-500 hover:text-slate-300"
                             }`}
                         >
                             {t('songMode')}
@@ -728,10 +728,10 @@ export function MixTool({ resumeJobId }: MixToolProps) {
                         <button
                             type="button"
                             onClick={() => handleModeChange("stems")}
-                            className={`rounded-md px-6 py-2.5 text-sm font-semibold transition-all duration-200 ${
+                            className={`rounded-md px-8 py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-200 ${
                                 uploadMode === "stems"
-                                ? "bg-teal-500 text-slate-950 shadow-lg shadow-teal-500/20 scale-105"
-                                : "text-slate-400 hover:text-slate-200"
+                                ? "bg-slate-800 text-white shadow-sm ring-1 ring-slate-700"
+                                : "text-slate-500 hover:text-slate-300"
                             }`}
                         >
                             {t('stemsMode')}
@@ -819,13 +819,14 @@ export function MixTool({ resumeJobId }: MixToolProps) {
                                 <div key={group.id} className={`relative flex items-start gap-4 group ${isDisabled ? 'opacity-30 grayscale' : 'opacity-100'}`}>
                                     {/* Icon */}
                                     <div className={`
-                                        relative z-10 flex items-center justify-center w-14 h-14 rounded-2xl border-2 shadow-lg transition-all duration-300 shrink-0
+                                        relative z-10 flex items-center justify-center w-14 h-14 rounded-2xl border-2 transition-all duration-300 shrink-0
+                                        group-hover:shadow-[0_0_15px_rgba(20,184,166,0.15)]
                                         ${isSelected
                                             ? `bg-slate-900 ${theme.border} ${theme.shadow}`
                                             : 'bg-slate-950 border-slate-800 shadow-none'}
                                     `}>
                                         <Icon className={`w-6 h-6 ${isSelected ? theme.text : 'text-slate-600'}`} />
-                                        {isSelected && <div className={`absolute inset-0 bg-opacity-5 ${theme.bg.replace('bg-', 'bg-')} rounded-xl animate-pulse`} />}
+                                        {isSelected && <div className={`absolute inset-0 bg-opacity-5 ${theme.bg.replace('bg-', 'bg-')} rounded-xl`} />}
                                     </div>
 
                                     {/* Content */}
@@ -922,7 +923,7 @@ export function MixTool({ resumeJobId }: MixToolProps) {
                             </>
                         ) : (
                             <>
-                                <div className="w-2 h-2 rounded-full border border-slate-950/40" />
+                                <div className="w-4 h-4 rounded-full border-2 border-slate-950/60" />
                                 {t('generateMix')}
                             </>
                         )}
