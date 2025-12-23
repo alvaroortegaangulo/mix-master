@@ -208,6 +208,17 @@
     "processing": "Procesando...",
     "waitingQueue": "Esperando en cola…",
     "runningStage": "Ejecutando etapa",
+    "stageGroups": {
+      "technicalPreparation": "Preparación Técnica",
+      "phaseAlignment": "Fase y Alineación",
+      "mixBusPrep": "Preparación del MixBus",
+      "spectralCleanup": "Limpieza Espectral",
+      "dynamics": "Dinámica",
+      "space": "Espacio y Profundidad",
+      "mastering": "MASTERIZACIÓN",
+      "manualCorrection": "Corrección Manual",
+      "other": "Otros"
+    },
     "stage": {
       "S0_SESSION_FORMAT": {
         "title": "Formato de sesión y enrutamiento",
