@@ -1,5 +1,5 @@
-import { buildBlogRssXml } from "../lib/blogRss";
-import { defaultBlogLocale } from "../content/blogPosts";
+import { buildBlogRssXml } from "../../lib/blogRss";
+import { defaultBlogLocale } from "../../content/blogPosts";
 
 export const revalidate = 3600;
 
