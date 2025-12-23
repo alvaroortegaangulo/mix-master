@@ -1002,6 +1002,8 @@
     }
   },
   "UploadDropzone": {
+    "title": "Centro de Carga",
+    "subtitle": "Arrastra tus archivos de audio para comenzar. Nuestro motor de IA analizará, mezclará y masterizará tus pistas automáticamente.",
     "uploadSong": "Sube tu Canción",
     "uploadStems": "Sube tus Pistas",
     "songModeDesc": "Masteriza una mezcla estéreo única.",

@@ -1011,6 +1011,8 @@
     }
   },
   "UploadDropzone": {
+    "title": "Upload Center",
+    "subtitle": "Drag your audio files to start. Our AI engine will automatically analyze, mix, and master your tracks.",
     "uploadSong": "Upload Your Song",
     "uploadStems": "Upload Your Stems",
     "songModeDesc": "Master a single stereo bounce.",

@@ -82,10 +82,14 @@ export function UploadDropzone({
         <CloudArrowUpIcon className="w-10 h-10 text-cyan-400 drop-shadow-[0_0_8px_rgba(34,211,238,0.5)]" />
       </div>
 
-      {/* Texto principal del dropzone, adaptado al modo */}
-      <p className="text-lg font-medium text-white mb-3 text-center tracking-wide">
-        {isSongUpload ? t("dragDropSong") : t("dragDropStems")}
+      {/* Título y Subtítulo */}
+      <h3 className="text-2xl font-bold text-white mb-2 text-center">
+        {t("title")}
+      </h3>
+      <p className="text-sm text-slate-400 mb-6 text-center max-w-sm leading-relaxed">
+        {t("subtitle")}
       </p>
+
       <p className="text-xs font-medium text-slate-500 mb-8 text-center uppercase tracking-wider">
         {t("supportedFormats")}
       </p>
