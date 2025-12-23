@@ -661,12 +661,15 @@ export default function StudioPage() {
             throw new Error(`Corrections failed (${correctionRes.status})`);
         }
 
-        const stagesPayload: { stages?: string[] } = {};
+        const stagesPayload: { stages?: string[]; start_from_stage?: string } = {};
         if (!proceedToMastering) {
             stagesPayload.stages = [
                 "S6_MANUAL_CORRECTION",
                 "S11_REPORT_GENERATION"
             ];
+        } else {
+            // Resume from correction stage to apply corrections and continue
+            stagesPayload.start_from_stage = "S6_MANUAL_CORRECTION";
         }
 
         const startRes = await fetch(`${baseUrl}/mix/${jobId}/start`, {
