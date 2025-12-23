@@ -154,20 +154,6 @@ const DSP_CALIBRATION_ES: BlogPostTranslation = {
 
 export const blogPosts: BlogPost[] = [
   {
-    slug: "ia-en-produccion-musical",
-    publishedAt: "2025-01-20",
-    translations: createLocalizedTranslations(IA_PRODUCTION_EN, {
-      es: IA_PRODUCTION_ES,
-    }),
-  },
-  {
-    slug: "tratamiento-acustico-dsp",
-    publishedAt: "2025-01-22",
-    translations: createLocalizedTranslations(DSP_CALIBRATION_EN, {
-      es: DSP_CALIBRATION_ES,
-    }),
-  },
-  {
     slug: "como-eliminar-dc-offset-en-stems",
     image: "/blog/blog_eliminarDC.png",
     publishedAt: "2025-01-10",
@@ -1053,6 +1039,7 @@ export const blogPosts: BlogPost[] = [
   },
   {
     slug: "lufs-true-peak-loudness",
+    image: "/mastering.webp",
     publishedAt: "2025-01-16",
     translations: {
       en: {
