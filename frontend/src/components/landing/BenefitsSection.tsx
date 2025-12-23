@@ -45,12 +45,12 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
                  {t('efficiencyBadge')}
               </div>
 
-              <h3 className="text-4xl sm:text-5xl font-bold text-white mb-6 leading-tight">
+              <h3 className="text-4xl sm:text-5xl font-bold text-white mb-6 leading-[1.05] tracking-[-0.02em]">
                 {t.rich('speedTitle', {
                   highlight: (chunks) => <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500">{chunks}</span>
                 })}
               </h3>
-              <p className="text-lg text-slate-400 mb-8 leading-relaxed">
+              <p className="text-lg text-slate-400 mb-8 leading-[1.7]">
                 {t('speedDescription')}
               </p>
               <ul className="space-y-4 text-slate-300">
@@ -78,12 +78,12 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
                  {t('qualityBadge')}
               </div>
 
-              <h3 className="text-4xl sm:text-5xl font-bold text-white mb-6 leading-tight">
+              <h3 className="text-4xl sm:text-5xl font-bold text-white mb-6 leading-[1.05] tracking-[-0.02em]">
                  {t.rich('qualityTitle', {
                     highlight: (chunks) => <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-500">{chunks}</span>
                   })}
               </h3>
-              <p className="text-lg text-slate-400 mb-8 leading-relaxed">
+              <p className="text-lg text-slate-400 mb-8 leading-[1.7]">
                 {t('qualityDescription')}
               </p>
 

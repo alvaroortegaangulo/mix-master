@@ -50,8 +50,8 @@ export function FeaturesSection({ className }: { className?: string }) {
           <div className="inline-block px-3 py-1 mb-6 text-xs font-semibold tracking-wider text-cyan-400 uppercase rounded-full bg-cyan-950/50 border border-cyan-800/50">
             {t('workflow')}
           </div>
-          <h2 className="text-4xl md:text-5xl font-bold tracking-tight text-white mb-6" dangerouslySetInnerHTML={{ __html: t.raw('title') }} />
-          <p className="max-w-3xl mx-auto text-lg md:text-xl text-slate-400 leading-relaxed">
+          <h2 className="text-4xl md:text-5xl font-bold tracking-[-0.02em] leading-[1.05] text-white mb-6" dangerouslySetInnerHTML={{ __html: t.raw('title') }} />
+          <p className="max-w-3xl mx-auto text-lg md:text-xl text-slate-400 leading-[1.7]">
             {t('subtitle')}
           </p>
         </div>
@@ -83,7 +83,7 @@ export function FeaturesSection({ className }: { className?: string }) {
                 {/* Top: Title */}
                 <div className="mb-auto mt-8 md:mt-12 animate-in fade-in slide-in-from-top-4 duration-700 delay-300 fill-mode-both">
                    <div className="mb-4">
-                      <h3 className="text-3xl md:text-4xl font-bold text-white tracking-tight">
+                      <h3 className="text-3xl md:text-4xl font-bold text-white tracking-[-0.02em] leading-[1.1]">
                         {feature.title}
                       </h3>
                    </div>
@@ -91,7 +91,7 @@ export function FeaturesSection({ className }: { className?: string }) {
 
                 {/* Center: Description */}
                 <div className="bg-slate-950/60 backdrop-blur-md p-6 md:p-8 rounded-2xl border border-slate-800/50 max-w-3xl animate-in fade-in zoom-in-95 duration-700 delay-500 fill-mode-both shadow-xl">
-                  <p className="text-lg md:text-2xl text-slate-100 leading-relaxed font-medium">
+                  <p className="text-lg md:text-2xl text-slate-100 leading-[1.6] font-medium">
                     {feature.description}
                   </p>
                 </div>

@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist_Mono, Space_Grotesk } from "next/font/google";
 import "../globals.css";
 import { GoogleAnalytics } from "@next/third-parties/google";
 import Script from "next/script";
@@ -17,9 +17,10 @@ export function generateStaticParams() {
   return routing.locales.map((locale) => ({locale}));
 }
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const spaceGrotesk = Space_Grotesk({
+  variable: "--font-space-grotesk",
   subsets: ["latin"],
+  display: "swap",
 });
 
 const geistMono = Geist_Mono({
@@ -208,7 +209,7 @@ export default async function LocaleLayout({
 
   return (
     <html lang={locale}>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+      <body className={`${spaceGrotesk.variable} ${geistMono.variable} antialiased`}>
         <NextIntlClientProvider messages={messages}>
           <GoogleOAuthProvider clientId={googleClientId}>
             <AuthProvider>

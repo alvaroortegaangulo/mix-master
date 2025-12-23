@@ -45,16 +45,16 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
         </div>
 
         {/* Main Heading - LCP Element (No entrance animation to minimize render delay) */}
-        <h1 className="flex flex-col text-5xl font-extrabold tracking-tight md:text-7xl lg:text-8xl gap-2">
-          <span className="text-white">
+        <h1 className="flex flex-col text-5xl font-extrabold tracking-[-0.02em] md:text-7xl lg:text-8xl gap-1">
+          <span className="text-white leading-[0.95]">
             {t('studioSound')}
           </span>
-          <span className="bg-gradient-to-r from-teal-400 to-purple-500 bg-clip-text text-transparent">
+          <span className="bg-gradient-to-r from-teal-400 to-purple-500 bg-clip-text text-transparent leading-[0.95]">
             {t('perfectedByAI')}
           </span>
         </h1>
 
-        <p className="mx-auto max-w-3xl text-lg font-light leading-relaxed text-slate-300 md:text-xl animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-100 fill-mode-backwards">
+        <p className="mx-auto max-w-3xl text-lg font-light leading-[1.7] text-slate-300 md:text-xl animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-100 fill-mode-backwards">
           {t('description')}
         </p>
 
