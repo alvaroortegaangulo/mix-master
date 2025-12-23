@@ -1010,7 +1010,7 @@
     "stemsModeDesc": "Sube pistas individuales para una mezcla completa con IA.",
     "dragDropSong": "Arrastra y suelta tu canción aquí",
     "dragDropStems": "Arrastra y suelta tus pistas aquí",
-    "orSelectFiles": "O selecciona archivos",
+    "orSelectFiles": "Selecciona tus pistas",
     "supportedFormats": "Soporta WAV, AIFF, MP3 (Max 500MB)",
     "filesSelected": "{count} archivo{count, plural, =1 {} other {s}} de audio seleccionado{count, plural, =1 {} other {s}}"
   },
