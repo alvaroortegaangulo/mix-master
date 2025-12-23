@@ -196,9 +196,9 @@
     "spaceDepthSettings": "Configuración de Espacio y Profundidad",
     "uploadMixConfig": "Configuración de Carga y Mezcla",
     "songMode": "Canción (Masterización)",
-    "stemsMode": "Stems (Mezcla Completa)",
+    "stemsMode": "Pistas (Mezcla Completa)",
     "songModeWarning": "El modo canción requiere exactamente un archivo WAV.",
-    "selectionWarning": "Has seleccionado solo un stem. Si quieres masterizar una canción, selecciona Canción (Masterización).",
+    "selectionWarning": "Has seleccionado solo una pista. Si quieres masterizar una canción, selecciona Canción (Masterización).",
     "pipelineSteps": "Pasos del pipeline",
     "enabled": "habilitados",
     "pipelineStepsDesc": "Habilita o deshabilita etapas del pipeline para este trabajo.",
@@ -215,11 +215,11 @@
       },
       "S1_STEM_DC_OFFSET": {
         "title": "Verificación de DC offset",
-        "description": "Detecta y corrige offsets de DC en cada stem."
+        "description": "Detecta y corrige offsets de DC en cada pista."
       },
       "S1_STEM_WORKING_LOUDNESS": {
         "title": "Sonoridad de trabajo",
-        "description": "Coincide el nivel de trabajo por stem basado en su perfil de instrumento."
+        "description": "Coincide el nivel de trabajo por pista basado en su perfil de instrumento."
       },
       "S1_KEY_DETECTION": {
         "title": "Detección de tonalidad",
@@ -246,15 +246,15 @@
         "description": "Equilibra la voz principal contra la mezcla estática."
       },
       "S4_STEM_HPF_LPF": {
-        "title": "Filtros HPF/LPF por stem",
-        "description": "Aplica filtros paso alto/bajo por stem basado en el perfil del instrumento."
+        "title": "Filtros HPF/LPF por pista",
+        "description": "Aplica filtros paso alto/bajo por pista basado en el perfil del instrumento."
       },
       "S4_STEM_RESONANCE_CONTROL": {
         "title": "Control de resonancia",
-        "description": "Detecta y doma resonancias estrechas en cada stem."
+        "description": "Detecta y doma resonancias estrechas en cada pista."
       },
       "S5_STEM_DYNAMICS_GENERIC": {
-        "title": "Dinámica de stem",
+        "title": "Dinámica de pista",
         "description": "Control dinámico genérico por pista (compresión/puerta)."
       },
       "S5_LEADVOX_DYNAMICS": {
@@ -294,8 +294,8 @@
         "description": "Generación del informe final del proceso."
       }
     },
-    "stemsProfile": "Seleccionar perfil de stems",
-    "stemsProfileDesc": "Etiqueta cada stem con su función en la mezcla. Luego usaremos estos perfiles para enrutar buses.",
+    "stemsProfile": "Seleccionar perfil de pistas",
+    "stemsProfileDesc": "Etiqueta cada pista con su función en la mezcla. Luego usaremos estos perfiles para enrutar buses.",
     "spaceDepthTitle": "Espacio / Profundidad por bus",
     "spaceDepthDesc": "Asigna un estilo de reverb/espacio por familia de bus para guiar etapas posteriores.",
     "spaceDepthBuses": {
@@ -337,7 +337,7 @@
       },
       "other": {
         "label": "Bus Otros",
-        "description": "Cualquier stem no clasificado en las categorías anteriores."
+        "description": "Cualquier pista no clasificada en las categorías anteriores."
       }
     },
     "auto": "Auto",
@@ -385,7 +385,7 @@
   "Studio": {
     "title": "Estudio Piroola",
     "project": "Proyecto",
-    "stemsZip": "Stems (ZIP)",
+    "stemsZip": "Pistas (ZIP)",
     "mixdown": "Mixdown",
     "downloading": "Descargando...",
     "finishHere": "Terminar aquí (no Masterizar)",
@@ -400,7 +400,7 @@
     "panning": "Paneo",
     "reverb": "Reverb",
     "loading": "Cargando Estudio Piroola...",
-    "loadingStems": "Cargando stems y forma de onda",
+    "loadingStems": "Cargando pistas y forma de onda",
     "selectTrack": "Selecciona una pista para ver la forma de onda"
   },
   "FAQ": {
@@ -988,11 +988,11 @@
   },
   "UploadDropzone": {
     "uploadSong": "Sube tu Canción",
-    "uploadStems": "Sube tus Stems",
+    "uploadStems": "Sube tus Pistas",
     "songModeDesc": "Masteriza una mezcla estéreo única.",
     "stemsModeDesc": "Sube pistas individuales para una mezcla completa con IA.",
     "dragDropSong": "Arrastra y suelta tu canción aquí, o haz clic para seleccionar un archivo",
-    "dragDropStems": "Arrastra y suelta stems aquí, o haz clic para seleccionar archivos",
+    "dragDropStems": "Arrastra y suelta pistas aquí, o haz clic para seleccionar archivos",
     "supportedFormats": "Formatos soportados: WAV",
     "filesSelected": "{count} archivo{count, plural, =1 {} other {s}} de audio seleccionado{count, plural, =1 {} other {s}}"
   },
@@ -1003,7 +1003,7 @@
     },
     "technicalPreparation": {
       "title": "Preparación Técnica",
-      "body": "Corregimos problemas técnicos básicos en cada stem: offset DC, sonoridad de trabajo y headroom inicial para asegurar un punto de partida limpio y confiable para la mezcla."
+      "body": "Corregimos problemas técnicos básicos en cada pista: offset DC, sonoridad de trabajo y headroom inicial para asegurar un punto de partida limpio y confiable para la mezcla."
     },
     "phasePolarityAlignment": {
       "title": "Alineación de Fase y Polaridad",
@@ -1015,7 +1015,7 @@
     },
     "spectralCleanup": {
       "title": "Limpieza Espectral",
-      "body": "Limpiamos cada stem usando filtros de paso alto y filtros de muesca suaves para eliminar el retumbe y resonancias duras, liberando espacio en la mezcla."
+      "body": "Limpiamos cada pista usando filtros de paso alto y filtros de muesca suaves para eliminar el retumbe y resonancias duras, liberando espacio en la mezcla."
     },
     "dynamicsLevelAutomation": {
       "title": "Dinámica y Automatización de Nivel",
@@ -1090,15 +1090,15 @@
     "stages": {
       "S0_SESSION_FORMAT": {
         "title": "Entrada y Metadatos",
-        "description": "Sesión iniciada con {count} stems. Se ha verificado el formato y unificado la frecuencia de muestreo a {sample_rate}Hz para garantizar la máxima fidelidad durante todo el proceso de procesamiento."
+        "description": "Sesión iniciada con {count} pistas. Se ha verificado el formato y unificado la frecuencia de muestreo a {sample_rate}Hz para garantizar la máxima fidelidad durante todo el proceso de procesamiento."
       },
       "S0_SEPARATE_STEMS": {
-        "title": "Separación de Stems",
-        "description": "Se procesaron los archivos cargados para preparar stems individuales para la mezcla."
+        "title": "Separación de Pistas",
+        "description": "Se procesaron los archivos cargados para preparar pistas individuales para la mezcla."
       },
       "S1_STEM_DC_OFFSET": {
         "title": "Corrección de DC Offset",
-        "description": "Se analizaron los stems en busca de ruido DC offset inaudible. Corregido para asegurar el máximo headroom."
+        "description": "Se analizaron las pistas en busca de ruido DC offset inaudible. Corregido para asegurar el máximo headroom."
       },
       "S1_KEY_DETECTION": {
         "title": "Detección de Tono",
@@ -1114,7 +1114,7 @@
       },
       "S1_STEM_WORKING_LOUDNESS": {
         "title": "Sonoridad de Trabajo",
-        "description": "Niveles de stem normalizados a una sonoridad de trabajo consistente."
+        "description": "Niveles de pista normalizados a una sonoridad de trabajo consistente."
       },
       "S2_GROUP_PHASE_DRUMS": {
         "title": "Alineación de Fase de Batería",
@@ -1137,8 +1137,8 @@
         "description": "Se suprimieron resonancias ásperas, reduciendo picos hasta {max_reduction_db}dB."
       },
       "S5_STEM_DYNAMICS_GENERIC": {
-        "title": "Dinámica de Stems",
-        "description": "Control dinámico aplicado a stems. Reducción de ganancia promedio: {avg_gr_db}dB."
+        "title": "Dinámica de Pistas",
+        "description": "Control dinámico aplicado a pistas. Reducción de ganancia promedio: {avg_gr_db}dB."
       },
       "S5_LEADVOX_DYNAMICS": {
         "title": "Dinámica Vocal",
