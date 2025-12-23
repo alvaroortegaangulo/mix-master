@@ -122,9 +122,9 @@ const ReportStageCard = ({
   const hasDescription = tStages.has(`${stageKey}.description` as any);
 
   return (
-    <div className="mb-4 overflow-hidden rounded-lg border border-[rgba(6,78,59,0.5)] bg-[rgba(15,23,42,0.4)] backdrop-blur-sm p-6">
+    <div className="mb-4 overflow-hidden rounded-lg border border-[rgba(19,78,74,0.5)] bg-[rgba(15,23,42,0.4)] backdrop-blur-sm p-6">
       <div className="mb-4">
-        <h3 className="text-base font-bold text-emerald-100 mb-3">{stageTitle}</h3>
+        <h3 className="text-base font-bold text-teal-100 mb-3">{stageTitle}</h3>
         <p className="text-sm text-slate-300 leading-relaxed text-justify">
           {hasDescription ? tStages.rich(`${stageKey}.description` as any, {
               ...combinedParams,
@@ -143,7 +143,7 @@ const ReportStageCard = ({
             <p className="text-xs font-bold text-slate-400 uppercase tracking-wide">
               Waveform Comparison (Image)
             </p>
-            <div className="rounded border border-[rgba(16,185,129,0.2)] bg-[rgba(0,0,0,0.4)] p-1">
+            <div className="rounded border border-[rgba(20,184,166,0.2)] bg-[rgba(0,0,0,0.4)] p-1">
               <img
                 src={waveformUrl}
                 alt="Waveform"
@@ -362,7 +362,7 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
   return (
     <div className="w-full space-y-6">
         <div className="flex justify-between items-center px-1">
-             <h1 className="text-xl font-bold text-emerald-400">{t("title")}</h1>
+             <h1 className="text-xl font-bold text-teal-400">{t("title")}</h1>
              <div className="flex gap-2">
                <button
                   onClick={handleDownloadLogs}
@@ -373,7 +373,7 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
                <button
                   onClick={handleDownloadPdf}
                   disabled={isDownloading}
-                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold rounded shadow transition-colors disabled:opacity-50"
+                  className="px-4 py-2 bg-teal-600 hover:bg-teal-500 text-white text-sm font-bold rounded shadow transition-colors disabled:opacity-50"
                >
                   {isDownloading ? t("generatingPdf") : t("downloadPdf")}
                </button>
@@ -383,24 +383,24 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
         <div ref={reportRef} id="report-content" className="space-y-6 p-4 bg-slate-950 text-slate-200">
             {/* Mix Summary Section */}
             <section
-              className="rounded-xl border border-[rgba(16,185,129,0.2)] p-5 shadow-lg"
+              className="rounded-xl border border-[rgba(20,184,166,0.2)] p-5 shadow-lg"
               style={{
                 // Use explicit rgba gradient to avoid html2canvas "lab" parsing errors.
                 backgroundImage:
-                  "linear-gradient(to bottom right, rgba(6, 78, 59, 0.2), rgba(15, 23, 42, 0.4))",
+                  "linear-gradient(to bottom right, rgba(19, 78, 74, 0.2), rgba(15, 23, 42, 0.4))",
               }}
             >
-                <h2 className="mb-4 text-lg font-bold text-emerald-100 tracking-tight">
+                <h2 className="mb-4 text-lg font-bold text-teal-100 tracking-tight">
                 {t("mixSummary")}
                 </h2>
 
                 <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
                 <div className="md:col-span-1 space-y-3">
-                    <div className="rounded-lg bg-[rgba(0,0,0,0.2)] border border-[rgba(16,185,129,0.1)] p-3">
-                    <p className="text-[10px] text-[rgba(52,211,153,0.7)] uppercase tracking-widest font-bold mb-1">
+                    <div className="rounded-lg bg-[rgba(0,0,0,0.2)] border border-[rgba(20,184,166,0.1)] p-3">
+                    <p className="text-[10px] text-[rgba(45,212,191,0.7)] uppercase tracking-widest font-bold mb-1">
                         Style Preset
                     </p>
-                    <p className="text-base font-medium text-emerald-50">
+                    <p className="text-base font-medium text-teal-50">
                         {report.style_preset}
                     </p>
                     </div>
@@ -411,8 +411,8 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
                     )}
                 </div>
 
-                <div className="md:col-span-2 rounded-lg border border-[rgba(16,185,129,0.1)] bg-[rgba(0,0,0,0.2)] p-4">
-                    <h3 className="mb-3 text-[10px] font-bold uppercase tracking-widest text-[rgba(52,211,153,0.7)]">
+                <div className="md:col-span-2 rounded-lg border border-[rgba(20,184,166,0.1)] bg-[rgba(0,0,0,0.2)] p-4">
+                    <h3 className="mb-3 text-[10px] font-bold uppercase tracking-widest text-[rgba(45,212,191,0.7)]">
                     Final Master Metrics
                     </h3>
                     <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
@@ -420,7 +420,7 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
                         <span className="text-[10px] text-slate-400 uppercase">
                         Integrated LUFS
                         </span>
-                        <span className="font-mono text-sm text-emerald-300 font-bold">
+                        <span className="font-mono text-sm text-teal-300 font-bold">
                         {report.final_metrics?.lufs_integrated?.toFixed(2) ?? "N/A"}
                         </span>
                     </div>
@@ -428,9 +428,9 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
                         <span className="text-[10px] text-slate-400 uppercase">
                         True Peak
                         </span>
-                        <span className="font-mono text-sm text-emerald-300 font-bold">
+                        <span className="font-mono text-sm text-teal-300 font-bold">
                         {report.final_metrics?.true_peak_dbtp?.toFixed(2) ?? "N/A"}{" "}
-                        <span className="text-[10px] font-normal text-[rgba(16,185,129,0.5)]">
+                        <span className="text-[10px] font-normal text-[rgba(20,184,166,0.5)]">
                             dBTP
                         </span>
                         </span>
@@ -482,8 +482,8 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
 
             {/* Advanced Interactive Charts Section */}
             {displayResult && (
-                <section className="rounded-xl border border-[rgba(16,185,129,0.2)] bg-[rgba(15,23,42,0.4)] p-5">
-                <h2 className="mb-4 text-sm font-bold uppercase tracking-widest text-[rgba(16,185,129,0.8)]">
+                <section className="rounded-xl border border-[rgba(20,184,166,0.2)] bg-[rgba(15,23,42,0.4)] p-5">
+                <h2 className="mb-4 text-sm font-bold uppercase tracking-widest text-[rgba(20,184,166,0.8)]">
                     {t("interactiveAnalysis")}
                 </h2>
 
@@ -498,7 +498,7 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
             {/* Detailed Stage Report */}
             <section>
                 <div className="mb-3 flex items-center justify-between px-1">
-                <h2 className="text-sm font-bold uppercase tracking-widest text-[rgba(16,185,129,0.8)]">
+                <h2 className="text-sm font-bold uppercase tracking-widest text-[rgba(20,184,166,0.8)]">
                     {t("detailedStageReport")}
                 </h2>
                 <span className="text-[10px] text-slate-500">
