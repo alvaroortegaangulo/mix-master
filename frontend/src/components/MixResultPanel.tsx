@@ -182,6 +182,7 @@ export function MixResultPanel({
           src={signedFullUrl}
           compareSrc={signedOriginalUrl}
           isCompareActive={showOriginal}
+          requireAuthForDownload
         />
 
         <div className="mt-2 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">

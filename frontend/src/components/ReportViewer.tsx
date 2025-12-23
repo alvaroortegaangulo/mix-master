@@ -5,6 +5,8 @@ import { useTranslations } from "next-intl";
 import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
 import { AdvancedInteractiveCharts, AnalysisData } from "./report/AdvancedInteractiveCharts";
+import { useAuth } from "../context/AuthContext";
+import { useModal } from "../context/ModalContext";
 
 // --- Types ---
 interface StageParameter {
@@ -163,6 +165,8 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
   const t = useTranslations("Report");
   const [isDownloading, setIsDownloading] = useState(false);
   const reportRef = useRef<HTMLDivElement>(null);
+  const { user } = useAuth();
+  const { openAuthModal } = useModal();
 
   if (!report) return null;
 
@@ -185,6 +189,10 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
   const displayOriginal = charts.original;
 
   const handleDownloadPdf = async () => {
+    if (!user) {
+      openAuthModal();
+      return;
+    }
     if (!reportRef.current) return;
     setIsDownloading(true);
 
@@ -234,6 +242,10 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
   };
 
   const handleDownloadLogs = async () => {
+    if (!user) {
+      openAuthModal();
+      return;
+    }
     try {
       // 1. Fetch the log file (via signed URL)
       // Since we don't have a direct "get log text" method in mixApi usually,

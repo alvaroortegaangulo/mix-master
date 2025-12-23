@@ -100,7 +100,7 @@ export function Header() {
                           {tNav('logIn')}
                       </button>
                       <button
-                          onClick={openAuthModal} // Or go to app? Usually Try for free = Sign up
+                          onClick={handleGoToApp}
                           className="rounded-full bg-teal-500 text-slate-950 px-5 py-2 text-sm font-bold shadow-lg shadow-teal-500/20 hover:bg-teal-400 hover:shadow-teal-500/40 transition transform hover:-translate-y-0.5"
                       >
                           {tNav('tryForFree')}

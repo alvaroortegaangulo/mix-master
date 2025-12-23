@@ -3,6 +3,8 @@
 import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { gaEvent } from "../lib/ga";
 import { PlayIcon, PauseIcon, ArrowDownTrayIcon } from "@heroicons/react/24/solid";
+import { useAuth } from "../context/AuthContext";
+import { useModal } from "../context/ModalContext";
 
 type WaveformPlayerProps = {
   src: string;
@@ -11,6 +13,7 @@ type WaveformPlayerProps = {
   downloadFileName?: string;
   accentColor?: string; // color de la parte reproducida (por defecto naranja)
   className?: string;
+  requireAuthForDownload?: boolean;
 };
 
 type PeakArray = number[];
@@ -29,7 +32,10 @@ export const WaveformPlayer: React.FC<WaveformPlayerProps> = ({
   downloadFileName,
   accentColor = "#fb923c", // naranja cálido
   className = "",
+  requireAuthForDownload = false,
 }) => {
+  const { user } = useAuth();
+  const { openAuthModal } = useModal();
   // Audio Refs
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const compareAudioRef = useRef<HTMLAudioElement | null>(null);
@@ -555,6 +561,10 @@ export const WaveformPlayer: React.FC<WaveformPlayerProps> = ({
 
   const handleDownload = async () => {
     if (!activeSrc || isDownloading) return;
+    if (requireAuthForDownload && !user) {
+      openAuthModal();
+      return;
+    }
 
     // Track download
     gaEvent("download_result", {

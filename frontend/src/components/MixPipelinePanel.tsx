@@ -270,7 +270,7 @@ export function MixPipelinePanel({
 
               {/* Reproductor estilo waveform para la fase */}
               <div className="mt-4">
-                <WaveformPlayer src={playbackUrl} />
+                <WaveformPlayer src={playbackUrl} requireAuthForDownload />
               </div>
             </div>
           </div>

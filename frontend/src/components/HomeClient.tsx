@@ -2,8 +2,6 @@
 
 import { Suspense } from "react";
 import { useRouter } from "../i18n/routing";
-import { useAuth } from "../context/AuthContext";
-import { useModal } from "../context/ModalContext";
 import { HomeViewContext } from "../context/HomeViewContext";
 
 interface HomeClientProps {
@@ -12,15 +10,9 @@ interface HomeClientProps {
 
 function PageContent({ children }: HomeClientProps) {
   const router = useRouter();
-  const { openAuthModal } = useModal();
-  const { user } = useAuth();
 
   const handleTryIt = () => {
-    if (user) {
-      router.push('/mix');
-    } else {
-      openAuthModal();
-    }
+    router.push("/mix");
   };
 
   return (

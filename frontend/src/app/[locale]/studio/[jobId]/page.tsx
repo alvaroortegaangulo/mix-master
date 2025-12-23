@@ -3,8 +3,8 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
+import { useModal } from "@/context/ModalContext";
 import { getBackendBaseUrl, getStudioToken, signFileUrl } from "@/lib/mixApi";
-import { AuthModal } from "@/components/AuthModal";
 import { CanvasWaveform } from "@/components/studio/CanvasWaveform";
 import { studioCache, AudioBufferData } from "@/lib/studioCache";
 import {
@@ -74,7 +74,7 @@ export default function StudioPage() {
   const locale = params.locale as string;
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
-  const [showAuthModal, setShowAuthModal] = useState(false);
+  const { openAuthModal } = useModal();
   const t = useTranslations('Studio');
 
   const [stems, setStems] = useState<StemControl[]>([]);
@@ -142,12 +142,6 @@ export default function StudioPage() {
           }
       });
   };
-
-  useEffect(() => {
-    if (!authLoading && !user) {
-      setShowAuthModal(true);
-    }
-  }, [authLoading, user]);
 
   useEffect(() => {
     if (typeof window !== "undefined" && !audioContextRef.current) {
@@ -241,7 +235,7 @@ export default function StudioPage() {
   }, [selectedStem, jobId]);
 
   useEffect(() => {
-    if (!jobId || !user) return;
+    if (!jobId) return;
 
     let cancelled = false;
 
@@ -516,7 +510,7 @@ export default function StudioPage() {
 
     load();
     return () => { cancelled = true; };
-  }, [jobId, user]);
+  }, [jobId]);
 
   // Removed WaveSurfer setup effect
 
@@ -694,6 +688,10 @@ export default function StudioPage() {
   };
 
   const downloadStems = async () => {
+      if (!user) {
+          openAuthModal();
+          return;
+      }
       setDownloadingStems(true);
       try {
           const baseUrl = getBackendBaseUrl();
@@ -719,6 +717,10 @@ export default function StudioPage() {
   };
 
   const downloadMixdown = async () => {
+       if (!user) {
+           openAuthModal();
+           return;
+       }
        setDownloadingMixdown(true);
        try {
           const baseUrl = getBackendBaseUrl();
@@ -757,14 +759,6 @@ export default function StudioPage() {
   const currentVisualPeaks = (selectedStem?.peaks && selectedStem.peaks.some(p => p > 0)) ? selectedStem.peaks : null;
 
   if (authLoading) return <div className="h-screen bg-[#0f111a]"></div>;
-
-  if (!user) {
-      return (
-        <div className="h-screen bg-[#0f111a] flex items-center justify-center text-slate-500">
-            <AuthModal isOpen={true} onClose={() => router.push('/')} />
-        </div>
-      );
-  }
 
   if (loadingStems) {
       return (
@@ -1063,7 +1057,6 @@ export default function StudioPage() {
           </aside>
       </div>
 
-      <AuthModal isOpen={showAuthModal} onClose={() => setShowAuthModal(false)} />
     </div>
   );
 }
