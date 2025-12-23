@@ -889,17 +889,17 @@ export function MixTool({ resumeJobId }: MixToolProps) {
                 <div className="relative z-10 w-full max-w-lg flex-1 flex flex-col justify-center">
                     <div className="mb-4 flex items-start justify-between gap-3">
                         <div>
-                            <h2 className="text-xl font-bold text-white leading-tight">
-                                {uploadStep === 1 && t("uploadSteps.labels.uploadTracks")}
-                                {uploadStep === 2 && t("uploadSteps.labels.selectProfiles")}
-                                {uploadStep === 3 && t("uploadSteps.labels.busSelection")}
-                            </h2>
-                            {uploadStep > 1 && (
-                                <p className="mt-1 text-xs text-slate-400">
-                                    {uploadStep === 2
-                                        ? t("uploadSteps.notes.profiles")
-                                        : t("uploadSteps.notes.buses")}
-                                </p>
+                              <h2 className="text-xl font-bold text-white leading-tight">
+                                  {uploadStep === 1 && t("uploadSteps.labels.uploadTracks")}
+                                  {uploadStep === 2 && t("uploadSteps.labels.selectProfiles")}
+                                  {uploadStep === 3 && !isReadyForMix && t("uploadSteps.labels.busSelection")}
+                              </h2>
+                              {uploadStep > 1 && !isReadyForMix && (
+                                  <p className="mt-1 text-xs text-slate-400">
+                                      {uploadStep === 2
+                                          ? t("uploadSteps.notes.profiles")
+                                          : t("uploadSteps.notes.buses")}
+                                  </p>
                             )}
                         </div>
                         {uploadStep > 1 && (
