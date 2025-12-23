@@ -295,6 +295,18 @@
         "description": "Generation of the final process report."
       }
     },
+    "stageGroups": {
+      "technicalPreparation": "Technical Preparation",
+      "technicalCalibrationEq": "Technical Calibration & EQ",
+      "phaseAlignment": "Phase & Polarity Alignment",
+      "mixBusPrep": "MixBus Prep",
+      "spectralCleanup": "Spectral Cleanup",
+      "dynamics": "Dynamics",
+      "space": "Space & Depth",
+      "mastering": "MASTERING",
+      "manualCorrection": "Manual Correction",
+      "other": "Other"
+    },
     "stemsProfile": "Select stems profile",
     "stemsProfileDesc": "Label each stem with its function in the mix. Later we will use these profiles to route buses.",
     "spaceDepthTitle": "Space / Depth by bus",
