@@ -746,15 +746,21 @@ export function MixTool({ resumeJobId }: MixToolProps) {
                         disabled={loading}
                         filesCount={files.length}
                         uploadMode={uploadMode}
+                        isProcessing={!!isProcessing}
+                        processingState={progressInfo ? {
+                            stageKey: jobStatus?.stageKey || "",
+                            progress: progressInfo.percent,
+                            description: `${progressInfo.title} - ${progressInfo.description}`
+                        } : undefined}
                     />
 
-                    {selectionWarning && (
+                    {!isProcessing && selectionWarning && (
                         <div className="mt-4 rounded-md border border-amber-400/60 bg-amber-500/10 px-4 py-3 text-sm text-amber-100 flex items-center justify-center text-center">
                             {selectionWarning}
                         </div>
                     )}
 
-                    {error && (
+                    {!isProcessing && error && (
                         <div className="mt-4 rounded-md border border-red-500/60 bg-red-500/10 px-4 py-3 text-sm text-red-200 text-center">
                             {error}
                         </div>
@@ -937,49 +943,8 @@ export function MixTool({ resumeJobId }: MixToolProps) {
             </div>
         </div>
 
-        {/* LOADING & RESULTS */}
+        {/* RESULTS */}
         <div className="w-full max-w-6xl mt-8">
-             {isProcessing && (
-                <div className="flex justify-center mb-12">
-                  <div className="relative">
-                      <div className="absolute inset-0 bg-teal-500/20 blur-3xl rounded-full" />
-                      <video
-                        src="/loading.mp4"
-                        autoPlay
-                        loop
-                        muted
-                        playsInline
-                        aria-label="Processing your mix..."
-                        className="relative h-24 w-auto rounded-lg z-10"
-                      />
-                  </div>
-                </div>
-             )}
-
-             {progressInfo && (
-                  <div className="mx-auto mt-6 w-full max-w-md select-none mb-12">
-                    <div className="mb-2 flex items-center gap-3">
-                      <div className="flex-1 overflow-hidden rounded-full border border-slate-800 bg-slate-950/50 h-2.5">
-                        <div
-                          className="relative h-full bg-teal-500 shadow-[0_0_12px_rgba(20,184,166,0.6)] transition-all duration-300 ease-out"
-                          style={{ width: `${progressInfo.percent}%` }}
-                        >
-                          <div className="absolute inset-0 bg-white/20" />
-                        </div>
-                      </div>
-                      <span className="min-w-[3ch] text-right font-mono text-sm font-bold text-teal-400">
-                        {progressInfo.percent}%
-                      </span>
-                    </div>
-                    <h3 className="mb-1 text-center text-xs font-bold uppercase tracking-[0.15em] text-teal-100">
-                      {progressInfo.title}
-                    </h3>
-                    <p className="mx-auto max-w-xs text-center text-[11px] font-medium leading-relaxed text-teal-200/70">
-                      {progressInfo.description}
-                    </p>
-                  </div>
-            )}
-
             {result && (
                 <MixResultPanel
                   result={result}
