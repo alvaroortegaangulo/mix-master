@@ -135,7 +135,7 @@ const ChartCard = ({
   children: React.ReactNode;
   onExpand: () => void;
 }) => (
-  <div className="flex flex-col rounded-lg border border-slate-800 bg-[rgba(15,23,42,0.5)] p-4 shadow-sm transition-all hover:border-[rgba(16,185,129,0.3)]">
+  <div className="flex flex-col rounded-lg border border-slate-800 bg-[rgba(15,23,42,0.5)] p-4 shadow-sm transition-all hover:border-[rgba(20,184,166,0.3)]">
     <div className="mb-3 flex items-center justify-between">
       <h3 className="text-sm font-bold uppercase tracking-wide text-slate-300">
         {title}
@@ -145,7 +145,7 @@ const ChartCard = ({
     <div className="flex justify-end">
       <button
         onClick={onExpand}
-        className="text-[10px] uppercase font-bold text-emerald-500 hover:text-emerald-400"
+        className="text-[10px] uppercase font-bold text-teal-500 hover:text-teal-400"
       >
         Expand
       </button>
@@ -169,7 +169,7 @@ const Modal = ({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-[rgba(0,0,0,0.8)] p-4 backdrop-blur-sm">
       <div className="flex h-[90vh] w-full max-w-6xl flex-col rounded-xl border border-slate-700 bg-slate-900 shadow-2xl">
         <div className="flex items-center justify-between border-b border-slate-800 p-4">
-          <h2 className="text-xl font-bold text-emerald-400">{title}</h2>
+          <h2 className="text-xl font-bold text-teal-400">{title}</h2>
           <button
             onClick={onClose}
             className="rounded p-2 text-slate-400 hover:bg-slate-800 hover:text-white"
@@ -209,8 +209,8 @@ const LoudnessChart = ({
       <AreaChart data={chartData}>
         <defs>
             <linearGradient id="gradResult" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
-                <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
+                <stop offset="5%" stopColor="#14b8a6" stopOpacity={0.3}/>
+                <stop offset="95%" stopColor="#14b8a6" stopOpacity={0}/>
             </linearGradient>
         </defs>
         <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
@@ -250,12 +250,12 @@ const LoudnessChart = ({
         <Area
           type="monotone"
           dataKey="s_res"
-          stroke="#10b981"
+          stroke="#14b8a6"
           fill="url(#gradResult)"
           strokeWidth={2}
           name="Short-term (Result)"
         />
-        <ReferenceLine y={data.integrated} stroke="#34d399" strokeDasharray="3 3" label={{ position: 'right', value: 'I', fill: '#34d399', fontSize: 10 }} />
+        <ReferenceLine y={data.integrated} stroke="#2dd4bf" strokeDasharray="3 3" label={{ position: 'right', value: 'I', fill: '#2dd4bf', fontSize: 10 }} />
       </AreaChart>
     </ResponsiveContainer>
   );
@@ -593,7 +593,7 @@ const SpectrogramCanvas = ({
                             top: hoverInfo.y + 10 > containerRef.current!.offsetHeight - 60 ? hoverInfo.y - 70 : hoverInfo.y + 10
                         }}
                     >
-                        <div className="font-bold text-emerald-400">{formatTime(hoverInfo.time)}</div>
+                        <div className="font-bold text-teal-400">{formatTime(hoverInfo.time)}</div>
                         <div>{hoverInfo.freq >= 1000 ? (hoverInfo.freq/1000).toFixed(1) + ' kHz' : hoverInfo.freq.toFixed(0) + ' Hz'}</div>
                         <div className="text-slate-400">{hoverInfo.db.toFixed(1)} dB</div>
                     </div>
@@ -802,7 +802,7 @@ const VectorscopeChart = ({
                 <div className="absolute top-4 right-4 flex space-x-2 z-10">
                      <button
                         onClick={() => setMode('result')}
-                        className={`px-2 py-1 text-xs rounded border border-transparent ${mode==='result' ? 'bg-emerald-600 text-white shadow' : 'bg-slate-800 text-slate-400 hover:border-slate-600'}`}
+                        className={`px-2 py-1 text-xs rounded border border-transparent ${mode==='result' ? 'bg-teal-600 text-white shadow' : 'bg-slate-800 text-slate-400 hover:border-slate-600'}`}
                      >
                         Result
                      </button>
