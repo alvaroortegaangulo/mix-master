@@ -1,5 +1,8 @@
 import type { ReactNode } from "react";
 import { BlogLocale, defaultBlogLocale } from "./blogPosts";
+import BlogCallout from "../components/blog/BlogCallout";
+import BlogChecklist from "../components/blog/BlogChecklist";
+import BlogAudioPlayer from "../components/blog/BlogAudioPlayer";
 
 export const blogPostContent: Record<BlogLocale, Record<string, ReactNode>> = {
   es: {
@@ -22,11 +25,10 @@ export const blogPostContent: Record<BlogLocale, Record<string, ReactNode>> = {
             convertidores, plugins mal calibrados, sampleos antiguos o
             exportaciones con errores.
           </p>
-          <ul>
-            <li>Es energía de muy baja frecuencia (casi 0 Hz).</li>
-            <li>No aporta información musical útil.</li>
-            <li>Ocupa headroom y altera el comportamiento dinámico.</li>
-          </ul>
+          <BlogCallout type="concept" title="Concepto Clave">
+            El DC Offset es energía de frecuencia 0 Hz. No suena, pero "empuja"
+            la señal hacia el techo digital, robando headroom invisiblemente.
+          </BlogCallout>
         </section>
 
         <section id="por-que-importa" className="scroll-mt-24">
@@ -42,30 +44,25 @@ export const blogPostContent: Record<BlogLocale, Record<string, ReactNode>> = {
             <li>Se reduce la claridad del low-end en el sumatorio.</li>
             <li>Más riesgo de distorsión asimétrica.</li>
           </ul>
-          <div className="not-prose my-6 rounded-xl border border-teal-500/20 bg-teal-500/10 p-4">
-            <p className="text-sm text-teal-100">
-              Regla rápida: si al hacer zoom la forma de onda no está centrada
-              en 0, hay un DC offset que deberías corregir antes de mezclar.
-            </p>
-          </div>
+          <BlogCallout type="tip" title="Regla de Oro">
+            Si al hacer zoom máximo en tu DAW la línea de silencio no está perfectamente
+            centrada en el eje 0, tienes DC Offset. Corrígelo antes de empezar a mezclar.
+          </BlogCallout>
         </section>
 
         <section id="como-detectarlo" className="scroll-mt-24">
           <h2>Cómo detectarlo rápido</h2>
-          <ol>
-            <li>Usa un medidor de DC o un analizador que muestre el valor medio.</li>
-            <li>Haz zoom en el editor y verifica si la forma de onda está centrada.</li>
-            <li>Calcula la media: si no es ~0, hay offset.</li>
-          </ol>
-          <pre>
-            <code>{`dc_offset = mean(signal)
-signal_fixed = signal - dc_offset`}</code>
-          </pre>
           <p>
             En términos prácticos, un valor mayor a -60 dB suele ser lo bastante
             alto como para justificar corrección. La magnitud exacta depende del
             flujo y del estilo.
           </p>
+          <pre>
+            <code>{`// Pseudocódigo de detección
+dc_offset = mean(signal)
+if abs(dc_offset) > threshold:
+    signal_fixed = signal - dc_offset`}</code>
+          </pre>
         </section>
 
         <section id="como-lo-hace-piroola" className="scroll-mt-24">
@@ -73,21 +70,14 @@ signal_fixed = signal - dc_offset`}</code>
           <p>
             En el pipeline, el análisis <strong>S1_STEM_DC_OFFSET.py</strong>
             mide el DC offset y el pico en dBFS de cada stem. Si supera el límite
-            esperado (<code>dc_offset_max_db</code>), el stage
-            <strong> S1_STEM_DC_OFFSET.py</strong> corrige la señal restando el
-            valor medio en todas las muestras, sin cambiar tu balance ni tu color.
+            esperado, el sistema corrige la señal restando el valor medio
+            matemático.
           </p>
-          <p>
-            Todo ocurre después de normalizar formatos en
-            <strong> S0_SESSION_FORMAT</strong> (tus archivos pasan a WAV de forma
-            interna), lo que permite analizar y corregir sin inconsistencias de
-            sample rate.
-          </p>
-          <ul>
-            <li>Analiza cada stem en mono para estimar el offset real.</li>
-            <li>Calcula un umbral y corrige solo si es necesario.</li>
-            <li>Reescribe los stems limpios en el trabajo temporal.</li>
-          </ul>
+          <BlogAudioPlayer
+            title="Corrección de DC Offset (Simulación)"
+            labelBefore="Original (Offset)"
+            labelAfter="Corregido (Centrado)"
+          />
         </section>
 
         <section id="solucion-manual" className="scroll-mt-24">
@@ -99,21 +89,24 @@ signal_fixed = signal - dc_offset`}</code>
             <li>Comprueba que la forma de onda vuelve al centro.</li>
             <li>Exporta el stem sin normalizar ni limitar.</li>
           </ol>
-          <p>
-            Evita filtros demasiado agresivos en subgraves si trabajas con 808 o
-            bajos muy profundos.
-          </p>
+          <BlogCallout type="warning" title="Cuidado con los Subgraves">
+             Evita usar filtros High-Pass agresivos (por encima de 30Hz) en bombos tipo 808
+             para quitar el DC Offset, ya que podrías alterar la fase y el peso del grave.
+             Usa herramientas dedicadas de "DC Removal" siempre que sea posible.
+          </BlogCallout>
         </section>
 
         <section id="checklist" className="scroll-mt-24">
-          <h2>Checklist antes de subir stems</h2>
-          <ul>
-            <li>Archivos a 24-bit o 32-float, sin dither innecesario.</li>
-            <li>Sin clipping visible en los picos.</li>
-            <li>Silencios limpios al inicio y final.</li>
-            <li>Sin normalizar cada stem de forma individual.</li>
-            <li>DC offset corregido o dentro del rango seguro.</li>
-          </ul>
+          <BlogChecklist
+            title="Checklist de Limpieza de Stems"
+            items={[
+              "Archivos a 24-bit o 32-float para mantener el rango dinámico.",
+              "Sin clipping visible (picos por debajo de 0 dBFS).",
+              "Silencios limpios al inicio y final (fades cortos).",
+              "Sin normalizar cada stem individualmente (conserva el balance).",
+              "DC offset corregido o verificado por debajo de -60dB."
+            ]}
+          />
         </section>
 
         <section id="faq" className="scroll-mt-24">
@@ -128,11 +121,6 @@ signal_fixed = signal - dc_offset`}</code>
             Puede ayudar, pero un DC removal es más preciso y no altera el rango
             audible. Usa HPF solo si no tienes otra opción.
           </p>
-          <h3>¿Puedo ignorarlo si es pequeño?</h3>
-          <p>
-            Si está muy por debajo de -60 dB, suele ser aceptable. Pero en stems
-            con mucho subgrave, cualquier margen extra cuenta.
-          </p>
         </section>
       </>
     ),
@@ -146,17 +134,17 @@ signal_fixed = signal - dc_offset`}</code>
         </p>
 
         <section id="por-que-bus" className="scroll-mt-24">
-          <h2>Por qué comprimir el bus de batería</h2>
+          <h2>El concepto de "Glue" (Pegamento)</h2>
           <p>
             El bus actúa como un pegamento común. Una ligera compresión unifica la
             batería, controla picos y genera sensación de energía constante sin
             matar el impacto.
           </p>
-          <ul>
-            <li>Mejora la cohesión entre kick, snare y overheads.</li>
-            <li>Reduce picos agresivos sin aplastar el groove.</li>
-            <li>Facilita que el bus se asiente con el resto de la mezcla.</li>
-          </ul>
+          <BlogCallout type="info" title="Glue Compression">
+             La compresión de "pegamento" se caracteriza por un ataque lento (para dejar pasar el golpe)
+             y un release rápido o automático (para volver a tiempo antes del siguiente golpe),
+             con ratios bajos (2:1 o 4:1).
+          </BlogCallout>
         </section>
 
         <section id="crest-factor" className="scroll-mt-24">
@@ -167,23 +155,20 @@ signal_fixed = signal - dc_offset`}</code>
             bajo, suena plana. Un rango común para bus de batería está entre 6 y
             10 dB dependiendo del estilo.
           </p>
-          <div className="not-prose my-6 rounded-xl border border-violet-500/20 bg-violet-500/10 p-4">
-            <p className="text-sm text-violet-100">
-              Si tu crest factor supera claramente el rango objetivo, necesitas
-              compresión suave de bus para recuperar cohesión.
-            </p>
-          </div>
         </section>
 
         <section id="ajustes-base" className="scroll-mt-24">
           <h2>Ajustes base recomendados</h2>
-          <ul>
-            <li>Ratio: 2:1 a 4:1 (3:1 es un punto sólido).</li>
-            <li>Attack: 10-30 ms para conservar transientes.</li>
-            <li>Release: 100-200 ms para seguir el groove.</li>
-            <li>Ganancia reducida: 1-3 dB en promedio.</li>
-          </ul>
-          <p>
+          <BlogChecklist
+            title="Configuración de Compresor Bus"
+            items={[
+               "Ratio: 2:1 a 4:1 (3:1 es el punto dulce).",
+               "Attack: 10-30 ms (vital para conservar transientes).",
+               "Release: 100-200 ms (ajustar al tempo/groove).",
+               "Gain Reduction: 1-3 dB máximo en medidores."
+            ]}
+          />
+          <p className="mt-4">
             Ajusta el threshold hasta que el medidor marque una reducción
             consistente, no solo en picos aislados.
           </p>
@@ -193,57 +178,37 @@ signal_fixed = signal - dc_offset`}</code>
           <h2>Cómo lo hace Piroola</h2>
           <p>
             El análisis <strong>S5_BUS_DYNAMICS_DRUMS.py</strong> identifica los
-            stems de la familia Drums en tu sesión y calcula el crest factor del
-            bus. Si el valor supera el objetivo, el stage de dinámica aplica una
-            compresión de glue con envolvente común para todo el bus.
+            stems de la familia Drums y calcula el crest factor. Si es necesario,
+            aplica compresión inteligente.
           </p>
-          <p>
-            En producción, usamos un detector de picos con ratio 3:1, attack 10 ms
-            y release 150 ms. El algoritmo calcula el threshold en función del
-            crest factor y limita la reducción media (
-            <code>max_average_gain_reduction_db</code>) para no destruir los
-            transientes.
-          </p>
-          <ul>
-            <li>Construye un bus multicanal con todos los stems de batería.</li>
-            <li>Aplica la misma envolvente a todos los canales.</li>
-            <li>Reescribe los stems con la compresión aplicada.</li>
-            <li>Guarda métricas pre/post en un JSON de control.</li>
-          </ul>
+          <BlogAudioPlayer
+            title="Compresión de Bus (Glue)"
+            labelBefore="Dry (Sin Compresión)"
+            labelAfter="Wet (Con Glue)"
+          />
         </section>
 
         <section id="paso-a-paso" className="scroll-mt-24">
           <h2>Paso a paso manual</h2>
           <ol>
             <li>Rutea kick, snare, toms y OH a un bus dedicado.</li>
-            <li>Inserta un compresor con ratio 3:1 y attack 10 ms.</li>
+            <li>Inserta un compresor tipo SSL o VCA.</li>
             <li>Reduce 1-3 dB en los picos fuertes.</li>
-            <li>Ajusta el release para que respire con el tempo.</li>
-            <li>Si falta punch, sube el attack o baja el ratio.</li>
+            <li>Ajusta el release para que la aguja "baile" con el tempo.</li>
           </ol>
-          <p>
-            Si necesitas más densidad sin perder pegada, usa compresión paralela y
-            mezcla el bus comprimido al gusto.
-          </p>
+          <BlogCallout type="tip" title="Compresión Paralela">
+             Si necesitas más densidad sin perder la pegada de los transientes originales,
+             duplica el bus, comprime uno agresivamente (10dB GR, ataque rápido) y mézclalo
+             sutilmente por debajo del bus original limpio.
+          </BlogCallout>
         </section>
 
         <section id="errores-comunes" className="scroll-mt-24">
           <h2>Errores comunes</h2>
           <ul>
             <li>Attack demasiado rápido: aplana transientes y quita pegada.</li>
-            <li>Release demasiado corto: bombeo audible.</li>
+            <li>Release demasiado corto: bombeo audible (distorsión en graves).</li>
             <li>Más de 4 dB de reducción media: batería sin vida.</li>
-            <li>Compresión sin escuchar el low-end: el kick pierde definición.</li>
-          </ul>
-        </section>
-
-        <section id="checklist" className="scroll-mt-24">
-          <h2>Checklist rápido</h2>
-          <ul>
-            <li>GR media entre 1-3 dB.</li>
-            <li>Crest factor dentro del rango objetivo.</li>
-            <li>Transientes del kick y snare siguen presentes.</li>
-            <li>No hay bombeo en hi-hats u overheads.</li>
           </ul>
         </section>
       </>
@@ -253,125 +218,103 @@ signal_fixed = signal - dc_offset`}</code>
         <p>
           Cuando grabas una batería con varios micrófonos, cualquier diferencia de
           tiempo o polaridad puede provocar cancelaciones. Eso se traduce en un
-          kick débil, una caja hueca o un estéreo borroso. Aquí tienes un método
-          práctico para alinear fase sin perder punch.
+          kick débil, una caja hueca o un estéreo borroso.
         </p>
 
         <section id="sintomas-fase" className="scroll-mt-24">
           <h2>Síntomas de fase</h2>
-          <ul>
-            <li>El low-end desaparece al sumar overheads con close mics.</li>
-            <li>La caja pierde cuerpo al activar room mics.</li>
-            <li>El sonido mejora cuando pones la mezcla en mono.</li>
-            <li>El medidor de correlación cae a valores negativos.</li>
-          </ul>
+          <BlogChecklist
+             title="Síntomas de Mala Fase"
+             items={[
+               "El low-end desaparece al sumar overheads con el bombo.",
+               "La caja suena delgada o hueca al activar los room mics.",
+               "El sonido mejora paradójicamente cuando pones la mezcla en MONO.",
+               "El medidor de correlación marca valores negativos (hacia -1)."
+             ]}
+          />
         </section>
 
         <section id="por-que-se-pierde" className="scroll-mt-24">
           <h2>Por qué se pierde la fase</h2>
           <p>
-            Cada micrófono está a una distancia distinta del parche. Esa diferencia
-            de tiempo mueve la fase y cambia la suma de frecuencias. Además, una
-            polaridad invertida o una cadena con latencia puede agravar el
-            problema.
+            Cada micrófono está a una distancia distinta del parche. El sonido viaja
+            a ~343 m/s, por lo que cada milisegundo cuenta.
           </p>
-          <ul>
-            <li>Diferencias de distancia entre micrófonos.</li>
-            <li>Inversión de polaridad en preamps o plugins.</li>
-            <li>Latencia no compensada en procesadores externos.</li>
-          </ul>
+          <BlogCallout type="concept" title="Física del Sonido">
+             1 ms de retraso equivale a unos 34 cm de distancia. Si tus overheads están
+             a 1 metro más de la caja que el micro cercano, el sonido llegará casi 3ms tarde,
+             creando un filtro de peine (comb filtering) audible.
+          </BlogCallout>
         </section>
 
         <section id="como-medir" className="scroll-mt-24">
           <h2>Cómo medir y alinear</h2>
           <ol>
             <li>Escucha en mono y detecta qué pistas se cancelan.</li>
-            <li>Usa un medidor de correlación para ver el desfase.</li>
-            <li>Prueba inversión de polaridad en kick o snare.</li>
-            <li>Alinea por muestras (nudge) hasta recuperar impacto.</li>
+            <li>Prueba inversión de polaridad (botón Ø) en kick o snare.</li>
+            <li>Alinea por muestras (nudge) en tu DAW.</li>
           </ol>
-          <p>
-            La clave es buscar el máximo low-end y pegada sin crear picos
-            artificiales.
-          </p>
         </section>
 
         <section id="como-lo-hace-piroola" className="scroll-mt-24">
           <h2>Cómo lo hace Piroola</h2>
           <p>
             El análisis <strong>S2_GROUP_PHASE_DRUMS.py</strong> identifica los
-            stems de batería y calcula su correlación. El stage aplica alineación
-            temporal y corrección de polaridad para maximizar la coherencia del
-            bus de Drums sin alterar el balance.
+            stems de batería y calcula su correlación cruzada. El sistema
+            alinea temporalmente los micros para maximizar el impacto.
           </p>
-          <ul>
-            <li>Detecta pares problemáticos en kick, snare y overheads.</li>
-            <li>Corrige offsets de tiempo a nivel de muestra.</li>
-            <li>Valida la coherencia con métricas de fase.</li>
-          </ul>
-        </section>
-
-        <section id="paso-a-paso" className="scroll-mt-24">
-          <h2>Paso a paso manual</h2>
-          <ol>
-            <li>Selecciona kick + overheads y comprueba la suma en mono.</li>
-            <li>Invierte polaridad donde notes pérdida de low-end.</li>
-            <li>Alinea transientes principales con un editor de muestras.</li>
-            <li>Repite con snare y room mics.</li>
-          </ol>
-        </section>
-
-        <section id="errores-comunes" className="scroll-mt-24">
-          <h2>Errores comunes</h2>
-          <ul>
-            <li>Confiar solo en la vista de onda y no en el oído.</li>
-            <li>Alinear todo al mismo punto sin considerar el groove.</li>
-            <li>Olvidar la polaridad antes de mover samples.</li>
-          </ul>
+          <BlogAudioPlayer
+             title="Alineación de Fase"
+             labelBefore="Desfasado (Débil)"
+             labelAfter="Alineado (Sólido)"
+          />
         </section>
 
         <section id="checklist" className="scroll-mt-24">
-          <h2>Checklist</h2>
-          <ul>
-            <li>Correlación estable y positiva.</li>
-            <li>Low-end sólido al sumar en mono.</li>
-            <li>Transientes definidos sin eco o flanger.</li>
-          </ul>
+          <BlogCallout type="tip" title="Tip de Producción">
+             Alinea siempre la fase de los Overheads respecto a la Caja (Snare).
+             La caja es el elemento central que conecta los micros cercanos con el sonido de sala.
+          </BlogCallout>
         </section>
       </>
     ),
     "control-resonancias-stems": (
       <>
         <p>
-          Las resonancias son picos estrechos que sobresalen y hacen que una pista
+          Las resonancias son picos estreitos que sobresalen y hacen que una pista
           suene áspera o nasal. No se arreglan con una EQ global: necesitan cortes
-          quirúrgicos para mantener el tono original.
+          quirúrgicos.
         </p>
 
         <section id="que-son-resonancias" className="scroll-mt-24">
           <h2>Qué son las resonancias</h2>
           <p>
             Son acumulaciones de energía en bandas muy concretas, causadas por la
-            sala, el instrumento o el micrófono. Cuando se suman varios stems, esas
-            frecuencias se vuelven molestas.
+            sala, el instrumento o el micrófono.
           </p>
         </section>
 
         <section id="por-que-problema" className="scroll-mt-24">
           <h2>Por qué son un problema</h2>
-          <ul>
-            <li>Fatigan el oído en escuchas largas.</li>
-            <li>Enmascaran la voz y los elementos principales.</li>
-            <li>Obligan a bajar volumen global para no molestar.</li>
-          </ul>
+          <BlogChecklist
+             title="Problemas de Resonancia"
+             items={[
+               "Fatigan el oído rápidamente (efecto 'silbido').",
+               "Enmascaran la inteligibilidad de las voces.",
+               "Disparan compresores innecesariamente en frecuencias específicas.",
+               "Obligan a bajar el volumen general de la pista."
+             ]}
+          />
         </section>
 
         <section id="como-detectar" className="scroll-mt-24">
           <h2>Cómo detectarlas</h2>
+          <p>La técnica del barrido es infalible:</p>
           <ol>
-            <li>Usa un analizador y busca picos muy estrechos.</li>
-            <li>Haz barridos con un EQ paramétrico (Q alto).</li>
-            <li>Comprueba si el pico aparece siempre, no solo en un golpe.</li>
+            <li>Usa un EQ paramétrico con Q muy alto (estrecho).</li>
+            <li>Sube la ganancia +10dB.</li>
+            <li>Barre lentamente el espectro hasta que el sonido "pite" o moleste mucho.</li>
+            <li>Ahí tienes tu frecuencia resonante. Ahora baja la ganancia a -3dB o -5dB.</li>
           </ol>
         </section>
 
@@ -379,43 +322,20 @@ signal_fixed = signal - dc_offset`}</code>
           <h2>Cómo lo hace Piroola</h2>
           <p>
             El stage <strong>S4_STEM_RESONANCE_CONTROL.py</strong> detecta
-            resonancias persistentes y aplica reducciones suaves por banda.
-            Después, <strong>S4_STEM_HPF_LPF.py</strong> limpia extremos para
-            dejar espacio al resto de la mezcla.
+            picos estáticos y aplica filtros notch quirúrgicos.
           </p>
-          <ul>
-            <li>Identifica picos estrechos por stem.</li>
-            <li>Aplica recortes de pocos dB con Q alto.</li>
-            <li>Evita alterar el timbre principal.</li>
-          </ul>
-        </section>
-
-        <section id="workflow-manual" className="scroll-mt-24">
-          <h2>Workflow manual</h2>
-          <ol>
-            <li>Inserta un EQ paramétrico antes de la compresión.</li>
-            <li>Barrer con +6 dB y Q alto hasta encontrar resonancias.</li>
-            <li>Reduce 2-4 dB en cada pico detectado.</li>
-            <li>Si el pico solo aparece a veces, usa EQ dinámica.</li>
-          </ol>
-        </section>
-
-        <section id="errores-comunes" className="scroll-mt-24">
-          <h2>Errores comunes</h2>
-          <ul>
-            <li>Hacer cortes demasiado anchos y adelgazar el sonido.</li>
-            <li>Eliminar resonancias que forman parte del carácter.</li>
-            <li>Corregir después de comprimir y empeorar el problema.</li>
-          </ul>
+          <BlogAudioPlayer
+             title="Limpieza Espectral"
+             labelBefore="Original (Áspero)"
+             labelAfter="Limpio (Suave)"
+          />
         </section>
 
         <section id="checklist" className="scroll-mt-24">
-          <h2>Checklist</h2>
-          <ul>
-            <li>Menos aspereza sin perder presencia.</li>
-            <li>EQ con cortes estrechos y controlados.</li>
-            <li>Dinámica intacta antes de comprimir.</li>
-          </ul>
+          <BlogCallout type="warning" title="No Te Pases">
+             Es fácil emocionarse y cortar demasiadas frecuencias, dejando el sonido "hueco" o sin vida.
+             Corta solo lo que realmente moleste y comprueba siempre en contexto con la mezcla completa.
+          </BlogCallout>
         </section>
       </>
     ),
@@ -423,82 +343,56 @@ signal_fixed = signal - dc_offset`}</code>
       <>
         <p>
           Llegar al loudness es fácil si limitas demasiado, pero el resultado suele
-          sonar plano. La clave es entender LUFS y true peak para subir volumen sin
-          destruir la dinámica.
+          sonar plano. La clave es entender LUFS y true peak.
         </p>
 
         <section id="que-son-lufs" className="scroll-mt-24">
           <h2>Qué son los LUFS</h2>
-          <p>
-            Los LUFS miden la sonoridad percibida. El valor integrado refleja la
-            canción completa, mientras que el short‑term muestra cambios a corto
-            plazo. Lo importante es lograr consistencia sin aplastar transientes.
-          </p>
+          <BlogCallout type="concept" title="LUFS vs RMS">
+            RMS mide la potencia eléctrica media. LUFS mide la sonoridad percibida por el oído humano,
+            teniendo en cuenta que escuchamos los medios más fuerte que los graves.
+          </BlogCallout>
         </section>
 
         <section id="targets-streaming" className="scroll-mt-24">
           <h2>Targets de streaming</h2>
           <p>
-            Muchas plataformas normalizan alrededor de -14 LUFS integrados y
-            recomiendan -1 dBTP de true peak. No es una regla fija: el género y la
-            intención artística mandan.
+            Muchas plataformas normalizan alrededor de -14 LUFS.
           </p>
-          <ul>
-            <li>-14 LUFS es una referencia común, no obligatoria.</li>
-            <li>-1 dBTP ayuda a evitar distorsión al codificar.</li>
-            <li>Comprueba siempre en el contexto del género.</li>
-          </ul>
+          <BlogChecklist
+             title="Estándares de la Industria"
+             items={[
+               "Spotify/YouTube: Normalizan a -14 LUFS.",
+               "Apple Music: Alrededor de -16 LUFS.",
+               "Club/CD Master: Suelen ir de -9 a -6 LUFS (más fuerte).",
+               "True Peak: Siempre dejar margen (-1.0 dBTP para streaming)."
+             ]}
+          />
         </section>
 
         <section id="true-peak" className="scroll-mt-24">
           <h2>True peak e intersample peaks</h2>
           <p>
             Los intersample peaks aparecen cuando la reconstrucción analógica supera
-            el 0 dBFS aunque el archivo digital no clippee. Por eso el true peak es
-            un control imprescindible en mastering.
+            el 0 dBFS aunque el archivo digital no clippee.
           </p>
+          <BlogCallout type="tip" title="El Margen de Seguridad">
+             Si masterizas a -0.1 dBTP, al convertir a MP3/AAC para streaming es casi seguro
+             que generarás distorsión por la compresión con pérdidas. Usa -1.0 dBTP para estar seguro.
+          </BlogCallout>
         </section>
 
         <section id="como-lo-hace-piroola" className="scroll-mt-24">
           <h2>Cómo lo hace Piroola</h2>
           <p>
-            <strong>S9_MASTER_GENERIC.py</strong> prepara la limitación final y
-            <strong> S10_MASTER_FINAL_LIMITS.py</strong> verifica LUFS, true peak y
+            <strong>S10_MASTER_FINAL_LIMITS.py</strong> verifica LUFS, true peak y
             correlación para ajustar micro‑ganancias sin perder dinámica.
           </p>
-          <ul>
-            <li>Aplica limitación suave con techo seguro.</li>
-            <li>Revisa LUFS integrados y true peak final.</li>
-            <li>Guarda métricas para el reporte técnico.</li>
-          </ul>
-        </section>
-
-        <section id="paso-a-paso" className="scroll-mt-24">
-          <h2>Paso a paso manual</h2>
-          <ol>
-            <li>Comprueba tu mezcla con un medidor LUFS y true peak.</li>
-            <li>Aplica un limitador con ceiling entre -1 y -0.5 dBTP.</li>
-            <li>Ajusta el threshold hasta el LUFS objetivo.</li>
-            <li>Escucha si aparecen bombeos o distorsión.</li>
-          </ol>
-        </section>
-
-        <section id="errores-comunes" className="scroll-mt-24">
-          <h2>Errores comunes</h2>
-          <ul>
-            <li>Limitar demasiado y perder transientes.</li>
-            <li>Olvidar el true peak y clippear en codificación.</li>
-            <li>Forzar un target que no encaja con el género.</li>
-          </ul>
-        </section>
-
-        <section id="checklist" className="scroll-mt-24">
-          <h2>Checklist</h2>
-          <ul>
-            <li>LUFS integrados dentro del rango deseado.</li>
-            <li>True peak por debajo del techo seguro.</li>
-            <li>Dinámica y pegada conservadas.</li>
-          </ul>
+          <BlogAudioPlayer
+             title="Limitación Final"
+             labelBefore="Mezcla (-18 LUFS)"
+             labelAfter="Master (-9 LUFS)"
+          />
         </section>
       </>
     ),
