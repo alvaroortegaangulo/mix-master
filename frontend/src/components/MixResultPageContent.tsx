@@ -531,7 +531,7 @@ export function MixResultPageContent({ jobId }: Props) {
                     compareSrc={signedOriginalUrl}
                     isCompareActive={showOriginal}
                     accentColor={showOriginal ? "#64748b" : "#f59e0b"} // Slate for original, Amber for Master
-                    className="bg-transparent shadow-none border-none p-0 !gap-0 h-48 md:h-56 overflow-hidden"
+                    className="bg-transparent shadow-none border-none p-0 !gap-0 h-32 md:h-40 overflow-hidden"
                     canvasClassName="h-full"
                     hideDownload={true}
                   />
