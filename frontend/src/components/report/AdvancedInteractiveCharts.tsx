@@ -63,7 +63,7 @@ export interface AnalysisData {
   stereo?: StereoData;
   spectrogram?: SpectrogramData;
   tonal?: TonalData;
-  vectorscope?: number[][]; // 64x64 density matrix
+  vectorscope?: number[][]; // 150x150 density matrix
 }
 
 export interface AdvancedChartsProps {
@@ -141,7 +141,7 @@ const ChartCard = ({
         {title}
       </h3>
     </div>
-    <div className="h-40 w-full relative mb-2">{children}</div>
+    <div className="h-40 w-full relative mb-2 flex items-center justify-center">{children}</div>
     <div className="flex justify-end">
       <button
         onClick={onExpand}
@@ -457,21 +457,39 @@ const SpectrogramCanvas = ({
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
     const [hoverInfo, setHoverInfo] = useState<{ x: number, y: number, time: number, freq: number, db: number } | null>(null);
+    const [dimensions, setDimensions] = useState<{ width: number; height: number } | null>(null);
+
+    // Responsive Logic
+    useEffect(() => {
+        if (!containerRef.current) return;
+
+        const updateDimensions = () => {
+             if (containerRef.current) {
+                 const rect = containerRef.current.getBoundingClientRect();
+                 setDimensions({ width: rect.width, height: rect.height });
+             }
+        };
+
+        updateDimensions();
+        const observer = new ResizeObserver(updateDimensions);
+        observer.observe(containerRef.current);
+
+        return () => observer.disconnect();
+    }, []);
 
     // Draw the spectrogram
     useEffect(() => {
         const canvas = canvasRef.current;
-        if (!canvas || !data || !data.data.length) return;
+        if (!canvas || !data || !data.data.length || !dimensions) return;
 
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
 
-        // Resize canvas to match container explicitly for crisp rendering
-        // or rely on CSS. Let's use internal resolution.
-        const width = expanded ? 800 : 300;
-        const height = expanded ? 400 : 150;
+        // Use high resolution for retina displays
+        const dpr = window.devicePixelRatio || 1;
+        const width = dimensions.width * dpr;
+        const height = dimensions.height * dpr;
 
-        // Ensure canvas element dimensions match
         if (canvas.width !== width || canvas.height !== height) {
              canvas.width = width;
              canvas.height = height;
@@ -484,8 +502,6 @@ const SpectrogramCanvas = ({
 
         ctx.clearRect(0,0,width,height);
 
-        // Find min/max for normalization approx
-        // We assume approx -80dB to 0dB range for display normalization
         const minDb = -80;
         const maxDb = 0;
 
@@ -497,8 +513,6 @@ const SpectrogramCanvas = ({
                 ctx.fillStyle = getMagmaColor(norm);
 
                 // j=0 is lowest freq (bottom), j=max is highest.
-                // In canvas 0,0 is top-left.
-                // So lowest freq should be at h - cellH
                 const y = height - (j + 1) * cellH;
                 const x = i * cellW;
 
@@ -507,7 +521,7 @@ const SpectrogramCanvas = ({
             }
         }
 
-    }, [data, expanded]);
+    }, [data, expanded, dimensions]);
 
     // Handle Interaction
     const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -553,9 +567,6 @@ const SpectrogramCanvas = ({
         >
             <canvas
                 ref={canvasRef}
-                // Width/Height controlled by useEffect but set default here
-                width={expanded ? 800 : 300}
-                height={expanded ? 400 : 150}
                 className="w-full h-full object-cover bg-black"
             />
 
@@ -598,7 +609,7 @@ const VectorscopeChart = ({
     original,
     expanded
 }: {
-    data: number[][]; // 64x64
+    data: number[][]; // 150x150
     original?: number[][];
     expanded?: boolean;
 }) => {
@@ -606,35 +617,56 @@ const VectorscopeChart = ({
     const containerRef = useRef<HTMLDivElement>(null);
     const [mode, setMode] = useState<'result' | 'original'>('result');
     const [hoverInfo, setHoverInfo] = useState<{ x: number, y: number, L: number, R: number, density: number } | null>(null);
+    const [dimensions, setDimensions] = useState<{ width: number; height: number } | null>(null);
 
     const activeData = (mode === 'result' ? data : original) || data;
 
+    // Responsive Logic
+    useEffect(() => {
+        if (!containerRef.current) return;
+
+        const updateDimensions = () => {
+             if (containerRef.current) {
+                 const rect = containerRef.current.getBoundingClientRect();
+                 setDimensions({ width: rect.width, height: rect.height });
+             }
+        };
+
+        updateDimensions();
+        const observer = new ResizeObserver(updateDimensions);
+        observer.observe(containerRef.current);
+
+        return () => observer.disconnect();
+    }, []);
+
     useEffect(() => {
         const canvas = canvasRef.current;
-        if (!canvas || !activeData) return;
+        if (!canvas || !activeData || !dimensions) return;
 
         const ctx = canvas.getContext('2d');
         if (!ctx) return;
 
-        const size = activeData.length; // 64
-        // Use higher res for drawing to look smooth
-        const w = expanded ? 400 : 200;
-        const h = expanded ? 400 : 200;
+        // High DPI support
+        const dpr = window.devicePixelRatio || 1;
+        const w = dimensions.width * dpr;
+        const h = dimensions.height * dpr;
 
         if (canvas.width !== w || canvas.height !== h) {
             canvas.width = w;
             canvas.height = h;
         }
 
+        const size = activeData.length; // e.g., 150
+
         ctx.clearRect(0, 0, w, h);
 
         // --- Draw Background Grid ---
         const cx = w/2;
         const cy = h/2;
-        const maxR = w/2 - 2;
+        const maxR = w/2 - 2 * dpr; // inset slightly
 
         ctx.strokeStyle = '#334155';
-        ctx.lineWidth = 1;
+        ctx.lineWidth = 1 * dpr;
 
         // Polar Circles
         [0.25, 0.5, 0.75, 1.0].forEach(r => {
@@ -674,7 +706,7 @@ const VectorscopeChart = ({
                 const boost = Math.pow(val, 0.5);
                 ctx.fillStyle = getMagmaColor(boost);
 
-                // y index 0 is R=-1 (bottom), y=63 is R=1 (top)
+                // y index 0 is R=-1 (bottom), y=max is R=1 (top)
                 // canvas 0 is top.
                 const drawY = h - (y + 1) * cellH;
                 const drawX = x * cellW;
@@ -687,12 +719,12 @@ const VectorscopeChart = ({
         // Clip circle overlay (make corners black/transparent to simulate circular scope)
         // optional, but looks pro. Let's just draw a border.
         ctx.strokeStyle = '#64748b';
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 2 * dpr;
         ctx.beginPath();
         ctx.arc(cx, cy, maxR, 0, Math.PI * 2);
         ctx.stroke();
 
-    }, [activeData, expanded, mode]);
+    }, [activeData, expanded, mode, dimensions]);
 
     const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
         if (!containerRef.current) return;
@@ -711,7 +743,7 @@ const VectorscopeChart = ({
         const R = ((h - mouseY) / h) * 2 - 1;
 
         // Lookup density
-        // Map L,R back to 0..63 indices
+        // Map L,R back to 0..size-1 indices
         const size = activeData.length;
         // L = (idx / size)*2 - 1  => idx = (L+1)/2 * size
         const idxX = Math.floor((L + 1) / 2 * size);
@@ -730,7 +762,12 @@ const VectorscopeChart = ({
             <div
                 ref={containerRef}
                 className="relative cursor-crosshair group rounded-full overflow-hidden shadow-2xl bg-black border border-slate-800"
-                style={{ width: expanded ? 400 : 200, height: expanded ? 400 : 200 }}
+                style={{
+                    // Use CSS max-values to keep it contained but square
+                    width: expanded ? 'min(60vh, 800px)' : '150px',
+                    height: expanded ? 'min(60vh, 800px)' : '150px',
+                    // Fallback / standard
+                }}
                 onMouseMove={handleMouseMove}
                 onMouseLeave={() => setHoverInfo(null)}
             >
