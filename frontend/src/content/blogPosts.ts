@@ -1135,6 +1135,426 @@ export const blogPosts: BlogPost[] = [
       },
     },
   },
+  {
+    slug: "ia-en-produccion-musical-aliado-enemigo",
+    publishedAt: "2025-01-20",
+    translations: {
+      en: {
+        title: "AI in Music Production: Friend or Foe?",
+        description:
+          "Analyzing the emerging batch of AI-assisted mastering and how to decide whether they become a creative ally or a runaway compressor.",
+        excerpt:
+          "As machine listening matures, production teams need to understand where to let AI automate and when to keep the human ear in charge.",
+        publishedAtLabel: "Jan 20, 2025",
+        readingTime: "9 min read",
+        tags: ["AI", "Music production", "Mastering"],
+        keywords: [
+          "ai mastering",
+          "ai music production",
+          "creative workflow ai",
+          "ai assisted mastering",
+          "automated mixing tools",
+        ],
+        toc: [
+          { id: "today-s-ia-echoes", label: "The AI echo chamber today" },
+          { id: "freedoms-and-limitations", label: "What freedom the AI tools really give you" },
+          { id: "matching-vision-to-output", label: "Matching production intent to AI output" },
+          { id: "quality-control-checklist", label: "Quality control checklist" },
+          { id: "keeping-human-tone", label: "Keeping the human tonal compass" },
+          { id: "workflow-sprint", label: "Workflow sprint with AI" },
+          { id: "glimpses-future", label: "What we expect next" },
+        ],
+      },
+      es: {
+        title: "IA en la Producción Musical: ¿Aliado o Enemigo?",
+        description:
+          "Analizamos las nuevas herramientas de mastering asistidas por IA y cómo integrarlas para que sumen sin reemplazar al ingeniero.",
+        excerpt:
+          "La escucha automática evoluciona rápido; aquí te ayudamos a decidir qué dejar en manos de la IA y qué debe seguir siendo humano.",
+        publishedAtLabel: "20 Ene 2025",
+        readingTime: "9 min",
+        tags: ["IA", "Producción", "Mastering"],
+        keywords: [
+          "mastering ai",
+          "producción musical ai",
+          "flujo creativo ai",
+          "mastering asistido",
+          "automatización mix",
+        ],
+        toc: [
+          { id: "today-s-ia-echoes", label: "El ecosistema de IA hoy" },
+          { id: "freedoms-and-limitations", label: "Qué libertades reales ofrece la IA" },
+          { id: "matching-vision-to-output", label: "Alineando intención y resultado" },
+          { id: "quality-control-checklist", label: "Checklist de control de calidad" },
+          { id: "keeping-human-tone", label: "Manteniendo el tono humano" },
+          { id: "workflow-sprint", label: "Sprint de flujo con IA" },
+          { id: "glimpses-future", label: "Qué viene después" },
+        ],
+      },
+      fr: {
+        title: "L’IA en production musicale : alliée ou ennemie ?",
+        description:
+          "Nous décortiquons les dernières fonctions de mastering assisté par IA pour garder le contrôle créatif sans perdre en efficacité.",
+        excerpt:
+          "Quand l’écoute machine s’améliore, il faut savoir quand lui confier des tâches et quand garder l’oreille humaine.",
+        publishedAtLabel: "20 janv. 2025",
+        readingTime: "9 min",
+        tags: ["IA", "Production musicale", "Mastering"],
+        keywords: [
+          "mastering ai",
+          "production musicale ai",
+          "workflow créatif ai",
+          "mastering assisté",
+          "outils de mix automatisés",
+        ],
+        toc: [
+          { id: "today-s-ia-echoes", label: "L’écosystème IA actuel" },
+          { id: "freedoms-and-limitations", label: "Les vraies libertés de l’IA" },
+          { id: "matching-vision-to-output", label: "Aligner intention et rendu" },
+          { id: "quality-control-checklist", label: "Checklist qualité" },
+          { id: "keeping-human-tone", label: "Conserver l’oreille humaine" },
+          { id: "workflow-sprint", label: "Sprint de workflow IA" },
+          { id: "glimpses-future", label: "Ce qui arrive" },
+        ],
+      },
+      de: {
+        title: "KI in der Musikproduktion: Verbündeter oder Feind?",
+        description:
+          "Wir analysieren die neuesten KI-gestützten Mastering-Tools und zeigen, wann sie kreative Hilfe leisten dürfen.",
+        excerpt:
+          "Maschinelles Hören wird besser – es gilt zu entscheiden, wann wir es einsetzen und wann der Mensch das letzte Wort behält.",
+        publishedAtLabel: "20. Jan. 2025",
+        readingTime: "9 Min.",
+        tags: ["KI", "Musikproduktion", "Mastering"],
+        keywords: [
+          "ki mastering",
+          "musikproduktion ai",
+          "kreativer workflow ai",
+          "assistiertes mastering",
+          "automatisierte mix tools",
+        ],
+        toc: [
+          { id: "today-s-ia-echoes", label: "Das KI-Ökosystem heute" },
+          { id: "freedoms-and-limitations", label: "Was KI wirklich erlaubt" },
+          { id: "matching-vision-to-output", label: "Intention mit Ergebnis abgleichen" },
+          { id: "quality-control-checklist", label: "Qualitätscheckliste" },
+          { id: "keeping-human-tone", label: "Das menschliche Ohr behalten" },
+          { id: "workflow-sprint", label: "Workflow-Sprint mit KI" },
+          { id: "glimpses-future", label: "Blick in die Zukunft" },
+        ],
+      },
+      it: {
+        title: "IA nella produzione musicale: alleata o nemica?",
+        description:
+          "Scomponiamo le novità nel mastering assistito da IA per usarle senza perdere controllo creativo.",
+        excerpt:
+          "L’ascolto automatico migliora: è ora di decidere quando affidarsi alla macchina e quando mantenere l’orecchio umano.",
+        publishedAtLabel: "20 gen 2025",
+        readingTime: "9 min",
+        tags: ["IA", "Produzione", "Mastering"],
+        keywords: [
+          "mastering ai",
+          "produzione musicale ai",
+          "workflow creativo ai",
+          "mastering assistito",
+          "strumenti mix automatizzati",
+        ],
+        toc: [
+          { id: "today-s-ia-echoes", label: "Il panorama IA oggi" },
+          { id: "freedoms-and-limitations", label: "Cosa permette davvero l’IA" },
+          { id: "matching-vision-to-output", label: "Allineare intenzione e resa" },
+          { id: "quality-control-checklist", label: "Checklist qualità" },
+          { id: "keeping-human-tone", label: "Mantenere l’orecchio umano" },
+          { id: "workflow-sprint", label: "Sprint di workflow con IA" },
+          { id: "glimpses-future", label: "Cosa viene dopo" },
+        ],
+      },
+      pt: {
+        title: "IA na produção musical: aliada ou inimiga?",
+        description:
+          "Analisamos as últimas funções de masterização assistida por IA para manter o controle artístico acompanhado da eficiência.",
+        excerpt:
+          "A escuta automática evolui rápido – descubra o que deixar com a IA e o que manter sob supervisão humana.",
+        publishedAtLabel: "20 jan 2025",
+        readingTime: "9 min",
+        tags: ["IA", "Produção musical", "Mastering"],
+        keywords: [
+          "mastering ai",
+          "produção musical ai",
+          "workflow criativo ai",
+          "mastering assistido",
+          "ferramentas de mix automatizadas",
+        ],
+        toc: [
+          { id: "today-s-ia-echoes", label: "O ecossistema de IA hoje" },
+          { id: "freedoms-and-limitations", label: "O que a IA realmente deixa fazer" },
+          { id: "matching-vision-to-output", label: "Alinhar intenção com resultado" },
+          { id: "quality-control-checklist", label: "Checklist de qualidade" },
+          { id: "keeping-human-tone", label: "Manter o ouvido humano" },
+          { id: "workflow-sprint", label: "Sprint de workflow com IA" },
+          { id: "glimpses-future", label: "O que vem por aí" },
+        ],
+      },
+      ja: {
+        title: "音楽制作におけるAI：味方か敵か？",
+        description:
+          "AI支援マスタリングの新機能を紐解き、創造的コントロールを保ちながら生産性を得る方法を探ります。",
+        excerpt:
+          "機械的なリスニングが進化すると、どこまで任せるか、人間の耳をいつ残すかの判断が重要になります。",
+        publishedAtLabel: "2025年1月20日",
+        readingTime: "9分",
+        tags: ["AI", "音楽制作", "マスタリング"],
+        keywords: [
+          "ai マスタリング",
+          "音楽制作 ai",
+          "クリエイティブワークフロー ai",
+          "ai支援マスタリング",
+          "自動ミックスツール",
+        ],
+        toc: [
+          { id: "today-s-ia-echoes", label: "最新のAIエコシステム" },
+          { id: "freedoms-and-limitations", label: "AIが本当に与える自由" },
+          { id: "matching-vision-to-output", label: "意図と出力を揃える" },
+          { id: "quality-control-checklist", label: "品質チェックリスト" },
+          { id: "keeping-human-tone", label: "人間の耳を残す" },
+          { id: "workflow-sprint", label: "AIとのワークフロースプリント" },
+          { id: "glimpses-future", label: "これからの展望" },
+        ],
+      },
+      zh: {
+        title: "音乐制作中的 AI：盟友还是敌人？",
+        description:
+          "解读最新 AI 辅助母带功能，在保持创作掌控的同时提高效率的实践建议。",
+        excerpt:
+          "机器听觉不断进化，现在是时候界定哪些任务交给 AI，哪些需要人耳终审。",
+        publishedAtLabel: "2025年1月20日",
+        readingTime: "9分钟",
+        tags: ["AI", "音乐制作", "母带"],
+        keywords: [
+          "ai 母带",
+          "音乐制作 ai",
+          "创意流程 ai",
+          "ai 辅助母带",
+          "自动混音工具",
+        ],
+        toc: [
+          { id: "today-s-ia-echoes", label: "当前的 AI 生态" },
+          { id: "freedoms-and-limitations", label: "AI 实际赋予的自由" },
+          { id: "matching-vision-to-output", label: "对齐创作意图与输出" },
+          { id: "quality-control-checklist", label: "质量检查表" },
+          { id: "keeping-human-tone", label: "保留人类听觉" },
+          { id: "workflow-sprint", label: "与 AI 的工作流加速" },
+          { id: "glimpses-future", label: "未来展望" },
+        ],
+      },
+    },
+  },
+  {
+    slug: "tratamiento-acustico-vs-calibracion-dsp",
+    publishedAt: "2025-01-22",
+    translations: {
+      en: {
+        title: "Acoustic Treatment vs. DSP Calibration",
+        description:
+          "Testing whether software EQ, convolution, and room correction can replace physical traps — and where real acoustics still win.",
+        excerpt:
+          "We compare in-room absorption, bass trapping, and measurements against the latest calibration suites to understand the trade-offs.",
+        publishedAtLabel: "Jan 22, 2025",
+        readingTime: "15 min read",
+        tags: ["Acoustics", "DSP", "Studios"],
+        keywords: [
+          "acoustic treatment",
+          "dsp calibration",
+          "room treatment vs dsp",
+          "calibrating studio room",
+          "room correction software",
+        ],
+        toc: [
+          { id: "physical-vs-digital", label: "Physical control vs. digital correction" },
+          { id: "what-dsp-tools-make", label: "What today's DSP tools actually do" },
+          { id: "room-measurements", label: "Room measurement methodology" },
+          { id: "treatment-checkpoints", label: "Treatment checkpoints and budget" },
+          { id: "hybrid-recipe", label: "A hybrid recipe for mixing rooms" },
+          { id: "when-to-rent", label: "When to rent a treated room" },
+        ],
+      },
+      es: {
+        title: "Tratamiento Acústico vs. Calibración DSP",
+        description:
+          "Comparamos si el EQ de software y la corrección con convolución pueden reemplazar trampas y paneles físicos.",
+        excerpt:
+          "Contraste entre absorción en sala, trampas de graves y las últimas suites de calibración para entender las compensaciones.",
+        publishedAtLabel: "22 Ene 2025",
+        readingTime: "15 min",
+        tags: ["Acústica", "Sala", "DSP"],
+        keywords: [
+          "tratamiento acústico",
+          "calibración dsp",
+          "sala tratada vs dsp",
+          "calibrar sala",
+          "software de corrección de sala",
+        ],
+        toc: [
+          { id: "physical-vs-digital", label: "Físico vs digital" },
+          { id: "what-dsp-tools-make", label: "Qué hacen hoy las herramientas DSP" },
+          { id: "room-measurements", label: "Metodología de medición" },
+          { id: "treatment-checkpoints", label: "Puntos clave de tratamiento" },
+          { id: "hybrid-recipe", label: "Receta híbrida para salas" },
+          { id: "when-to-rent", label: "Cuándo alquilar una sala tratada" },
+        ],
+      },
+      fr: {
+        title: "Traitement acoustique vs calibration DSP",
+        description:
+          "Nous testons si l’équalisation logicielle et la convolution peuvent remplacer les panneaux physiques.",
+        excerpt:
+          "Comparatif entre absorption réelle, piégeage des basses et suites de calibration modernes pour apprécier les compromis.",
+        publishedAtLabel: "22 janv. 2025",
+        readingTime: "15 min",
+        tags: ["Acoustique", "DSP", "Studios"],
+        keywords: [
+          "traitement acoustique",
+          "calibration dsp",
+          "salle traitée vs dsp",
+          "calibrer une salle",
+          "correction de pièce logicielle",
+        ],
+        toc: [
+          { id: "physical-vs-digital", label: "Contrôle physique vs correction digitale" },
+          { id: "what-dsp-tools-make", label: "Ce que font vraiment les outils DSP" },
+          { id: "room-measurements", label: "Méthodologie de mesure" },
+          { id: "treatment-checkpoints", label: "Points de traitement" },
+          { id: "hybrid-recipe", label: "Recette hybride" },
+          { id: "when-to-rent", label: "Quand louer une salle traitée" },
+        ],
+      },
+      de: {
+        title: "Akustikbehandlung vs. DSP-Kalibrierung",
+        description:
+          "Wir testen, ob Software-EQ und Raumkorrektur Hardware-Panels ersetzen können und wo echte Akustik punktet.",
+        excerpt:
+          "Vergleich von Absorption, Bassfallen und Kalibrierungssuites, um die richtigen Kompromisse zu verstehen.",
+        publishedAtLabel: "22. Jan. 2025",
+        readingTime: "15 Min.",
+        tags: ["Akustik", "DSP", "Studios"],
+        keywords: [
+          "akustikbehandlung",
+          "dsp kalibrierung",
+          "raum akustik vs dsp",
+          "studio kalibrierung",
+          "raumnormierung software",
+        ],
+        toc: [
+          { id: "physical-vs-digital", label: "Physisch vs digital" },
+          { id: "what-dsp-tools-make", label: "Was DSP-Tools tatsächlich tun" },
+          { id: "room-measurements", label: "Raum-Messmethodik" },
+          { id: "treatment-checkpoints", label: "Behandlungs-Checkpoints" },
+          { id: "hybrid-recipe", label: "Hybrides Rezept" },
+          { id: "when-to-rent", label: "Wann man behandelte Räume mieten sollte" },
+        ],
+      },
+      it: {
+        title: "Trattamento acustico vs calibrazione DSP",
+        description:
+          "Valutiamo se l’EQ software e la correzione possono sostituire pannelli e pannelli bass trap fisici.",
+        excerpt:
+          "Mettiamo a confronto assorbimento reale, trap per bassi e suite di calibrazione per capire i compromessi.",
+        publishedAtLabel: "22 gen 2025",
+        readingTime: "15 min",
+        tags: ["Acustica", "Sala", "DSP"],
+        keywords: [
+          "trattamento acustico",
+          "calibrazione dsp",
+          "sala trattata vs dsp",
+          "calibrare sala",
+          "correzione stanza software",
+        ],
+        toc: [
+          { id: "physical-vs-digital", label: "Fisico vs digitale" },
+          { id: "what-dsp-tools-make", label: "Cosa fanno veramente gli strumenti DSP" },
+          { id: "room-measurements", label: "Metodologia di misurazione" },
+          { id: "treatment-checkpoints", label: "Checkpoint di trattamento" },
+          { id: "hybrid-recipe", label: "Ricetta ibrida" },
+          { id: "when-to-rent", label: "Quando affittare una sala trattata" },
+        ],
+      },
+      pt: {
+        title: "Tratamento acústico vs calibração DSP",
+        description:
+          "Testamos se equalização e convolução podem substituir fofos físicos e quando a acústica real ainda manda.",
+        excerpt:
+          "Comparamos absorção na sala, armadilhas de graves e as últimas suítes de calibração para entender trocas.",
+        publishedAtLabel: "22 jan 2025",
+        readingTime: "15 min",
+        tags: ["Acústica", "Sala", "DSP"],
+        keywords: [
+          "tratamento acústico",
+          "calibração dsp",
+          "sala tratada vs dsp",
+          "calibrar sala",
+          "correção de sala software",
+        ],
+        toc: [
+          { id: "physical-vs-digital", label: "Físico vs digital" },
+          { id: "what-dsp-tools-make", label: "O que os DSPs fazem" },
+          { id: "room-measurements", label: "Método de medição" },
+          { id: "treatment-checkpoints", label: "Pontos de tratamento" },
+          { id: "hybrid-recipe", label: "Receita híbrida" },
+          { id: "when-to-rent", label: "Quando alugar uma sala tratada" },
+        ],
+      },
+      ja: {
+        title: "アコースティック処理 vs DSP校正",
+        description:
+          "EQやルーム補正ソフトが物理的な吸音と置き換えられるか、どこで本物のアコースティックが勝つかを検証します。",
+        excerpt:
+          "吸音とベーストラップ、最新キャリブレーションツールを比較して妥協点を探ります。",
+        publishedAtLabel: "2025年1月22日",
+        readingTime: "15分",
+        tags: ["アコースティック", "DSP", "スタジオ"],
+        keywords: [
+          "アコースティック処理",
+          "DSP 校正",
+          "ルーム処理 vs dsp",
+          "スタジオ キャリブレーション",
+          "ルームコレクション ソフト",
+        ],
+        toc: [
+          { id: "physical-vs-digital", label: "物理 vs デジタル" },
+          { id: "what-dsp-tools-make", label: "DSPが実際に行うこと" },
+          { id: "room-measurements", label: "ルーム計測" },
+          { id: "treatment-checkpoints", label: "処理チェック" },
+          { id: "hybrid-recipe", label: "ハイブリッドレシピ" },
+          { id: "when-to-rent", label: "処理済みルームを借りるタイミング" },
+        ],
+      },
+      zh: {
+        title: "声学处理 vs DSP 校准",
+        description:
+          "我们检验软件 EQ 能否替代物理吸音、什么时候真正的声学安排才是胜出者。",
+        excerpt:
+          "比较吸收、低频陷阱与最新校准套件，厘清哪种策略适合混音室。",
+        publishedAtLabel: "2025年1月22日",
+        readingTime: "15分钟",
+        tags: ["声学", "DSP", "工作室"],
+        keywords: [
+          "声学处理",
+          "DSP 校准",
+          "处理 vs dsp",
+          "校准工作室",
+          "房间校正软件",
+        ],
+        toc: [
+          { id: "physical-vs-digital", label: "实体 vs 数字" },
+          { id: "what-dsp-tools-make", label: "DSP 工具能做什么" },
+          { id: "room-measurements", label: "房间测量方法" },
+          { id: "treatment-checkpoints", label: "处理检查点" },
+          { id: "hybrid-recipe", label: "混合方案" },
+          { id: "when-to-rent", label: "何时租用处理房" },
+        ],
+      },
+    },
+  },
 ];
 
 export const blogPostSlugs = blogPosts.map((post) => post.slug);
