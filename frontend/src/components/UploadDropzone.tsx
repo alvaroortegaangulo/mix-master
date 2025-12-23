@@ -121,7 +121,7 @@ export function UploadDropzone({
         multiple={uploadMode === "stems"}
         accept={
           uploadMode === "song"
-            ? ".wav,audio/wav,audio/x-wav"
+            ? ".wav,.aif,.aiff,.mp3,audio/wav,audio/x-wav,audio/aiff,audio/x-aiff,audio/mpeg,audio/mp3"
             : "audio/*"
         }
         onChange={handleInputChange}

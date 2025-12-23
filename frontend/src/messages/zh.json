@@ -194,7 +194,7 @@
     "uploadMixConfig": "上传 & 混音配置",
     "songMode": "歌曲（母带处理）",
     "stemsMode": "分轨（完整混音）",
-    "songModeWarning": "歌曲模式只需要一个 WAV 文件。",
+    "songModeWarning": "歌曲模式只需要一个 WAV/AIFF/MP3 文件。",
     "selectionWarning": "您只选择了一个分轨。如果您想进行歌曲母带处理，请选择歌曲（母带处理）。",
     "pipelineSteps": "管道步骤",
     "enabled": "已启用",
@@ -990,7 +990,7 @@
     "stemsModeDesc": "上传单独的轨道以进行完整的 AI 混音。",
     "dragDropSong": "将您的歌曲拖放到此处，或单击以选择文件",
     "dragDropStems": "将分轨拖放到此处，或单击以选择文件",
-    "supportedFormats": "支持的格式：WAV",
+    "supportedFormats": "支持的格式：WAV, AIFF, MP3",
     "filesSelected": "已选择 {count} 个音频文件"
   },
   "PipelinePhases": {

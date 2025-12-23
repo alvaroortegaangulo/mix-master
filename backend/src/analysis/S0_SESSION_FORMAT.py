@@ -28,6 +28,75 @@ from utils.session_utils import (  # noqa: E402
     infer_bus_target,
 )
 
+SUPPORTED_AUDIO_EXTS = {".wav", ".aif", ".aiff", ".mp3"}
+
+
+def _load_audio_for_conversion(path: Path) -> tuple[np.ndarray, int]:
+    """
+    Lee audio con soundfile si es posible; fallback a librosa para formatos
+    como MP3 cuando libsndfile no lo soporta.
+    Devuelve audio en float32 con forma (samples, channels).
+    """
+    try:
+        data, sr = sf.read(path, always_2d=True)
+        return data.astype(np.float32, copy=False), int(sr)
+    except Exception:
+        try:
+            import librosa  # type: ignore
+        except Exception as exc:  # pragma: no cover - depende del entorno
+            raise RuntimeError(f"No se pudo leer {path.name}; falta backend para MP3/AIFF: {exc}") from exc
+
+        data, sr = librosa.load(path, sr=None, mono=False)
+        if data.ndim == 1:
+            data = data.reshape(-1, 1)
+        else:
+            data = data.T
+        return data.astype(np.float32, copy=False), int(sr)
+
+
+def _unique_wav_path(path: Path) -> Path:
+    base = path.with_suffix(".wav")
+    if not base.exists():
+        return base
+    stem = path.stem
+    for i in range(1, 1000):
+        candidate = path.with_name(f"{stem}_{i}.wav")
+        if not candidate.exists():
+            return candidate
+    raise RuntimeError(f"No se pudo encontrar nombre libre para {path.name}")
+
+
+def _convert_to_wav(path: Path) -> Path:
+    data, sr = _load_audio_for_conversion(path)
+    wav_path = _unique_wav_path(path)
+    sf.write(wav_path, data, sr, subtype="FLOAT")
+    return wav_path
+
+
+def _update_session_config_paths(temp_dir: Path, converted: Dict[str, str]) -> None:
+    if not converted:
+        return
+    cfg_path = temp_dir / "session_config.json"
+    if not cfg_path.exists():
+        return
+    try:
+        cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
+    except Exception:
+        return
+
+    stems = cfg.get("stems", [])
+    updated = False
+    for stem in stems:
+        if not isinstance(stem, dict):
+            continue
+        fname = stem.get("file_name")
+        if fname in converted:
+            stem["file_name"] = converted[fname]
+            updated = True
+
+    if updated:
+        cfg_path.write_text(json.dumps(cfg, indent=2, ensure_ascii=False), encoding="utf-8")
+
 def analyze_stem(stem_path: Path) -> Dict[str, Any]:
     """
     Analiza un stem: samplerate, canales, duración, pico, silencios inicio/fin, bit_depth.
@@ -109,7 +178,36 @@ def main() -> None:
     style_preset = cfg["style_preset"]
     instrument_by_file = cfg["instrument_by_file"]
 
-    # 3) Leer y analizar stems desde temp/<contract_id>
+    # 3) Convertir a WAV si llegan AIFF/MP3 para unificar el pipeline
+    converted: Dict[str, str] = {}
+    stem_candidates = [
+        p for p in temp_dir.iterdir()
+        if p.is_file()
+        and p.suffix.lower() in SUPPORTED_AUDIO_EXTS
+        and p.name.lower() != "full_song.wav"
+    ]
+    for src in stem_candidates:
+        if src.suffix.lower() == ".wav":
+            continue
+        try:
+            wav_path = _convert_to_wav(src)
+            converted[src.name] = wav_path.name
+            try:
+                src.unlink()
+            except Exception as exc:
+                logger.logger.warning(f"[S0_SESSION_FORMAT] No se pudo borrar {src.name}: {exc}")
+            logger.logger.info(f"[S0_SESSION_FORMAT] Convertido {src.name} -> {wav_path.name}")
+        except Exception as exc:
+            logger.logger.error(f"[S0_SESSION_FORMAT] Error convirtiendo {src.name} a WAV: {exc}")
+            raise
+
+    if converted:
+        _update_session_config_paths(temp_dir, converted)
+        for old_name, new_name in converted.items():
+            if old_name in instrument_by_file and new_name not in instrument_by_file:
+                instrument_by_file[new_name] = instrument_by_file[old_name]
+
+    # 4) Leer y analizar stems desde temp/<contract_id>
     stem_files: List[Path] = sorted(
         p for p in temp_dir.glob("*.wav")
         if p.name.lower() != "full_song.wav"  # por si en algún momento existiera
@@ -124,7 +222,15 @@ def main() -> None:
 
     for stem_info in results:
         file_name = stem_info["file_name"]
-        requested_profile = instrument_by_file.get(file_name, "Other")
+        requested_profile = instrument_by_file.get(file_name)
+        if not requested_profile:
+            file_stem = Path(file_name).stem
+            for key, prof in instrument_by_file.items():
+                if Path(key).stem == file_stem:
+                    requested_profile = prof
+                    break
+        if not requested_profile:
+            requested_profile = "Other"
 
         # Resolver instrument_profile cuando es "Auto"
         if str(requested_profile).lower() == "auto":

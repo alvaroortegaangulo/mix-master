@@ -194,7 +194,7 @@
     "uploadMixConfig": "Configurazione Caricamento & Mix",
     "songMode": "Canzone (Mastering)",
     "stemsMode": "Stems (Mix Completo)",
-    "songModeWarning": "La modalità canzone richiede esattamente un file WAV.",
+    "songModeWarning": "La modalità canzone richiede esattamente un file WAV/AIFF/MP3.",
     "selectionWarning": "Hai selezionato solo uno stem. Se vuoi masterizzare una canzone, seleziona Canzone (Mastering).",
     "pipelineSteps": "Fasi della pipeline",
     "enabled": "abilitato",
@@ -990,7 +990,7 @@
     "stemsModeDesc": "Carica tracce individuali per un mix completo con IA.",
     "dragDropSong": "Trascina la tua canzone qui, o clicca per selezionare un file",
     "dragDropStems": "Trascina gli stems qui, o clicca per selezionare i file",
-    "supportedFormats": "Formati supportati: WAV",
+    "supportedFormats": "Formati supportati: WAV, AIFF, MP3",
     "filesSelected": "{count} file audio selezionat{count, plural, =1 {o} other {i}}"
   },
   "PipelinePhases": {

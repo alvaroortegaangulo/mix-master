@@ -990,7 +990,7 @@
     "stemsModeDesc": "完全なAIミックスのために個々のトラックをアップロードします。",
     "dragDropSong": "ここに曲をドラッグ＆ドロップするか、クリックしてファイルを選択してください",
     "dragDropStems": "ここにステムをドラッグ＆ドロップするか、クリックしてファイルを選択してください",
-    "supportedFormats": "サポートされている形式: WAV",
+    "supportedFormats": "サポートされている形式: WAV, AIFF, MP3",
     "filesSelected": "{count} 個のオーディオファイルが選択されました"
   },
   "PipelinePhases": {

@@ -197,7 +197,7 @@
     "uploadMixConfig": "Upload & Mix Configuration",
     "songMode": "Song (Mastering)",
     "stemsMode": "Stems (Full Mix)",
-    "songModeWarning": "Song mode requires exactly one WAV file.",
+    "songModeWarning": "Song mode requires exactly one WAV/AIFF/MP3 file.",
     "selectionWarning": "You have selected only one stem. If you want to master a song, select Song (Mastering).",
     "pipelineSteps": "Pipeline steps",
     "enabled": "enabled",
@@ -1002,7 +1002,7 @@
     "stemsModeDesc": "Upload individual tracks for a full AI mix.",
     "dragDropSong": "Drag & drop your song here, or click to select a file",
     "dragDropStems": "Drag & drop stems here, or click to select files",
-    "supportedFormats": "Supported formats: WAV",
+    "supportedFormats": "Supported formats: WAV, AIFF, MP3",
     "filesSelected": "{count} audio file{count, plural, =1 {} other {s}} selected"
   },
   "PipelinePhases": {

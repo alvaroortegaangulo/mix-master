@@ -183,13 +183,16 @@ def _write_session_config(stage_dir: Path, profiles_by_name: Optional[Dict[str, 
 
         space_depth_bus_styles = _load_space_depth_bus_styles()
 
-        wavs = [
+        audio_exts = {".wav", ".aif", ".aiff", ".flac", ".mp3", ".m4a", ".ogg", ".aac"}
+        stem_files = [
             p.name
-            for p in stage_dir.glob("*.wav")
-            if p.is_file() and p.name.lower() != "full_song.wav"
+            for p in stage_dir.iterdir()
+            if p.is_file()
+            and p.suffix.lower() in audio_exts
+            and p.name.lower() != "full_song.wav"
         ]
         stems = []
-        for name in sorted(wavs):
+        for name in sorted(stem_files):
             prof = profiles_map.get(name, "auto")
             stems.append({"file_name": name, "instrument_profile": prof})
 

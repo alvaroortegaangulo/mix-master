@@ -583,12 +583,21 @@ useEffect(() => {
 
       const [file] = selected;
       const name = file.name.toLowerCase();
-      const isWav =
+      const isSupported =
         name.endsWith(".wav") ||
-        file.type === "audio/wav" ||
-        file.type === "audio/x-wav";
+        name.endsWith(".aif") ||
+        name.endsWith(".aiff") ||
+        name.endsWith(".mp3") ||
+        [
+          "audio/wav",
+          "audio/x-wav",
+          "audio/aiff",
+          "audio/x-aiff",
+          "audio/mpeg",
+          "audio/mp3",
+        ].includes(file.type);
 
-      if (!isWav) {
+      if (!isSupported) {
         setError(t('songModeWarning'));
         return;
       }
