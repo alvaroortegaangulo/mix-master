@@ -206,6 +206,9 @@ export function MixTool({ resumeJobId }: MixToolProps) {
   const isSongMode = uploadMode === "song";
 
   const t = useTranslations('MixTool');
+  // Use router from next-intl/routing to ensure locale preservation
+  const { useRouter } = require("@/i18n/routing");
+  const router = useRouter();
 
   const serviceJsonLd = useMemo(
     () => ({
@@ -292,6 +295,7 @@ export function MixTool({ resumeJobId }: MixToolProps) {
         finished = true;
         setLoading(false);
         wsHandle?.close();
+        router.push(`/mix/result/${activeJobId}`);
         return;
       }
 
@@ -964,16 +968,6 @@ export function MixTool({ resumeJobId }: MixToolProps) {
                     )}
                 </div>
             </div>
-        </div>
-
-        {/* RESULTS */}
-        <div className="w-full max-w-6xl mt-8">
-            {result && (
-                <MixResultPanel
-                  result={result}
-                  enabledPipelineStageKeys={selectedStageKeys}
-                />
-            )}
         </div>
 
         {/* SECONDARY PANELS ROW */}

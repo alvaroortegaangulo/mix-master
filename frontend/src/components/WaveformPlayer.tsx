@@ -13,7 +13,9 @@ type WaveformPlayerProps = {
   downloadFileName?: string;
   accentColor?: string; // color de la parte reproducida (por defecto naranja)
   className?: string;
+  canvasClassName?: string;
   requireAuthForDownload?: boolean;
+  hideDownload?: boolean;
 };
 
 type PeakArray = number[];
@@ -32,7 +34,9 @@ export const WaveformPlayer: React.FC<WaveformPlayerProps> = ({
   downloadFileName,
   accentColor = "#fb923c", // naranja cálido
   className = "",
+  canvasClassName = "h-10",
   requireAuthForDownload = false,
+  hideDownload = false,
 }) => {
   const { user } = useAuth();
   const { openAuthModal } = useModal();
@@ -634,7 +638,7 @@ export const WaveformPlayer: React.FC<WaveformPlayerProps> = ({
       <div className="relative flex-1" onClick={handleWaveformClick}>
         <canvas
           ref={canvasRef}
-          className="h-10 w-full cursor-pointer rounded-xl bg-transparent"
+          className={`${canvasClassName} w-full cursor-pointer rounded-xl bg-transparent`}
         />
         {/* tiempos izquierda / derecha */}
         <div className="pointer-events-none absolute inset-x-2 top-1 flex justify-between text-[10px] font-medium text-slate-100">
@@ -648,19 +652,21 @@ export const WaveformPlayer: React.FC<WaveformPlayerProps> = ({
       </div>
 
       {/* Botón descarga */}
-      <button
-        type="button"
-        onClick={handleDownload}
-        disabled={isDownloading}
-        className={`flex h-9 w-9 items-center justify-center rounded-full bg-amber-500 text-slate-950 shadow hover:bg-amber-400 transition disabled:opacity-50 ${isDownloading ? "cursor-wait" : ""}`}
-        title="Download"
-      >
-        {isDownloading ? (
-           <span className="block h-4 w-4 animate-spin rounded-full border-2 border-slate-950 border-t-transparent"></span>
-        ) : (
-           <ArrowDownTrayIcon className="h-5 w-5" />
-        )}
-      </button>
+      {!hideDownload && (
+        <button
+          type="button"
+          onClick={handleDownload}
+          disabled={isDownloading}
+          className={`flex h-9 w-9 items-center justify-center rounded-full bg-amber-500 text-slate-950 shadow hover:bg-amber-400 transition disabled:opacity-50 ${isDownloading ? "cursor-wait" : ""}`}
+          title="Download"
+        >
+          {isDownloading ? (
+            <span className="block h-4 w-4 animate-spin rounded-full border-2 border-slate-950 border-t-transparent"></span>
+          ) : (
+            <ArrowDownTrayIcon className="h-5 w-5" />
+          )}
+        </button>
+      )}
     </div>
   );
 };
