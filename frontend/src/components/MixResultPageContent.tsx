@@ -473,7 +473,7 @@ export function MixResultPageContent({ jobId }: Props) {
                     compareSrc={signedOriginalUrl}
                     isCompareActive={showOriginal}
                     accentColor={showOriginal ? "#64748b" : "#f59e0b"} // Slate for original, Amber for Master
-                    className="bg-transparent shadow-none border-none p-0 !gap-0 h-40"
+                    className="bg-transparent shadow-none border-none p-0 !gap-0 h-40 overflow-hidden"
                     canvasClassName="h-full"
                     hideDownload={true}
                   />
@@ -521,7 +521,7 @@ export function MixResultPageContent({ jobId }: Props) {
             </div>
 
             {/* PIPELINE SECTION */}
-            <div className="border-t border-slate-900 bg-slate-925 relative z-20">
+            <div className="border-t border-slate-900 bg-slate-950 relative z-20">
                 <button
                     onClick={() => setIsPipelineExpanded(!isPipelineExpanded)}
                     className="w-full flex items-center justify-between p-6 hover:bg-slate-900/50 transition"
