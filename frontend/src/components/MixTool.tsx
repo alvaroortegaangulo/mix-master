@@ -18,6 +18,19 @@ import { UploadDropzone } from "./UploadDropzone";
 import { type SpaceBus } from "./SpaceDepthStylePanel";
 import { gaEvent } from "../lib/ga";
 import { useTranslations } from "next-intl";
+import {
+  WrenchIcon,
+  ArrowsRightLeftIcon,
+  RectangleStackIcon,
+  SparklesIcon,
+  SpeakerWaveIcon,
+  GlobeAltIcon,
+  HandRaisedIcon,
+  MusicalNoteIcon,
+  CheckCircleIcon,
+  LockClosedIcon,
+  ChevronDownIcon
+} from "@heroicons/react/24/outline";
 
 const siteName = "Piroola";
 const fallbackSiteUrl = "https://music-mix-master.com";
@@ -126,17 +139,18 @@ const STAGE_ESTIMATES_MIN: Record<string, number> = {
 type GroupConfig = {
   id: string;
   labelKey: string; // Key within 'MixTool.stageGroups'
+  icon: any;
 };
 
 const GROUPS_CONFIG: GroupConfig[] = [
-  { id: "TECHNICAL_PREPARATION", labelKey: "technicalPreparation" },
-  { id: "PHASE_ALIGNMENT", labelKey: "phaseAlignment" },
-  { id: "MIXBUS_PREP", labelKey: "mixBusPrep" },
-  { id: "SPECTRAL_CLEANUP", labelKey: "spectralCleanup" },
-  { id: "DYNAMICS", labelKey: "dynamics" },
-  { id: "SPACE", labelKey: "space" },
-  { id: "MANUAL_CORRECTION", labelKey: "manualCorrection" },
-  { id: "MASTERING", labelKey: "mastering" },
+  { id: "TECHNICAL_PREPARATION", labelKey: "technicalPreparation", icon: WrenchIcon },
+  { id: "PHASE_ALIGNMENT", labelKey: "phaseAlignment", icon: ArrowsRightLeftIcon },
+  { id: "MIXBUS_PREP", labelKey: "mixBusPrep", icon: RectangleStackIcon },
+  { id: "SPECTRAL_CLEANUP", labelKey: "spectralCleanup", icon: SparklesIcon }, // ChartBar not available in outline? using Sparkles
+  { id: "DYNAMICS", labelKey: "dynamics", icon: SpeakerWaveIcon },
+  { id: "SPACE", labelKey: "space", icon: GlobeAltIcon },
+  { id: "MANUAL_CORRECTION", labelKey: "manualCorrection", icon: HandRaisedIcon },
+  { id: "MASTERING", labelKey: "mastering", icon: MusicalNoteIcon },
 ];
 
 function mapStemProfileToBusKey(profile: string): string {
@@ -380,7 +394,7 @@ export function MixTool({ resumeJobId }: MixToolProps) {
         wsHandle.close();
         wsHandle = null;
       }
-    };
+        };
   }, [activeJobId]);
 
   useEffect(() => {
@@ -740,232 +754,265 @@ export function MixTool({ resumeJobId }: MixToolProps) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(serviceJsonLd) }}
       />
 
-      <main className="flex flex-1 items-stretch justify-center px-4 py-8">
-        <div
-          className="
-            w-full mx-auto grid grid-cols-1
-            lg:grid-cols-[minmax(0,1fr)_minmax(auto,36rem)_minmax(0,1fr)]
-            2xl:grid-cols-[minmax(0,1fr)_minmax(auto,48rem)_minmax(0,1fr)]
-            gap-8
-          "
-        >
+      <main className="flex flex-1 flex-col items-center px-4 py-8">
+        {/* MAIN CARD CONTAINER */}
+        <div className="w-full max-w-6xl rounded-3xl bg-slate-950 border border-slate-800 shadow-2xl shadow-black overflow-hidden grid grid-cols-1 lg:grid-cols-[1.5fr_1fr]">
 
-          {/* Left Column: Space & Depth Settings */}
-          <div className="lg:col-start-1">
-            <h2 className="sr-only">Space & Depth Settings</h2>
-            {stemProfiles.length > 0 &&
-              visibleSpaceDepthBuses.length > 0 && (
-                <div className="w-full max-w-xs mx-auto">
-                  <SpaceDepthStylePanel
-                    buses={visibleSpaceDepthBuses}
-                    value={spaceBusStyles}
-                    onChange={handleBusStyleChange}
-                  />
-                </div>
-              )}
-          </div>
+            {/* LEFT COLUMN: Upload & Config */}
+            <div className="p-8 lg:p-12 flex flex-col items-center justify-between border-b lg:border-b-0 lg:border-r border-slate-800 relative bg-[url('/bg-grid.svg')] bg-repeat opacity-95">
+                {/* Background ambient glow */}
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full max-w-[500px] max-h-[500px] bg-teal-500/5 blur-[120px] rounded-full pointer-events-none" />
 
-          {/* Center Column */}
-          <div className="lg:col-start-2 flex justify-center">
-            <div className="w-full max-w-3xl">
-              <section
-                id="how-it-works"
-                className="rounded-2xl border border-slate-700/60 bg-slate-900/60 p-8 shadow-2xl shadow-slate-900/50"
-              >
-                <h2 className="sr-only">{t('uploadMixConfig')}</h2>
-
-                <div className="mb-6 flex justify-center">
-                  <div className="inline-flex rounded-lg bg-slate-950 p-1 shadow-inner shadow-slate-900">
-                    <button
-                      type="button"
-                      onClick={() => handleModeChange("song")}
-                      className={`rounded-md px-6 py-2 text-sm font-semibold transition-colors ${
-                        uploadMode === "song"
-                          ? "bg-teal-500 text-slate-950 shadow-sm"
-                          : "text-slate-400 hover:text-slate-200"
-                      }`}
-                    >
-                      {t('songMode')}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleModeChange("stems")}
-                      className={`rounded-md px-6 py-2 text-sm font-semibold transition-colors ${
-                        uploadMode === "stems"
-                          ? "bg-teal-500 text-slate-950 shadow-sm"
-                          : "text-slate-400 hover:text-slate-200"
-                      }`}
-                    >
-                      {t('stemsMode')}
-                    </button>
-                  </div>
+                {/* Top: Mode Switcher */}
+                <div className="relative z-10 w-full flex justify-center mb-8">
+                    <div className="inline-flex rounded-lg bg-slate-900/80 p-1.5 border border-slate-800">
+                        <button
+                            type="button"
+                            onClick={() => handleModeChange("song")}
+                            className={`rounded-md px-6 py-2.5 text-sm font-semibold transition-all duration-200 ${
+                                uploadMode === "song"
+                                ? "bg-teal-500 text-slate-950 shadow-lg shadow-teal-500/20 scale-105"
+                                : "text-slate-400 hover:text-slate-200"
+                            }`}
+                        >
+                            {t('songMode')}
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => handleModeChange("stems")}
+                            className={`rounded-md px-6 py-2.5 text-sm font-semibold transition-all duration-200 ${
+                                uploadMode === "stems"
+                                ? "bg-teal-500 text-slate-950 shadow-lg shadow-teal-500/20 scale-105"
+                                : "text-slate-400 hover:text-slate-200"
+                            }`}
+                        >
+                            {t('stemsMode')}
+                        </button>
+                    </div>
                 </div>
 
-                <div id="upload">
-                  <UploadDropzone
-                    onFilesSelected={handleFilesSelected}
-                    disabled={loading}
-                    filesCount={files.length}
-                    uploadMode={uploadMode}
-                  />
+                {/* Center: Upload */}
+                <div className="relative z-10 w-full max-w-lg flex-1 flex flex-col justify-center">
+                    <UploadDropzone
+                        onFilesSelected={handleFilesSelected}
+                        disabled={loading}
+                        filesCount={files.length}
+                        uploadMode={uploadMode}
+                    />
+
+                    {selectionWarning && (
+                        <div className="mt-4 rounded-md border border-amber-400/60 bg-amber-500/10 px-4 py-3 text-sm text-amber-100 flex items-center justify-center text-center">
+                            {selectionWarning}
+                        </div>
+                    )}
+
+                    {error && (
+                        <div className="mt-4 rounded-md border border-red-500/60 bg-red-500/10 px-4 py-3 text-sm text-red-200 text-center">
+                            {error}
+                        </div>
+                    )}
                 </div>
 
-                {selectionWarning && (
-                  <div className="mt-3 rounded-md border border-amber-400/60 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">
-                    {selectionWarning}
-                  </div>
-                )}
-
-                {showStageSelector && availableStages.length > 0 && (
-                  <section className="mt-8">
-                     <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-lg font-bold text-white tracking-wide flex items-center gap-2">
-                           <span className="text-teal-400 text-xl">⚡</span> Pipeline IA
-                        </h3>
-                        <span className="text-xs font-mono uppercase text-teal-400 bg-teal-500/10 px-2 py-1 rounded border border-teal-500/20">
-                           AUTO-PILOT ON
+                {/* Bottom: Footer Status */}
+                <div className="relative z-10 w-full flex items-center justify-between text-xs text-slate-500 mt-8 px-4">
+                    <div className="flex items-center gap-2">
+                        <span className="relative flex h-2 w-2">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
                         </span>
-                     </div>
-                     <p className="text-slate-400 text-sm mb-6">Cadena de procesamiento activa</p>
+                        <span>Servidores listos</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                        <LockClosedIcon className="w-3.5 h-3.5" />
+                        <span>Cifrado TLS seguro</span>
+                    </div>
+                </div>
+            </div>
 
-                     <div className="space-y-4">
-                        {GROUPS_CONFIG.map(group => {
-                            const stages = groupedStages[group.id];
-                            if (!stages || stages.length === 0) return null;
+            {/* RIGHT COLUMN: Pipeline */}
+            <div className="p-8 lg:p-10 bg-slate-900/50 flex flex-col relative">
+                {/* Header */}
+                <div className="flex items-center justify-between mb-8">
+                    <div>
+                        <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                            <span className="text-teal-400">
+                                <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" /></svg>
+                            </span>
+                             Pipeline IA
+                        </h3>
+                        <p className="text-xs text-slate-500 mt-1">Cadena de procesamiento activa</p>
+                    </div>
+                    <span className="text-[10px] font-bold tracking-wider uppercase text-teal-400 bg-teal-500/10 px-2 py-1 rounded border border-teal-500/20">
+                        AUTO-PILOT ON
+                    </span>
+                </div>
 
-                            const isExpanded = expandedGroups[group.id] || false;
+                {/* Timeline Container */}
+                <div className="flex-1 relative overflow-y-auto pr-2 -mr-2 custom-scrollbar">
+                    {/* Vertical Line */}
+                    <div className="absolute left-[1.65rem] top-4 bottom-4 w-px bg-slate-800" />
 
-                            // Check group selection state
-                            // For song mode, only check relevant keys
+                    <div className="space-y-6 pb-6">
+                        {GROUPS_CONFIG.map((group, idx) => {
+                            const stages = groupedStages[group.id] || [];
+                            // For visualization, assume if stages exist, the group is relevant.
+                            // However, we want to respect songModeStageKeys.
                             const relevantKeys = isSongMode
                                ? stages.map(s => s.key).filter(k => songModeStageKeys.includes(k))
                                : stages.map(s => s.key);
 
-                            // If no relevant keys in this group, maybe hide or disable?
-                            // For now we keep showing but disabled state handles interactivity
-                            const groupHasActiveStages = relevantKeys.length > 0;
-                            const isGroupSelected = groupHasActiveStages && relevantKeys.every(k => selectedStageKeys.includes(k));
-                            const isGroupPartiallySelected = groupHasActiveStages && !isGroupSelected && relevantKeys.some(k => selectedStageKeys.includes(k));
+                            const isDisabled = relevantKeys.length === 0;
+                            const isSelected = !isDisabled && relevantKeys.every(k => selectedStageKeys.includes(k));
+                            const Icon = group.icon;
+
+                            // If group has no stages in current mode, we might want to grey it out completely
+                            // But keeping it visible maintains the "Pipeline" structure logic.
 
                             return (
-                                <div key={group.id} className="rounded-xl border border-slate-700 bg-slate-900/50 overflow-hidden transition-all duration-300 hover:border-slate-600">
-                                   {/* Group Header */}
-                                   <div className="flex items-center justify-between p-4 bg-slate-900/80">
-                                      <div className="flex items-center gap-4 flex-1 cursor-pointer" onClick={() => toggleGroupExpand(group.id)}>
-                                         <div className={`p-2 rounded-lg ${isGroupSelected ? 'bg-teal-500/20 text-teal-400' : 'bg-slate-800 text-slate-500'}`}>
-                                            {/* Icon Placeholder - could map icons per group later */}
-                                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                                            </svg>
-                                         </div>
-                                         <div>
-                                            <h4 className="text-sm font-semibold text-slate-200">
-                                                {/* @ts-ignore dynamic key */}
-                                                {t(`stageGroups.${group.labelKey}`)}
-                                            </h4>
-                                            <p className="text-xs text-slate-500 mt-0.5">
-                                                {stages.length} stages • {isGroupSelected ? "Active" : "Modified"}
-                                            </p>
-                                         </div>
-                                      </div>
+                                <div key={group.id} className={`relative flex items-start gap-4 group ${isDisabled ? 'opacity-30 grayscale' : 'opacity-100'}`}>
+                                    {/* Icon */}
+                                    <div className={`
+                                        relative z-10 flex items-center justify-center w-14 h-14 rounded-2xl border-2 shadow-lg transition-all duration-300 shrink-0
+                                        ${isSelected
+                                            ? 'bg-slate-900 border-teal-500/50 shadow-teal-500/10'
+                                            : 'bg-slate-950 border-slate-800 shadow-none'}
+                                    `}>
+                                        <Icon className={`w-6 h-6 ${isSelected ? 'text-teal-400' : 'text-slate-600'}`} />
+                                        {isSelected && <div className="absolute inset-0 bg-teal-500/5 rounded-xl animate-pulse" />}
+                                        {/* Dot indicator on right of box? No, image has a dot inside or next to it. */}
+                                    </div>
 
-                                      <div className="flex items-center gap-3">
-                                          <button
-                                            onClick={() => toggleGroupExpand(group.id)}
-                                            className="text-slate-500 hover:text-slate-300 transition-colors"
-                                          >
-                                              <span className={`inline-block transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`}>▼</span>
-                                          </button>
+                                    {/* Content */}
+                                    <div className="flex-1 pt-1.5 min-w-0">
+                                        <div className="flex items-start justify-between gap-4">
+                                            <div className="flex flex-col">
+                                                <h4 className={`text-sm font-bold ${isSelected ? 'text-white' : 'text-slate-500'}`}>
+                                                    {/* @ts-ignore */}
+                                                    {t(`stageGroups.${group.labelKey}`)}
+                                                </h4>
+                                                <p className="text-xs text-slate-500 mt-0.5 leading-relaxed line-clamp-2">
+                                                    {/* We can use the description from the first stage or a generic one */}
+                                                    {/* Or simply listing stage count */}
+                                                    {stages.length > 0
+                                                        ? `${stages.length} pasos: ${stages.slice(0, 2).map(s => HUMAN_STAGE_TEXT[s.key]?.title).join(", ")}${stages.length > 2 ? '...' : ''}`
+                                                        : "No active stages"
+                                                    }
+                                                </p>
 
-                                          {/* Master Toggle */}
-                                          <label className="relative inline-flex items-center cursor-pointer">
-                                            <input
-                                                type="checkbox"
-                                                className="sr-only peer"
-                                                checked={isGroupSelected}
-                                                onChange={() => toggleGroup(group.id)}
-                                                disabled={!groupHasActiveStages}
-                                            />
-                                            <div className="w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-teal-500"></div>
-                                          </label>
-                                      </div>
-                                   </div>
+                                                {/* Expand Button */}
+                                                {stages.length > 0 && (
+                                                    <button
+                                                        onClick={() => toggleGroupExpand(group.id)}
+                                                        className="mt-2 text-[10px] text-slate-600 hover:text-teal-400 flex items-center gap-1 transition-colors w-fit"
+                                                    >
+                                                        {expandedGroups[group.id] ? "Ocultar detalles" : "Ver detalles"}
+                                                        <ChevronDownIcon className={`w-3 h-3 transition-transform ${expandedGroups[group.id] ? 'rotate-180' : ''}`} />
+                                                    </button>
+                                                )}
+                                            </div>
 
-                                   {/* Expanded Details */}
-                                   {isExpanded && (
-                                       <div className="border-t border-slate-800 bg-slate-950/30 px-4 py-3 space-y-2">
-                                           {stages.map(stage => {
-                                               const isSelected = selectedStageKeys.includes(stage.key);
-                                               const isDisabled = isSongMode && !songModeStageKeys.includes(stage.key);
+                                            {/* Toggle */}
+                                            <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                                                <input
+                                                    type="checkbox"
+                                                    className="sr-only peer"
+                                                    checked={isSelected}
+                                                    onChange={() => toggleGroup(group.id)}
+                                                    disabled={isDisabled}
+                                                />
+                                                <div className="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-400 after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-teal-500 peer-checked:after:bg-white"></div>
+                                            </label>
+                                        </div>
 
-                                               return (
-                                                   <div key={stage.key} className="flex items-center justify-between py-2 pl-12 pr-2 hover:bg-white/5 rounded transition-colors">
-                                                       <div className="flex flex-col">
-                                                           <span className={`text-xs font-medium ${isSelected ? 'text-slate-300' : 'text-slate-600'}`}>
+                                        {/* Expanded Stages List */}
+                                        {expandedGroups[group.id] && (
+                                            <div className="mt-3 pl-2 border-l border-slate-800 space-y-2 animate-in slide-in-from-top-2 duration-200">
+                                                {stages.map(stage => {
+                                                   const isStageSelected = selectedStageKeys.includes(stage.key);
+                                                   const isStageDisabled = isSongMode && !songModeStageKeys.includes(stage.key);
+
+                                                   return (
+                                                       <div key={stage.key} className="flex items-center justify-between text-xs group/stage">
+                                                           <span className={`${isStageSelected ? 'text-slate-300' : 'text-slate-600'}`}>
                                                                {HUMAN_STAGE_TEXT[stage.key]?.title || stage.label}
                                                            </span>
-                                                           <span className="text-[10px] text-slate-600">
-                                                               {HUMAN_STAGE_TEXT[stage.key]?.description}
-                                                           </span>
-                                                       </div>
-
-                                                       <label className="relative inline-flex items-center cursor-pointer">
                                                             <input
                                                                 type="checkbox"
-                                                                className="sr-only peer"
-                                                                checked={isSelected}
+                                                                className="rounded border-slate-700 bg-slate-800 text-teal-500 focus:ring-teal-500/50 h-3 w-3"
+                                                                checked={isStageSelected}
                                                                 onChange={() => toggleStage(stage.key)}
-                                                                disabled={isDisabled}
+                                                                disabled={isStageDisabled}
                                                             />
-                                                            <div className={`w-7 h-4 bg-slate-800 rounded-full peer after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-400 after:rounded-full after:h-3 after:w-3 after:transition-all ${isSelected ? 'peer-checked:bg-teal-500/50 peer-checked:after:translate-x-full peer-checked:after:bg-teal-400' : ''}`}></div>
-                                                       </label>
-                                                   </div>
-                                               );
-                                           })}
-                                       </div>
-                                   )}
+                                                       </div>
+                                                   );
+                                                })}
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             );
                         })}
-                     </div>
-                  </section>
-                )}
-
-                <div className="mt-8 flex flex-col items-center gap-3">
-                  <button
-                    type="button"
-                    onClick={handleGenerateMix}
-                    disabled={!hasFiles || loading}
-                    className={[
-                      "w-full max-w-sm inline-flex items-center justify-center rounded-lg px-6 py-4 text-base font-bold tracking-wide",
-                      "bg-gradient-to-r from-teal-500 to-teal-400 text-slate-950 shadow-lg shadow-teal-500/20",
-                      "transition-all duration-200 hover:shadow-teal-500/40 hover:scale-[1.01] hover:brightness-110 disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none",
-                    ].join(" ")}
-                  >
-                    {loading ? (
-                        <span className="flex items-center gap-2">
-                            <svg className="animate-spin h-5 w-5 text-slate-900" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                            {t('processing')}
-                        </span>
-                    ) : (
-                        t('generateMix')
-                    )}
-                  </button>
-
-                  {/* Time Estimate */}
-                  {!loading && hasFiles && (
-                    <p className="text-xs text-slate-500 font-medium">
-                       Estimado: ~{estimatedMinutes} min de procesamiento • 1 Crédito
-                    </p>
-                  )}
+                    </div>
                 </div>
 
-                {progressInfo && (
-                  <div className="mx-auto mt-6 w-full max-w-md select-none">
-                    {/* Progress Bar Row */}
+                {/* Footer Action */}
+                <div className="mt-6 pt-6 border-t border-slate-800">
+                    <button
+                        type="button"
+                        onClick={handleGenerateMix}
+                        disabled={!hasFiles || loading}
+                        className={[
+                            "w-full rounded-xl px-6 py-4 text-base font-bold tracking-wide uppercase",
+                            "bg-gradient-to-r from-teal-400 to-cyan-500 text-slate-950 shadow-lg shadow-teal-500/20",
+                            "transition-all duration-200 hover:shadow-teal-500/40 hover:brightness-110 disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none",
+                            "flex items-center justify-center gap-3"
+                        ].join(" ")}
+                    >
+                        {loading ? (
+                            <>
+                                <svg className="animate-spin h-5 w-5 text-slate-950" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                {t('processing')}
+                            </>
+                        ) : (
+                            <>
+                                <div className="w-2 h-2 rounded-full border border-slate-950/40" />
+                                {t('generateMix')}
+                            </>
+                        )}
+                    </button>
+                    {!loading && hasFiles && (
+                         <p className="text-center text-[10px] text-slate-500 font-medium mt-3 uppercase tracking-wide">
+                            Estimado: ~{estimatedMinutes} min de procesamiento • 1 Crédito
+                         </p>
+                    )}
+                </div>
+            </div>
+        </div>
+
+        {/* LOADING & RESULTS */}
+        <div className="w-full max-w-6xl mt-8">
+             {isProcessing && (
+                <div className="flex justify-center mb-12">
+                  <div className="relative">
+                      <div className="absolute inset-0 bg-teal-500/20 blur-3xl rounded-full" />
+                      <video
+                        src="/loading.mp4"
+                        autoPlay
+                        loop
+                        muted
+                        playsInline
+                        aria-label="Processing your mix..."
+                        className="relative h-24 w-auto rounded-lg z-10"
+                      />
+                  </div>
+                </div>
+             )}
+
+             {progressInfo && (
+                  <div className="mx-auto mt-6 w-full max-w-md select-none mb-12">
                     <div className="mb-2 flex items-center gap-3">
                       <div className="flex-1 overflow-hidden rounded-full border border-slate-800 bg-slate-950/50 h-2.5">
                         <div
@@ -979,7 +1026,6 @@ export function MixTool({ resumeJobId }: MixToolProps) {
                         {progressInfo.percent}%
                       </span>
                     </div>
-
                     <h3 className="mb-1 text-center text-xs font-bold uppercase tracking-[0.15em] text-teal-100">
                       {progressInfo.title}
                     </h3>
@@ -987,51 +1033,38 @@ export function MixTool({ resumeJobId }: MixToolProps) {
                       {progressInfo.description}
                     </p>
                   </div>
-                )}
+            )}
 
-                {error && (
-                  <p className="mt-4 text-center text-sm text-red-400">
-                    {error}
-                  </p>
-                )}
-
-              </section>
-
-              {isProcessing && (
-                <div className="mt-12 flex justify-center">
-                  <video
-                    src="/loading.mp4"
-                    autoPlay
-                    loop
-                    muted
-                    playsInline
-                    aria-label="Processing your mix..."
-                    className="h-12 w-auto rounded-lg"
-                  />
-                </div>
-              )}
-
-              {result && (
+            {result && (
                 <MixResultPanel
                   result={result}
                   enabledPipelineStageKeys={selectedStageKeys}
                 />
-              )}
-            </div>
-          </div>
-
-          {/* Right Column: Stem Profiles */}
-          <div className="lg:col-start-3">
-            <h2 className="sr-only">Stem Profiles</h2>
-            {stemProfiles.length > 0 && (
-              <div className="w-full max-w-xs mx-auto">
-                <StemsProfilePanel
-                  stems={stemProfiles}
-                  onChangeProfile={handleStemProfileChange}
-                />
-              </div>
             )}
-          </div>
+        </div>
+
+        {/* SECONDARY PANELS ROW */}
+        <div className="w-full max-w-6xl mt-8 grid grid-cols-1 md:grid-cols-2 gap-8">
+             {/* Space Panel */}
+            {stemProfiles.length > 0 && visibleSpaceDepthBuses.length > 0 && (
+                <div>
+                   <SpaceDepthStylePanel
+                    buses={visibleSpaceDepthBuses}
+                    value={spaceBusStyles}
+                    onChange={handleBusStyleChange}
+                  />
+                </div>
+            )}
+
+            {/* Stems Panel */}
+            {stemProfiles.length > 0 && (
+                <div>
+                  <StemsProfilePanel
+                    stems={stemProfiles}
+                    onChangeProfile={handleStemProfileChange}
+                  />
+                </div>
+            )}
         </div>
       </main>
     </div>
