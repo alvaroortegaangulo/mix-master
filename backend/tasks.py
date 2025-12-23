@@ -245,17 +245,19 @@ def run_full_pipeline_task(
     temp_root: str,
     enabled_stage_keys: Optional[List[str]] = None,
     profiles_by_name: Optional[Dict[str, str]] = None,
+    resume_stage_index_offset: int = -1,
 ) -> Dict[str, Any]:
     """
     Tarea Celery que ejecuta el pipeline completo para un job concreto.
     """
     start_ts = time.time()
     logger.info(
-        ">>> run_full_pipeline_task recibido en worker. job_id=%s celery_id=%s media_dir=%s temp_root=%s",
+        ">>> run_full_pipeline_task recibido en worker. job_id=%s celery_id=%s media_dir=%s temp_root=%s offset=%d",
         job_id,
         getattr(self.request, "id", None),
         media_dir,
         temp_root,
+        resume_stage_index_offset,
     )
 
     # Import diferido del pipeline (por si el import es costoso)
@@ -278,23 +280,35 @@ def run_full_pipeline_task(
         "message": "Inicializando pipeline...",
     }
 
-    # Si estamos reanudando (enabled_stage_keys != None), intentamos leer el estado previo
-    # para mantener stage_index/total_stages coherentes (no reiniciar el progreso).
-    resume_stage_index_offset = 0
+    # Si resume_stage_index_offset es -1, intentamos deducirlo del estado previo (comportamiento legacy)
+    # Si es >= 0, usamos el valor proporcionado por el llamante (start_from_stage logic).
+    actual_offset = 0
     resume_total_stages: Optional[int] = None
     status_path = job_root_path / "job_status.json"
-    if enabled_stage_keys:
+
+    if resume_stage_index_offset >= 0:
+        actual_offset = resume_stage_index_offset
+        # Intentamos recuperar total_stages previo para mantener consistencia
         try:
             if status_path.exists():
                 prev = json.loads(status_path.read_text(encoding="utf-8"))
                 if isinstance(prev, dict):
-                    resume_stage_index_offset = int(prev.get("stage_index", 0) or 0)
+                    prev_total = int(prev.get("total_stages", 0) or 0)
+                    resume_total_stages = prev_total if prev_total > 0 else None
+        except Exception:
+            pass
+    elif enabled_stage_keys:
+        try:
+            if status_path.exists():
+                prev = json.loads(status_path.read_text(encoding="utf-8"))
+                if isinstance(prev, dict):
+                    actual_offset = int(prev.get("stage_index", 0) or 0)
                     prev_total = int(prev.get("total_stages", 0) or 0)
                     resume_total_stages = prev_total if prev_total > 0 else None
                     logger.info(
-                        "[%s] Reanudando con offset stage_index=%d total_stages=%s",
+                        "[%s] Reanudando (auto-detect) con offset stage_index=%d total_stages=%s",
                         job_id,
-                        resume_stage_index_offset,
+                        actual_offset,
                         resume_total_stages,
                     )
         except Exception:
@@ -303,19 +317,19 @@ def run_full_pipeline_task(
     # Total inicial para status (usa total previo si existe, si no calcula aprox con stages habilitadas)
     # Si ya tenНamos total_stages en job_status, lo respetamos para no crear saltos.
     # Si no, estimamos usando offset + stages habilitadas.
-    initial_total_guess = resume_total_stages or (resume_stage_index_offset + len(enabled_stage_keys or []))
+    initial_total_guess = resume_total_stages or (actual_offset + len(enabled_stage_keys or []))
     initial_progress = 0.0
     if initial_total_guess > 0:
-        initial_progress = min(100.0, float(resume_stage_index_offset) / initial_total_guess * 100.0)
+        initial_progress = min(100.0, float(actual_offset) / initial_total_guess * 100.0)
 
-    progress_state["stage_index"] = resume_stage_index_offset
+    progress_state["stage_index"] = actual_offset
     progress_state["total_stages"] = initial_total_guess
 
     initial_status = {
         "jobId": job_id,
         "job_id": job_id,
         "status": "running",
-        "stage_index": resume_stage_index_offset,
+        "stage_index": actual_offset,
         "total_stages": initial_total_guess,
         "stage_key": "initializing",
         "message": "Inicializando pipeline de mezcla...",
@@ -379,7 +393,7 @@ def run_full_pipeline_task(
             "[%s] Llamando a run_pipeline_for_job (enabled_stage_keys=%s, resume_offset=%d, resume_total=%s)",
             job_id,
             enabled_stage_keys,
-            resume_stage_index_offset,
+            actual_offset,
             resume_total_stages,
         )
         t0 = time.time()
@@ -391,7 +405,7 @@ def run_full_pipeline_task(
             enabled_stage_keys=enabled_stage_keys,
             profiles_by_name=profiles_by_name,
             progress_cb=progress_cb,
-            resume_stage_index_offset=resume_stage_index_offset,
+            resume_stage_index_offset=actual_offset,
             resume_total_stages=resume_total_stages,
         )
 

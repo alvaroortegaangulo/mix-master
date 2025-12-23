@@ -1346,13 +1346,14 @@ async def upload_file_for_job(
 @app.post("/mix/{job_id}/start")
 async def start_mix_job_endpoint(
     job_id: str,
-    stages_override: Optional[Dict[str, List[str]]] = None,
+    payload: Optional[Dict[str, Any]] = Body(None),
     _: None = Depends(_guard_heavy_endpoint),
     current_user: User = Depends(get_current_user),
 ):
     """
     Lanza la tarea Celery para un job ya inicializado y con WAVs subidos.
-    Allows passing 'stages' list in body to override enabled_stages.
+    Allows passing 'stages' list in body to override enabled_stages,
+    or 'start_from_stage' to resume from a specific stage in the original list.
     """
     request_start_ts = time.time()
 
@@ -1364,36 +1365,60 @@ async def start_mix_job_endpoint(
     job_root = temp_root
     work_dir = job_root / "work"
 
-    # Stages habilitadas
+    # Stages habilitadas y offset
     enabled_stage_keys: Optional[List[str]] = None
+    resume_offset = -1
 
-    # Check if we have an override in the body
-    if stages_override and "stages" in stages_override and isinstance(stages_override["stages"], list):
-        enabled_stage_keys = stages_override["stages"]
+    stages_in_payload = payload.get("stages") if payload else None
+    start_from = payload.get("start_from_stage") if payload else None
+    stages_override_old = payload.get("stages_override") if payload else None # Backwards compatibility? No, Body matches payload structure.
+
+    # 1. Load original full list from disk
+    full_stages_list = []
+    enabled_path = work_dir / "enabled_stages.json"
+    if enabled_path.exists():
+        try:
+            parsed = json.loads(enabled_path.read_text(encoding="utf-8"))
+            if isinstance(parsed, list):
+                full_stages_list = [str(k) for k in parsed]
+        except Exception as exc:
+            logger.warning("[/mix/%s/start] No se pudo leer enabled_stages.json: %s", job_id, exc)
+
+    # 2. Determine enabled_stage_keys
+    if stages_in_payload and isinstance(stages_in_payload, list):
+        enabled_stage_keys = stages_in_payload
         logger.info(
-            "[/mix/%s/start] Usando override de stages desde body: %s",
+            "[/mix/%s/start] Usando explicit stages list: %s",
             job_id,
             enabled_stage_keys
         )
+    elif start_from and isinstance(start_from, str) and full_stages_list:
+        if start_from in full_stages_list:
+            idx = full_stages_list.index(start_from)
+            enabled_stage_keys = full_stages_list[idx:]
+            resume_offset = idx
+            logger.info(
+                "[/mix/%s/start] Resuming from stage %s (index %d). Stages: %s",
+                job_id,
+                start_from,
+                idx,
+                enabled_stage_keys
+            )
+        else:
+            logger.warning(
+                "[/mix/%s/start] start_from_stage '%s' not found in full list. Fallback to full list.",
+                job_id,
+                start_from
+            )
+            enabled_stage_keys = full_stages_list
     else:
-        # Fallback to enabled_stages.json
-        enabled_path = work_dir / "enabled_stages.json"
-        if enabled_path.exists():
-            try:
-                parsed = json.loads(enabled_path.read_text(encoding="utf-8"))
-                if isinstance(parsed, list):
-                    enabled_stage_keys = [str(k) for k in parsed]
-                logger.info(
-                    "[/mix/%s/start] enabled_stages.json cargado con %d entradas",
-                    job_id,
-                    len(enabled_stage_keys or []),
-                )
-            except Exception as exc:
-                logger.warning(
-                    "[/mix/%s/start] No se pudo leer enabled_stages.json: %s",
-                    job_id,
-                    exc,
-                )
+        # Fallback to full list
+        enabled_stage_keys = full_stages_list
+        logger.info(
+            "[/mix/%s/start] Using full enabled_stages.json (%d stages)",
+            job_id,
+            len(enabled_stage_keys)
+        )
 
     # Perfiles de stems
     profiles_by_name: Dict[str, str] = {}
@@ -1440,7 +1465,10 @@ async def start_mix_job_endpoint(
                 str(temp_root),
                 enabled_stage_keys,
                 profiles_by_name,
-            ]
+            ],
+            kwargs={
+                "resume_stage_index_offset": resume_offset
+            }
         )
         task_id = getattr(result, "id", None)
         if task_id:
