@@ -28,6 +28,9 @@ const LOG_MESSAGES: Record<string, string[]> = {
     "Calculating LUFS integrated...",
     "Extracting transients...",
     "Checking sample rate consistency...",
+    "Validating codec compatibility...",
+    "Building silence-map...",
+    "Sweeping headroom scan...",
   ],
   alignment: [
     "Correlating stereo channels...",
@@ -36,6 +39,8 @@ const LOG_MESSAGES: Record<string, string[]> = {
     "Adjusting time offset (ms)...",
     "Aligning polarity...",
     "Verifying mono compatibility...",
+    "Tracing transient envelopes...",
+    "Balancing mid/side energy...",
   ],
   spectral: [
     "Computing Mel-spectrogram...",
@@ -44,6 +49,8 @@ const LOG_MESSAGES: Record<string, string[]> = {
     "Balancing spectral tilt...",
     "Checking pink noise reference...",
     "Optimizing low-end coherence...",
+    "Scanning harmonic content...",
+    "Aligning formant peaks...",
   ],
   dynamics: [
     "Measuring crest factor...",
@@ -52,6 +59,8 @@ const LOG_MESSAGES: Record<string, string[]> = {
     "Applying makeup gain...",
     "Smoothing envelopes...",
     "Detecting peaks > -1dBTP...",
+    "Tapering transients...",
+    "Calibrating transient shaper...",
   ],
   mastering: [
     "Finalizing limiting stage...",
@@ -60,7 +69,13 @@ const LOG_MESSAGES: Record<string, string[]> = {
     "Maximizing loudness...",
     "Rendering final mixdown...",
     "Tagging metadata...",
+    "Documenting session cues...",
+    "Ensuring export sanity checks...",
   ]
+};
+
+const shuffleLogs = (logs: string[]) => {
+  return [...logs].sort(() => Math.random() - 0.5);
 };
 
 export function ProcessingVisualizer({ stageKey, progress, description }: ProcessingVisualizerProps) {
@@ -70,11 +85,20 @@ export function ProcessingVisualizer({ stageKey, progress, description }: Proces
   // Log simulation
   useEffect(() => {
     const baseLogs = LOG_MESSAGES[mode] || LOG_MESSAGES["analysis"];
-    let i = 0;
+    let logQueue = shuffleLogs(baseLogs);
+    let index = 0;
     setLogs([]); // Reset on mode change
 
+    const getNextLog = () => {
+      if (index >= logQueue.length) {
+        logQueue = shuffleLogs(baseLogs);
+        index = 0;
+      }
+      return logQueue[index++];
+    };
+
     const interval = setInterval(() => {
-      const msg = baseLogs[Math.floor(Math.random() * baseLogs.length)];
+      const msg = getNextLog();
       const time = new Date().toISOString().split("T")[1].slice(0, 8);
       const logLine = `[${time}] ${msg}`;
 
@@ -82,7 +106,6 @@ export function ProcessingVisualizer({ stageKey, progress, description }: Proces
         const next = [...prev, logLine];
         return next.slice(-6); // Keep last 6 lines
       });
-      i++;
     }, 800);
 
     return () => clearInterval(interval);
