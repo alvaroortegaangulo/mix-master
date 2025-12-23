@@ -341,8 +341,8 @@ def _compute_vectorscope_density(audio: np.ndarray) -> List[List[float]]:
         L = L / peak
         R = R / peak
 
-    # 2D Histogram: 64x64
-    H, _, _ = np.histogram2d(L, R, bins=64, range=[[-1, 1], [-1, 1]], density=True)
+    # 2D Histogram: 150x150 for better resolution
+    H, _, _ = np.histogram2d(L, R, bins=150, range=[[-1, 1], [-1, 1]], density=True)
 
     # Log compression for visibility
     H = np.log1p(H)
@@ -554,9 +554,10 @@ def _analyze_audio_series(audio: np.ndarray, sr: int) -> Dict[str, Any]:
             width_vals.append(round(float(w), 3))
 
     # --- 4. Spectrogram (Downsampled) ---
-    # We produce a grid of roughly 64 freq bands x 100 time slices
+    # We produce a grid of roughly 128 freq bands x 600 time slices for better UI resolution
     n_fft = 2048
-    hop_length = len(mono) // 100
+    # Target ~600 time frames
+    hop_length = len(mono) // 600
     if hop_length < 512: hop_length = 512
 
     try:
@@ -565,12 +566,12 @@ def _analyze_audio_series(audio: np.ndarray, sr: int) -> Dict[str, Any]:
         S = librosa.stft(mono, n_fft=n_fft, hop_length=hop_length)
         S_db = librosa.amplitude_to_db(np.abs(S), ref=np.max)
 
-        # Resize to 64 bands (Mel scale ideally, or Log)
+        # Resize to 128 bands (Mel scale ideally, or Log)
         # We can use librosa.feature.melspectrogram logic but applied to pre-computed STFT
         # Or just bin averaging
 
         # Use mel filter bank
-        n_mels = 64
+        n_mels = 128
         mels = librosa.filters.mel(sr=sr, n_fft=n_fft, n_mels=n_mels, fmin=20, fmax=sr/2)
         mel_S = np.dot(mels, np.abs(S))
         mel_db = librosa.power_to_db(mel_S**2, ref=np.max)
@@ -578,9 +579,9 @@ def _analyze_audio_series(audio: np.ndarray, sr: int) -> Dict[str, Any]:
         # mel_db is (n_mels, n_frames).
         # We want to transpose to (n_frames, n_mels) for JSON?
         # Or just list of lists.
-        # Limit frames to ~100
-        if mel_db.shape[1] > 100:
-            step_spec = mel_db.shape[1] // 100
+        # Limit frames to ~600
+        if mel_db.shape[1] > 600:
+            step_spec = mel_db.shape[1] // 600
             mel_db = mel_db[:, ::step_spec]
 
         spec_data = []
