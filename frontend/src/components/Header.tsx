@@ -22,6 +22,7 @@ export function Header() {
     { label: tNav('pricing'), href: "/pricing" },
     { label: tNav('faq'), href: "/faq" },
     { label: tNav('howItWorks'), href: "/docs" },
+    { label: tNav('blog'), href: "/blog" },
     { label: tNav('support'), href: "/support" },
   ];
 
