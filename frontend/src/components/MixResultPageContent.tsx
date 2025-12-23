@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "@/i18n/routing";
 import {
   fetchJobStatus,
@@ -47,11 +47,15 @@ const PHASE_KEY_MAP: Record<string, string> = {
   "Reporting": "reporting"
 };
 
+const STATUS_POLL_INTERVAL_MS = 2000;
+const MAX_FINALIZING_RETRIES = 15;
+
 export function MixResultPageContent({ jobId }: Props) {
   const router = useRouter();
   const t = useTranslations('MixTool.result');
   const tPhases = useTranslations("PipelinePhases");
   const tPanel = useTranslations("MixPipelinePanel");
+  const finalizingRetriesRef = useRef(0);
 
   // State
   const [jobStatus, setJobStatus] = useState<JobStatus | null>(null);
@@ -75,49 +79,101 @@ export function MixResultPageContent({ jobId }: Props) {
   const [shareLink, setShareLink] = useState("");
   const [loadingShare, setLoadingShare] = useState(false);
 
-  // --- Initial Data Load ---
+  // --- Pipeline Stages Load ---
   useEffect(() => {
     let cancelled = false;
 
-    async function loadData() {
+    async function loadStages() {
       try {
-        setLoading(true);
-        // 1. Fetch Job Status
+        const allStages = await fetchPipelineStages();
+        if (!cancelled) setStages(allStages);
+      } catch (e) {
+        console.warn("Could not fetch stages", e);
+      }
+    }
+
+    loadStages();
+    return () => { cancelled = true; };
+  }, []);
+
+  // --- Job Status Polling ---
+  useEffect(() => {
+    let cancelled = false;
+    let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+    finalizingRetriesRef.current = 0;
+    setError(null);
+    setLoading(true);
+
+    if (!jobId) {
+      setError("Job ID missing");
+      setLoading(false);
+      return () => {};
+    }
+
+    const pollStatus = async () => {
+      try {
         const status = await fetchJobStatus(jobId);
         if (cancelled) return;
         setJobStatus(status);
 
-        if (status.status !== "done" || !status.result) {
-            // Handle incomplete job (maybe redirect back to mix tool if running?)
-            // For now, just show status
+        if (status.status === "error") {
+          setError(status.error || status.message || "Error loading result");
+          setLoading(false);
+          return;
         }
 
-        // 2. Fetch Report (for metrics & pipeline details)
-        try {
-            const rep = await fetchJobReport(jobId);
-            if (!cancelled) setReport(rep);
-        } catch (e) {
-            console.warn("Could not fetch report", e);
+        const hasResult = status.status === "done" && !!status.result;
+        if (hasResult) {
+          setLoading(false);
+          return;
         }
 
-        // 3. Fetch Pipeline Stages
-        try {
-            const allStages = await fetchPipelineStages();
-            if (!cancelled) setStages(allStages);
-        } catch (e) {
-            console.warn("Could not fetch stages", e);
+        if (status.status === "done" && !status.result) {
+          finalizingRetriesRef.current += 1;
+          if (finalizingRetriesRef.current >= MAX_FINALIZING_RETRIES) {
+            setError("Resultados no disponibles. Intenta nuevamente.");
+            setLoading(false);
+            return;
+          }
+        } else {
+          finalizingRetriesRef.current = 0;
         }
 
+        setLoading(false);
+        timeoutId = setTimeout(pollStatus, STATUS_POLL_INTERVAL_MS);
       } catch (err: any) {
-        if (!cancelled) setError(err.message || "Error loading result");
-      } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) {
+          setError(err.message || "Error loading result");
+          setLoading(false);
+        }
+      }
+    };
+
+    pollStatus();
+    return () => {
+      cancelled = true;
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [jobId]);
+
+  // --- Fetch Report (after job completes) ---
+  useEffect(() => {
+    if (!jobStatus || jobStatus.status !== "done") return;
+    let cancelled = false;
+
+    async function loadReport() {
+      try {
+        const rep = await fetchJobReport(jobId);
+        if (!cancelled) setReport(rep);
+      } catch (e) {
+        console.warn("Could not fetch report", e);
       }
     }
 
-    loadData();
+    loadReport();
     return () => { cancelled = true; };
-  }, [jobId]);
+  }, [jobId, jobStatus?.status]);
 
   // --- Derive Processed Keys from Report ---
   useEffect(() => {
@@ -278,10 +334,48 @@ export function MixResultPageContent({ jobId }: Props) {
       );
   }
 
-  if (error || !jobStatus || !jobStatus.result) {
+  if (error) {
       return (
         <div className="flex flex-col items-center justify-center min-h-[60vh] text-slate-400 gap-4">
-            <p className="text-red-400">{error || "No se encontraron resultados"}</p>
+            <p className="text-red-400">{error}</p>
+            <button onClick={() => router.push('/mix')} className="text-amber-500 underline">Volver al inicio</button>
+        </div>
+      );
+  }
+
+  const isFinalizing = jobStatus?.status === "done" && !jobStatus?.result;
+  const isProcessing = jobStatus && jobStatus.status !== "done" && jobStatus.status !== "error";
+  const progressValue = Math.min(100, Math.max(0, jobStatus?.progress ?? 0));
+
+  if (isProcessing || isFinalizing) {
+      return (
+          <div className="flex items-center justify-center min-h-[60vh] text-slate-400">
+              <div className="flex w-full max-w-md flex-col items-center gap-4 px-4 text-center">
+                  <div className="w-8 h-8 border-4 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
+                  <div>
+                      <p className="text-slate-200">
+                        {isFinalizing ? "Preparando archivos finales..." : "Procesando mezcla..."}
+                      </p>
+                      <p className="text-xs text-slate-500 mt-2">{jobStatus?.message || "Esperando actualizacion del estado..."}</p>
+                  </div>
+                  <div className="w-full">
+                      <div className="h-2 w-full rounded-full bg-slate-800 overflow-hidden">
+                          <div
+                              className="h-2 bg-amber-500 transition-all"
+                              style={{ width: `${progressValue}%` }}
+                          />
+                      </div>
+                      <p className="mt-2 text-xs text-slate-500">{Math.round(progressValue)}%</p>
+                  </div>
+              </div>
+          </div>
+      );
+  }
+
+  if (!jobStatus || !jobStatus.result) {
+      return (
+        <div className="flex flex-col items-center justify-center min-h-[60vh] text-slate-400 gap-4">
+            <p className="text-red-400">No se encontraron resultados</p>
             <button onClick={() => router.push('/mix')} className="text-amber-500 underline">Volver al inicio</button>
         </div>
       );
@@ -427,7 +521,7 @@ export function MixResultPageContent({ jobId }: Props) {
             </div>
 
             {/* PIPELINE SECTION */}
-            <div className="border-t border-slate-900 bg-slate-925 relative z-10">
+            <div className="border-t border-slate-900 bg-slate-925 relative z-20">
                 <button
                     onClick={() => setIsPipelineExpanded(!isPipelineExpanded)}
                     className="w-full flex items-center justify-between p-6 hover:bg-slate-900/50 transition"

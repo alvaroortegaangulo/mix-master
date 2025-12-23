@@ -238,6 +238,7 @@ export function MixTool({ resumeJobId }: MixToolProps) {
     Object.fromEntries(BUS_KEYS.map((key) => [key, "auto"])),
   );
   const [busConfirmationMessage, setBusConfirmationMessage] = useState<string>("");
+  const [showBusPanel, setShowBusPanel] = useState(true);
   const pipelineRef = useRef<HTMLDivElement | null>(null);
 
   const t = useTranslations('MixTool');
@@ -577,6 +578,8 @@ export function MixTool({ resumeJobId }: MixToolProps) {
     setShowStageSelector(true);
     setFiles([]);
     setStemProfiles([]);
+    setShowBusPanel(true);
+    setBusConfirmationMessage("");
 
     if (isSongMode) {
       if (selected.length !== 1) {
@@ -636,6 +639,8 @@ export function MixTool({ resumeJobId }: MixToolProps) {
       };
     });
     setStemProfiles(newProfiles);
+    setShowBusPanel(true);
+    setBusConfirmationMessage("");
     if (!isSongMode && newProfiles.length) {
       setUploadStep(2);
     } else {
@@ -653,10 +658,14 @@ export function MixTool({ resumeJobId }: MixToolProps) {
 
   const handleStepBack = () => {
     setUploadStep((prev) => (prev === 1 ? 1 : (prev - 1) as 1 | 2));
+    setShowBusPanel(true);
+    setBusConfirmationMessage("");
   };
 
   const handleConfirmProfiles = () => {
     setUploadStep(3);
+    setShowBusPanel(true);
+    setBusConfirmationMessage("");
   };
 
   const handleBusStyleChange = (busKey: string, style: string) => {
@@ -668,10 +677,15 @@ export function MixTool({ resumeJobId }: MixToolProps) {
 
   const handleConfirmBuses = () => {
     pipelineRef.current?.scrollIntoView({ behavior: "smooth" });
+    setUploadStep(3);
+    setShowBusPanel(false);
     setBusConfirmationMessage(t("uploadSteps.messages.mixReady"));
   };
 
   const hasFiles = files.length > 0;
+  const isReadyForMix = uploadStep === 3 && !showBusPanel && Boolean(busConfirmationMessage);
+  const readyMessageText =
+    busConfirmationMessage || t("uploadSteps.messages.mixReady");
 
   const estimatedMinutes = useMemo(() => {
     if (!selectedStageKeys.length) return 0;
@@ -911,7 +925,7 @@ export function MixTool({ resumeJobId }: MixToolProps) {
                             </div>
                         ) : (
                             <div className="space-y-4">
-                                {uploadStep === 2 && stemProfiles.length > 0 ? (
+                                {uploadStep === 2 && stemProfiles.length > 0 && (
                                     <div className="flex min-h-[400px] flex-col rounded-3xl border border-teal-500/40 bg-gradient-to-br from-teal-500/10 to-slate-900/70 p-5 shadow-lg shadow-teal-500/10">
                                         <StemsProfilePanel
                                             stems={stemProfiles}
@@ -929,38 +943,59 @@ export function MixTool({ resumeJobId }: MixToolProps) {
                                             </button>
                                         </div>
                                     </div>
-                                ) : uploadStep === 3 && stemProfiles.length > 0 ? (
+                                )}
+
+                                {uploadStep === 3 && stemProfiles.length > 0 && showBusPanel && (
                                     <div className="flex min-h-[400px] flex-col gap-4 rounded-3xl border border-slate-700 bg-slate-900/60 p-5 shadow-lg shadow-slate-900/50">
                                         <div className="flex-1">
-                                        <SpaceDepthStylePanel
-                                            buses={visibleSpaceDepthBuses}
-                                            value={busStyles}
-                                            onChange={handleBusStyleChange}
-                                        />
+                                            <SpaceDepthStylePanel
+                                                buses={visibleSpaceDepthBuses}
+                                                value={busStyles}
+                                                onChange={handleBusStyleChange}
+                                            />
+                                        </div>
+                                        <div className="flex justify-end">
+                                            <button
+                                                type="button"
+                                                disabled={loading}
+                                                onClick={handleConfirmBuses}
+                                                className="rounded-full bg-slate-200/90 px-5 py-2.5 text-xs font-bold uppercase tracking-widest text-slate-950 transition hover:bg-slate-100 disabled:opacity-60"
+                                            >
+                                                {t("uploadSteps.buttons.confirmBuses")}
+                                            </button>
+                                        </div>
                                     </div>
-                                    <div className="flex justify-end">
-                                        <button
-                                            type="button"
+                                )}
+
+                                {(uploadStep === 1 || isReadyForMix) && (
+                                    isReadyForMix ? (
+                                        <div className="flex min-h-[400px] flex-col items-center justify-center gap-4 rounded-3xl border-2 border-teal-500/40 bg-gradient-to-br from-slate-900/80 to-slate-950/60 px-8 py-10 text-center shadow-inner shadow-teal-500/20">
+                                            <p className="text-lg font-semibold text-white max-w-xl">
+                                                {readyMessageText}
+                                            </p>
+                                            <p className="text-xs font-semibold uppercase tracking-wider text-teal-200">
+                                                {t("uploadSteps.labels.busSelection")}
+                                            </p>
+                                            <button
+                                                type="button"
+                                                onClick={handleGenerateMix}
+                                                disabled={!hasFiles || loading}
+                                                className="mt-2 rounded-full border border-teal-400 bg-gradient-to-r from-teal-500 to-cyan-500 px-5 py-2 text-[11px] font-bold uppercase tracking-[0.3em] text-slate-950 transition hover:brightness-110 disabled:opacity-60"
+                                            >
+                                                {t("generateMix")}
+                                            </button>
+                                            <p className="text-[11px] text-slate-400">
+                                                {t("uploadSteps.notes.buses")}
+                                            </p>
+                                        </div>
+                                    ) : (
+                                        <UploadDropzone
+                                            onFilesSelected={handleFilesSelected}
                                             disabled={loading}
-                                            onClick={handleConfirmBuses}
-                                            className="rounded-full bg-slate-200/90 px-5 py-2.5 text-xs font-bold uppercase tracking-widest text-slate-950 transition hover:bg-slate-100 disabled:opacity-60"
-                                        >
-                                            {t("uploadSteps.buttons.confirmBuses")}
-                                        </button>
-                                    </div>
-                                    {busConfirmationMessage && (
-                                        <p className="mt-3 text-sm text-teal-200">
-                                            {busConfirmationMessage}
-                                        </p>
-                                    )}
-                                </div>
-                                ) : (
-                                    <UploadDropzone
-                                        onFilesSelected={handleFilesSelected}
-                                        disabled={loading}
-                                        filesCount={files.length}
-                                        uploadMode={uploadMode}
-                                    />
+                                            filesCount={files.length}
+                                            uploadMode={uploadMode}
+                                        />
+                                    )
                                 )}
                             </div>
                         )}

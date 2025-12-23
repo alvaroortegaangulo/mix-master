@@ -42,7 +42,131 @@ export type LocalizedBlogPost = BlogPostTranslation & {
   publishedAt: string;
 };
 
+const createLocalizedTranslations = (
+  base: BlogPostTranslation,
+  overrides: Partial<Record<BlogLocale, BlogPostTranslation>> = {},
+): Record<BlogLocale, BlogPostTranslation> => {
+  return blogLocales.reduce((acc, locale) => {
+    acc[locale] = overrides[locale] ?? base;
+    return acc;
+  }, {} as Record<BlogLocale, BlogPostTranslation>);
+};
+
+const IA_PRODUCTION_EN: BlogPostTranslation = {
+  title: "AI in Music Production: Ally or Adversary?",
+  description:
+    "We analyze the latest AI-assisted mastering copilots and how to integrate them into your workflow without losing human oversight.",
+  excerpt:
+    "AI promises to fix everything with a click. We map the guardrails that keep your mixes sounding intentional rather than auto-generated.",
+  publishedAtLabel: "Jan 20, 2025",
+  readingTime: "8 min read",
+  tags: ["AI", "Production", "Mastering", "Stems"],
+  keywords: [
+    "AI mastering",
+    "automatic mixing",
+    "stems workflow",
+    "machine learning audio",
+    "human oversight",
+    "mix prep",
+  ],
+  toc: [
+    { id: "new-tools", label: "New AI mastering copilots" },
+    { id: "trust-boundaries", label: "Trust boundaries with automation" },
+    { id: "hybrid-workflow", label: "Designing a hybrid workflow" },
+    { id: "ready-checklist", label: "Checklist before uploading stems" },
+  ],
+};
+
+const IA_PRODUCTION_ES: BlogPostTranslation = {
+  title: "IA en la Producción Musical: ¿Aliado o Enemigo?",
+  description:
+    "Analizamos las nuevas herramientas de mastering asistido por IA y cómo integrarlas en tu flujo sin perder el control creativo.",
+  excerpt:
+    "Estas herramientas prometen solucionar todo al instante. Descubre cuándo confiar y cuándo seguir supervisando manualmente.",
+  publishedAtLabel: "20 Ene 2025",
+  readingTime: "8 min",
+  tags: ["IA", "Producción Musical", "Mastering", "Flujo de trabajo"],
+  keywords: [
+    "IA en mezcla",
+    "mastering asistido",
+    "preparación de stems",
+    "flujo creativo",
+    "control humano",
+    "herramientas inteligentes",
+  ],
+  toc: [
+    { id: "nuevas-herramientas", label: "Nuevas herramientas asistidas por IA" },
+    { id: "limites-de-confianza", label: "Límites de confianza con la automatización" },
+    { id: "flujo-hibrido", label: "Diseñar un flujo híbrido" },
+    { id: "checklist", label: "Checklist antes de subir stems" },
+  ],
+};
+
+const DSP_CALIBRATION_EN: BlogPostTranslation = {
+  title: "Acoustic Treatment vs. DSP Calibration: Can Software Fix Your Room?",
+  description:
+    "We test the leading DSP suites against physical treatment to understand where software can save the day and where it can't compete.",
+  excerpt:
+    "Before buying foam or repositioning monitors, learn when DSP delivers and when real acoustic panels are still required.",
+  publishedAtLabel: "Jan 22, 2025",
+  readingTime: "15 min read",
+  tags: ["Acoustics", "DSP", "Monitoring", "Studio"],
+  keywords: [
+    "acoustic treatment",
+    "DSP calibration",
+    "room correction",
+    "monitoring",
+    "bass traps",
+    "acoustic measurements",
+  ],
+  toc: [
+    { id: "physical-vs-dsp", label: "Physical panels vs. DSP tricks" },
+    { id: "dsp-limitations", label: "Where DSP calibration helps" },
+    { id: "monitoring-strategies", label: "Real monitoring strategies on a budget" },
+    { id: "hybrid-plan", label: "Hybrid correction road map" },
+  ],
+};
+
+const DSP_CALIBRATION_ES: BlogPostTranslation = {
+  title: "Tratamiento Acústico vs. Calibración DSP",
+  description:
+    "¿Realmente puedes arreglar tu sala con software? Probamos las soluciones líderes del mercado para entender sus límites y garantías.",
+  excerpt:
+    "A veces la calibración DSP rescata una sala doméstica; otras veces los paneles acústicos siguen siendo la respuesta. Te contamos cómo decidir.",
+  publishedAtLabel: "22 Ene 2025",
+  readingTime: "15 min",
+  tags: ["Acústica", "DSP", "Sala", "Monitoreo"],
+  keywords: [
+    "tratamiento acústico",
+    "calibración dsp",
+    "paneles acústicos",
+    "trap bass",
+    "ecualización de sala",
+    "monitoreo crítico",
+  ],
+  toc: [
+    { id: "fisica-vs-dsp", label: "Paneles físicos vs. trucos digitales" },
+    { id: "limitaciones-dsp", label: "Dónde la calibración DSP ayuda" },
+    { id: "casos-practicos", label: "Casos reales con salas domésticas" },
+    { id: "plan-hibrido", label: "Hoja de ruta híbrida" },
+  ],
+};
+
 export const blogPosts: BlogPost[] = [
+  {
+    slug: "ia-en-produccion-musical",
+    publishedAt: "2025-01-20",
+    translations: createLocalizedTranslations(IA_PRODUCTION_EN, {
+      es: IA_PRODUCTION_ES,
+    }),
+  },
+  {
+    slug: "tratamiento-acustico-dsp",
+    publishedAt: "2025-01-22",
+    translations: createLocalizedTranslations(DSP_CALIBRATION_EN, {
+      es: DSP_CALIBRATION_ES,
+    }),
+  },
   {
     slug: "como-eliminar-dc-offset-en-stems",
     image: "/blog/blog_eliminarDC.png",
