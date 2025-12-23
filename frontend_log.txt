@@ -1,0 +1,29 @@
+
+> frontend@0.1.0 dev
+> next dev -p 3000
+
+▲ Next.js 16.1.1 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.0.2:3000
+- Experiments (use with caution):
+  ✓ optimizeCss
+  · optimizePackageImports
+
+✓ Starting...
+Attention: Next.js now collects completely anonymous telemetry regarding usage.
+This information is used to shape Next.js' roadmap and prioritize features.
+You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
+https://nextjs.org/telemetry
+
+✓ Ready in 2.3s
+○ Compiling /[locale]/mix ...
+ GET /en/mix 200 in 15.3s (compile: 13.9s, proxy.ts: 444ms, generate-params: 1140ms, render: 1009ms)
+ GET /bg-grid.svg 200 in 3.0s
+ GET /en/mix 200 in 229ms (compile: 53ms, proxy.ts: 20ms, generate-params: 39ms, render: 156ms)
+ GET /bg-grid.svg 404 in 241ms (compile: 48ms, generate-params: 37ms, render: 193ms)
+ GET /en/mix 200 in 158ms (compile: 39ms, proxy.ts: 8ms, generate-params: 31ms, render: 111ms)
+ GET /bg-grid.svg 404 in 151ms (compile: 34ms, generate-params: 30ms, render: 117ms)
+ GET /en/mix 200 in 178ms (compile: 41ms, proxy.ts: 8ms, generate-params: 32ms, render: 129ms)
+ GET /bg-grid.svg 404 in 211ms (compile: 37ms, generate-params: 33ms, render: 174ms)
+ GET /en/mix 200 in 181ms (compile: 43ms, proxy.ts: 7ms, generate-params: 34ms, render: 131ms)
+ GET /bg-grid.svg 404 in 205ms (compile: 44ms, generate-params: 36ms, render: 161ms)
