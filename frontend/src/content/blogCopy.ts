@@ -39,9 +39,9 @@ export const blogCopy: Record<
       metaDescription:
         "Technical guides on real audio problems: DC offset, drum bus compression, dynamics, and stem preparation.",
       badge: "Technical blog",
-      title: "Specific solutions for real mixing problems",
+      title: "Your Music Deserves to Sound Professional",
       subtitle:
-        "Instead of fighting generic keywords, we target the technical searches producers do every day: DC offset cleanup, bus compression, dynamics control, and stem prep.",
+        "Stop fighting your mix and start creating with confidence. Discover the technical strategies top engineers use to achieve clarity, power, and emotion in every track.",
       readArticleLabel: "Read article",
       ctaTitle: "Want these fixes applied automatically?",
       ctaBody:
@@ -73,9 +73,9 @@ export const blogCopy: Record<
       metaDescription:
         "Guías técnicas sobre problemas reales de audio: DC offset, compresión de bus, dinámica y preparación de stems.",
       badge: "Blog técnico",
-      title: "Soluciones específicas para problemas reales de mezcla",
+      title: "Tu Música Merece Sonar Profesional",
       subtitle:
-        "En lugar de competir por keywords genéricas, aquí atacamos búsquedas técnicas que los productores hacen todos los días: limpieza de DC offset, compresión de bus, control dinámico y preparación de stems.",
+        "Deja de luchar con tu mezcla y empieza a crear con confianza. Descubre las estrategias técnicas que utilizan los ingenieros top para lograr claridad, potencia y emoción en cada track.",
       readArticleLabel: "Leer artículo",
       ctaTitle: "¿Quieres aplicar estos ajustes automáticamente?",
       ctaBody:
