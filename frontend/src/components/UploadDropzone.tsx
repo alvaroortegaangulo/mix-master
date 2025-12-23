@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { CloudArrowUpIcon } from "@heroicons/react/24/solid";
+import { ProcessingVisualizer } from "./ProcessingVisualizer";
 
 type UploadMode = "song" | "stems";
 
@@ -11,6 +12,12 @@ type UploadDropzoneProps = {
   disabled?: boolean;
   filesCount?: number;
   uploadMode: UploadMode;
+  isProcessing?: boolean;
+  processingState?: {
+    stageKey: string;
+    progress: number;
+    description: string;
+  };
 };
 
 export function UploadDropzone({
@@ -18,6 +25,8 @@ export function UploadDropzone({
   disabled,
   filesCount = 0,
   uploadMode,
+  isProcessing,
+  processingState,
 }: UploadDropzoneProps) {
   const t = useTranslations("UploadDropzone");
   const [isDragging, setIsDragging] = useState(false);
@@ -26,7 +35,7 @@ export function UploadDropzone({
   const isSongUpload = uploadMode === "song";
 
   const handleClick = () => {
-    if (disabled) return;
+    if (disabled || isProcessing) return;
     inputRef.current?.click();
   };
 
@@ -38,7 +47,7 @@ export function UploadDropzone({
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
-    if (disabled) return;
+    if (disabled || isProcessing) return;
     setIsDragging(false);
 
     const droppedFiles = Array.from(e.dataTransfer.files).filter((f) =>
@@ -52,7 +61,7 @@ export function UploadDropzone({
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
-    if (disabled) return;
+    if (disabled || isProcessing) return;
     setIsDragging(true);
   };
 
@@ -61,6 +70,18 @@ export function UploadDropzone({
     setIsDragging(false);
   };
 
+  if (isProcessing && processingState) {
+    return (
+        <div className="w-full h-full min-h-[400px] flex items-stretch justify-stretch">
+            <ProcessingVisualizer
+                stageKey={processingState.stageKey}
+                progress={processingState.progress}
+                description={processingState.description}
+            />
+        </div>
+    );
+  }
+
   return (
     <div
       onClick={handleClick}
@@ -68,7 +89,7 @@ export function UploadDropzone({
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       className={[
-        "flex flex-col items-center justify-center rounded-2xl border-2 border-dashed",
+        "flex flex-col items-center justify-center rounded-2xl border-2 border-dashed w-full",
         "border-slate-800 bg-slate-950/20 px-8 py-12 cursor-pointer transition min-h-[400px]",
         disabled
           ? "opacity-60 cursor-not-allowed"
