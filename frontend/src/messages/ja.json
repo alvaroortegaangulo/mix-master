@@ -209,11 +209,15 @@
         "profiles": "次に進む前に各ステムにプロファイルを割り当ててください。",
         "buses": "バスを構成し、確認してパイプラインに移動します。"
       },
-      "buttons": {
-        "confirmProfiles": "プロファイルを確認",
-        "confirmBuses": "バス選択を確認",
-        "back": "戻る"
-      }
+    "buttons": {
+      "confirmProfiles": "プロファイルを確認",
+      "confirmBuses": "バス選択を確認",
+      "back": "戻る"
+    }
+    ,
+    "messages": {
+      "mixReady": "ミックス用のトラックが準備できました。「Generar Mix IA」を押してミックス＆マスタリングを開始してください。"
+    }
     },
     "songMode": "ソング（マスタリング）",
     "stemsMode": "ステム（フルミックス）",

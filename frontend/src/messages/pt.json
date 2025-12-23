@@ -209,11 +209,15 @@
         "profiles": "Atribua um perfil a cada faixa antes de continuar.",
         "buses": "Defina os barramentos e confirme para abrir o pipeline."
       },
-      "buttons": {
-        "confirmProfiles": "Confirmar perfis",
-        "confirmBuses": "Confirmar seleção de barramentos",
-        "back": "Voltar"
-      }
+    "buttons": {
+      "confirmProfiles": "Confirmar perfis",
+      "confirmBuses": "Confirmar seleção de barramentos",
+      "back": "Voltar"
+    }
+    ,
+    "messages": {
+      "mixReady": "Faixas prontas para mixagem; pressione Gerar Mix IA para iniciar mixagem e masterização."
+    }
     },
     "songMode": "Música (Masterização)",
     "stemsMode": "Stems (Mixagem Completa)",

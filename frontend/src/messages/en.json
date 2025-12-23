@@ -211,11 +211,15 @@
         "profiles": "Assign each stem a profile before proceeding.",
         "buses": "Fine-tune bus routing and confirm to jump to the pipeline."
       },
-      "buttons": {
-        "confirmProfiles": "Confirm profiles",
-        "confirmBuses": "Confirm bus selection",
-        "back": "Back"
-      }
+    "buttons": {
+      "confirmProfiles": "Confirm profiles",
+      "confirmBuses": "Confirm bus selection",
+      "back": "Back"
+    }
+    ,
+    "messages": {
+      "mixReady": "Tracks prepared for mixing; press Generate Mix IA to start mixing and mastering."
+    }
     },
     "songMode": "Song (Mastering)",
     "stemsMode": "Stems (Full Mix)",

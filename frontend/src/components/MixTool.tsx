@@ -73,6 +73,24 @@ const BUS_KEYS = [
   "other",
 ];
 
+const PROFILE_TO_BUS: Record<string, string[]> = {
+  auto: ["other"],
+  Kick: ["drums"],
+  Snare: ["drums"],
+  Percussion: ["percussion"],
+  Bass_Electric: ["bass"],
+  Acoustic_Guitar: ["guitars"],
+  Electric_Guitar_Rhythm: ["guitars"],
+  Keys_Piano: ["keys_synths"],
+  Synth_Pads: ["keys_synths"],
+  Lead_Vocal_Melodic: ["lead_vocal"],
+  Lead_Vocal_Rap: ["lead_vocal"],
+  Backing_Vocals: ["backing_vocals"],
+  FX_EarCandy: ["fx"],
+  Ambience_Atmos: ["ambience"],
+  Other: ["other"],
+};
+
 type StemProfile = {
   id: string;
   fileName: string;
@@ -219,6 +237,7 @@ export function MixTool({ resumeJobId }: MixToolProps) {
   const [busStyles, setBusStyles] = useState<Record<string, string>>(() =>
     Object.fromEntries(BUS_KEYS.map((key) => [key, "auto"])),
   );
+  const [busConfirmationMessage, setBusConfirmationMessage] = useState<string>("");
   const pipelineRef = useRef<HTMLDivElement | null>(null);
 
   const t = useTranslations('MixTool');
@@ -238,6 +257,20 @@ export function MixTool({ resumeJobId }: MixToolProps) {
       })),
     [t],
   );
+
+  const activeBusKeys = useMemo(() => {
+    const selected = new Set<string>();
+    stemProfiles.forEach((stem) => {
+      const mapped = PROFILE_TO_BUS[stem.profile] ?? ["other"];
+      mapped.forEach((busKey) => selected.add(busKey));
+    });
+    const result = BUS_KEYS.filter((key) => selected.has(key));
+    return result.length > 0 ? result : BUS_KEYS;
+  }, [stemProfiles]);
+
+  const visibleSpaceDepthBuses = activeBusKeys.length
+    ? spaceDepthBuses.filter((bus) => activeBusKeys.includes(bus.key))
+    : spaceDepthBuses;
   // Use router from next-intl/routing to ensure locale preservation
   const { useRouter } = require("@/i18n/routing");
   const router = useRouter();
@@ -635,6 +668,7 @@ export function MixTool({ resumeJobId }: MixToolProps) {
 
   const handleConfirmBuses = () => {
     pipelineRef.current?.scrollIntoView({ behavior: "smooth" });
+    setBusConfirmationMessage(t("uploadSteps.messages.mixReady"));
   };
 
   const hasFiles = files.length > 0;
@@ -841,9 +875,6 @@ export function MixTool({ resumeJobId }: MixToolProps) {
                 <div className="relative z-10 w-full max-w-lg flex-1 flex flex-col justify-center">
                     <div className="mb-4 flex items-start justify-between gap-3">
                         <div>
-                            <p className="text-[10px] uppercase tracking-[0.5em] text-slate-500">
-                                {t("uploadSteps.stepCounter", { current: uploadStep })}
-                            </p>
                             <h2 className="text-xl font-bold text-white leading-tight">
                                 {uploadStep === 1 && t("uploadSteps.labels.uploadTracks")}
                                 {uploadStep === 2 && t("uploadSteps.labels.selectProfiles")}
@@ -901,23 +932,28 @@ export function MixTool({ resumeJobId }: MixToolProps) {
                                 ) : uploadStep === 3 && stemProfiles.length > 0 ? (
                                     <div className="flex min-h-[400px] flex-col gap-4 rounded-3xl border border-slate-700 bg-slate-900/60 p-5 shadow-lg shadow-slate-900/50">
                                         <div className="flex-1">
-                                            <SpaceDepthStylePanel
-                                                buses={spaceDepthBuses}
-                                                value={busStyles}
-                                                onChange={handleBusStyleChange}
-                                            />
-                                        </div>
-                                        <div className="flex justify-end">
-                                            <button
-                                                type="button"
-                                                disabled={loading}
-                                                onClick={handleConfirmBuses}
-                                                className="rounded-full bg-slate-200/90 px-5 py-2.5 text-xs font-bold uppercase tracking-widest text-slate-950 transition hover:bg-slate-100 disabled:opacity-60"
-                                            >
-                                                {t("uploadSteps.buttons.confirmBuses")}
-                                            </button>
-                                        </div>
+                                        <SpaceDepthStylePanel
+                                            buses={visibleSpaceDepthBuses}
+                                            value={busStyles}
+                                            onChange={handleBusStyleChange}
+                                        />
                                     </div>
+                                    <div className="flex justify-end">
+                                        <button
+                                            type="button"
+                                            disabled={loading}
+                                            onClick={handleConfirmBuses}
+                                            className="rounded-full bg-slate-200/90 px-5 py-2.5 text-xs font-bold uppercase tracking-widest text-slate-950 transition hover:bg-slate-100 disabled:opacity-60"
+                                        >
+                                            {t("uploadSteps.buttons.confirmBuses")}
+                                        </button>
+                                    </div>
+                                    {busConfirmationMessage && (
+                                        <p className="mt-3 text-sm text-teal-200">
+                                            {busConfirmationMessage}
+                                        </p>
+                                    )}
+                                </div>
                                 ) : (
                                     <UploadDropzone
                                         onFilesSelected={handleFilesSelected}

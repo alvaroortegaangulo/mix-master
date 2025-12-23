@@ -209,11 +209,15 @@
         "profiles": "Assegna un profilo a ogni traccia prima di proseguire.",
         "buses": "Configura i bus e conferma per accedere alla pipeline."
       },
-      "buttons": {
-        "confirmProfiles": "Conferma profili",
-        "confirmBuses": "Conferma selezione bus",
-        "back": "Indietro"
-      }
+    "buttons": {
+      "confirmProfiles": "Conferma profili",
+      "confirmBuses": "Conferma selezione bus",
+      "back": "Indietro"
+    }
+    ,
+    "messages": {
+      "mixReady": "Tracce pronte per il mix; premi Genera Mix IA per avviare mix e mastering."
+    }
     },
     "songMode": "Canzone (Mastering)",
     "stemsMode": "Stems (Mix Completo)",

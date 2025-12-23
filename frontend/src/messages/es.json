@@ -211,11 +211,15 @@
         "profiles": "Asigna un perfil a cada pista antes de continuar.",
         "buses": "Configura los buses y confirma para ver el pipeline."
       },
-      "buttons": {
-        "confirmProfiles": "Confirmar perfiles",
-        "confirmBuses": "Confirmar selección de bus",
-        "back": "Atrás"
-      }
+    "buttons": {
+      "confirmProfiles": "Confirmar perfiles",
+      "confirmBuses": "Confirmar selección de bus",
+      "back": "Atrás"
+    }
+    ,
+    "messages": {
+      "mixReady": "Pistas preparadas para mezcla, pulsa Generar Mezcla IA para comenzar mezcla y masterización."
+    }
     },
     "songMode": "Canción (Masterización)",
     "stemsMode": "Pistas (Mezcla Completa)",

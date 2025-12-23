@@ -53,20 +53,20 @@ export function SpaceDepthStylePanel({ buses, value, onChange }: Props) {
   if (!buses.length) return null;
 
   return (
-    <aside className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 text-xs shadow-lg shadow-amber-500/20 text-amber-50">
+    <aside className="rounded-2xl border border-teal-500/40 bg-teal-500/10 p-4 text-xs shadow-lg shadow-teal-500/20 text-teal-50">
       <div className="flex items-start justify-between gap-2">
         <div>
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-amber-100">
+          <h3 className="text-sm font-semibold uppercase tracking-wide text-teal-100">
             {t('spaceDepthTitle')}
           </h3>
-          <p className="mt-1 text-[11px] text-amber-200">
+          <p className="mt-1 text-[11px] text-teal-200">
             {t('spaceDepthDesc')}
           </p>
         </div>
         <button
           type="button"
           onClick={() => setShowDocs((v) => !v)}
-          className="ml-2 inline-flex h-7 w-7 items-center justify-center rounded-full border border-amber-500/60 text-[11px] text-amber-100 hover:border-amber-300 hover:text-amber-50"
+          className="ml-2 inline-flex h-7 w-7 items-center justify-center rounded-full border border-teal-500/60 text-[11px] text-teal-100 hover:border-teal-300 hover:text-teal-50"
         >
           ?
         </button>
@@ -76,21 +76,21 @@ export function SpaceDepthStylePanel({ buses, value, onChange }: Props) {
         {buses.map((bus) => (
           <div
             key={bus.key}
-            className="flex items-center justify-between gap-2 rounded-lg border border-amber-500/30 bg-amber-500/5 px-2.5 py-2"
+            className="flex items-center justify-between gap-2 rounded-lg border border-teal-500/30 bg-teal-500/5 px-2.5 py-2"
           >
             <div className="min-w-0">
-              <p className="text-[11px] font-medium text-amber-50">
+              <p className="text-[11px] font-medium text-teal-50">
                 {bus.label}
               </p>
               {bus.description && (
-                <p className="mt-0.5 text-[10px] text-amber-200/80">
+                <p className="mt-0.5 text-[10px] text-teal-200/80">
                   {bus.description}
                 </p>
               )}
             </div>
             <div className="flex items-center gap-1">
               <select
-                className="max-w-[10rem] rounded-md border border-amber-500/60 bg-slate-950/80 px-2 py-1 text-[11px] text-amber-50 outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400"
+                className="max-w-[10rem] rounded-md border border-teal-500/60 bg-slate-950/80 px-2 py-1 text-[11px] text-teal-50 outline-none focus:border-teal-400 focus:ring-1 focus:ring-teal-400"
                 value={value[bus.key] ?? "auto"}
                 onChange={(e) => onChange(bus.key, e.target.value)}
               >
@@ -107,11 +107,11 @@ export function SpaceDepthStylePanel({ buses, value, onChange }: Props) {
       </div>
 
       {showDocs && (
-        <div className="mt-3 rounded-xl border border-amber-500/40 bg-amber-500/10 p-3 text-[11px] text-amber-100">
-          <p className="font-semibold uppercase tracking-wide text-amber-200">
+        <div className="mt-3 rounded-xl border border-teal-500/40 bg-teal-500/10 p-3 text-[11px] text-teal-100">
+          <p className="font-semibold uppercase tracking-wide text-teal-200">
             Quick references
           </p>
-          <p className="mt-1 text-amber-50/90">
+          <p className="mt-1 text-teal-50/90">
             In Auto mode we apply short rooms/plates with moderate sends and strong low filtering to avoid masking. Choose a style to force a specific space per bus.
           </p>
         </div>

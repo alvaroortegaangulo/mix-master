@@ -209,11 +209,15 @@
         "profiles": "Weise jedem Stem ein Profil zu, bevor du fortfährst.",
         "buses": "Konfiguriere die Busse und bestätige, um zum Pipeline-Bereich zu springen."
       },
-      "buttons": {
-        "confirmProfiles": "Profile bestätigen",
-        "confirmBuses": "Busauswahl bestätigen",
-        "back": "Zurück"
-      }
+    "buttons": {
+      "confirmProfiles": "Profile bestätigen",
+      "confirmBuses": "Busauswahl bestätigen",
+      "back": "Zurück"
+    }
+    ,
+    "messages": {
+      "mixReady": "Spuren sind bereit für den Mix; drücke Generiere Mix IA, um Mischung und Mastering zu starten."
+    }
     },
     "songMode": "Song (Mastering)",
     "stemsMode": "Stems (Vollständiger Mix)",

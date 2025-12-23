@@ -373,16 +373,18 @@ export function MixResultPageContent({ jobId }: Props) {
 
                 {/* Waveform */}
                 <div className="mb-8">
-                    <WaveformPlayer
-                        src={signedFullUrl}
-                        compareSrc={signedOriginalUrl}
-                        isCompareActive={showOriginal}
-                        accentColor={showOriginal ? "#64748b" : "#f59e0b"} // Slate for original, Amber for Master
-                        className="bg-transparent shadow-none border-none p-0 !gap-0 h-40"
-                        canvasClassName="h-full"
-                        hideDownload={true}
-                    />
+                <div className="relative z-0">
+                  <WaveformPlayer
+                    src={signedFullUrl}
+                    compareSrc={signedOriginalUrl}
+                    isCompareActive={showOriginal}
+                    accentColor={showOriginal ? "#64748b" : "#f59e0b"} // Slate for original, Amber for Master
+                    className="bg-transparent shadow-none border-none p-0 !gap-0 h-40"
+                    canvasClassName="h-full"
+                    hideDownload={true}
+                  />
                 </div>
+              </div>
 
                 {/* Controls & Actions */}
                 <div className="flex flex-col md:flex-row items-center justify-between gap-6 pt-6 border-t border-slate-900">
@@ -425,7 +427,7 @@ export function MixResultPageContent({ jobId }: Props) {
             </div>
 
             {/* PIPELINE SECTION */}
-            <div className="border-t border-slate-900 bg-slate-925">
+            <div className="border-t border-slate-900 bg-slate-925 relative z-10">
                 <button
                     onClick={() => setIsPipelineExpanded(!isPipelineExpanded)}
                     className="w-full flex items-center justify-between p-6 hover:bg-slate-900/50 transition"
