@@ -195,6 +195,23 @@
     "loadingResult": "Carregando resultado...",
     "spaceDepthSettings": "Configurações de Espaço & Profundidade",
     "uploadMixConfig": "Configuração de Upload & Mix",
+    "uploadSteps": {
+      "stepCounter": "Passo {current}/3",
+      "labels": {
+        "uploadTracks": "1/3 Carregue as faixas de áudio",
+        "selectProfiles": "2/3 Selecione o perfil dos stems",
+        "busSelection": "3/3 Seleção de barramentos"
+      },
+      "notes": {
+        "profiles": "Atribua um perfil a cada faixa antes de continuar.",
+        "buses": "Defina os barramentos e confirme para abrir o pipeline."
+      },
+      "buttons": {
+        "confirmProfiles": "Confirmar perfis",
+        "confirmBuses": "Confirmar seleção de barramentos",
+        "back": "Voltar"
+      }
+    },
     "songMode": "Música (Masterização)",
     "stemsMode": "Stems (Mixagem Completa)",
     "songModeWarning": "O modo música requer exatamente um arquivo WAV/AIFF/MP3.",

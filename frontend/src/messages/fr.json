@@ -195,6 +195,23 @@
     "loadingResult": "Chargement du résultat...",
     "spaceDepthSettings": "Paramètres d'Espace & Profondeur",
     "uploadMixConfig": "Configuration de Téléchargement & Mixage",
+    "uploadSteps": {
+      "stepCounter": "Étape {current}/3",
+      "labels": {
+        "uploadTracks": "1/3 Téléchargez vos pistes audio",
+        "selectProfiles": "2/3 Sélectionnez le profil des stems",
+        "busSelection": "3/3 Sélection des bus"
+      },
+      "notes": {
+        "profiles": "Attribuez un profil à chaque piste avant de poursuivre.",
+        "buses": "Choisissez les bus puis confirmez pour afficher le pipeline."
+      },
+      "buttons": {
+        "confirmProfiles": "Confirmer les profils",
+        "confirmBuses": "Confirmer la sélection des bus",
+        "back": "Retour"
+      }
+    },
     "songMode": "Chanson (Mastering)",
     "stemsMode": "Stems (Mixage Complet)",
     "songModeWarning": "Le mode chanson nécessite exactement un fichier WAV/AIFF/MP3.",

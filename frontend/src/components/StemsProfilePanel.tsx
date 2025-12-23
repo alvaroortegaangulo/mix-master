@@ -10,13 +10,51 @@ type StemProfile = {
   profile: string;
 };
 
+type Accent = "amber" | "teal";
+
 type Props = {
   stems: StemProfile[];
   onChangeProfile: (id: string, profile: string) => void;
+  accent?: Accent;
 };
 
-export function StemsProfilePanel({ stems, onChangeProfile }: Props) {
+type AccentTheme = {
+  wrapper: string;
+  title: string;
+  description: string;
+  card: string;
+  text: string;
+  muted: string;
+  selectBorder: string;
+  selectFocus: string;
+};
+
+const ACCENT_THEMES: Record<Accent, AccentTheme> = {
+  amber: {
+    wrapper: "border-amber-500/40 bg-amber-500/10 text-amber-50 shadow-lg shadow-amber-500/20",
+    title: "text-amber-100",
+    description: "text-amber-200",
+    card: "border-amber-500/30 bg-amber-500/5",
+    text: "text-amber-50",
+    muted: "text-amber-200/80",
+    selectBorder: "border-amber-500/60",
+    selectFocus: "focus:border-amber-400 focus:ring-1 focus:ring-amber-400",
+  },
+  teal: {
+    wrapper: "border-teal-500/40 bg-teal-500/10 text-teal-50 shadow-lg shadow-teal-500/20",
+    title: "text-teal-100",
+    description: "text-teal-200",
+    card: "border-teal-500/30 bg-teal-500/5",
+    text: "text-teal-50",
+    muted: "text-teal-200/80",
+    selectBorder: "border-teal-500/60",
+    selectFocus: "focus:border-teal-400 focus:ring-1 focus:ring-teal-400",
+  },
+};
+
+export function StemsProfilePanel({ stems, onChangeProfile, accent = "amber" }: Props) {
   const t = useTranslations('MixTool');
+  const theme = ACCENT_THEMES[accent];
 
   // We need to fetch options inside the component to use translations
   const STEM_PROFILE_OPTIONS: { value: string; label: string }[] = [
@@ -47,11 +85,11 @@ export function StemsProfilePanel({ stems, onChangeProfile }: Props) {
   if (!stems.length) return null;
 
   return (
-    <aside className="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 text-xs shadow-lg shadow-amber-500/20 text-amber-50">
-      <h3 className="text-sm font-semibold uppercase tracking-wide text-amber-100">
+    <aside className={`rounded-2xl border ${theme.wrapper} p-4 text-xs`}>
+      <h3 className={`text-sm font-semibold uppercase tracking-wide ${theme.title}`}>
         {t('stemsProfile')}
       </h3>
-      <p className="mt-1 text-[11px] text-amber-200">
+      <p className={`mt-1 text-[11px] ${theme.description}`}>
         {t('stemsProfileDesc')}
       </p>
 
@@ -60,18 +98,18 @@ export function StemsProfilePanel({ stems, onChangeProfile }: Props) {
         {stems.map((stem) => (
           <div
             key={stem.id}
-            className="flex items-center justify-between gap-2 rounded-lg border border-amber-500/30 bg-amber-500/5 px-2.5 py-2"
+            className={`flex items-center justify-between gap-2 rounded-lg border ${theme.card} px-2.5 py-2`}
           >
             <div className="min-w-0">
-              <p className="truncate text-[11px] font-medium text-amber-50">
+              <p className={`truncate text-[11px] font-medium ${theme.text}`}>
                 {stem.fileName}
                 {stem.extension && (
-                  <span className="text-amber-200/80">.{stem.extension}</span>
+                  <span className={theme.muted}>.{stem.extension}</span>
                 )}
               </p>
             </div>
             <select
-              className="max-w-[9.5rem] rounded-md border border-amber-500/60 bg-slate-950/80 px-2 py-1 text-[11px] text-amber-50 outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400"
+              className={`max-w-[9.5rem] rounded-md border ${theme.selectBorder} bg-slate-950/80 px-2 py-1 text-[11px] ${theme.text} outline-none ${theme.selectFocus}`}
               value={stem.profile}
               onChange={(e) => onChangeProfile(stem.id, e.target.value)}
             >

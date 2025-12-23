@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import {
   startMixJob,
   fetchJobStatus,
@@ -24,8 +24,10 @@ import {
   HandRaisedIcon,
   BoltIcon,
   LockClosedIcon,
-  ChevronDownIcon
+  ChevronDownIcon,
+  ArrowLeftIcon
 } from "@heroicons/react/24/outline";
+import { ProcessingVisualizer } from "./ProcessingVisualizer";
 
 const siteName = "Piroola";
 const fallbackSiteUrl = "https://music-mix-master.com";
@@ -55,6 +57,21 @@ const MixResultPanel = dynamic(
 const StemsProfilePanel = dynamic(
   () => import("./StemsProfilePanel").then((mod) => mod.StemsProfilePanel)
 );
+const SpaceDepthStylePanel = dynamic(
+  () => import("./SpaceDepthStylePanel").then((mod) => mod.SpaceDepthStylePanel)
+);
+const BUS_KEYS = [
+  "drums",
+  "percussion",
+  "bass",
+  "guitars",
+  "keys_synths",
+  "lead_vocal",
+  "backing_vocals",
+  "fx",
+  "ambience",
+  "other",
+];
 
 type StemProfile = {
   id: string;
@@ -198,12 +215,27 @@ export function MixTool({ resumeJobId }: MixToolProps) {
 
   // Group expansion state
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
+  const [uploadStep, setUploadStep] = useState<1 | 2 | 3>(1);
+  const [busStyles, setBusStyles] = useState<Record<string, string>>(() =>
+    Object.fromEntries(BUS_KEYS.map((key) => [key, "auto"])),
+  );
+  const pipelineRef = useRef<HTMLDivElement | null>(null);
 
   const songModeStageKeys = useMemo(
     () => getSongModeStages(availableStages),
     [availableStages],
   );
   const isSongMode = uploadMode === "song";
+
+  const spaceDepthBuses = useMemo(
+    () =>
+      BUS_KEYS.map((key) => ({
+        key,
+        label: t(`spaceDepthBuses.${key}.label`) || key,
+        description: t(`spaceDepthBuses.${key}.description`) || "",
+      })),
+    [t],
+  );
 
   const t = useTranslations('MixTool');
   // Use router from next-intl/routing to ensure locale preservation
@@ -499,6 +531,8 @@ export function MixTool({ resumeJobId }: MixToolProps) {
     setError(null);
     setStemProfiles([]);
     setSelectionWarning(null);
+    setUploadStep(1);
+    setBusStyles(Object.fromEntries(BUS_KEYS.map((key) => [key, "auto"])));
   };
 
   const handleFilesSelected = (selected: File[]) => {
@@ -569,6 +603,11 @@ export function MixTool({ resumeJobId }: MixToolProps) {
       };
     });
     setStemProfiles(newProfiles);
+    if (!isSongMode && newProfiles.length) {
+      setUploadStep(2);
+    } else {
+      setUploadStep(1);
+    }
   };
 
   const handleStemProfileChange = (id: string, profile: string) => {
@@ -577,6 +616,25 @@ export function MixTool({ resumeJobId }: MixToolProps) {
         stem.id === id ? { ...stem, profile } : stem,
       ),
     );
+  };
+
+  const handleStepBack = () => {
+    setUploadStep((prev) => Math.max(1, prev - 1));
+  };
+
+  const handleConfirmProfiles = () => {
+    setUploadStep(3);
+  };
+
+  const handleBusStyleChange = (busKey: string, style: string) => {
+    setBusStyles((prev) => ({
+      ...prev,
+      [busKey]: style,
+    }));
+  };
+
+  const handleConfirmBuses = () => {
+    pipelineRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
   const hasFiles = files.length > 0;
@@ -701,6 +759,28 @@ export function MixTool({ resumeJobId }: MixToolProps) {
     (jobStatus &&
       (jobStatus.status === "queued" || jobStatus.status === "running"));
 
+  useEffect(() => {
+    if (!files.length) {
+      setUploadStep(1);
+    }
+  }, [files.length]);
+
+  useEffect(() => {
+    if (isProcessing) {
+      setUploadStep(3);
+    }
+  }, [isProcessing]);
+
+  const processingState = progressInfo
+    ? {
+        stageKey: jobStatus?.stageKey || "",
+        progress: progressInfo.percent,
+        description: progressInfo.description
+          ? `${progressInfo.title} - ${progressInfo.description}`
+          : progressInfo.title,
+      }
+    : undefined;
+
 
   return (
     <div className="flex-1 flex flex-col">
@@ -759,18 +839,96 @@ export function MixTool({ resumeJobId }: MixToolProps) {
 
                 {/* Center: Upload */}
                 <div className="relative z-10 w-full max-w-lg flex-1 flex flex-col justify-center">
-                    <UploadDropzone
-                        onFilesSelected={handleFilesSelected}
-                        disabled={loading}
-                        filesCount={files.length}
-                        uploadMode={uploadMode}
-                        isProcessing={!!isProcessing}
-                        processingState={progressInfo ? {
-                            stageKey: jobStatus?.stageKey || "",
-                            progress: progressInfo.percent,
-                            description: `${progressInfo.title} - ${progressInfo.description}`
-                        } : undefined}
-                    />
+                    <div className="mb-4 flex items-start justify-between gap-3">
+                        <div>
+                            <p className="text-[10px] uppercase tracking-[0.5em] text-slate-500">
+                                {t("uploadSteps.stepCounter", { current: uploadStep })}
+                            </p>
+                            <h2 className="text-xl font-bold text-white leading-tight">
+                                {uploadStep === 1 && t("uploadSteps.labels.uploadTracks")}
+                                {uploadStep === 2 && t("uploadSteps.labels.selectProfiles")}
+                                {uploadStep === 3 && t("uploadSteps.labels.busSelection")}
+                            </h2>
+                            {uploadStep > 1 && (
+                                <p className="mt-1 text-xs text-slate-400">
+                                    {uploadStep === 2
+                                        ? t("uploadSteps.notes.profiles")
+                                        : t("uploadSteps.notes.buses")}
+                                </p>
+                            )}
+                        </div>
+                        {uploadStep > 1 && (
+                            <button
+                                type="button"
+                                onClick={handleStepBack}
+                                className="flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-900/60 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-slate-400 transition hover:border-slate-500 hover:text-slate-200"
+                            >
+                                <ArrowLeftIcon className="w-3 h-3" />
+                                {t("uploadSteps.buttons.back")}
+                            </button>
+                        )}
+                    </div>
+
+                    <div className="flex-1">
+                        {isProcessing && processingState ? (
+                            <div className="w-full min-h-[400px]">
+                                <ProcessingVisualizer
+                                    stageKey={processingState.stageKey}
+                                    progress={processingState.progress}
+                                    description={processingState.description}
+                                />
+                            </div>
+                        ) : (
+                            <div className="space-y-4">
+                                {uploadStep === 2 && stemProfiles.length > 0 ? (
+                                    <div className="flex min-h-[400px] flex-col rounded-3xl border border-teal-500/40 bg-gradient-to-br from-teal-500/10 to-slate-900/70 p-5 shadow-lg shadow-teal-500/10">
+                                        <StemsProfilePanel
+                                            stems={stemProfiles}
+                                            onChangeProfile={handleStemProfileChange}
+                                            accent="teal"
+                                        />
+                                        <div className="mt-4 flex justify-end">
+                                            <button
+                                                type="button"
+                                                disabled={loading || !stemProfiles.length}
+                                                onClick={handleConfirmProfiles}
+                                                className="rounded-full bg-teal-500 px-5 py-2.5 text-xs font-bold uppercase tracking-widest text-slate-950 transition hover:bg-teal-400 disabled:opacity-60"
+                                            >
+                                                {t("uploadSteps.buttons.confirmProfiles")}
+                                            </button>
+                                        </div>
+                                    </div>
+                                ) : uploadStep === 3 && stemProfiles.length > 0 ? (
+                                    <div className="flex min-h-[400px] flex-col gap-4 rounded-3xl border border-slate-700 bg-slate-900/60 p-5 shadow-lg shadow-slate-900/50">
+                                        <div className="flex-1">
+                                            <SpaceDepthStylePanel
+                                                buses={spaceDepthBuses}
+                                                value={busStyles}
+                                                onChange={handleBusStyleChange}
+                                            />
+                                        </div>
+                                        <div className="flex justify-end">
+                                            <button
+                                                type="button"
+                                                disabled={loading}
+                                                onClick={handleConfirmBuses}
+                                                className="rounded-full bg-slate-200/90 px-5 py-2.5 text-xs font-bold uppercase tracking-widest text-slate-950 transition hover:bg-slate-100 disabled:opacity-60"
+                                            >
+                                                {t("uploadSteps.buttons.confirmBuses")}
+                                            </button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <UploadDropzone
+                                        onFilesSelected={handleFilesSelected}
+                                        disabled={loading}
+                                        filesCount={files.length}
+                                        uploadMode={uploadMode}
+                                    />
+                                )}
+                            </div>
+                        )}
+                    </div>
 
                     {!isProcessing && selectionWarning && (
                         <div className="mt-4 rounded-md border border-amber-400/60 bg-amber-500/10 px-4 py-3 text-sm text-amber-100 flex items-center justify-center text-center">
@@ -802,7 +960,10 @@ export function MixTool({ resumeJobId }: MixToolProps) {
             </div>
 
             {/* RIGHT COLUMN: Pipeline */}
-            <div className="p-8 lg:p-10 bg-slate-900/50 flex flex-col relative">
+            <div
+                ref={pipelineRef}
+                className="p-8 lg:p-10 bg-slate-900/50 flex flex-col relative"
+            >
                 {/* Header */}
                 <div className="flex items-center justify-between mb-8">
                     <div>
@@ -970,18 +1131,6 @@ export function MixTool({ resumeJobId }: MixToolProps) {
             </div>
         </div>
 
-        {/* SECONDARY PANELS ROW */}
-        <div className="w-full max-w-6xl mt-8 grid grid-cols-1 md:grid-cols-2 gap-8">
-            {/* Stems Panel */}
-            {stemProfiles.length > 0 && (
-                <div>
-                  <StemsProfilePanel
-                    stems={stemProfiles}
-                    onChangeProfile={handleStemProfileChange}
-                  />
-                </div>
-            )}
-        </div>
       </main>
     </div>
   );

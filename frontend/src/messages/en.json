@@ -200,6 +200,23 @@
     "loadingResult": "Loading result...",
     "spaceDepthSettings": "Space & Depth Settings",
     "uploadMixConfig": "Upload & Mix Configuration",
+    "uploadSteps": {
+      "stepCounter": "Step {current}/3",
+      "labels": {
+        "uploadTracks": "1/3 Upload your audio tracks",
+        "selectProfiles": "2/3 Select stems profile",
+        "busSelection": "3/3 Bus selection"
+      },
+      "notes": {
+        "profiles": "Assign each stem a profile before proceeding.",
+        "buses": "Fine-tune bus routing and confirm to jump to the pipeline."
+      },
+      "buttons": {
+        "confirmProfiles": "Confirm profiles",
+        "confirmBuses": "Confirm bus selection",
+        "back": "Back"
+      }
+    },
     "songMode": "Song (Mastering)",
     "stemsMode": "Stems (Full Mix)",
     "songModeWarning": "Song mode requires exactly one WAV/AIFF/MP3 file.",

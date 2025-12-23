@@ -3,7 +3,6 @@
 import { useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { CloudArrowUpIcon } from "@heroicons/react/24/solid";
-import { ProcessingVisualizer } from "./ProcessingVisualizer";
 
 type UploadMode = "song" | "stems";
 
@@ -12,12 +11,6 @@ type UploadDropzoneProps = {
   disabled?: boolean;
   filesCount?: number;
   uploadMode: UploadMode;
-  isProcessing?: boolean;
-  processingState?: {
-    stageKey: string;
-    progress: number;
-    description: string;
-  };
 };
 
 export function UploadDropzone({
@@ -25,8 +18,6 @@ export function UploadDropzone({
   disabled,
   filesCount = 0,
   uploadMode,
-  isProcessing,
-  processingState,
 }: UploadDropzoneProps) {
   const t = useTranslations("UploadDropzone");
   const [isDragging, setIsDragging] = useState(false);
@@ -35,7 +26,7 @@ export function UploadDropzone({
   const isSongUpload = uploadMode === "song";
 
   const handleClick = () => {
-    if (disabled || isProcessing) return;
+    if (disabled) return;
     inputRef.current?.click();
   };
 
@@ -47,7 +38,7 @@ export function UploadDropzone({
 
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
-    if (disabled || isProcessing) return;
+    if (disabled) return;
     setIsDragging(false);
 
     const droppedFiles = Array.from(e.dataTransfer.files).filter((f) =>
@@ -61,7 +52,7 @@ export function UploadDropzone({
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
-    if (disabled || isProcessing) return;
+    if (disabled) return;
     setIsDragging(true);
   };
 
@@ -69,18 +60,6 @@ export function UploadDropzone({
     e.preventDefault();
     setIsDragging(false);
   };
-
-  if (isProcessing && processingState) {
-    return (
-        <div className="w-full h-full min-h-[400px] flex items-stretch justify-stretch">
-            <ProcessingVisualizer
-                stageKey={processingState.stageKey}
-                progress={processingState.progress}
-                description={processingState.description}
-            />
-        </div>
-    );
-  }
 
   return (
     <div
