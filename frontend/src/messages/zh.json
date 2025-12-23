@@ -53,6 +53,7 @@
     }
   },
   "BenefitsSection": {
+    "efficiencyBadge": "??AI",
     "speedTitle": "数小时的工作，几分钟完成。",
     "speedDescription": "忘记繁琐的增益分级、相位对齐和共振清理。Piroola 处理技术重活，让您可以专注于创意氛围。",
     "speedPoints": [
@@ -62,6 +63,8 @@
     ],
     "qualityTitle": "录音室质量，人人可及。",
     "qualityDescription": "您不需要百万美元的录音室或几十年的经验来获得专业的声音。我们的算法在热门唱片上训练，以提供具有商业竞争力的结果。",
+    "readyFor": "????",
+    "qualityBadge": "????",
     "spotifyReady": "Spotify 就绪",
     "appleMusicReady": "Apple Music 就绪"
   },

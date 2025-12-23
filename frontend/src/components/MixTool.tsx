@@ -619,7 +619,7 @@ export function MixTool({ resumeJobId }: MixToolProps) {
   };
 
   const handleStepBack = () => {
-    setUploadStep((prev) => Math.max(1, prev - 1));
+    setUploadStep((prev) => (prev === 1 ? 1 : (prev - 1) as 1 | 2));
   };
 
   const handleConfirmProfiles = () => {

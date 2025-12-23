@@ -2,11 +2,11 @@
 
 import { useState, useMemo } from "react";
 import { Link } from "../../../i18n/routing";
-import type { BlogPost } from "../../../content/blogPosts";
+import type { LocalizedBlogPost } from "../../../content/blogPosts";
 import Image from "next/image";
 
 interface BlogContentProps {
-  posts: BlogPost[];
+  posts: LocalizedBlogPost[];
   allTags: string[];
   copy: any;
   locale: string;

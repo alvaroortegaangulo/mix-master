@@ -53,6 +53,7 @@
     }
   },
   "BenefitsSection": {
+    "efficiencyBadge": "効率化AI",
     "speedTitle": "何時間もの作業が、数分で完了。",
     "speedDescription": "退屈なゲインステージング、位相調整、共鳴除去を忘れてください。Piroolaは技術的な重労働を処理するので、クリエイティブな雰囲気に集中できます。",
     "speedPoints": [
@@ -62,6 +63,8 @@
     ],
     "qualityTitle": "スタジオ品質を、誰にでも。",
     "qualityDescription": "プロフェッショナルなサウンドを得るために、数百万ドルのスタジオや数十年の経験は必要ありません。私たちのアルゴリズムは、商業的に競争力のある結果を提供するためにヒットレコードでトレーニングされています。",
+    "readyFor": "準備完了",
+    "qualityBadge": "プレミアム品質",
     "spotifyReady": "Spotify対応",
     "appleMusicReady": "Apple Music対応"
   },

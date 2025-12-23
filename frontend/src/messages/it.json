@@ -53,6 +53,7 @@
     }
   },
   "BenefitsSection": {
+    "efficiencyBadge": "Efficienza IA",
     "speedTitle": "Ore di lavoro, fatte in minuti.",
     "speedDescription": "Dimentica il noioso gain staging, l'allineamento di fase e la pulizia delle risonanze. Piroola gestisce il lavoro pesante tecnico così puoi concentrarti sull'atmosfera creativa.",
     "speedPoints": [
@@ -62,6 +63,8 @@
     ],
     "qualityTitle": "Qualità da Studio, accessibile a tutti.",
     "qualityDescription": "Non hai bisogno di uno studio da un milione di dollari o decenni di esperienza per ottenere un suono professionale. I nostri algoritmi sono addestrati su dischi di successo per fornire risultati commercialmente competitivi.",
+    "readyFor": "Pronto per",
+    "qualityBadge": "Qualit? Premium",
     "spotifyReady": "Pronto per Spotify",
     "appleMusicReady": "Pronto per Apple Music"
   },
