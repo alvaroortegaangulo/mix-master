@@ -7,7 +7,7 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
   const t = useTranslations('HeroSection');
 
   return (
-    <section className="relative flex min-h-[70vh] lg:min-h-[75vh] 2xl:min-h-[85vh] flex-col items-center justify-center overflow-hidden bg-slate-950 px-4 text-center py-14 md:py-16 2xl:py-20">
+    <section className="relative flex min-h-[70vh] lg:min-h-[75vh] 2xl:min-h-[85vh] flex-col items-center justify-center overflow-hidden bg-slate-950 px-4 text-center py-10 md:py-12 2xl:py-16">
       {/* Background Image */}
       <div className="absolute inset-0 z-0 pointer-events-none">
         <Image
@@ -28,9 +28,9 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
         <div className="absolute top-[40%] -right-[10%] h-[60%] w-[60%] rounded-full bg-violet-600/10 blur-[120px]" />
       </div>
 
-      <div className="relative z-10 max-w-5xl space-y-4 sm:space-y-5 lg:space-y-6 flex flex-col items-center">
+      <div className="relative z-10 max-w-5xl space-y-3 sm:space-y-4 lg:space-y-5 flex flex-col items-center">
         {/* Logo */}
-        <div className="mx-auto flex justify-center mb-4 animate-in fade-in zoom-in duration-1000">
+        <div className="mx-auto flex justify-center mb-2 animate-in fade-in zoom-in duration-1000">
           <Image
             src="/logo.webp"
             alt="Piroola logo"
@@ -52,20 +52,20 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
           </span>
         </h1>
 
-        <p className="mx-auto max-w-3xl text-base font-light leading-[1.6] text-slate-300 sm:text-lg lg:text-xl animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-100 fill-mode-backwards">
+        <p className="mx-auto max-w-3xl text-sm font-light leading-[1.55] text-slate-300 sm:text-base lg:text-lg animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-100 fill-mode-backwards">
           {t('description')}
         </p>
 
-        <div className="beta-badge flex items-center gap-2 px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-violet-100 backdrop-blur-sm leading-none sm:text-xs">
+        <div className="beta-badge flex items-center gap-2 px-3 py-1.5 text-[9px] font-semibold uppercase tracking-[0.18em] text-violet-100 backdrop-blur-sm leading-none sm:text-[10px]">
           <span className="beta-dot" aria-hidden="true" />
           <span>{t('alertConstruction')}</span>
         </div>
 
-        <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center mt-3 sm:mt-4 animate-in fade-in slide-in-from-bottom-6 duration-1000 delay-200 fill-mode-backwards">
+        <div className="flex flex-col items-center gap-2 sm:flex-row sm:justify-center mt-2 sm:mt-3 animate-in fade-in slide-in-from-bottom-6 duration-1000 delay-200 fill-mode-backwards">
           {/* Button 1: Mezclar mi Track */}
           <button
             onClick={onTryIt}
-            className="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-full bg-teal-400 px-6 py-3 text-base font-bold text-slate-950 transition-all hover:bg-teal-300 hover:scale-105 focus:outline-none focus:ring-4 focus:ring-teal-500/30 sm:px-8 sm:py-3.5 sm:text-lg"
+            className="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-full bg-teal-400 px-5 py-2.5 text-sm font-bold text-slate-950 transition-all hover:bg-teal-300 hover:scale-105 focus:outline-none focus:ring-4 focus:ring-teal-500/30 sm:px-6 sm:py-3 sm:text-base"
           >
             {/* Simple Circle Icon */}
             <svg
@@ -86,21 +86,21 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
           {/* Button 2: Escuchar Demos */}
           <Link
             href="/examples"
-            className="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-full bg-slate-800/80 px-6 py-3 text-base font-semibold text-white transition-all hover:bg-slate-700 hover:scale-105 focus:outline-none focus:ring-4 focus:ring-violet-500/30 border border-slate-700 sm:px-8 sm:py-3.5 sm:text-lg"
+            className="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-full bg-slate-800/80 px-5 py-2.5 text-sm font-semibold text-white transition-all hover:bg-slate-700 hover:scale-105 focus:outline-none focus:ring-4 focus:ring-violet-500/30 border border-slate-700 sm:px-6 sm:py-3 sm:text-base"
           >
-            <PlayCircleIcon className="h-5 w-5 sm:h-6 sm:w-6 text-white" aria-hidden="true" />
+            <PlayCircleIcon className="h-4 w-4 sm:h-5 sm:w-5 text-white" aria-hidden="true" />
             <span>{t('listenToDemos')}</span>
           </Link>
         </div>
 
         {/* Rating Section */}
-        <div className="flex items-center gap-2 text-xs font-medium text-slate-300 mt-1 sm:mt-2 sm:text-sm animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-300 fill-mode-backwards">
-            <div className="flex items-center gap-1 text-teal-300">
-                <StarIcon className="h-4 w-4 sm:h-5 sm:w-5" aria-hidden="true" />
-                <span>{t('rating')}</span>
-            </div>
-            <span>•</span>
-            <span>{t('tracksMastered')}</span>
+        <div className="flex items-center gap-2 text-[11px] font-medium text-slate-300 mt-1 sm:mt-2 sm:text-xs animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-300 fill-mode-backwards">
+          <div className="flex items-center gap-1 text-amber-300">
+            <StarIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" aria-hidden="true" />
+            <span>{t('rating')}</span>
+          </div>
+          <span className="text-slate-400">&bull;</span>
+          <span>{t('tracksMastered')}</span>
         </div>
       </div>
 
