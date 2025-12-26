@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { PlayCircleIcon, StarIcon, ExclamationTriangleIcon } from "@heroicons/react/24/solid";
+import { PlayCircleIcon, StarIcon } from "@heroicons/react/24/solid";
 import { useTranslations } from 'next-intl';
 import { Link } from '../../i18n/routing';
 
@@ -29,12 +29,6 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
       </div>
 
       <div className="relative z-10 max-w-5xl space-y-4 sm:space-y-5 lg:space-y-6 flex flex-col items-center">
-        {/* Alert: Website under construction */}
-        <div className="flex items-center gap-2 rounded-full bg-red-900/20 border border-red-500/50 px-4 py-1.5 text-red-400 animate-in fade-in zoom-in duration-1000">
-          <ExclamationTriangleIcon className="h-4 w-4 sm:h-5 sm:w-5" aria-hidden="true" />
-          <span className="font-bold text-xs sm:text-sm tracking-wide uppercase">{t('alertConstruction')}</span>
-        </div>
-
         {/* Logo */}
         <div className="mx-auto flex justify-center mb-4 animate-in fade-in zoom-in duration-1000">
           <Image
@@ -61,6 +55,11 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
         <p className="mx-auto max-w-3xl text-base font-light leading-[1.6] text-slate-300 sm:text-lg lg:text-xl animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-100 fill-mode-backwards">
           {t('description')}
         </p>
+
+        <div className="flex items-center gap-2 rounded-full border border-violet-400/40 bg-gradient-to-r from-violet-900/50 via-violet-800/30 to-violet-900/50 px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-violet-100 shadow-[0_0_24px_rgba(139,92,246,0.35)] backdrop-blur-sm sm:text-xs">
+          <span className="h-2 w-2 rounded-full bg-[#c084fc] shadow-[0_0_10px_rgba(192,132,252,0.9)] animate-blink-soft" />
+          <span>{t('alertConstruction')}</span>
+        </div>
 
         <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center mt-3 sm:mt-4 animate-in fade-in slide-in-from-bottom-6 duration-1000 delay-200 fill-mode-backwards">
           {/* Button 1: Mezclar mi Track */}

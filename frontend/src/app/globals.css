@@ -98,6 +98,17 @@ body {
     100% { background-position: 0% 50%; }
 }
 
+@keyframes blink-soft {
+    0%, 100% { opacity: 0.35; }
+    50% { opacity: 1; }
+}
+
+@layer utilities {
+  .animate-blink-soft {
+    animation: blink-soft 1.6s ease-in-out infinite;
+  }
+}
+
 /* Connector Line Animation */
 .connector-line {
     position: absolute;
