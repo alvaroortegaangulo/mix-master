@@ -83,17 +83,17 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
   };
 
   return (
-    <section className={`py-8 md:py-12 relative z-20 ${className || 'bg-slate-900'}`}>
+    <section className={`py-6 md:py-8 lg:py-10 2xl:py-12 relative z-20 ${className || 'bg-slate-900'}`}>
     <div className="w-full max-w-7xl mx-auto px-4 md:px-8 relative z-10">
       {/* Header */}
-      <header className="text-center mx-auto mb-8 relative z-10 max-w-4xl">
-        <div className="inline-block mb-4 px-4 py-1.5 rounded-full border border-teal-500/30 bg-teal-500/10 text-teal-300 text-xs font-semibold tracking-wider uppercase">
+      <header className="text-center mx-auto mb-6 relative z-10 max-w-4xl">
+        <div className="inline-block mb-3 px-3 py-1 rounded-full border border-teal-500/30 bg-teal-500/10 text-teal-300 text-xs font-semibold tracking-wider uppercase">
           {t('label')}
         </div>
-        <h2 className="text-4xl md:text-6xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-white via-teal-200 to-violet-200 drop-shadow-lg">
+        <h2 className="text-3xl sm:text-4xl lg:text-5xl 2xl:text-6xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-white via-teal-200 to-violet-200 drop-shadow-lg">
           {t('title')}
         </h2>
-        <p className="text-slate-300 text-lg max-w-2xl mx-auto">
+        <p className="text-slate-300 text-base sm:text-lg max-w-2xl mx-auto">
           {t('description')}
         </p>
       </header>
@@ -102,7 +102,7 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
       <div className="w-full relative z-10">
 
         {/* Steps Container */}
-        <div className="flex flex-col lg:flex-row justify-between items-start gap-8 lg:gap-4 relative">
+        <div className="flex flex-col lg:flex-row justify-between items-start gap-6 lg:gap-4 relative">
           {stepsData.map((step, index) => {
             const isActive = index === activeStep;
 
@@ -121,7 +121,7 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
                       : 'bg-slate-800/40 opacity-70 group-hover:-translate-y-2 group-hover:scale-105 group-hover:border-violet-500/50 group-hover:shadow-xl'
                     }`}
                 >
-                  <div className="relative h-32 w-full overflow-hidden rounded-xl mb-4">
+                  <div className="relative h-24 sm:h-28 w-full overflow-hidden rounded-xl mb-4">
                     <img
                       src={step.image}
                       alt={step.title}
@@ -136,7 +136,7 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
                       />
                     </div>
                   </div>
-                  <h3 className={`text-xl font-bold text-white mb-1 transition-colors ${isActive ? step.colorClass : 'group-hover:text-violet-300'}`}>
+                  <h3 className={`text-lg sm:text-xl font-bold text-white mb-1 transition-colors ${isActive ? step.colorClass : 'group-hover:text-violet-300'}`}>
                     {index + 1}. {step.title}
                   </h3>
                   <p className="text-sm text-slate-300 line-clamp-2">
@@ -152,12 +152,12 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
                 {/* Floating Detail Popup */}
                 {isActive && (
                   <div className={`
-                    z-50 w-full lg:w-[600px]
+                    z-50 w-full lg:w-[520px] 2xl:w-[600px]
                     ${/* Mobile: Relative (Accordion) */ "relative top-0 mt-4"}
                     ${/* Desktop: Absolute (Popup) */ "lg:absolute lg:top-full lg:mt-4"}
                     ${getPopupPositionClass(index)}
                   `}>
-                    <div className="relative bg-slate-900/95 border border-slate-700/50 rounded-2xl p-6 shadow-2xl backdrop-blur-xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+                    <div className="relative bg-slate-900/95 border border-slate-700/50 rounded-2xl p-5 2xl:p-6 shadow-2xl backdrop-blur-xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
                       {/* Decorative Background Elements */}
                       <div className="absolute top-0 right-0 w-32 h-32 bg-teal-500/10 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
                       <div className="absolute bottom-0 left-0 w-32 h-32 bg-violet-500/10 rounded-full blur-2xl -ml-10 -mb-10 pointer-events-none"></div>
@@ -171,7 +171,7 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
                               alt=""
                               className="w-8 h-8 object-contain"
                             />
-                            <h3 className="text-2xl font-bold text-white font-display leading-tight">
+                            <h3 className="text-xl sm:text-2xl font-bold text-white font-display leading-tight">
                               {step.title}
                             </h3>
                           </div>
@@ -197,7 +197,7 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
                         </div>
 
                         {/* Visual Context */}
-                        <div className="relative rounded-xl overflow-hidden border border-slate-700/50 shadow-lg min-h-[200px] md:min-h-0">
+                        <div className="relative rounded-xl overflow-hidden border border-slate-700/50 shadow-lg min-h-[160px] sm:min-h-[180px] md:min-h-0">
                             <img
                               src={step.image}
                               className="absolute inset-0 w-full h-full object-cover"

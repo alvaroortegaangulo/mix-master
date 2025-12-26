@@ -7,7 +7,7 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
   const t = useTranslations('HeroSection');
 
   return (
-    <section className="relative flex min-h-[85vh] flex-col items-center justify-center overflow-hidden bg-slate-950 px-4 text-center py-20">
+    <section className="relative flex min-h-[70vh] lg:min-h-[75vh] 2xl:min-h-[85vh] flex-col items-center justify-center overflow-hidden bg-slate-950 px-4 text-center py-14 md:py-16 2xl:py-20">
       {/* Background Image */}
       <div className="absolute inset-0 z-0 pointer-events-none">
         <Image
@@ -28,11 +28,11 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
         <div className="absolute top-[40%] -right-[10%] h-[60%] w-[60%] rounded-full bg-violet-600/10 blur-[120px]" />
       </div>
 
-      <div className="relative z-10 max-w-5xl space-y-6 flex flex-col items-center">
+      <div className="relative z-10 max-w-5xl space-y-4 sm:space-y-5 lg:space-y-6 flex flex-col items-center">
         {/* Alert: Website under construction */}
-        <div className="flex items-center gap-2 rounded-full bg-red-900/20 border border-red-500/50 px-5 py-2 text-red-400 animate-in fade-in zoom-in duration-1000">
-          <ExclamationTriangleIcon className="h-5 w-5" aria-hidden="true" />
-          <span className="font-bold text-sm tracking-wide uppercase">{t('alertConstruction')}</span>
+        <div className="flex items-center gap-2 rounded-full bg-red-900/20 border border-red-500/50 px-4 py-1.5 text-red-400 animate-in fade-in zoom-in duration-1000">
+          <ExclamationTriangleIcon className="h-4 w-4 sm:h-5 sm:w-5" aria-hidden="true" />
+          <span className="font-bold text-xs sm:text-sm tracking-wide uppercase">{t('alertConstruction')}</span>
         </div>
 
         {/* Logo */}
@@ -43,13 +43,13 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
             width={96}
             height={96}
             sizes="96px"
-            className="h-16 w-16 md:h-20 md:w-20"
+            className="h-14 w-14 sm:h-16 sm:w-16"
             priority
           />
         </div>
 
         {/* Main Heading - LCP Element (No entrance animation to minimize render delay) */}
-        <h1 className="flex flex-col text-5xl font-extrabold tracking-[-0.02em] md:text-6xl lg:text-7xl gap-1">
+        <h1 className="flex flex-col text-4xl font-extrabold tracking-[-0.02em] sm:text-5xl lg:text-6xl 2xl:text-7xl gap-1">
           <span className="text-white leading-[0.95]">
             {t('studioSound')}
           </span>
@@ -58,15 +58,15 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
           </span>
         </h1>
 
-        <p className="mx-auto max-w-3xl text-lg font-light leading-[1.7] text-slate-300 md:text-xl animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-100 fill-mode-backwards">
+        <p className="mx-auto max-w-3xl text-base font-light leading-[1.6] text-slate-300 sm:text-lg lg:text-xl animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-100 fill-mode-backwards">
           {t('description')}
         </p>
 
-        <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-center mt-4 animate-in fade-in slide-in-from-bottom-6 duration-1000 delay-200 fill-mode-backwards">
+        <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-center mt-3 sm:mt-4 animate-in fade-in slide-in-from-bottom-6 duration-1000 delay-200 fill-mode-backwards">
           {/* Button 1: Mezclar mi Track */}
           <button
             onClick={onTryIt}
-            className="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-full bg-teal-400 px-8 py-4 text-lg font-bold text-slate-950 transition-all hover:bg-teal-300 hover:scale-105 focus:outline-none focus:ring-4 focus:ring-teal-500/30"
+            className="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-full bg-teal-400 px-6 py-3 text-base font-bold text-slate-950 transition-all hover:bg-teal-300 hover:scale-105 focus:outline-none focus:ring-4 focus:ring-teal-500/30 sm:px-8 sm:py-3.5 sm:text-lg"
           >
             {/* Simple Circle Icon */}
             <svg
@@ -86,18 +86,18 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
 
           {/* Button 2: Escuchar Demos */}
           <Link
-             href="/examples"
-             className="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-full bg-slate-800/80 px-8 py-4 text-lg font-semibold text-white transition-all hover:bg-slate-700 hover:scale-105 focus:outline-none focus:ring-4 focus:ring-violet-500/30 border border-slate-700"
+            href="/examples"
+            className="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-full bg-slate-800/80 px-6 py-3 text-base font-semibold text-white transition-all hover:bg-slate-700 hover:scale-105 focus:outline-none focus:ring-4 focus:ring-violet-500/30 border border-slate-700 sm:px-8 sm:py-3.5 sm:text-lg"
           >
-            <PlayCircleIcon className="h-6 w-6 text-white" aria-hidden="true" />
+            <PlayCircleIcon className="h-5 w-5 sm:h-6 sm:w-6 text-white" aria-hidden="true" />
             <span>{t('listenToDemos')}</span>
           </Link>
         </div>
 
         {/* Rating Section */}
-        <div className="flex items-center gap-2 text-sm font-medium text-slate-300 mt-2 animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-300 fill-mode-backwards">
+        <div className="flex items-center gap-2 text-xs font-medium text-slate-300 mt-1 sm:mt-2 sm:text-sm animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-300 fill-mode-backwards">
             <div className="flex items-center gap-1 text-teal-300">
-                <StarIcon className="h-5 w-5" aria-hidden="true" />
+                <StarIcon className="h-4 w-4 sm:h-5 sm:w-5" aria-hidden="true" />
                 <span>{t('rating')}</span>
             </div>
             <span>•</span>

@@ -51,13 +51,13 @@ export function LandingPage() {
       <BenefitsSection className="bg-slate-900" />
 
       {/* Bottom CTA */}
-      <section className="py-12 md:py-24 bg-gradient-to-t from-teal-900/20 to-slate-950 text-center px-4">
-        <h2 className="text-3xl md:text-5xl font-bold text-white mb-8">
+      <section className="py-10 md:py-14 lg:py-16 2xl:py-20 bg-gradient-to-t from-teal-900/20 to-slate-950 text-center px-4">
+        <h2 className="text-2xl sm:text-3xl lg:text-4xl 2xl:text-5xl font-bold text-white mb-6">
           {t('readyToElevate')}
         </h2>
         <button
           onClick={handleTryIt}
-          className="bg-white text-slate-950 px-10 py-4 rounded-full text-lg font-bold hover:bg-teal-50 transition shadow-xl shadow-teal-500/10"
+          className="bg-white text-slate-950 px-8 py-3 rounded-full text-base sm:text-lg font-bold hover:bg-teal-50 transition shadow-xl shadow-teal-500/10"
         >
           {t('startMixing')}
         </button>

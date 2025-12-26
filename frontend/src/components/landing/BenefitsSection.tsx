@@ -37,14 +37,14 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
     const t = useTranslations('BenefitsSection');
 
     return (
-      <section className={`py-8 md:py-12 overflow-hidden ${className || 'bg-slate-900'}`}>
+      <section className={`py-6 md:py-8 lg:py-10 2xl:py-12 overflow-hidden ${className || 'bg-slate-900'}`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
           {/* Benefit 1: Speed */}
-          <div className="flex flex-col lg:flex-row items-center gap-10 md:gap-12 mb-8 md:mb-12">
+          <div className="flex flex-col lg:flex-row items-center gap-6 md:gap-8 mb-6 md:mb-10">
             <div className="flex-1 order-2 lg:order-1">
                {/* Image Placeholder */}
-               <div className="w-full aspect-video rounded-2xl bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 flex items-center justify-center relative shadow-2xl overflow-hidden group">
+               <div className="w-full aspect-video lg:aspect-auto lg:h-[240px] 2xl:h-[280px] rounded-2xl bg-gradient-to-br from-slate-800 to-slate-900 border border-slate-700 flex items-center justify-center relative shadow-2xl overflow-hidden group">
                   <LazyVideo
                     src="/master_interface.webm"
                     poster="/result.webp"
@@ -53,20 +53,20 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
                </div>
             </div>
             <div className="flex-1 order-1 lg:order-2">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-500/10 border border-teal-500/20 text-teal-400 text-xs font-semibold tracking-wider mb-6">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-500/10 border border-teal-500/20 text-teal-400 text-xs font-semibold tracking-wider mb-4">
                  <BoltIcon className="w-4 h-4" aria-hidden="true" />
                  {t('efficiencyBadge')}
               </div>
 
-              <h2 className="text-4xl sm:text-5xl font-bold text-white mb-6 leading-[1.05] tracking-[-0.02em]">
+              <h2 className="text-3xl sm:text-4xl 2xl:text-5xl font-bold text-white mb-4 leading-[1.05] tracking-[-0.02em]">
                 {t.rich('speedTitle', {
                   highlight: (chunks) => <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-violet-500">{chunks}</span>
                 })}
               </h2>
-              <p className="text-lg text-slate-300 mb-8 leading-[1.7]">
+              <p className="text-base sm:text-lg text-slate-300 mb-6 leading-[1.6]">
                 {t('speedDescription')}
               </p>
-              <ul className="space-y-4 text-slate-300">
+              <ul className="space-y-3 text-slate-300">
                 <li className="flex items-center gap-3">
                   <span className="h-2 w-2 rounded-full bg-teal-500 shadow-[0_0_10px_rgba(20,184,166,0.5)]" />
                   {t('speedPoints.0')}
@@ -84,45 +84,45 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
           </div>
 
           {/* Benefit 2: Quality */}
-          <div className="flex flex-col lg:flex-row items-center gap-16">
+          <div className="flex flex-col lg:flex-row items-center gap-10">
             <div className="flex-1">
-               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-violet-500/10 border border-violet-500/20 text-violet-400 text-xs font-semibold tracking-wider mb-6">
+               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-violet-500/10 border border-violet-500/20 text-violet-400 text-xs font-semibold tracking-wider mb-4">
                  <StarIcon className="w-4 h-4" aria-hidden="true" />
                  {t('qualityBadge')}
               </div>
 
-              <h2 className="text-4xl sm:text-5xl font-bold text-white mb-6 leading-[1.05] tracking-[-0.02em]">
+              <h2 className="text-3xl sm:text-4xl 2xl:text-5xl font-bold text-white mb-4 leading-[1.05] tracking-[-0.02em]">
                  {t.rich('qualityTitle', {
                     highlight: (chunks) => <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-violet-500">{chunks}</span>
                   })}
               </h2>
-              <p className="text-lg text-slate-300 mb-8 leading-[1.7]">
+              <p className="text-base sm:text-lg text-slate-300 mb-6 leading-[1.6]">
                 {t('qualityDescription')}
               </p>
 
               <div className="flex flex-wrap gap-4">
                  {/* Spotify Badge */}
-                 <div className="flex items-center gap-4 px-5 py-3 rounded-xl bg-slate-900/80 border border-slate-800/60 shadow-lg backdrop-blur-sm min-w-[180px]">
-                    <SpotifyIcon className="w-8 h-8 text-[#1DB954]" />
+                 <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-slate-900/80 border border-slate-800/60 shadow-lg backdrop-blur-sm min-w-[160px]">
+                    <SpotifyIcon className="w-7 h-7 text-[#1DB954]" />
                     <div className="flex flex-col">
                         <span className="text-[10px] uppercase tracking-wider text-slate-300 font-semibold">{t('readyFor')}</span>
-                        <span className="text-base font-bold text-white">{t('spotifyReady')}</span>
+                        <span className="text-sm sm:text-base font-bold text-white">{t('spotifyReady')}</span>
                     </div>
                  </div>
 
                  {/* Apple Music Badge */}
-                 <div className="flex items-center gap-4 px-5 py-3 rounded-xl bg-slate-900/80 border border-slate-800/60 shadow-lg backdrop-blur-sm min-w-[180px]">
-                    <AppleMusicIcon className="w-8 h-8 text-white" /> {/* Apple Music is usually white or pinkish/red */}
+                 <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-slate-900/80 border border-slate-800/60 shadow-lg backdrop-blur-sm min-w-[160px]">
+                    <AppleMusicIcon className="w-7 h-7 text-white" /> {/* Apple Music is usually white or pinkish/red */}
                     <div className="flex flex-col">
                         <span className="text-[10px] uppercase tracking-wider text-slate-300 font-semibold">{t('readyFor')}</span>
-                        <span className="text-base font-bold text-white">{t('appleMusicReady')}</span>
+                        <span className="text-sm sm:text-base font-bold text-white">{t('appleMusicReady')}</span>
                     </div>
                  </div>
               </div>
             </div>
             <div className="flex-1">
                {/* Image Placeholder */}
-               <div className="w-full aspect-video rounded-2xl bg-gradient-to-br from-violet-900/20 to-slate-900 border border-slate-700 flex items-center justify-center relative shadow-2xl overflow-hidden">
+               <div className="w-full aspect-video lg:aspect-auto lg:h-[240px] 2xl:h-[280px] rounded-2xl bg-gradient-to-br from-violet-900/20 to-slate-900 border border-slate-700 flex items-center justify-center relative shadow-2xl overflow-hidden">
                   <LazyVideo
                     src="/spectral_analysis.webm"
                     poster="/analysis.webp"
