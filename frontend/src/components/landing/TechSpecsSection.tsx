@@ -5,9 +5,9 @@ export function TechSpecsSection({ className }: { className?: string }) {
     const t = useTranslations('TechSpecsSection');
 
     return (
-      <section className={`py-12 md:py-24 overflow-hidden ${className || 'bg-slate-900'}`}>
+      <section className={`py-10 md:py-12 overflow-hidden ${className || 'bg-slate-900'}`}>
         <div className="max-w-6xl mx-auto px-4 text-center">
-          <h2 className="text-3xl font-bold text-white mb-12">{t('title')}</h2>
+          <h2 className="text-3xl font-bold text-white mb-8">{t('title')}</h2>
 
           <div className="max-w-4xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8">
              <div className="p-6">

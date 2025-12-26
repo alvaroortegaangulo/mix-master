@@ -63,7 +63,7 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
   }, []);
 
   return (
-    <section className={`py-12 md:py-24 border-t border-slate-900 relative overflow-hidden ${className || 'bg-slate-950'}`}>
+    <section className={`py-8 md:py-12 border-t border-slate-900 relative overflow-hidden ${className || 'bg-slate-950'}`}>
         {/* Background Gradients */}
         <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
             <div className="absolute top-1/4 -left-64 w-96 h-96 bg-teal-900/10 rounded-full blur-3xl"></div>
@@ -72,7 +72,7 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         {/* Header */}
-        <div className="mb-16">
+        <div className="mb-10">
           <div className="flex items-center gap-2 mb-6">
              <div className="h-2 w-2 rounded-full bg-teal-400 animate-pulse"></div>
              <div className="text-xs font-bold tracking-widest text-teal-400 uppercase">
@@ -91,10 +91,10 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
           {/* LEFT PANEL: Frequency Spectrum */}
-          <div className="lg:col-span-2 bg-slate-900/50 rounded-3xl border border-slate-800 p-4 md:p-6 flex flex-col justify-between min-h-[400px] md:min-h-[500px] shadow-2xl relative overflow-hidden">
+          <div className="lg:col-span-2 bg-slate-900/50 rounded-3xl border border-slate-800 p-4 md:p-6 flex flex-col justify-between min-h-[300px] md:min-h-[350px] shadow-2xl relative overflow-hidden">
 
              {/* Top Bar of Panel */}
-             <div className="flex justify-between items-start mb-8 relative z-10">
+             <div className="flex justify-between items-start mb-6 relative z-10">
                  <div className="flex items-center gap-2">
                      <div className="bg-teal-500/20 p-1.5 rounded-lg">
                         <svg className="w-5 h-5 text-teal-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true" focusable="false">
@@ -107,7 +107,7 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
              </div>
 
              {/* Spectrum Visualizer */}
-             <div className="flex-1 flex items-end justify-between gap-1 px-2 mb-8 relative z-10 h-64">
+             <div className="flex-1 flex items-end justify-between gap-1 px-2 mb-6 relative z-10 h-32">
                 {spectrumData.map((height, i) => (
                     <div
                         key={i}

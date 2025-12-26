@@ -83,10 +83,10 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
   };
 
   return (
-    <section className={`py-12 md:py-24 relative z-20 ${className || 'bg-slate-900'}`}>
+    <section className={`py-8 md:py-12 relative z-20 ${className || 'bg-slate-900'}`}>
     <div className="w-full max-w-7xl mx-auto px-4 md:px-8 relative z-10">
       {/* Header */}
-      <header className="text-center mx-auto mb-16 relative z-10 max-w-4xl">
+      <header className="text-center mx-auto mb-8 relative z-10 max-w-4xl">
         <div className="inline-block mb-4 px-4 py-1.5 rounded-full border border-teal-500/30 bg-teal-500/10 text-teal-300 text-xs font-semibold tracking-wider uppercase">
           {t('label')}
         </div>
@@ -121,7 +121,7 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
                       : 'bg-slate-800/40 opacity-70 group-hover:-translate-y-2 group-hover:scale-105 group-hover:border-violet-500/50 group-hover:shadow-xl'
                     }`}
                 >
-                  <div className="relative h-40 w-full overflow-hidden rounded-xl mb-4">
+                  <div className="relative h-32 w-full overflow-hidden rounded-xl mb-4">
                     <img
                       src={step.image}
                       alt={step.title}

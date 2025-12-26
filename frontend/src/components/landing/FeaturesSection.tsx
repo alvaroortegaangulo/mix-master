@@ -47,11 +47,11 @@ export function FeaturesSection({ className }: { className?: string }) {
   }, [features.length, activeStep]);
 
   return (
-    <section className={`py-12 md:py-24 ${className || 'bg-slate-950'}`} id="features">
+    <section className={`py-8 md:py-12 ${className || 'bg-slate-950'}`} id="features">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
-        <div className="text-center mb-12">
-          <div className="inline-block px-3 py-1 mb-6 text-xs font-semibold tracking-wider text-teal-400 uppercase rounded-full bg-teal-950/50 border border-teal-800/50">
+        <div className="text-center mb-8">
+          <div className="inline-block px-3 py-1 mb-4 text-xs font-semibold tracking-wider text-teal-400 uppercase rounded-full bg-teal-950/50 border border-teal-800/50">
             {t('workflow')}
           </div>
           <h2 className="text-4xl md:text-5xl font-bold tracking-[-0.02em] leading-[1.05] text-white mb-6" dangerouslySetInnerHTML={{ __html: t.raw('title') }} />
@@ -61,7 +61,7 @@ export function FeaturesSection({ className }: { className?: string }) {
         </div>
 
         {/* Carousel Container */}
-        <div className="relative w-full h-[600px] md:h-auto md:aspect-[21/9] lg:h-[600px] bg-slate-900 rounded-3xl overflow-hidden shadow-2xl border border-slate-800 group">
+        <div className="relative w-full h-[450px] md:h-auto md:aspect-[21/9] lg:h-[400px] bg-slate-900 rounded-3xl overflow-hidden shadow-2xl border border-slate-800 group">
 
           {/* Slides */}
           {features.map((feature, idx) => (
@@ -84,10 +84,10 @@ export function FeaturesSection({ className }: { className?: string }) {
               </div>
 
               {/* Content Overlay */}
-              <div className="absolute inset-0 flex flex-col items-center justify-center p-6 md:p-12 text-center z-20">
+              <div className="absolute inset-0 flex flex-col items-center justify-center p-6 md:p-8 text-center z-20">
                 {/* Top: Title */}
-                <div className="mb-auto mt-8 md:mt-12 animate-in fade-in slide-in-from-top-4 duration-700 delay-300 fill-mode-both">
-                   <div className="mb-4">
+                <div className="mb-auto mt-4 md:mt-8 animate-in fade-in slide-in-from-top-4 duration-700 delay-300 fill-mode-both">
+                   <div className="mb-2">
                       <h3 className="text-3xl md:text-4xl font-bold text-white tracking-[-0.02em] leading-[1.1]">
                         {feature.title}
                       </h3>
@@ -102,7 +102,7 @@ export function FeaturesSection({ className }: { className?: string }) {
                 </div>
 
                 {/* Bottom Spacer to balance layout */}
-                <div className="mt-auto mb-12" />
+                <div className="mt-auto mb-8" />
               </div>
             </div>
           ))}
