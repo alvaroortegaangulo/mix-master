@@ -98,14 +98,80 @@ body {
     100% { background-position: 0% 50%; }
 }
 
-@keyframes blink-soft {
-    0%, 100% { opacity: 0.35; }
-    50% { opacity: 1; }
+@keyframes beta-dot-pulse {
+    0%, 100% {
+        opacity: 0.35;
+        transform: scale(0.85);
+        box-shadow: 0 0 6px rgba(192, 132, 252, 0.4), 0 0 14px rgba(192, 132, 252, 0.25);
+    }
+    50% {
+        opacity: 1;
+        transform: scale(1);
+        box-shadow: 0 0 12px rgba(192, 132, 252, 0.9), 0 0 22px rgba(192, 132, 252, 0.6);
+    }
+}
+
+@keyframes beta-dots {
+    0% { background-position: 0 0, 3px 3px; opacity: 0.55; }
+    50% { opacity: 0.75; }
+    100% { background-position: 12px 6px, 15px 9px; opacity: 0.55; }
+}
+
+@keyframes beta-sweep {
+    0% { transform: translateX(-70%); opacity: 0; }
+    35% { opacity: 0.6; }
+    60% { transform: translateX(40%); opacity: 0.3; }
+    100% { transform: translateX(130%); opacity: 0; }
 }
 
 @layer utilities {
-  .animate-blink-soft {
-    animation: blink-soft 1.6s ease-in-out infinite;
+  .beta-badge {
+    position: relative;
+    overflow: hidden;
+    border-radius: 9999px;
+    border: 1px solid rgba(167, 139, 250, 0.45);
+    background: linear-gradient(180deg, rgba(88, 28, 135, 0.65), rgba(59, 7, 100, 0.65));
+    box-shadow: 0 0 18px rgba(139, 92, 246, 0.35), inset 0 0 14px rgba(139, 92, 246, 0.25);
+  }
+
+  .beta-badge::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image:
+      radial-gradient(rgba(196, 181, 253, 0.35) 0.8px, transparent 0.9px),
+      radial-gradient(rgba(167, 139, 250, 0.2) 0.8px, transparent 0.9px);
+    background-size: 6px 6px, 8px 8px;
+    background-position: 0 0, 3px 3px;
+    opacity: 0.6;
+    animation: beta-dots 3.4s linear infinite;
+    pointer-events: none;
+  }
+
+  .beta-badge::after {
+    content: "";
+    position: absolute;
+    inset: -60% -30%;
+    background: linear-gradient(120deg, transparent 0%, rgba(216, 180, 254, 0.35) 45%, rgba(216, 180, 254, 0.15) 55%, transparent 100%);
+    opacity: 0.5;
+    animation: beta-sweep 4.2s ease-in-out infinite;
+    pointer-events: none;
+    filter: blur(0.5px);
+  }
+
+  .beta-badge > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  .beta-dot {
+    height: 0.5rem;
+    width: 0.5rem;
+    flex-shrink: 0;
+    border-radius: 9999px;
+    background: #c084fc;
+    box-shadow: 0 0 8px rgba(192, 132, 252, 0.9), 0 0 16px rgba(192, 132, 252, 0.6);
+    animation: beta-dot-pulse 1.4s ease-in-out infinite;
   }
 }
 

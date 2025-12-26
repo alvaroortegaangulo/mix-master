@@ -56,8 +56,8 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
           {t('description')}
         </p>
 
-        <div className="flex items-center gap-2 rounded-full border border-violet-400/40 bg-gradient-to-r from-violet-900/50 via-violet-800/30 to-violet-900/50 px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-violet-100 shadow-[0_0_24px_rgba(139,92,246,0.35)] backdrop-blur-sm sm:text-xs">
-          <span className="h-2 w-2 rounded-full bg-[#c084fc] shadow-[0_0_10px_rgba(192,132,252,0.9)] animate-blink-soft" />
+        <div className="beta-badge flex items-center gap-2 px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-violet-100 backdrop-blur-sm leading-none sm:text-xs">
+          <span className="beta-dot" aria-hidden="true" />
           <span>{t('alertConstruction')}</span>
         </div>
 
