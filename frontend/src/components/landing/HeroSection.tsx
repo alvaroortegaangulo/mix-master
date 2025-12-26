@@ -7,7 +7,7 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
   const t = useTranslations('HeroSection');
 
   return (
-    <section className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-slate-950 px-4 text-center">
+    <section className="relative flex min-h-[85vh] flex-col items-center justify-center overflow-hidden bg-slate-950 px-4 text-center py-20">
       {/* Background Image */}
       <div className="absolute inset-0 z-0 pointer-events-none">
         <Image
@@ -28,7 +28,7 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
         <div className="absolute top-[40%] -right-[10%] h-[60%] w-[60%] rounded-full bg-violet-600/10 blur-[120px]" />
       </div>
 
-      <div className="relative z-10 max-w-5xl space-y-8 flex flex-col items-center">
+      <div className="relative z-10 max-w-5xl space-y-6 flex flex-col items-center">
         {/* Alert: Website under construction */}
         <div className="flex items-center gap-2 rounded-full bg-red-900/20 border border-red-500/50 px-5 py-2 text-red-400 animate-in fade-in zoom-in duration-1000">
           <ExclamationTriangleIcon className="h-5 w-5" aria-hidden="true" />
@@ -43,13 +43,13 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
             width={96}
             height={96}
             sizes="96px"
-            className="h-24 w-24"
+            className="h-16 w-16 md:h-20 md:w-20"
             priority
           />
         </div>
 
         {/* Main Heading - LCP Element (No entrance animation to minimize render delay) */}
-        <h1 className="flex flex-col text-5xl font-extrabold tracking-[-0.02em] md:text-7xl lg:text-8xl gap-1">
+        <h1 className="flex flex-col text-5xl font-extrabold tracking-[-0.02em] md:text-6xl lg:text-7xl gap-1">
           <span className="text-white leading-[0.95]">
             {t('studioSound')}
           </span>
