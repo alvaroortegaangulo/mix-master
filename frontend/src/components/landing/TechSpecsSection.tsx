@@ -12,20 +12,22 @@ export function TechSpecsSection({ className }: { className?: string }) {
     const isDraggingRef = useRef(false);
     const [isDragging, setIsDragging] = useState(false);
     const specs = [
-      { value: "96k", label: t("internalProcessing") },
+      { value: "96 kHz", label: t("internalProcessing") },
       { value: "32-bit", label: t("floatDepth") },
-      { value: "12+", label: t("processingStages") },
-      { value: "0s", label: t("latency") },
-      { value: "-14 LUFS", label: "OBJETIVO STREAMING" },
-      { value: "-1.0 dBTP", label: "TRUE PEAK SEGURO" },
-      { value: "WIDE", label: "IMAGEN ESTEREO" },
-      { value: "12-16 dB", label: "RANGO DINAMICO" },
-      { value: "AI-MATCH", label: "BALANCE TONAL" },
-      { value: "+3.2 dB", label: "PUNCH TRANSIENTE" },
-      { value: "OK", label: "PHASE CHECK" },
-      { value: "-90 dB", label: "NOISE FLOOR" },
-      { value: "DEPTH", label: "PROFUNDIDAD 3D" },
-      { value: "SOFT", label: "SATURACION MUSICAL" },
+      { value: "12", label: t("processingStages") },
+      { value: "0 ms", label: t("latency") },
+      { value: "-14 LUFS", label: "OBJETIVO LOUDNESS" },
+      { value: "-1.0 dBTP", label: "TRUE PEAK MAX" },
+      { value: "110 dB", label: "SNR" },
+      { value: "0.01%", label: "THD+N" },
+      { value: "20-20 kHz", label: "RESPUESTA FREQ" },
+      { value: "0.02 deg", label: "ERROR DE FASE" },
+      { value: "0.90", label: "CORRELACION ESTEREO" },
+      { value: "4096", label: "TAPS EQ LINEAL" },
+      { value: "4x", label: "OVERSAMPLING" },
+      { value: "0", label: "EVENTOS CLIPPING" },
+      { value: "0.2 dB", label: "TOLERANCIA RMS" },
+      { value: "-90 dBFS", label: "PISO DE RUIDO" },
     ];
     const marqueeSpecs = [...specs, ...specs];
 
