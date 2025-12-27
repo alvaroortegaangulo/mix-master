@@ -53,20 +53,20 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
                </div>
             </div>
             <div className="flex-1 order-1 lg:order-2">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-500/10 border border-teal-500/20 text-teal-400 text-xs font-semibold tracking-wider mb-4">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-500/10 border border-teal-500/20 text-teal-400 text-[10px] font-semibold tracking-wider mb-4">
                  <BoltIcon className="w-4 h-4" aria-hidden="true" />
                  {t('efficiencyBadge')}
               </div>
 
-              <h2 className="text-3xl sm:text-4xl 2xl:text-5xl font-bold text-white mb-4 leading-[1.05] tracking-[-0.02em]">
+              <h2 className="text-2xl sm:text-3xl 2xl:text-4xl font-bold text-white mb-4 leading-[1.05] tracking-[-0.02em]">
                 {t.rich('speedTitle', {
                   highlight: (chunks) => <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-violet-500">{chunks}</span>
                 })}
               </h2>
-              <p className="text-base sm:text-lg text-slate-300 mb-6 leading-[1.6]">
+              <p className="text-sm sm:text-base text-slate-300 mb-6 leading-[1.55]">
                 {t('speedDescription')}
               </p>
-              <ul className="space-y-3 text-slate-300">
+              <ul className="space-y-3 text-sm text-slate-300">
                 <li className="flex items-center gap-3">
                   <span className="h-2 w-2 rounded-full bg-teal-500 shadow-[0_0_10px_rgba(20,184,166,0.5)]" />
                   {t('speedPoints.0')}
@@ -86,17 +86,17 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
           {/* Benefit 2: Quality */}
           <div className="flex flex-col lg:flex-row items-center gap-10">
             <div className="flex-1">
-               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-violet-500/10 border border-violet-500/20 text-violet-400 text-xs font-semibold tracking-wider mb-4">
+               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-violet-500/10 border border-violet-500/20 text-violet-400 text-[10px] font-semibold tracking-wider mb-4">
                  <StarIcon className="w-4 h-4" aria-hidden="true" />
                  {t('qualityBadge')}
               </div>
 
-              <h2 className="text-3xl sm:text-4xl 2xl:text-5xl font-bold text-white mb-4 leading-[1.05] tracking-[-0.02em]">
+              <h2 className="text-2xl sm:text-3xl 2xl:text-4xl font-bold text-white mb-4 leading-[1.05] tracking-[-0.02em]">
                  {t.rich('qualityTitle', {
                     highlight: (chunks) => <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-violet-500">{chunks}</span>
                   })}
               </h2>
-              <p className="text-base sm:text-lg text-slate-300 mb-6 leading-[1.6]">
+              <p className="text-sm sm:text-base text-slate-300 mb-6 leading-[1.55]">
                 {t('qualityDescription')}
               </p>
 
@@ -105,8 +105,8 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
                  <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-slate-900/80 border border-slate-800/60 shadow-lg backdrop-blur-sm min-w-[160px]">
                     <SpotifyIcon className="w-7 h-7 text-[#1DB954]" />
                     <div className="flex flex-col">
-                        <span className="text-[10px] uppercase tracking-wider text-slate-300 font-semibold">{t('readyFor')}</span>
-                        <span className="text-sm sm:text-base font-bold text-white">{t('spotifyReady')}</span>
+                        <span className="text-[9px] uppercase tracking-wider text-slate-300 font-semibold">{t('readyFor')}</span>
+                        <span className="text-xs sm:text-sm font-bold text-white">{t('spotifyReady')}</span>
                     </div>
                  </div>
 
@@ -114,8 +114,8 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
                  <div className="flex items-center gap-3 px-4 py-2.5 rounded-xl bg-slate-900/80 border border-slate-800/60 shadow-lg backdrop-blur-sm min-w-[160px]">
                     <AppleMusicIcon className="w-7 h-7 text-white" /> {/* Apple Music is usually white or pinkish/red */}
                     <div className="flex flex-col">
-                        <span className="text-[10px] uppercase tracking-wider text-slate-300 font-semibold">{t('readyFor')}</span>
-                        <span className="text-sm sm:text-base font-bold text-white">{t('appleMusicReady')}</span>
+                        <span className="text-[9px] uppercase tracking-wider text-slate-300 font-semibold">{t('readyFor')}</span>
+                        <span className="text-xs sm:text-sm font-bold text-white">{t('appleMusicReady')}</span>
                     </div>
                  </div>
               </div>

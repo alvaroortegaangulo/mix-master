@@ -96,7 +96,7 @@ export function FeaturesSection({ className }: { className?: string }) {
 
                 {/* Center: Description */}
                 <div className="bg-slate-950/60 backdrop-blur-md p-4 md:p-6 rounded-2xl border border-slate-800/50 max-w-3xl animate-in fade-in zoom-in-95 duration-700 delay-500 fill-mode-both shadow-xl">
-                  <p className="text-base sm:text-lg lg:text-xl 2xl:text-2xl text-slate-100 leading-[1.6] font-medium">
+                  <p className="text-xs sm:text-sm lg:text-base 2xl:text-lg text-slate-100 leading-[1.6] font-medium">
                     {feature.description}
                   </p>
                 </div>
