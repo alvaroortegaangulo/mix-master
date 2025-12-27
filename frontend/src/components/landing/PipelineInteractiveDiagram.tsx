@@ -89,10 +89,9 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
       {/* Main Pipeline Diagram */}
       <div className="w-full relative z-10">
         {/* Steps Container */}
-        <div className="flex flex-col lg:flex-row items-stretch gap-4 lg:gap-5">
+        <div className="flex flex-col lg:flex-row items-start gap-4 lg:gap-5">
           {stepsData.map((step, index) => {
             const isActive = index === activeStep;
-            const stepNumber = String(index + 1).padStart(2, '0');
 
             return (
               <button
@@ -102,8 +101,8 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
                 onClick={() => setActiveStep(index)}
                 className={`relative w-full overflow-hidden rounded-2xl border border-white/10 text-left backdrop-blur-xl transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400/70
                   ${isActive
-                    ? 'bg-slate-900/70 shadow-[0_0_35px_rgba(45,212,191,0.18)] lg:flex-[3] lg:-translate-y-1'
-                    : 'bg-slate-900/30 hover:bg-slate-900/45 lg:flex-[1]'
+                    ? 'bg-slate-950/85 shadow-[0_0_35px_rgba(45,212,191,0.18)] lg:flex-[3] lg:-translate-y-1'
+                    : 'bg-slate-950/60 hover:bg-slate-950/70 lg:flex-[1]'
                   }`}
               >
                 <div className="absolute inset-0">
@@ -114,13 +113,13 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
                   />
                   <div
                     className={`absolute inset-0 ${isActive
-                      ? 'bg-gradient-to-br from-slate-950/90 via-slate-950/60 to-slate-900/40'
-                      : 'bg-gradient-to-br from-slate-950/95 via-slate-950/70 to-slate-900/60'
+                      ? 'bg-gradient-to-br from-slate-950/95 via-slate-950/80 to-slate-900/60'
+                      : 'bg-gradient-to-br from-slate-950/98 via-slate-950/85 to-slate-900/70'
                     }`}
                   ></div>
                 </div>
 
-                <div className="relative z-10 flex h-full min-h-[180px] lg:min-h-[520px] flex-col p-4 sm:p-5 lg:p-6">
+                <div className="relative z-10 flex h-full min-h-[180px] flex-col p-4 sm:p-5 lg:p-6">
                   <div className="flex items-start gap-3">
                     <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-600/70 bg-slate-900/60 shadow-sm">
                       <img
@@ -130,9 +129,6 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
                       />
                     </div>
                     <div className={`flex flex-col ${isActive ? '' : 'lg:hidden'}`}>
-                      <span className="text-[10px] uppercase tracking-[0.3em] text-slate-300/80">
-                        {stepNumber}
-                      </span>
                       <h3 className={`text-lg sm:text-xl font-bold text-white ${isActive ? step.colorClass : ''}`}>
                         {step.title}
                       </h3>
@@ -147,20 +143,12 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
                       {step.desc}
                     </p>
 
-                    <div className="rounded-lg border border-slate-700/60 bg-slate-900/60 p-3">
-                      <h4 className="text-[10px] font-bold uppercase tracking-widest text-slate-300 mb-2">
-                        {t('keyTools')}
-                      </h4>
-                      <div className="flex flex-wrap gap-1.5">
-                        {step.tools.map((tool, idx) => (
-                          <span
-                            key={idx}
-                            className={`px-2 py-0.5 ${step.bgClass} text-[10px] md:text-xs rounded-full border ${step.borderClass} text-white/90`}
-                          >
-                            {tool}
-                          </span>
-                        ))}
-                      </div>
+                    <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-slate-200/90">
+                      {step.tools.map((tool, idx) => (
+                        <span key={idx} className="font-medium">
+                          {tool}
+                        </span>
+                      ))}
                     </div>
 
                     <div className={`rounded-lg border ${step.borderClass} bg-slate-900/70 p-3`}>
@@ -173,7 +161,7 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
                     </div>
                   </div>
 
-                  <div className={`hidden lg:flex flex-1 items-center justify-center ${isActive ? 'lg:hidden' : ''}`}>
+                  <div className={`hidden lg:flex mt-6 ${isActive ? 'lg:hidden' : ''}`}>
                     <span
                       className="text-xs uppercase tracking-[0.4em] text-slate-200/70"
                       style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
