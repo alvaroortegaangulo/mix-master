@@ -153,7 +153,7 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
                   <div className={`
                     z-50 w-full lg:w-[520px] 2xl:w-[600px]
                     ${/* Mobile: Relative (Accordion) */ "relative top-0 mt-4"}
-                    ${/* Desktop: Absolute (Popup) */ "lg:absolute lg:bottom-full lg:mb-4"}
+                    ${/* Desktop: Absolute (Popup) */ "lg:absolute lg:bottom-0"}
                     ${getPopupPositionClass(index)}
                   `}>
                     <div className="relative bg-slate-900/95 border border-slate-700/50 rounded-2xl p-5 2xl:p-6 shadow-2xl backdrop-blur-xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">

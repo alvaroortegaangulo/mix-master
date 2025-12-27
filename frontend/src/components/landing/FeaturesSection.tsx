@@ -111,7 +111,7 @@ export function FeaturesSection({ className }: { className?: string }) {
           <button
             type="button"
             onClick={() => setActiveStep((prev) => (prev - 1 + features.length) % features.length)}
-            className="absolute left-3 top-1/2 z-30 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-slate-700 bg-slate-900/70 text-sm font-semibold text-white/80 shadow-lg backdrop-blur hover:bg-slate-800 hover:text-white transition"
+            className="absolute left-3 top-1/2 z-30 -translate-y-1/2 text-2xl sm:text-3xl font-light leading-none text-white/70 transition hover:text-white hover:scale-110 focus-visible:text-white drop-shadow-[0_0_10px_rgba(139,92,246,0.35)]"
             aria-label="Previous slide"
           >
             <span aria-hidden="true">&lt;</span>
@@ -119,7 +119,7 @@ export function FeaturesSection({ className }: { className?: string }) {
           <button
             type="button"
             onClick={() => setActiveStep((prev) => (prev + 1) % features.length)}
-            className="absolute right-3 top-1/2 z-30 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-slate-700 bg-slate-900/70 text-sm font-semibold text-white/80 shadow-lg backdrop-blur hover:bg-slate-800 hover:text-white transition"
+            className="absolute right-3 top-1/2 z-30 -translate-y-1/2 text-2xl sm:text-3xl font-light leading-none text-white/70 transition hover:text-white hover:scale-110 focus-visible:text-white drop-shadow-[0_0_10px_rgba(139,92,246,0.35)]"
             aria-label="Next slide"
           >
             <span aria-hidden="true">&gt;</span>
