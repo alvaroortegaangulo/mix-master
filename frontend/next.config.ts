@@ -1,14 +1,11 @@
 import createNextIntlPlugin from 'next-intl/plugin';
 
 const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
-const isFastBuild = process.env.FAST_BUILD !== "0";
+const isFastBuild = true;
 
 const nextConfig = {
   reactCompiler: true,
   compress: true,
-  eslint: {
-    ignoreDuringBuilds: isFastBuild,
-  },
   typescript: {
     ignoreBuildErrors: isFastBuild,
   },

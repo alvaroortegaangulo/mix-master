@@ -36,10 +36,6 @@ ENV NODE_ENV=production
 ARG NEXT_PUBLIC_GA_MEASUREMENT_ID
 ENV NEXT_PUBLIC_GA_MEASUREMENT_ID=$NEXT_PUBLIC_GA_MEASUREMENT_ID
 
-# Build arg para acelerar builds (omite lint/typecheck/CSS optimization)
-ARG FAST_BUILD=1
-ENV FAST_BUILD=$FAST_BUILD
-
 # Construimos la app (cachea .next para builds repetidos)
 RUN --mount=type=cache,target=/app/.next/cache npm run build
 
