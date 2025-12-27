@@ -89,7 +89,7 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
       {/* Main Pipeline Diagram */}
       <div className="w-full relative z-10">
         {/* Steps Container */}
-        <div className="flex flex-col lg:flex-row items-start gap-4 lg:gap-5">
+        <div className="flex flex-col lg:flex-row items-stretch gap-4 lg:gap-5">
           {stepsData.map((step, index) => {
             const isActive = index === activeStep;
 
@@ -99,17 +99,17 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
                 type="button"
                 aria-expanded={isActive}
                 onClick={() => setActiveStep(index)}
-                className={`relative w-full overflow-hidden rounded-2xl border border-white/10 text-left backdrop-blur-xl transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400/70
+                className={`relative w-full lg:flex-1 lg:self-stretch overflow-hidden rounded-2xl border border-white/5 text-left backdrop-blur-xl transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400/70
                   ${isActive
-                    ? 'bg-slate-950/85 shadow-[0_0_35px_rgba(45,212,191,0.18)] lg:flex-[3] lg:-translate-y-1'
-                    : 'bg-slate-950/60 hover:bg-slate-950/70 lg:flex-[1]'
+                    ? 'bg-slate-950/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),_inset_0_-1px_0_rgba(0,0,0,0.65),_0_0_28px_rgba(34,211,238,0.18),_0_0_46px_rgba(139,92,246,0.14)]'
+                    : 'bg-slate-950/70 hover:bg-slate-950/80 shadow-[inset_0_1px_0_rgba(255,255,255,0.05),_inset_0_-1px_0_rgba(0,0,0,0.7),_0_0_22px_rgba(34,211,238,0.08),_0_0_30px_rgba(139,92,246,0.08)]'
                   }`}
               >
                 <div className="absolute inset-0">
                   <img
                     src={step.image}
                     alt=""
-                    className={`h-full w-full object-cover transition duration-700 ${isActive ? 'scale-110' : 'scale-100'}`}
+                    className={`h-full w-full object-cover transition duration-700 ${isActive ? 'scale-110' : 'scale-100 grayscale brightness-75 opacity-70'}`}
                   />
                   <div
                     className={`absolute inset-0 ${isActive
@@ -125,7 +125,7 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
                       <img
                         src={step.icon}
                         alt=""
-                        className="h-5 w-5 object-contain"
+                        className={`h-5 w-5 object-contain ${isActive ? '' : 'grayscale brightness-75 opacity-60'}`}
                       />
                     </div>
                     <div className={`flex flex-col ${isActive ? '' : 'lg:hidden'}`}>

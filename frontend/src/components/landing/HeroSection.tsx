@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect, useRef } from "react";
 import Image from "next/image";
 import { PlayCircleIcon, StarIcon } from "@heroicons/react/24/solid";
 import { useTranslations } from 'next-intl';
@@ -5,6 +8,88 @@ import { Link } from '../../i18n/routing';
 
 export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
   const t = useTranslations('HeroSection');
+  const waveformRef = useRef<HTMLCanvasElement | null>(null);
+
+  useEffect(() => {
+    const canvas = waveformRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    let frameId = 0;
+    let width = 0;
+    let height = 0;
+    let dpr = window.devicePixelRatio || 1;
+    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+    const resize = () => {
+      const rect = canvas.getBoundingClientRect();
+      width = Math.max(1, rect.width);
+      height = Math.max(1, rect.height);
+      dpr = window.devicePixelRatio || 1;
+      canvas.width = Math.floor(width * dpr);
+      canvas.height = Math.floor(height * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    };
+
+    const bands = [
+      { amplitude: 18, frequency: 0.006, speed: 0.9, y: 0.35, color: "rgba(34,211,238,0.35)", phase: 0.2 },
+      { amplitude: 14, frequency: 0.008, speed: 1.15, y: 0.55, color: "rgba(139,92,246,0.28)", phase: 1.1 },
+      { amplitude: 10, frequency: 0.012, speed: 0.75, y: 0.72, color: "rgba(45,212,191,0.22)", phase: 2.4 }
+    ];
+
+    const draw = (time: number) => {
+      const t = time * 0.001;
+      ctx.clearRect(0, 0, width, height);
+      ctx.lineWidth = 1.35;
+      ctx.lineJoin = "round";
+      ctx.lineCap = "round";
+
+      for (const band of bands) {
+        ctx.beginPath();
+        const baseY = height * band.y;
+        const step = 6;
+
+        for (let x = 0; x <= width; x += step) {
+          const wave = Math.sin(x * band.frequency + t * band.speed + band.phase) * band.amplitude;
+          const shimmer = Math.sin(x * band.frequency * 2.1 - t * band.speed * 1.4) * band.amplitude * 0.35;
+          const y = baseY + wave + shimmer;
+          if (x === 0) {
+            ctx.moveTo(x, y);
+          } else {
+            ctx.lineTo(x, y);
+          }
+        }
+
+        ctx.shadowColor = band.color;
+        ctx.shadowBlur = 14;
+        ctx.strokeStyle = band.color;
+        ctx.stroke();
+      }
+
+      ctx.shadowBlur = 0;
+
+      if (!prefersReducedMotion) {
+        frameId = window.requestAnimationFrame(draw);
+      }
+    };
+
+    resize();
+    window.addEventListener("resize", resize);
+    if (prefersReducedMotion) {
+      draw(0);
+    } else {
+      frameId = window.requestAnimationFrame(draw);
+    }
+
+    return () => {
+      window.removeEventListener("resize", resize);
+      if (frameId) {
+        window.cancelAnimationFrame(frameId);
+      }
+    };
+  }, []);
 
   return (
     <section className="relative flex min-h-[70vh] lg:min-h-[75vh] 2xl:min-h-[85vh] flex-col items-center justify-center overflow-hidden bg-slate-950 px-4 text-center py-8 md:py-10 2xl:py-14">
@@ -104,17 +189,12 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
         </div>
       </div>
 
-      {/* Visual placeholder for waveform/animation */}
-      <div className="absolute bottom-0 left-0 w-full opacity-20 pointer-events-none">
-          <svg
-            className="w-full h-24 text-teal-500/30"
-            viewBox="0 0 1440 320"
-            preserveAspectRatio="none"
-            aria-hidden="true"
-            focusable="false"
-          >
-             <path fill="currentColor" fillOpacity="1" d="M0,160L48,170.7C96,181,192,203,288,197.3C384,192,480,160,576,149.3C672,139,768,149,864,170.7C960,192,1056,224,1152,229.3C1248,235,1344,213,1392,202.7L1440,192V320H1392C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320H0Z"></path>
-          </svg>
+      <div className="absolute bottom-0 left-0 w-full h-28 sm:h-32 lg:h-36 opacity-35 pointer-events-none">
+        <canvas
+          ref={waveformRef}
+          className="h-full w-full"
+          aria-hidden="true"
+        />
       </div>
     </section>
   );

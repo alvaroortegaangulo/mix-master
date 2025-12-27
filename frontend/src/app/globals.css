@@ -29,7 +29,7 @@
   --color-slate-700: #334155;
   --color-slate-800: #1e293b;
   --color-slate-900: #0f172a;
-  --color-slate-950: #020617;
+  --color-slate-950: #020408;
 
   --color-emerald-50: #ecfdf5;
   --color-emerald-100: #d1fae5;
@@ -58,7 +58,7 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
+    --background: #020408;
     --foreground: #ededed;
   }
 }
