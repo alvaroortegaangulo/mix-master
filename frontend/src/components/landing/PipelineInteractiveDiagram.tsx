@@ -89,10 +89,10 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
         <div className="inline-block mb-3 px-3 py-1 rounded-full border border-teal-500/30 bg-teal-500/10 text-teal-300 text-xs font-semibold tracking-wider uppercase">
           {t('label')}
         </div>
-        <h2 className="text-3xl sm:text-4xl lg:text-5xl 2xl:text-6xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-white via-teal-200 to-violet-200 drop-shadow-lg">
+        <h2 className="text-2xl sm:text-3xl lg:text-4xl 2xl:text-5xl font-bold mb-3 bg-clip-text text-transparent bg-gradient-to-r from-white via-teal-200 to-violet-200 drop-shadow-lg">
           {t('title')}
         </h2>
-        <p className="text-slate-300 text-base sm:text-lg max-w-2xl mx-auto">
+        <p className="text-slate-300 text-sm sm:text-base max-w-2xl mx-auto">
           {t('description')}
         </p>
       </header>
@@ -152,8 +152,8 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
                 {isActive && (
                   <div className={`
                     z-50 w-full lg:w-[520px] 2xl:w-[600px]
-                    ${/* Mobile: Relative (Accordion) */ "relative top-0 mt-4"}
-                    ${/* Desktop: Absolute (Popup) */ "lg:absolute lg:bottom-0"}
+                    ${/* Mobile: Relative (Accordion) */ "relative mt-4"}
+                    ${/* Desktop: Absolute (Popup) */ "lg:absolute lg:bottom-0 lg:top-auto lg:mt-0"}
                     ${getPopupPositionClass(index)}
                   `}>
                     <div className="relative bg-slate-900/95 border border-slate-700/50 rounded-2xl p-5 2xl:p-6 shadow-2xl backdrop-blur-xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
