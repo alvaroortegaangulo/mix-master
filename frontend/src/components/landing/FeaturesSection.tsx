@@ -1,12 +1,17 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import type { PointerEvent } from "react";
 import { LazyVideo } from "../LazyVideo";
 import { useTranslations } from "next-intl";
 
 export function FeaturesSection({ className }: { className?: string }) {
   const [activeStep, setActiveStep] = useState(0);
+  const dragStartXRef = useRef(0);
+  const dragDeltaXRef = useRef(0);
+  const isDraggingRef = useRef(false);
   const t = useTranslations('FeaturesSection');
+  const dragThreshold = 40;
 
   const features = [
     {
@@ -46,6 +51,38 @@ export function FeaturesSection({ className }: { className?: string }) {
     return () => clearInterval(timer);
   }, [features.length, activeStep]);
 
+  const handlePointerDown = (event: PointerEvent<HTMLDivElement>) => {
+    if (event.pointerType === "mouse" && event.button !== 0) return;
+    const target = event.target as HTMLElement;
+    if (target.closest("button")) return;
+    isDraggingRef.current = true;
+    dragStartXRef.current = event.clientX;
+    dragDeltaXRef.current = 0;
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+
+  const handlePointerMove = (event: PointerEvent<HTMLDivElement>) => {
+    if (!isDraggingRef.current) return;
+    dragDeltaXRef.current = event.clientX - dragStartXRef.current;
+  };
+
+  const handlePointerEnd = (event: PointerEvent<HTMLDivElement>) => {
+    if (!isDraggingRef.current) return;
+    isDraggingRef.current = false;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+    const deltaX = dragDeltaXRef.current;
+    dragDeltaXRef.current = 0;
+    if (deltaX > dragThreshold) {
+      setActiveStep((prev) => (prev - 1 + features.length) % features.length);
+      return;
+    }
+    if (deltaX < -dragThreshold) {
+      setActiveStep((prev) => (prev + 1) % features.length);
+    }
+  };
+
   return (
     <section className={`py-6 md:py-8 lg:py-10 2xl:py-12 ${className || 'bg-slate-950'}`} id="features">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -61,7 +98,14 @@ export function FeaturesSection({ className }: { className?: string }) {
         </div>
 
         {/* Carousel Container */}
-        <div className="relative w-full h-[320px] sm:h-[360px] md:h-auto md:aspect-[21/9] lg:h-[340px] 2xl:h-[400px] bg-slate-900 rounded-3xl overflow-hidden shadow-2xl border border-slate-800 group">
+        <div
+          className="relative w-full h-[320px] sm:h-[360px] md:h-auto md:aspect-[21/9] lg:h-[340px] 2xl:h-[400px] bg-slate-900 rounded-3xl overflow-hidden shadow-2xl border border-slate-800 group cursor-grab active:cursor-grabbing"
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerEnd}
+          onPointerCancel={handlePointerEnd}
+          style={{ touchAction: "pan-y" }}
+        >
 
           {/* Slides */}
           {features.map((feature, idx) => (
@@ -111,7 +155,7 @@ export function FeaturesSection({ className }: { className?: string }) {
           <button
             type="button"
             onClick={() => setActiveStep((prev) => (prev - 1 + features.length) % features.length)}
-            className="absolute left-3 top-1/2 z-30 -translate-y-1/2 text-2xl sm:text-3xl font-light leading-none text-white/70 transition hover:text-white hover:scale-110 focus-visible:text-white drop-shadow-[0_0_10px_rgba(139,92,246,0.35)]"
+            className="absolute left-3 top-1/2 z-30 -translate-y-1/2 h-11 w-14 sm:h-12 sm:w-16 rounded-full border border-slate-700/60 bg-slate-900/60 text-2xl sm:text-3xl font-light leading-none text-white/70 backdrop-blur transition hover:bg-slate-800/70 hover:text-white hover:scale-105 focus-visible:text-white shadow-[0_8px_18px_rgba(15,23,42,0.35)]"
             aria-label="Previous slide"
           >
             <span aria-hidden="true">&lt;</span>
@@ -119,7 +163,7 @@ export function FeaturesSection({ className }: { className?: string }) {
           <button
             type="button"
             onClick={() => setActiveStep((prev) => (prev + 1) % features.length)}
-            className="absolute right-3 top-1/2 z-30 -translate-y-1/2 text-2xl sm:text-3xl font-light leading-none text-white/70 transition hover:text-white hover:scale-110 focus-visible:text-white drop-shadow-[0_0_10px_rgba(139,92,246,0.35)]"
+            className="absolute right-3 top-1/2 z-30 -translate-y-1/2 h-11 w-14 sm:h-12 sm:w-16 rounded-full border border-slate-700/60 bg-slate-900/60 text-2xl sm:text-3xl font-light leading-none text-white/70 backdrop-blur transition hover:bg-slate-800/70 hover:text-white hover:scale-105 focus-visible:text-white shadow-[0_8px_18px_rgba(15,23,42,0.35)]"
             aria-label="Next slide"
           >
             <span aria-hidden="true">&gt;</span>

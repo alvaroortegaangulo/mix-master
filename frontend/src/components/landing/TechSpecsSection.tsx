@@ -29,6 +29,24 @@ export function TechSpecsSection({ className }: { className?: string }) {
       { value: "0.2 dB", label: "TOLERANCIA RMS" },
       { value: "-90 dBFS", label: "PISO DE RUIDO" },
     ];
+    const valueColors = [
+      "text-teal-300",
+      "text-teal-200",
+      "text-emerald-300",
+      "text-cyan-300",
+      "text-sky-300",
+      "text-amber-300",
+      "text-blue-300",
+      "text-indigo-300",
+      "text-violet-300",
+      "text-purple-300",
+      "text-fuchsia-300",
+      "text-violet-400",
+      "text-sky-400",
+      "text-amber-400",
+      "text-teal-400",
+      "text-indigo-400",
+    ];
     const marqueeSpecs = [...specs, ...specs];
 
     useEffect(() => {
@@ -156,7 +174,7 @@ export function TechSpecsSection({ className }: { className?: string }) {
                     aria-hidden={index >= specs.length ? "true" : undefined}
                     className="flex items-center gap-3 rounded-full border border-slate-800/80 bg-slate-900/60 px-4 py-2 shadow-sm"
                   >
-                    <span className="text-sm sm:text-base font-semibold text-teal-300 tabular-nums">
+                    <span className={`text-sm sm:text-base font-semibold tabular-nums ${valueColors[index % valueColors.length]}`}>
                       {spec.value}
                     </span>
                     <span className="text-[10px] sm:text-xs font-medium uppercase tracking-widest text-slate-300">
