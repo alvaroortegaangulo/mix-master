@@ -30,22 +30,22 @@ export function TechSpecsSection({ className }: { className?: string }) {
       { value: "-90 dBFS", label: "PISO DE RUIDO" },
     ];
     const valueColors = [
-      "text-teal-300",
-      "text-teal-200",
-      "text-emerald-300",
       "text-cyan-300",
-      "text-sky-300",
-      "text-amber-300",
-      "text-blue-300",
-      "text-indigo-300",
+      "text-teal-300",
+      "text-emerald-300",
       "text-violet-300",
       "text-purple-300",
       "text-fuchsia-300",
+      "text-orange-300",
+      "text-amber-300",
+      "text-rose-300",
+      "text-cyan-400",
+      "text-emerald-400",
       "text-violet-400",
-      "text-sky-400",
+      "text-orange-400",
       "text-amber-400",
       "text-teal-400",
-      "text-indigo-400",
+      "text-pink-400",
     ];
     const marqueeSpecs = [...specs, ...specs];
 

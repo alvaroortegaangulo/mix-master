@@ -7,6 +7,8 @@ import { useTranslations } from "next-intl";
 
 export function FeaturesSection({ className }: { className?: string }) {
   const [activeStep, setActiveStep] = useState(0);
+  const [dragOffset, setDragOffset] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
   const dragStartXRef = useRef(0);
   const dragDeltaXRef = useRef(0);
   const isDraggingRef = useRef(false);
@@ -45,11 +47,12 @@ export function FeaturesSection({ className }: { className?: string }) {
   ];
 
   useEffect(() => {
+    if (isDragging) return;
     const timer = setInterval(() => {
       setActiveStep((prev) => (prev + 1) % features.length);
     }, 7000);
     return () => clearInterval(timer);
-  }, [features.length, activeStep]);
+  }, [features.length, activeStep, isDragging]);
 
   const handlePointerDown = (event: PointerEvent<HTMLDivElement>) => {
     if (event.pointerType === "mouse" && event.button !== 0) return;
@@ -58,12 +61,17 @@ export function FeaturesSection({ className }: { className?: string }) {
     isDraggingRef.current = true;
     dragStartXRef.current = event.clientX;
     dragDeltaXRef.current = 0;
+    setIsDragging(true);
+    setDragOffset(0);
     event.currentTarget.setPointerCapture(event.pointerId);
   };
 
   const handlePointerMove = (event: PointerEvent<HTMLDivElement>) => {
     if (!isDraggingRef.current) return;
-    dragDeltaXRef.current = event.clientX - dragStartXRef.current;
+    event.preventDefault();
+    const delta = event.clientX - dragStartXRef.current;
+    dragDeltaXRef.current = delta;
+    setDragOffset(delta);
   };
 
   const handlePointerEnd = (event: PointerEvent<HTMLDivElement>) => {
@@ -74,6 +82,8 @@ export function FeaturesSection({ className }: { className?: string }) {
     }
     const deltaX = dragDeltaXRef.current;
     dragDeltaXRef.current = 0;
+    setDragOffset(0);
+    setIsDragging(false);
     if (deltaX > dragThreshold) {
       setActiveStep((prev) => (prev - 1 + features.length) % features.length);
       return;
@@ -108,13 +118,29 @@ export function FeaturesSection({ className }: { className?: string }) {
         >
 
           {/* Slides */}
-          {features.map((feature, idx) => (
-            <div
-              key={feature.id}
-              className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
-                activeStep === idx ? "opacity-100 z-10" : "opacity-0 z-0"
-              }`}
-            >
+          {features.map((feature, idx) => {
+            const prevIndex = (activeStep - 1 + features.length) % features.length;
+            const nextIndex = (activeStep + 1) % features.length;
+            const isActive = activeStep === idx;
+            const isPrev = prevIndex === idx;
+            const isNext = nextIndex === idx;
+            const isVisible = isActive || (isDragging && (isPrev || isNext));
+            const baseOffset = isPrev ? -100 : isNext ? 100 : 0;
+            const translate = isDragging
+              ? `translateX(calc(${dragOffset}px + ${baseOffset}%))`
+              : "translateX(0)";
+
+            return (
+              <div
+                key={feature.id}
+                className={`absolute inset-0 ease-in-out ${isVisible ? "opacity-100" : "opacity-0"} ${
+                  isActive ? "z-20" : "z-10"
+                }`}
+                style={{
+                  transform: translate,
+                  transition: isDragging ? "none" : "transform 300ms ease, opacity 500ms ease",
+                }}
+              >
               {/* Background Video */}
               <div className="absolute inset-0">
                 <LazyVideo
@@ -148,8 +174,9 @@ export function FeaturesSection({ className }: { className?: string }) {
                 {/* Bottom Spacer to balance layout */}
                 <div className="mt-auto mb-6" />
               </div>
-            </div>
-          ))}
+              </div>
+            );
+          })}
 
           {/* Navigation Arrows */}
           <button
