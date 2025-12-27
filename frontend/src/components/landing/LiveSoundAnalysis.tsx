@@ -1,11 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import {
-  ArrowPathIcon,
-  SpeakerWaveIcon,
-  CheckCircleIcon,
-} from "@heroicons/react/24/outline";
+import { SpeakerWaveIcon } from "@heroicons/react/24/outline";
 import { useTranslations } from "next-intl";
 
 export function LiveSoundAnalysis({ className }: { className?: string }) {
@@ -79,10 +75,10 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
                 {t('label')}
              </div>
           </div>
-          <h2 className="text-3xl sm:text-4xl 2xl:text-5xl font-bold tracking-tight text-white mb-6">
+          <h2 className="text-2xl sm:text-3xl 2xl:text-4xl font-bold tracking-tight text-white mb-4">
             {t('title')}
           </h2>
-          <p className="max-w-2xl text-base sm:text-lg text-slate-300 leading-relaxed">
+          <p className="max-w-2xl text-sm sm:text-base text-slate-300 leading-relaxed">
             {t('description')}
           </p>
         </div>
@@ -107,7 +103,7 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
              </div>
 
              {/* Spectrum Visualizer */}
-             <div className="flex-1 flex items-end justify-between gap-1 px-2 mb-4 relative z-10 h-24">
+             <div className="flex-1 flex items-end justify-between gap-1 px-2 mb-4 relative z-10 h-16">
                 {spectrumData.map((height, i) => (
                     <div
                         key={i}
@@ -147,18 +143,6 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
           {/* RIGHT COLUMN: Metrics Cards */}
           <div className="flex flex-col gap-4">
 
-             {/* Controls / Header for Right Column */}
-             <div className="flex justify-end gap-3 mb-2">
-                 <button className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-700 bg-slate-900/50 text-xs font-medium text-slate-300 hover:bg-slate-800 transition">
-                    <ArrowPathIcon className="w-3 h-3" aria-hidden="true" />
-                    {t('controls.reScan')}
-                 </button>
-                 <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-slate-700 bg-slate-900/50 text-xs font-mono text-slate-300">
-                    <span>{t('controls.target')}:</span>
-                    <span className="text-teal-400">-14 LUFS</span>
-                 </div>
-             </div>
-
              {/* Card 1: Integrated Loudness */}
              <div className="bg-slate-900/50 rounded-2xl border border-slate-800 p-4 2xl:p-6 shadow-lg relative group overflow-hidden">
                 <div className="flex justify-between items-start mb-2">
@@ -179,10 +163,6 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
                     <span>-8</span>
                 </div>
 
-                <div className="flex items-center gap-2 text-teal-400 text-xs font-medium bg-teal-950/30 p-2 rounded-lg border border-teal-900/50 inline-block">
-                    <CheckCircleIcon className="w-4 h-4" aria-hidden="true" />
-                    {t('spectrum.optimal')}
-                </div>
              </div>
 
              {/* Card 2: Stereo Image */}
@@ -202,9 +182,6 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
                      </div>
                  </div>
 
-                 <p className="text-xs text-slate-300 leading-relaxed border-t border-slate-800/50 pt-3 mt-1">
-                     {t('metrics.description')}
-                 </p>
              </div>
 
              {/* Card 3: Dynamic Range */}
