@@ -54,8 +54,8 @@ export function FeaturesSection({ className }: { className?: string }) {
           <div className="inline-block px-3 py-1 mb-3 text-xs font-semibold tracking-wider text-teal-400 uppercase rounded-full bg-teal-950/50 border border-teal-800/50">
             {t('workflow')}
           </div>
-          <h2 className="text-3xl sm:text-4xl 2xl:text-5xl font-bold tracking-[-0.02em] leading-[1.05] text-white mb-4" dangerouslySetInnerHTML={{ __html: t.raw('title') }} />
-          <p className="max-w-3xl mx-auto text-base sm:text-lg text-slate-300 leading-[1.6]">
+          <h2 className="text-2xl sm:text-3xl 2xl:text-4xl font-bold tracking-[-0.02em] leading-[1.05] text-white mb-3" dangerouslySetInnerHTML={{ __html: t.raw('title') }} />
+          <p className="max-w-3xl mx-auto text-sm sm:text-base text-slate-300 leading-[1.55]">
             {t('subtitle')}
           </p>
         </div>
@@ -88,7 +88,7 @@ export function FeaturesSection({ className }: { className?: string }) {
                 {/* Top: Title */}
                 <div className="mb-auto mt-3 md:mt-6 animate-in fade-in slide-in-from-top-4 duration-700 delay-300 fill-mode-both">
                    <div className="mb-2">
-                      <h3 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white tracking-[-0.02em] leading-[1.1]">
+                      <h3 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white tracking-[-0.02em] leading-[1.1]">
                         {feature.title}
                       </h3>
                    </div>
@@ -106,6 +106,24 @@ export function FeaturesSection({ className }: { className?: string }) {
               </div>
             </div>
           ))}
+
+          {/* Navigation Arrows */}
+          <button
+            type="button"
+            onClick={() => setActiveStep((prev) => (prev - 1 + features.length) % features.length)}
+            className="absolute left-3 top-1/2 z-30 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-slate-700 bg-slate-900/70 text-sm font-semibold text-white/80 shadow-lg backdrop-blur hover:bg-slate-800 hover:text-white transition"
+            aria-label="Previous slide"
+          >
+            <span aria-hidden="true">&lt;</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveStep((prev) => (prev + 1) % features.length)}
+            className="absolute right-3 top-1/2 z-30 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full border border-slate-700 bg-slate-900/70 text-sm font-semibold text-white/80 shadow-lg backdrop-blur hover:bg-slate-800 hover:text-white transition"
+            aria-label="Next slide"
+          >
+            <span aria-hidden="true">&gt;</span>
+          </button>
 
           {/* Navigation Dots */}
           <div className="absolute bottom-4 left-0 right-0 z-30 flex justify-center gap-2">
