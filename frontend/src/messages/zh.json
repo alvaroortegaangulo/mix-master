@@ -1,498 +1,555 @@
 {
   "Metadata": {
-    "title": "Piroola: 专业 AI 音频混音与母带处理在线服务",
-    "description": "用 Piroola 改变您的曲目。我们的 AI 驱动的混音和母带处理服务在几分钟内从您的多轨分轨提供专业录音室质量的结果。"
+    "title": "Piroola: Professional AI Audio Mixing & Mastering Online",
+    "description": "Transform your tracks with Piroola. Our AI-powered mixing and mastering service delivers professional studio-quality results from your multi-track stems in minutes."
   },
   "Navigation": {
-    "examples": "示例",
-    "pricing": "定价",
-    "faq": "常见问题",
-    "howItWorks": "如何运作",
-    "blog": "博客",
+    "examples": "Examples",
+    "pricing": "Pricing",
+    "faq": "FAQ",
+    "howItWorks": "How it works",
+    "blog": "Blog",
     "rss": "RSS",
-    "support": "支持",
-    "goToApp": "转到应用",
-    "logIn": "登录",
-    "tryForFree": "免费试用"
+    "support": "Support",
+    "goToApp": "Go to App",
+    "logIn": "Log In",
+    "tryForFree": "Try for free"
   },
   "LandingPage": {
-    "readyToElevate": "准备好提升您的声音了吗？",
-    "startMixing": "免费开始混音"
+    "readyToElevate": "Ready to elevate your sound?",
+    "startMixing": "Start Mixing for Free"
   },
   "HeroSection": {
-    "alertConstruction": "BETA V2.0 访问已开放",
-    "studioSound": "录音室声音。",
-    "perfectedByAI": "由 AI 完善。",
-    "description": "在几分钟内将您的家庭录音（分轨）转变为专业的、Spotify 就绪的混音。Piroola 处理技术工程，以便您可以专注于音乐。",
-    "mixMyTracks": "混合我的曲目",
-    "listenToDemos": "收听演示",
-    "rating": "4.9/5 评分",
-    "tracksMastered": "+10k 曲目已母带处理"
+    "alertConstruction": "BETA ACCESS V2.0 AVAILABLE",
+    "studioSound": "Studio Sound.",
+    "perfectedByAI": "Perfected by AI.",
+    "description": "Transform your home recordings (stems) into professional, Spotify-ready mixes in minutes. Piroola handles the technical engineering so you can focus on the music.",
+    "mixMyTracks": "Mix my Tracks",
+    "listenToDemos": "Listen to Demos",
+    "rating": "4.9/5 Rating",
+    "tracksMastered": "+10k Tracks Mastered"
   },
   "FeaturesSection": {
-    "workflow": "工作流程",
-    "title": "从您的 DAW 到<span class='text-cyan-400'>世界</span>。",
-    "subtitle": "我们简化了复杂的工程流程。没有无尽的菜单，只有卓越的声音结果。",
+    "workflow": "WORKFLOW",
+    "title": "From your DAW to the <span className='text-cyan-400'>World</span>.",
+    "subtitle": "We have simplified the complex engineering process. No infinite menus, only superior sonic results.",
     "steps": {
       "0": {
-        "title": "智能分析",
-        "description": "我们的 AI 扫描您的曲目以了解调性、速度、流派和乐器编制，创建自定义混音策略。"
+        "tabStep": "01. Connection",
+        "tabTitle": "DAW Integration",
+        "slideLabel": "STEP 1",
+        "title": "Seamless Integration",
+        "description": "Forget about exporting and importing. Piroola lives inside your favorite DAW (Ableton, Logic, Pro Tools) as a native VST3/AU plugin."
       },
       "1": {
-        "title": "精确混音",
-        "description": "Piroola 应用外科手术式的 EQ、动态压缩和空间增强，专为每个分轨在混音中的角色量身定制。"
+        "tabStep": "02. Process",
+        "tabTitle": "Neural Engine",
+        "slideLabel": "STEP 2",
+        "title": "Sonic Intelligence",
+        "description": "Our AI scans your tracks to understand key, tempo, genre, and instrumentation, creating a custom mixing strategy."
       },
       "2": {
-        "title": "创意控制",
-        "description": "调整工作流程以满足您的需求，获得最佳声音。将您的乐器和音乐风格配置到最大潜力。"
+        "tabStep": "03. Results",
+        "tabTitle": "Mastering Grade",
+        "slideLabel": "STEP 3",
+        "title": "Mastering Grade Polish",
+        "description": "Finalizes your track with industry-standard loudness matching, stereo widening, and limiter safety."
       },
       "3": {
-        "title": "母带质量",
-        "description": "以行业标准的响度匹配、立体声宽度和限制器安全性完成您的曲目。"
+        "tabStep": "04. Release",
+        "tabTitle": "Ready for the World",
+        "slideLabel": "STEP 4",
+        "title": "Ready for the World",
+        "description": "Export your masters in high-resolution WAV and MP3 formats ready for distribution on Spotify, Apple Music, and more."
       }
     }
   },
   "BenefitsSection": {
-    "efficiencyBadge": "??AI",
-    "speedTitle": "数小时的工作，几分钟完成。",
-    "speedDescription": "忘记繁琐的增益分级、相位对齐和共振清理。Piroola 处理技术重活，让您可以专注于创意氛围。",
-    "speedPoints": [
-      "即时会话设置和路由",
-      "自动化修正 EQ",
-      "实时响度合规性检查"
-    ],
-    "qualityTitle": "录音室质量，人人可及。",
-    "qualityDescription": "您不需要百万美元的录音室或几十年的经验来获得专业的声音。我们的算法在热门唱片上训练，以提供具有商业竞争力的结果。",
-    "readyFor": "????",
-    "qualityBadge": "????",
-    "spotifyReady": "Spotify 就绪",
-    "appleMusicReady": "Apple Music 就绪"
+    "headerBadge": "Piroola AI Engine v2.0",
+    "headerTitle": "Revolutionize your sound",
+    "headerDesc": "The intelligent mastering suite that transforms home demos into commercial hits in seconds.",
+    "efficiencyBadge": "AI Efficiency",
+    "manual": "MANUAL",
+    "speedTitle": "<strike>Hours</strike> of work,<br /><highlight>done in minutes.</highlight>",
+    "speedDescription": "Forget manual gain staging and resonance cleanup. Piroola automates the heavy technical lifting so you can create.",
+    "deepAnalysisTitle": "Deep Analysis",
+    "deepAnalysisPoints": {
+      "0": "Resonance detection",
+      "1": "Dynamic spectral balance",
+      "2": "Intelligent stereo image"
+    },
+    "qualityBadge": "Premium Quality",
+    "qualityTitle": "Studio Sound",
+    "qualityDescription": "Algorithms trained on Billboard hits for competitive results.",
+    "toolkitTitle": "Automatic Toolkit",
+    "toolkitItems": {
+      "0": {
+        "title": "Instant Routing",
+        "desc": "Automatic session setup."
+      },
+      "1": {
+        "title": "Corrective EQ",
+        "desc": "Eliminates annoying frequencies."
+      },
+      "2": {
+        "title": "Loudness Check",
+        "desc": "Real-time LUFS verification."
+      }
+    },
+    "readyForWorldTitle": "Ready for the World",
+    "readyForWorldDesc": "Optimized for streaming platforms.",
+    "spotify": "Spotify",
+    "appleMusic": "Music"
   },
   "LiveSoundAnalysis": {
-    "label": "实时分析引擎",
-    "title": "可视化不可见之物。",
-    "description": "停止猜测。Piroola 提供外科手术般精确的指标，确保您的混音符合流媒体（Spotify、Apple Music）和广播标准。",
+    "label": "Live Analytics Engine",
+    "title": "Visualize the Invisible.",
+    "description": "Stop guessing. Piroola provides surgical precision metrics to ensure your mix meets streaming standards (Spotify, Apple Music) and broadcast.",
     "spectrum": {
-      "title": "频谱",
+      "title": "Frequency Spectrum",
       "range": "20Hz - 20kHz",
-      "sub": "深低音 (Sub)",
-      "vocal": "人声存在感",
-      "air": "空气感 / 亮度",
-      "balanced": "平衡",
-      "optimal": "最佳"
+      "sub": "Low End (Sub)",
+      "vocal": "Vocal Presence",
+      "air": "Air / Shine",
+      "balanced": "Balanced",
+      "optimal": "Optimal"
     },
     "controls": {
-      "reScan": "重新扫描",
-      "target": "目标"
+      "reScan": "Re-Scan",
+      "target": "Target"
     },
     "metrics": {
-      "loudness": "综合响度",
-      "stereoImage": "立体声声像",
-      "dynamicRange": "动态范围",
-      "target": "目标",
-      "wide": "宽",
-      "correlation": "相关性",
-      "description": "出色的单声道兼容性。无严重相位抵消。"
+      "loudness": "Integrated Loudness",
+      "stereoImage": "Stereo Image",
+      "dynamicRange": "Dynamic Range",
+      "target": "Target",
+      "wide": "Wide",
+      "correlation": "Correlation",
+      "description": "Excellent mono compatibility. No critical phase cancellations."
     }
   },
   "PipelineInteractiveDiagram": {
-    "label": "音频工程工作流程",
-    "title": "混音与母带处理流程",
-    "description": "交互式探索音频制作过程的每个阶段，从初始分析到最终润色。",
-    "keyTools": "关键工具",
-    "proTip": "专业提示",
+    "label": "Audio Engineering Workflow",
+    "title": "Mixing & Mastering Pipeline",
+    "description": "Interactively explore each stage of the audio production process, from initial analysis to final polishing.",
+    "keyTools": "Key Tools",
+    "proTip": "PRO TIP",
     "steps": {
       "0": {
-        "title": "分析",
-        "shortDesc": "频率、相位和动态范围诊断。",
-        "desc": "在处理之前，了解源素材至关重要。我们使用频谱分析仪、相位相关表和 LUFS 表来识别共振问题、音色不平衡或相位问题。",
-        "tip": "最初始终以单声道收听以检测相位抵消。",
+        "title": "Analysis",
+        "shortDesc": "Frequency, phase, and dynamic range diagnosis.",
+        "desc": "Before processing, understanding the source material is crucial. We use spectrum analyzers, phase correlation meters, and LUFS meters to identify resonant issues, tonal imbalances, or phase problems.",
+        "tip": "Always listen in mono initially to detect phase cancellations.",
         "tools": [
-          "频谱分析仪",
-          "相位计",
-          "LUFS 表"
+          "Spectrum Analyzer",
+          "Goniometer",
+          "LUFS Meter"
         ]
       },
       "1": {
-        "title": "修正",
-        "shortDesc": "清理、减法 EQ 和降噪。",
-        "desc": "外科手术阶段。我们使用减法 EQ 去除有问题的频率，减少背景噪音，并在必要时修正人声音高。目标是在增强之前进行清理。",
-        "tip": "在不需要低频的乐器上切断低频（高通）以获得清晰度。",
+        "title": "Correction",
+        "shortDesc": "Cleaning, subtractive EQ, and noise reduction.",
+        "desc": "The surgical stage. We remove problematic frequencies with subtractive EQ, reduce background noise, and correct vocal pitch if necessary. The goal is to clean before enhancing.",
+        "tip": "Cut low frequencies (High Pass) on instruments that don't need them to gain clarity.",
         "tools": [
-          "参数 EQ",
-          "去噪器",
-          "音高修正"
+          "Parametric EQ",
+          "De-noiser",
+          "Pitch Correction"
         ]
       },
       "2": {
-        "title": "动态",
-        "shortDesc": "瞬态控制、压缩和平衡。",
-        "desc": "我们控制动态范围以获得连贯的混音。我们使用压缩器将元素粘合在一起，并使用软限制器驯服不需要的峰值。",
-        "tip": "使用串联压缩（多个温和的压缩器）而不是单个激进的压缩器，以获得更自然的声音。",
+        "title": "Dynamics",
+        "shortDesc": "Transient control, compression, and balance.",
+        "desc": "We control the dynamic range for a consistent mix. We use compressors to glue elements together and soft limiters to tame unruly peaks.",
+        "tip": "Use serial compression (multiple gentle compressors) instead of a single aggressive one for a more natural sound.",
         "tools": [
-          "VCA 压缩器",
-          "多段压缩器",
-          "齿音消除器",
-          "限制器"
+          "VCA Compressor",
+          "Multiband Compressor",
+          "De-esser",
+          "Limiter"
         ]
       },
       "3": {
-        "title": "空间",
-        "shortDesc": "深度、混响和立体声声像。",
-        "desc": "我们创造歌曲的 3D 世界。我们将乐器放置在立体声场中（声像），并使用混响和延迟增加深度。",
-        "tip": "保持底鼓、贝斯和主唱在中心。将节奏和和声元素移动到两侧。",
+        "title": "Spatial",
+        "shortDesc": "Depth, reverberation, and stereo image.",
+        "desc": "We create the song's 3D world. We place instruments in the stereo field (panning) and add depth with reverb and delay.",
+        "tip": "Keep the kick, bass, and lead vocal in the center. Move rhythmic and harmonic elements to the sides.",
         "tools": [
-          "板式/大厅混响",
-          "立体声延迟",
-          "立体声扩展器",
-          "声像旋钮"
+          "Reverb Plate/Hall",
+          "Stereo Delay",
+          "Stereo Widener",
+          "Pan Pot"
         ]
       },
       "4": {
-        "title": "母带处理",
-        "shortDesc": "响度、最终凝聚力和交付格式。",
-        "desc": "最终润色。我们的目标是具有竞争力的商业响度、整体音色平衡，并确保歌曲在任何播放系统（汽车、手机、俱乐部）上听起来都很好。",
-        "tip": "始终将您的母带与同类型的参考歌曲进行比较（A/B 测试）。",
+        "title": "Mastering",
+        "shortDesc": "Loudness, final cohesion, and delivery formats.",
+        "desc": "The final polish. We aim for competitive commercial loudness, global tonal balance, and ensure the song translates well to any playback system (car, phone, club).",
+        "tip": "Always compare your master with reference songs of the same genre (A/B testing).",
         "tools": [
-          "母带总线压缩",
-          "线性 EQ",
-          "最大化器",
-          "抖动"
+          "Master Bus Comp",
+          "Linear EQ",
+          "Maximizer",
+          "Dithering"
         ]
       }
     }
   },
   "TechSpecsSection": {
-    "title": "力量 & 精度",
-    "internalProcessing": "内部处理",
-    "floatDepth": "浮点深度",
-    "processingStages": "处理阶段",
-    "latency": "延迟 (云端)"
+    "title": "Power & Precision",
+    "internalProcessing": "Internal Processing",
+    "floatDepth": "Float Depth",
+    "processingStages": "Processing Stages",
+    "latency": "Latency (Cloud)"
   },
   "Footer": {
-    "terms": "条款",
-    "privacy": "隐私",
-    "cookies": "Cookie",
-    "contact": "联系",
+    "terms": "Terms",
+    "privacy": "Privacy",
+    "cookies": "Cookies",
+    "contact": "Contact",
     "rss": "RSS",
     "copyright": "© 2025 Piroola."
   },
   "AuthModal": {
-    "seamlessMastering": "无缝母带处理",
-    "experiencePower": "体验先进 AI 母带处理引擎的力量。",
-    "signIn": "登录",
-    "createAccount": "创建账户",
-    "signInGoogle": "使用 Google 登录",
-    "or": "或",
-    "fullName": "全名",
-    "email": "电子邮件地址",
-    "password": "密码",
-    "forgotPassword": "忘记密码？",
-    "processing": "处理中...",
-    "newUser": "新用户？",
-    "register": "注册 +",
-    "alreadyHaveAccount": "已有账户？"
+    "seamlessMastering": "Seamless Mastering",
+    "experiencePower": "Experience the power of an advanced AI mastering engine.",
+    "signIn": "Sign In",
+    "createAccount": "Create Account",
+    "signInGoogle": "Sign in with Google",
+    "or": "or",
+    "fullName": "Full Name",
+    "email": "Email Address",
+    "password": "Password",
+    "forgotPassword": "Forgot password?",
+    "processing": "Processing...",
+    "newUser": "New user?",
+    "register": "Register +",
+    "alreadyHaveAccount": "Already have an account?"
   },
   "MixTool": {
-    "loadingStudio": "加载工作室...",
-    "loadingResult": "加载结果...",
-    "spaceDepthSettings": "空间 & 深度设置",
-    "uploadMixConfig": "上传 & 混音配置",
+    "title": "Upload Center",
+    "subtitle": "Drag your audio files to start. Our AI engine will automatically analyze, mix, and master your tracks.",
+    "loadingStudio": "Loading studio...",
+    "loadingResult": "Loading result...",
+    "spaceDepthSettings": "Space & Depth Settings",
+    "uploadMixConfig": "Upload & Mix Configuration",
     "uploadSteps": {
-      "stepCounter": "? {current}/3 ?",
+      "stepCounter": "Step {current}/3",
       "labels": {
-        "uploadTracks": "1/3 ??????",
-        "selectProfiles": "2/3 ????????",
-        "busSelection": "3/3 ????"
+        "uploadTracks": "1/3 Upload your audio tracks",
+        "selectProfiles": "2/3 Select stems profile",
+        "busSelection": "3/3 Bus selection"
       },
       "notes": {
-        "profiles": "???????????????????",
-        "buses": "????????????????"
+        "profiles": "Assign each stem a profile before proceeding.",
+        "buses": "Fine-tune bus routing and confirm to jump to the pipeline."
       },
-      "buttons": {
-        "confirmProfiles": "????",
-        "confirmBuses": "??????",
-        "back": "??"
-      },
-      "messages": {
-        "mixReady": "????????????“Generar Mix IA”??????????"
-      }
+    "buttons": {
+      "confirmProfiles": "Confirm profiles",
+      "confirmBuses": "Confirm bus selection",
+      "back": "Back"
+    }
+    ,
+    "messages": {
+      "mixReady": "Tracks prepared for mixing; press Generate Mix IA to start mixing and mastering."
+    }
     },
-    "songMode": "歌曲（母带处理）",
-    "stemsMode": "分轨（完整混音）",
-    "songModeWarning": "歌曲模式只需要一个 WAV/AIFF/MP3 文件。",
-    "selectionWarning": "您只选择了一个分轨。如果您想进行歌曲母带处理，请选择歌曲（母带处理）。",
-    "pipelineSteps": "管道步骤",
-    "enabled": "已启用",
-    "pipelineStepsDesc": "为此作业启用或禁用管道阶段。",
-    "all": "全部",
-    "none": "无",
-    "generateMix": "生成 AI 混音",
-    "processing": "处理中...",
-    "waitingQueue": "排队等候中…",
-    "runningStage": "正在运行阶段",
+    "songMode": "Song (Mastering)",
+    "stemsMode": "Stems (Full Mix)",
+    "songModeWarning": "Song mode requires exactly one WAV/AIFF/MP3 file.",
+    "selectionWarning": "You have selected only one stem. If you want to master a song, select Song (Mastering).",
+    "pipelineSteps": "Pipeline steps",
+    "enabled": "enabled",
+    "pipelineStepsDesc": "Enable or disable pipeline stages for this job.",
+    "all": "All",
+    "none": "None",
+    "generateMix": "Generate AI Mix",
+    "processing": "Processing...",
+    "waitingQueue": "Waiting in queue…",
+    "runningStage": "Running stage",
     "stage": {
       "S0_SESSION_FORMAT": {
-        "title": "会话格式 & 路由",
-        "description": "标准化采样率/位深度并分配逻辑总线以干净地开始。"
+        "title": "Session format & routing",
+        "description": "Normalizes samplerate/bit depth and assigns logical buses to start clean."
       },
       "S1_STEM_DC_OFFSET": {
-        "title": "直流偏移检查",
-        "description": "检测并修正每个分轨上的直流偏移。"
+        "title": "DC offset check",
+        "description": "Detects and fixes DC offsets on each stem."
       },
       "S1_STEM_WORKING_LOUDNESS": {
-        "title": "工作响度",
-        "description": "根据乐器配置文件匹配每个分轨的工作电平。"
+        "title": "Working loudness",
+        "description": "Matches working level per stem based on its instrument profile."
       },
       "S1_KEY_DETECTION": {
-        "title": "调性检测",
-        "description": "估计歌曲的整体调性和音阶。"
+        "title": "Key detection",
+        "description": "Estimates the song's global key and scale."
       },
       "S1_VOX_TUNING": {
-        "title": "人声调音",
-        "description": "在尊重检测到的调性的同时调整主唱。"
+        "title": "Vocal tuning",
+        "description": "Tunes the lead vocal while respecting the detected key."
       },
       "S1_MIXBUS_HEADROOM": {
-        "title": "混音总线动态余量",
-        "description": "调整整体动态余量以便为处理留出空间。"
+        "title": "Mixbus headroom",
+        "description": "Adjusts global headroom to leave space for processing."
       },
       "S2_GROUP_PHASE_DRUMS": {
-        "title": "相位对齐（鼓）",
-        "description": "对齐鼓和打击乐器的相位/极性。"
+        "title": "Phase alignment (drums)",
+        "description": "Aligns phase/polarity across drums and percussion."
       },
       "S3_MIXBUS_HEADROOM": {
-        "title": "混音总线动态余量",
-        "description": "调整整体动态余量以便为处理留出空间。"
+        "title": "Mixbus headroom",
+        "description": "Adjusts global headroom to leave space for processing."
       },
       "S3_LEADVOX_AUDIBILITY": {
-        "title": "主唱可听度",
-        "description": "平衡主唱与静态混音。"
+        "title": "Lead vocal audibility",
+        "description": "Balances the lead vocal against the static mix."
       },
       "S4_STEM_HPF_LPF": {
-        "title": "每分轨 HPF/LPF",
-        "description": "根据乐器配置文件应用每分轨的高通/低通滤波器。"
+        "title": "HPF/LPF per stem",
+        "description": "Applies high/low-pass filters per stem based on instrument profile."
       },
       "S4_STEM_RESONANCE_CONTROL": {
-        "title": "共振控制",
-        "description": "检测并驯服每个分轨上的窄共振。"
+        "title": "Resonance control",
+        "description": "Detects and tames narrow resonances on each stem."
       },
       "S5_STEM_DYNAMICS_GENERIC": {
-        "title": "分轨动态",
-        "description": "每轨通用动态控制（压缩/门限）。"
+        "title": "Stem dynamics",
+        "description": "Generic per-track dynamics control (compression/gate)."
       },
       "S5_LEADVOX_DYNAMICS": {
-        "title": "主唱动态",
-        "description": "主唱的压缩和动态控制。"
+        "title": "Lead vocal dynamics",
+        "description": "Compression and dynamics control for the lead vocal."
       },
       "S5_BUS_DYNAMICS_DRUMS": {
-        "title": "鼓总线动态",
-        "description": "鼓的总线压缩以获得冲击力和凝聚力。"
+        "title": "Drum bus dynamics",
+        "description": "Drum-bus compression on drums for punch and glue."
       },
       "S6_BUS_REVERB_STYLE": {
-        "title": "总线混响 & 空间",
-        "description": "按总线系列进行风格感知的混响和空间分配。"
+        "title": "Bus reverb & space",
+        "description": "Style-aware reverb and space assignment per bus family."
       },
       "S6_MANUAL_CORRECTION": {
-        "title": "手动修正",
-        "description": "Piroola Studio 中的手动调整。"
+        "title": "Manual Correction",
+        "description": "Manual adjustments in Piroola Studio."
       },
       "S7_MIXBUS_TONAL_BALANCE": {
-        "title": "混音总线音色平衡",
-        "description": "宽带 EQ 以匹配目标风格的音色平衡。"
+        "title": "Mixbus tonal balance",
+        "description": "Broad EQ to match the tonal balance to the target style."
       },
       "S8_MIXBUS_COLOR_GENERIC": {
-        "title": "混音总线色彩",
-        "description": "混音总线上的温和饱和度/色彩以获得凝聚力。"
+        "title": "Mixbus color",
+        "description": "Gentle saturation/color on the mixbus for cohesion."
       },
       "S9_MASTER_GENERIC": {
-        "title": "母带准备",
-        "description": "最终质量控制前的预母带调整（电平和平衡）。"
+        "title": "Master prep",
+        "description": "Pre-master adjustment (level and balance) before final QC."
       },
       "S10_MASTER_FINAL_LIMITS": {
-        "title": "母带最终质检",
-        "description": "带有微调的 TP/LUFS/相关性的最终检查。"
+        "title": "Master final QC",
+        "description": "Final check of TP/LUFS/correlation with micro-adjustments."
       },
       "S11_REPORT_GENERATION": {
-        "title": "报告生成",
-        "description": "生成最终流程报告。"
+        "title": "Report Generation",
+        "description": "Generation of the final process report."
       }
     },
-    "stemsProfile": "选择分轨配置文件",
-    "stemsProfileDesc": "标记每个分轨在混音中的功能。稍后我们将使用这些配置文件来路由总线。",
-    "spaceDepthTitle": "每总线空间 / 深度",
-    "spaceDepthDesc": "按总线系列分配混响/空间风格以指导后续阶段。",
+    "stageGroups": {
+      "technicalPreparation": "Technical Preparation",
+      "technicalCalibrationEq": "Technical Calibration & EQ",
+      "phaseAlignment": "Phase & Polarity Alignment",
+      "mixBusPrep": "MixBus Prep",
+      "spectralCleanup": "Spectral Cleanup",
+      "dynamics": "Dynamics",
+      "space": "Space & Depth",
+      "mastering": "MASTERING",
+      "manualCorrection": "Manual Correction",
+      "other": "Other"
+    },
+    "stemsProfile": "Select stems profile",
+    "stemsProfileDesc": "Label each stem with its function in the mix. Later we will use these profiles to route buses.",
+    "spaceDepthTitle": "Space / Depth by bus",
+    "spaceDepthDesc": "Assign a reverb/space style per bus family to guide later stages.",
     "spaceDepthBuses": {
       "drums": {
-        "label": "鼓总线",
-        "description": "架子鼓、编曲鼓、循环等。"
+        "label": "Drums bus",
+        "description": "Drum kit, programmed drums, loops, etc."
       },
       "percussion": {
-        "label": "打击乐总线",
-        "description": "额外打击乐、拍手、沙锤等。"
+        "label": "Percussion bus",
+        "description": "Additional percussion, claps, shakers, etc."
       },
       "bass": {
-        "label": "贝斯总线",
-        "description": "电贝司、合成贝司、超低音。"
+        "label": "Bass bus",
+        "description": "Electric bass, synth bass, sub-bass."
       },
       "guitars": {
-        "label": "吉他总线",
-        "description": "原声吉他和电吉他。"
+        "label": "Guitars bus",
+        "description": "Acoustic and electric guitars."
       },
       "keys_synths": {
-        "label": "键盘 / 合成器总线",
-        "description": "钢琴、Rhodes、铺底、合成器。"
+        "label": "Keys / Synths bus",
+        "description": "Pianos, Rhodes, pads, synthesizers."
       },
       "lead_vocal": {
-        "label": "主唱总线",
-        "description": "主唱。"
+        "label": "Lead vocal bus",
+        "description": "Lead vocal."
       },
       "backing_vocals": {
-        "label": "和声总线",
-        "description": "和声、配音、和弦。"
+        "label": "Backing vocals bus",
+        "description": "Backing vocals, doubles, harmonies."
       },
       "fx": {
-        "label": "特效总线",
-        "description": "上升音效、撞击声、人声切片、创意特效。"
+        "label": "FX / Ear candy bus",
+        "description": "Risers, impacts, vocal chops, creative FX."
       },
       "ambience": {
-        "label": "氛围 / 大气总线",
-        "description": "氛围、大气、房间麦克风、背景特效。"
+        "label": "Ambience / Atmos bus",
+        "description": "Ambiences, atmospheres, room mics, background FX."
       },
       "other": {
-        "label": "其他总线",
-        "description": "未归类于之前类别的任何分轨。"
+        "label": "Other bus",
+        "description": "Any stem not classified in the previous categories."
       }
     },
-    "auto": "自动",
-    "autoRecommended": "自动检测（推荐）",
+    "auto": "Auto",
+    "autoRecommended": "Auto-detect (recommended)",
     "profileOptions": {
-      "Kick": "底鼓（主要底鼓）",
-      "Snare": "军鼓（主要军鼓）",
-      "Percussion": "打击乐（拍手、邦戈...）",
-      "Bass_Electric": "电贝司 / 合成贝司",
-      "Acoustic_Guitar": "原声吉他",
-      "Electric_Guitar_Rhythm": "电吉他",
-      "Keys_Piano": "钢琴 / 键盘",
-      "Synth_Pads": "合成器铺底",
-      "Lead_Vocal_Melodic": "主唱（旋律）",
-      "Lead_Vocal_Rap": "主唱（说唱）",
-      "Backing_Vocals": "和声",
-      "FX_EarCandy": "特效 / 听觉糖果",
-      "Ambience_Atmos": "氛围 / 大气",
-      "Other": "其他"
+      "Kick": "Kick (main kick drum)",
+      "Snare": "Snare (main snare)",
+      "Percussion": "Percussion (palmas, bongos...)",
+      "Bass_Electric": "Electric / synth bass",
+      "Acoustic_Guitar": "Acoustic guitar",
+      "Electric_Guitar_Rhythm": "Electric guitar",
+      "Keys_Piano": "Piano / keys",
+      "Synth_Pads": "Synth pads",
+      "Lead_Vocal_Melodic": "Lead vocal (melodic)",
+      "Lead_Vocal_Rap": "Lead vocal (rap)",
+      "Backing_Vocals": "Backing vocals",
+      "FX_EarCandy": "FX / ear candy",
+      "Ambience_Atmos": "Ambience / atmos",
+      "Other": "Other"
     },
     "styleOptions": {
-      "Flamenco_Rumba": "弗拉门戈 / 伦巴",
-      "EDM_Club": "EDM / 俱乐部",
-      "Acoustic_SingerSongwriter": "原声 / 唱作人"
+      "Flamenco_Rumba": "Flamenco / Rumba",
+      "EDM_Club": "EDM / Club",
+      "Acoustic_SingerSongwriter": "Acoustic / Singer-songwriter"
     },
     "result": {
-      "originalMix": "原始混音",
-      "aiMix": "AI 混音 & 母带处理（结果）",
-      "originalDesc": "原始混音（处理前）。",
-      "aiDesc": "AI 混音 & 母带处理（结果）。收听处理后的最终混音。",
-      "backToResult": "返回结果",
-      "listenOriginal": "收听原始",
-      "viewReport": "查看完整报告",
-      "loadingReport": "加载报告...",
-      "finalReport": "最终混音报告",
-      "close": "关闭",
-      "retry": "重试加载报告",
-      "unavailable": "报告数据不可用。",
-      "share": "分享",
-      "shareMix": "分享您的混音",
-      "shareMixDesc": "复制下面的链接与客户或朋友分享此混音。该链接提供只读访问权限以收听结果。",
-      "copy": "复制"
+      "originalMix": "Original mix",
+      "aiMix": "AI mix & mastering (result)",
+      "originalDesc": "Original mix (before processing).",
+      "aiDesc": "AI mix & mastering (result). Listen to the final mix after processing.",
+      "backToResult": "Back to Result",
+      "listenOriginal": "Listen to Original",
+      "viewReport": "View Full Report",
+      "loadingReport": "Loading Report...",
+      "finalReport": "Final Mix Report",
+      "close": "Close",
+      "retry": "Retry loading report",
+      "unavailable": "Report data is not available.",
+      "share": "Share Mix",
+      "shareMix": "Share Your Mix",
+      "shareMixDesc": "Copy the link below to share this mix with clients or friends. The link provides read-only access to listen to the result.",
+      "copy": "Copy"
+    },
+    "share": {
+      "invalidLink": "Invalid or expired link.",
+      "notFound": "Shared mix not found.",
+      "sharedMixTitle": "Shared AI Mix",
+      "sharedMixDesc": "Listen to this track mixed and mastered by Piroola AI.",
+      "aiMix": "AI Mix & Master",
+      "originalMix": "Original Mix (Reference)",
+      "createYourOwn": "Create your own mix with Piroola"
     }
   },
   "Studio": {
-    "title": "Piroola 工作室",
-    "project": "项目",
-    "stemsZip": "分轨 (ZIP)",
-    "mixdown": "混音",
-    "downloading": "下载中...",
-    "finishHere": "在此结束（无母带处理）",
-    "proceedMastering": "继续进行母带处理",
-    "tracks": "轨道",
-    "masterOut": "主输出",
-    "monitor": "监听",
-    "selectedChannel": "已选通道",
-    "noTrackSelected": "未选择轨道",
-    "parametricEq": "参数 EQ",
-    "compressor": "压缩器",
-    "panning": "声像",
-    "reverb": "混响",
-    "loading": "加载 Piroola 工作室...",
-    "loadingStems": "加载分轨和波形",
-    "selectTrack": "选择一个轨道以查看波形"
+    "title": "Piroola Studio",
+    "project": "Project",
+    "stemsZip": "Stems (ZIP)",
+    "mixdown": "Mixdown",
+    "downloading": "Downloading...",
+    "finishHere": "Finish here (not Mastering)",
+    "proceedMastering": "Proceed to Mastering",
+    "tracks": "Tracks",
+    "masterOut": "MASTER OUT",
+    "monitor": "MONITOR",
+    "selectedChannel": "Selected Channel",
+    "noTrackSelected": "No Track Selected",
+    "parametricEq": "Parametric EQ",
+    "compressor": "Compressor",
+    "panning": "Panning",
+    "reverb": "Reverb",
+    "loading": "Loading Piroola Studio...",
+    "loadingStems": "Loading stems and waveform",
+    "selectTrack": "Select a track to view waveform"
   },
   "FAQ": {
-    "title": "常见问题",
-    "subtitle": "关于我们 AI 混音和母带处理服务您需要知道的一切。",
+    "title": "Frequently Asked Questions",
+    "subtitle": "Everything you need to know about our AI mixing and mastering service.",
     "items": {
       "0": {
-        "question": "什么是 Piroola？",
-        "answer": "Piroola 是一项先进的在线服务，使用人工智能混合和母带处理您的多轨音频文件。它分析您的分轨并应用专业的录音室技术，在几分钟内提供广播质量的曲目。"
+        "question": "What is Piroola?",
+        "answer": "Piroola is an advanced online service that uses Artificial Intelligence to mix and master your multi-track audio files. It analyzes your stems and applies professional studio techniques to deliver radio-ready quality tracks in minutes."
       },
       "1": {
-        "question": "AI 混音如何运作？",
-        "answer": "我们的 AI 管道分析每个分轨的频率内容、动态和音色平衡。然后，它应用修正处理（EQ、压缩），平衡电平，将乐器放置在立体声场中，并添加混响等效果，以创建针对您的流派量身定制的连贯混音。"
+        "question": "How does the AI mixing work?",
+        "answer": "Our AI pipeline analyzes each stem for frequency content, dynamics, and tonal balance. It then applies corrective processing (EQ, compression), balances levels, places instruments in the stereo field, and adds effects like reverb to create a cohesive mix, tailored to your genre."
       },
       "2": {
-        "question": "支持哪些文件格式？",
-        "answer": "我们支持大多数标准音频格式，包括 WAV、AIFF、FLAC 和 MP3。为了获得最佳效果，我们建议上传高质量的未压缩 WAV 或 AIFF 文件（24 位 / 44.1kHz 或更高）。"
+        "question": "What file formats are supported?",
+        "answer": "We support most standard audio formats including WAV, AIFF, FLAC, and MP3. For the best results, we recommend uploading high-quality uncompressed WAV or AIFF files (24-bit / 44.1kHz or higher)."
       },
       "3": {
-        "question": "我的音乐安全吗？",
-        "answer": "是的，您的安全是我们的首要任务。您的文件在我们的服务器上安全处理，并在短时间后自动删除。我们不对您的音乐主张任何权利；您保留作品的 100% 所有权。"
+        "question": "Is my music secure?",
+        "answer": "Yes, your security is our priority. Your files are processed securely on our servers and are automatically deleted after a short period. We do not claim any rights to your music; you retain 100% ownership of your work."
       },
       "4": {
-        "question": "该过程需要多长时间？",
-        "answer": "大多数混音在几分钟内完成，具体取决于分轨数量和曲目长度。您将看到一个进度条，指示分析和混音过程的每个阶段。"
+        "question": "How long does the process take?",
+        "answer": "Most mixes are completed within a few minutes, depending on the number of stems and the length of the track. You will see a progress bar indicating each step of the analysis and mixing process."
       },
       "5": {
-        "question": "我可以上传分轨吗？",
-        "answer": "当然。实际上，我们的服务就是为分轨设计的！您可以上传单独的乐器轨道（如底鼓、军鼓、贝斯、人声），让我们的 AI 将它们完美地混合在一起。"
+        "question": "Can I upload stems?",
+        "answer": "Absolutely. In fact, our service is designed for stems! You can upload individual instrument tracks (like kick, snare, bass, vocals) to allow our AI to mix them together perfectly."
       },
       "6": {
-        "question": "混音和母带处理有什么区别？",
-        "answer": "混音涉及平衡单独的轨道（分轨）以形成一首歌曲，包括调整电平、声像和添加效果。母带处理是润色混音歌曲的最后一步，确保其声音连贯且响度足以进行商业发行。"
+        "question": "What is the difference between mixing and mastering?",
+        "answer": "Mixing involves balancing individual tracks (stems) to form a song, including adjusting levels, panning, and adding effects. Mastering is the final step that polishes the mixed song, ensuring it sounds consistent and loud enough for commercial release."
       },
       "7": {
-        "question": "我拥有混音曲目的权利吗？",
-        "answer": "是的！您保留原创音乐和 Piroola 制作的最终混音的完整版权和所有权。您可以在任何流媒体平台上发布您的曲目，而无需向我们支付版税。"
+        "question": "Do I own the rights to the mixed track?",
+        "answer": "Yes! You maintain full copyright and ownership of your original music and the final mix produced by Piroola. You can release your tracks on any streaming platform without paying us royalties."
       },
       "8": {
-        "question": "如果我不满意结果怎么办？",
-        "answer": "我们提供所应用处理的详细报告。如果结果不是您所期望的，您可以尝试调整输入分轨（例如，清理噪音）或确保文件标记正确，然后重新运行该过程。"
+        "question": "What if I'm not satisfied with the result?",
+        "answer": "We provide a detailed report of the processing applied. If the result isn't what you expected, you can try adjusting the input stems (e.g., cleaning up noise) or ensuring your files are correctly labeled, and run the process again."
       },
       "9": {
-        "question": "有文件大小限制吗？",
-        "answer": "目前，我们支持音乐制作分轨典型的合理文件大小。如果您遇到极大项目的问题，请考虑以标准采样率（例如 44.1kHz 或 48kHz）导出您的分轨。"
+        "question": "Is there a file size limit?",
+        "answer": "Currently, we support reasonable file sizes typical for music production stems. If you encounter issues with extremely large projects, consider exporting your stems at a standard sample rate (e.g., 44.1kHz or 48kHz)."
       },
       "10": {
-        "question": "如何下载我的结果？",
-        "answer": "处理完成后，将出现一个“下载”按钮。您可以直接将最终混音和母带处理后的立体声文件下载到您的设备。"
+        "question": "How do I download my results?",
+        "answer": "Once the processing is complete, a 'Download' button will appear. You can download the final mixed and mastered stereo file directly to your device."
       },
       "11": {
-        "question": "我可以在移动设备上使用 Piroola 吗？",
-        "answer": "是的，我们的网站完全响应式，可在移动设备上运行。但是，为了管理多个分轨文件，台式电脑可能会提供更流畅的工作流程。"
+        "question": "Can I use Piroola on mobile?",
+        "answer": "Yes, our website is fully responsive and works on mobile devices. However, for managing multiple stem files, a desktop computer might offer a smoother workflow."
       }
     }
   },
   "Pricing": {
-    "title": "定价",
-    "subtitle": "为您旅程的每个阶段提供的定价计划",
-    "description": "为您的音频制作需求选择完美的计划。从演示到专业发行，我们都能满足您的需求。",
-    "monthlyBilling": "按月计费",
-    "yearlyBilling": "按年计费",
-    "save20": "节省 ~20%",
-    "month": "月",
-    "billedYearly": "按年计费",
-    "mostPopular": "最受欢迎",
-    "startForFree": "免费开始",
-    "getPlus": "获取 Plus",
-    "getPro": "获取 Pro",
+    "title": "Pricing",
+    "subtitle": "Pricing plans for every stage of your journey",
+    "description": "Choose the perfect plan for your audio production needs. From demos to professional releases, we have you covered.",
+    "monthlyBilling": "Monthly billing",
+    "yearlyBilling": "Yearly billing",
+    "save20": "Save ~20%",
+    "month": "month",
+    "billedYearly": "Billed yearly",
+    "mostPopular": "Most Popular",
+    "startForFree": "Start for Free",
+    "getPlus": "Get Plus",
+    "getPro": "Get Pro",
     "Tiers": {
       "free": {
         "name": "Free",
@@ -975,202 +1032,229 @@
     }
   },
   "Cookie": {
-    "title": "Cookie 政策",
-    "lastUpdated": "最后更新：{date}",
+    "title": "Cookie Policy",
+    "lastUpdated": "Last updated: {date}",
     "sections": {
       "0": {
-        "title": "1. 什么是 Cookie",
-        "content": "Cookie 是您浏览网站时放置在您的计算机或移动设备上的小文本文件。它们被广泛用于使网站工作，或更有效地工作，以及向网站所有者提供信息。"
+        "title": "1. What Are Cookies",
+        "content": "Cookies are small text files that are placed on your computer or mobile device when you browse websites. They are widely used to make websites work, or work more efficiently, as well as to provide information to the owners of the site."
       },
       "1": {
-        "title": "2. 我们如何使用 Cookie",
-        "content": "我们使用 Cookie 的原因详见下文。不幸的是，在大多数情况下，没有行业标准选项可以在不完全禁用它们添加到本网站的功能和特性的情况下禁用 Cookie。如果您不确定是否需要它们，建议您保留所有 Cookie，以防它们用于提供您使用的服务。"
+        "title": "2. How We Use Cookies",
+        "content": "We use cookies for a variety of reasons detailed below. Unfortunately, in most cases there are no industry standard options for disabling cookies without completely disabling the functionality and features they add to this site. It is recommended that you leave on all cookies if you are not sure whether you need them or not in case they are used to provide a service that you use."
       },
       "2": {
-        "title": "3. 我们设置的 Cookie",
+        "title": "3. The Cookies We Set",
         "list": {
-          "0": "<strong>基本 Cookie：</strong> 这些 Cookie 对于网站运行是必需的，无法在我们的系统中关闭。它们通常仅根据您做出的相当于服务请求的操作（例如设置您的隐私首选项、登录或填写表格）进行设置。",
-          "1": "<strong>功能性 Cookie：</strong> 这些 Cookie 使网站能够提供增强的功能和个性化。它们可能由我们或我们已将其服务添加到我们页面的第三方提供商设置。",
-          "2": "<strong>分析 Cookie：</strong> 我们使用 Google Analytics 来了解我们的访问者如何与网站互动。这有助于我们改善用户体验。这些 Cookie 跟踪诸如您在网站上花费的时间和您访问的页面等内容。"
+          "0": "<strong>Essential Cookies:</strong> These cookies are necessary for the website to function and cannot be switched off in our systems. They are usually only set in response to actions made by you which amount to a request for services, such as setting your privacy preferences, logging in or filling in forms.",
+          "1": "<strong>Functionality Cookies:</strong> These cookies enable the website to provide enhanced functionality and personalization. They may be set by us or by third party providers whose services we have added to our pages.",
+          "2": "<strong>Analytics Cookies:</strong> We use Google Analytics to understand how our visitors interact with the website. This helps us improve the user experience. These cookies track things such as how long you spend on the site and the pages that you visit."
         }
       },
       "3": {
-        "title": "4. 第三方 Cookie",
-        "content": "在某些特殊情况下，我们还会使用受信任的第三方提供的 Cookie。以下部分详细介绍了您通过本网站可能会遇到的第三方 Cookie。",
-        "p2": "本网站使用 Google Analytics，这是网络上最广泛和最受信任的分析解决方案之一，用于帮助我们了解您如何使用本网站以及我们如何改善您的体验。这些 Cookie 可能会跟踪诸如您在网站上花费的时间和您访问的页面等内容，以便我们可以继续制作引人入胜的内容。"
+        "title": "4. Third Party Cookies",
+        "content": "In some special cases we also use cookies provided by trusted third parties. The following section details which third party cookies you might encounter through this site.",
+        "p2": "This site uses Google Analytics which is one of the most widespread and trusted analytics solutions on the web for helping us to understand how you use the site and ways that we can improve your experience. These cookies may track things such as how long you spend on the site and the pages that you visit so we can continue to produce engaging content."
       },
       "4": {
-        "title": "5. 管理 Cookie",
-        "content": "您可以通过调整浏览器上的设置来阻止设置 Cookie（请参阅您的浏览器帮助以了解如何执行此操作）。请注意，禁用 Cookie 将影响本网站以及您访问的许多其他网站的功能。禁用 Cookie 通常还会导致禁用本网站的某些功能和特性。因此，建议您不要禁用 Cookie。"
+        "title": "5. Managing Cookies",
+        "content": "You can prevent the setting of cookies by adjusting the settings on your browser (see your browser Help for how to do this). Be aware that disabling cookies will affect the functionality of this and many other websites that you visit. Disabling cookies will usually result in also disabling certain functionality and features of this site. Therefore it is recommended that you do not disable cookies."
       },
       "5": {
-        "title": "6. 联系方式",
-        "content": "如果您对本 Cookie 政策有任何疑问，请通过以下方式联系我们：<br /><span class='text-teal-400'>privacy@audioalchemy.com</span>"
+        "title": "6. Contact Details",
+        "content": "If you have any questions about this cookie policy, please contact us at: <br /><span class='text-teal-400'>privacy@audioalchemy.com</span>"
       }
     }
   },
   "UploadDropzone": {
-    "uploadSong": "上传您的歌曲",
-    "uploadStems": "上传您的分轨",
-    "songModeDesc": "母带处理单个立体声混音。",
-    "stemsModeDesc": "上传单独的轨道以进行完整的 AI 混音。",
-    "dragDropSong": "将您的歌曲拖放到此处，或单击以选择文件",
-    "dragDropStems": "将分轨拖放到此处，或单击以选择文件",
-    "supportedFormats": "支持的格式：WAV, AIFF, MP3",
-    "filesSelected": "已选择 {count} 个音频文件"
+    "uploadSong": "Upload Your Song",
+    "uploadStems": "Upload Your Stems",
+    "songModeDesc": "Master a single stereo bounce.",
+    "stemsModeDesc": "Upload individual tracks for a full AI mix.",
+    "dragDropSong": "Drag & drop your song here, or click to select a file",
+    "dragDropStems": "Drag & drop stems here, or click to select files",
+    "supportedFormats": "Supported formats: WAV, AIFF, MP3",
+    "filesSelected": "{count} audio file{count, plural, =1 {} other {s}} selected"
   },
   "PipelinePhases": {
     "inputMetadata": {
-      "title": "输入 & 元数据",
-      "body": "我们通过组织所有上传的文件并标准化格式、采样率和基本元数据来准备您的会话，以便管道的其余部分可以一致地工作。"
+      "title": "Input & Metadata",
+      "body": "We prepare your session by organizing all uploaded files and normalizing formats, sample rates and basic metadata so the rest of the pipeline can work consistently."
     },
     "technicalPreparation": {
-      "title": "技术准备",
-      "body": "我们修复每个分轨上的基本技术问题：直流偏移、工作响度和初始动态余量，以确保混音有一个干净、可靠的起点。"
+      "title": "Technical Preparation",
+      "body": "We fix basic technical issues on each stem: DC offset, working loudness and initial headroom to ensure a clean, reliable starting point for mixing."
     },
     "phasePolarityAlignment": {
-      "title": "相位 & 极性对齐",
-      "body": "我们分析多麦克风组（如鼓）以对齐相位并校正极性，避免抵消并恢复冲击力和低频清晰度。"
+      "title": "Phase & Polarity Alignment",
+      "body": "We analyze multi-mic groups (like drums) to align phase and correct polarity, avoiding cancellations and restoring impact and low-end clarity."
     },
     "staticMixRouting": {
-      "title": "静态混音 & 路由",
-      "body": "我们构建静态平衡和总线路由，放置推子和声像位置，以便在任何繁重处理之前都能清晰地听到所有元素。"
+      "title": "Static Mix & Routing",
+      "body": "We build a static balance and bus routing, placing faders and pan positions so that all elements are heard clearly before any heavy processing."
     },
     "spectralCleanup": {
-      "title": "频谱清理",
-      "body": "我们使用高通滤波器和温和的陷波滤波器清洁每个分轨，以去除隆隆声和刺耳的共振，释放混音中的空间。"
+      "title": "Spectral Cleanup",
+      "body": "We clean each stem using high-pass filters and gentle notch filters to remove rumble and harsh resonances, freeing up space in the mix."
     },
     "dynamicsLevelAutomation": {
-      "title": "动态 & 电平自动化",
-      "body": "我们使用压缩、限制和电平自动化控制动态，保持表演的表现力，但防止峰值跳出混音。"
+      "title": "Dynamics & Level Automation",
+      "body": "We control dynamics using compression, limiting and level automation, keeping performances expressive but preventing peaks from jumping out of the mix."
     },
     "spaceDepthByBuses": {
-      "title": "按总线的空间 & 深度",
-      "body": "我们将乐器发送到专用的混响和氛围总线，将它们放置在声场的更近或更远位置，以营造深度感和空间感。"
+      "title": "Space & Depth by Buses",
+      "body": "We send instruments to dedicated reverb and ambience buses, placing them closer or farther in the soundstage to create a sense of depth and space."
     },
     "multibandEqTonalBalance": {
-      "title": "多段 EQ & 音色平衡",
-      "body": "我们微调整体频谱平衡，使混音感觉自然并在不同的播放系统上转换良好。"
+      "title": "Multiband EQ & Tonal Balance",
+      "body": "We fine-tune the overall spectral balance so the mix feels natural and translates well across different playback systems."
     },
     "mixBusColor": {
-      "title": "混音总线色彩",
-      "body": "我们添加温和的饱和度和总线处理以将混音粘合在一起，增强温暖度、冲击力和感知响度，而不会破坏动态。"
+      "title": "Mix Bus Color",
+      "body": "We add gentle saturation and bus processing to glue the mix together, enhancing warmth, punch and perceived loudness without destroying dynamics."
     },
     "mastering": {
-      "title": "母带处理",
-      "body": "我们将曲目提升至目标响度，调整最终 EQ、立体声宽度和限制，使其准备好在流媒体平台上发布。"
+      "title": "Mastering",
+      "body": "We bring the track up to its target loudness, adjust final EQ, stereo width and limiting so it is ready for release on streaming platforms."
     },
     "masterStereoQc": {
-      "title": "母带立体声质检",
-      "body": "我们运行最终质量检查（真峰值、响度、立体声声像和平衡）以确保母带符合技术目标。"
+      "title": "Master Stereo QC",
+      "body": "We run final quality checks (true peak, loudness, stereo image and balance) to ensure the master meets the technical targets."
     },
     "reporting": {
-      "title": "报告",
-      "body": "我们生成技术报告并导出最终母带，以便您可以查看管道每个阶段所做的工作。"
+      "title": "Reporting",
+      "body": "We generate a technical report and export the final master so you can review what was done at each stage of the pipeline."
     }
   },
   "MixPipelinePanel": {
-    "title": "管道",
-    "description": "通过收听每个主要处理块后的累积结果，探索混音在每个阶段的演变过程。",
-    "loading": "正在加载管道定义...",
-    "error": "加载管道定义时出错。",
-    "activeContract": "活动合同："
+    "title": "Pipeline",
+    "description": "Explore how the mix evolves at each phase by listening to the cumulative result after every major processing block.",
+    "loading": "Loading pipeline definition...",
+    "error": "Error loading the pipeline definition.",
+    "activeContract": "Active contract:"
   },
   "Report": {
-    "title": "母带处理报告",
-    "downloadPdf": "下载 PDF",
-    "generatingPdf": "正在生成 PDF...",
-    "mixSummary": "混音摘要",
-    "interactiveAnalysis": "交互式分析",
-    "detailedStageReport": "详细阶段报告",
+    "title": "Mastering Report",
+    "downloadPdf": "Download PDF",
+    "downloadLogs": "Download Logs",
+    "generatingPdf": "Generating PDF...",
+    "mixSummary": "Mix Summary",
+    "interactiveAnalysis": "Interactive Analysis",
+    "detailedStageReport": "Detailed Stage Report",
+    "stageChangesTitle": "Key Changes",
+    "noChangesDetected": "No significant changes were applied in this stage.",
+    "metrics": {
+      "noiseFloor": "Noise Floor",
+      "inputLoudness": "Input Loudness (RMS)",
+      "inputTruePeak": "Input True Peak",
+      "harmonicDistortion": "Harmonic Distortion (THD)",
+      "sampleRate": "Sample Rate",
+      "targetTruePeakMax": "Target True Peak (Max)",
+      "targetTruePeakMin": "Target True Peak (Min)",
+      "dynamicRange": "Dynamic Range",
+      "clippingCount": "Clipped Samples",
+      "maxEqAdjustment": "Max EQ Adjustment per Band",
+      "eqCorrection": "EQ Correction Gains",
+      "avgGainReduction": "Avg. Gain Reduction",
+      "maxGainReduction": "Max Gain Reduction",
+      "compressionRatio": "Compression Ratio",
+      "compressionThreshold": "Compression Threshold",
+      "saturationDrive": "Saturation Drive Limit",
+      "saturationDriveUsed": "Saturation Applied",
+      "finalLoudness": "Integrated Loudness (LUFS)",
+      "finalTruePeak": "True Peak (dBTP)",
+      "limiterCeiling": "Limiter Ceiling",
+      "limiterGain": "Limiter Pre-Gain",
+      "limiterReduction": "Limiter Gain Reduction"
+    },
     "stages": {
       "S0_SESSION_FORMAT": {
-        "title": "输入与元数据",
-        "description": "会话初始化包含 {count} 个分轨。格式验证为 {format}。采样率标准化为 {sample_rate}Hz 以确保处理一致性。"
+        "title": "Input & Metadata",
+        "description": "Session started with <green>{count}</green> stems imported. Format verification and sample rate unification to <green>{sample_rate}</green>Hz have been performed to ensure maximum fidelity throughout the processing pipeline."
       },
       "S0_SEPARATE_STEMS": {
-        "title": "分轨分离",
-        "description": "处理上传的文件以准备用于混音的单独分轨。"
+        "title": "Stem Separation",
+        "description": "Processed uploaded files to prepare individual stems for mixing."
       },
       "S1_STEM_DC_OFFSET": {
-        "title": "直流偏移校正",
-        "description": "分析分轨中的不可听直流偏移噪声。已校正以确保最大动态余量。"
+        "title": "DC Offset Correction",
+        "description": "Deep technical analysis performed to detect inaudible DC offset noise. Corrected to ensure maximum headroom and prevent phase issues."
       },
       "S1_KEY_DETECTION": {
-        "title": "调性检测",
-        "description": "检测到全局调性为 {key}，置信度为 {confidence}%。"
+        "title": "Key Detection",
+        "description": "Harmonic analysis engine determined the global key is <green>{key}</green> with <green>{confidence}</green>% confidence. This informs melodic tuning and frequency resonance decisions."
       },
       "S1_VOX_TUNING": {
-        "title": "人声调音",
-        "description": "对人声应用音高修正以匹配检测到的调性 {key}。"
+        "title": "Vocal Tuning",
+        "description": "Transparent pitch correction applied to vocals to match the detected key of <green>{key}</green>, maintaining natural performance while ensuring perfect tuning."
       },
       "S1_MIXBUS_HEADROOM": {
-        "title": "总线动态余量",
-        "description": "调整总线动态余量至 {headroom_db}dB 以准备处理。"
+        "title": "Mixbus Headroom",
+        "description": "Initial mixbus gain structure adjusted to establish <green>{headroom_db}</green>dB safety headroom, providing dynamic space for subsequent processing."
       },
       "S1_STEM_WORKING_LOUDNESS": {
-        "title": "工作响度",
-        "description": "将分轨电平标准化为一致的工作响度。"
+        "title": "Working Loudness",
+        "description": "Working loudness normalized for each stem, ensuring all faders start at a balanced point for predictable compressor behavior."
       },
       "S2_GROUP_PHASE_DRUMS": {
-        "title": "鼓组相位对齐",
-        "description": "对齐鼓组音轨的相位以提高冲击力和低频清晰度。"
+        "title": "Drum Phase Alignment",
+        "description": "Phase coherence analyzed across drum microphones. Time alignment and polarity correction applied to recover lost low-end energy and impact."
       },
       "S3_MIXBUS_HEADROOM": {
-        "title": "总线动态余量检查",
-        "description": "重新验证动态余量为 {headroom_db}dB。"
+        "title": "Mixbus Headroom Check",
+        "description": "Mixbus headroom re-verified to <green>{headroom_db}</green>dB to ensure summing integrity before critical mixing."
       },
       "S3_LEADVOX_AUDIBILITY": {
-        "title": "主唱平衡",
-        "description": "平衡主唱电平 {gain_db}dB，以获得相对于混音的最佳听感。"
+        "title": "Lead Vocal Balance",
+        "description": "Lead vocal level balanced by <green>{gain_db}</green>dB to sit correctly against the instrumental backing, ensuring intelligibility."
       },
       "S4_STEM_HPF_LPF": {
-        "title": "频谱清理",
-        "description": "应用高通/低通滤波器以清理频谱。"
+        "title": "Spectral Cleanup",
+        "description": "Surgical High-Pass and Low-Pass filters applied to clean the frequency spectrum, removing subsonic rumble and ultrasonic hiss."
       },
       "S4_STEM_RESONANCE_CONTROL": {
-        "title": "共振控制",
-        "description": "抑制刺耳的共振，峰值降低高达 {max_reduction_db}dB。"
+        "title": "Resonance Control",
+        "description": "Harsh frequency resonances suppressed, reducing peaks by up to <green>{max_reduction_db}</green>dB for a smoother, less fatiguing sound."
       },
       "S5_STEM_DYNAMICS_GENERIC": {
-        "title": "分轨动态",
-        "description": "对分轨应用动态控制。平均增益衰减：{avg_gr_db}dB。"
+        "title": "Stem Dynamics",
+        "description": "Individual dynamic control applied to stems. Average gain reduction of <green>{avg_gr_db}</green>dB achieved for consistent levels without killing micro-dynamics."
       },
       "S5_LEADVOX_DYNAMICS": {
-        "title": "人声动态",
-        "description": "以 {gr_db}dB 的增益衰减控制人声动态，以获得一致的表现。"
+        "title": "Vocal Dynamics",
+        "description": "Lead vocal processed with dedicated compression, applying <green>{gr_db}</green>dB reduction to keep the vocal firm and upfront."
       },
       "S5_BUS_DYNAMICS_DRUMS": {
-        "title": "鼓组总线压缩",
-        "description": "对鼓组总线应用胶水压缩。增益衰减：{gr_db}dB。"
+        "title": "Drum Bus Compression",
+        "description": "Glue compression applied to the drum bus with <green>{gr_db}</green>dB reduction, unifying the kit into a cohesive, punchy instrument."
       },
       "S6_BUS_REVERB_STYLE": {
-        "title": "空间深度",
-        "description": "使用 '{style}' 混响风格增强总线的空间深度。"
+        "title": "Spatial Depth",
+        "description": "Spatial dimension added using '<green>{style}</green>' reverb style, placing instruments in their own acoustic space for depth."
       },
       "S7_MIXBUS_TONAL_BALANCE": {
-        "title": "音调平衡",
-        "description": "平衡总线频谱。应用的最大修正：{max_correction_db}dB。"
+        "title": "Tonal Balance",
+        "description": "Global frequency spectrum analyzed and corrected by up to <green>{max_correction_db}</green>dB. Tonal balance sculpted to match genre standards, ensuring clear bass, mids, and highs."
       },
       "S8_MIXBUS_COLOR_GENERIC": {
-        "title": "总线饱和度",
-        "description": "向总线添加谐波饱和。驱动量：{drive_percent}%。"
+        "title": "Mixbus Saturation",
+        "description": "Analog character injected via soft saturation (<green>{drive_percent}</green>%) acting as sonic glue. This increased density (RMS <green>{diff_inputLoudness}</green>dB) and raised the noise floor by <green>{diff_noiseFloor}</green>dB for rich texture."
       },
       "S9_MASTER_GENERIC": {
-        "title": "母带限制器",
-        "description": "应用最终限制，上限为 {ceiling_db}dB，以达到商业响度。"
+        "title": "Mastering Limiter",
+        "description": "Loudness maximized for commercial competition with a <green>{ceiling_db}</green>dB safety ceiling. Dynamics controlled for a large, present sound while preserving transient punch."
       },
       "S10_MASTER_FINAL_LIMITS": {
-        "title": "最终质量控制",
-        "description": "验证标准。综合响度：{lufs} LUFS，真峰值：{true_peak} dBTP。"
+        "title": "Final QC",
+        "description": "Final Quality Control passed. Integrated loudness of <green>{lufs}</green> LUFS and True Peak of <green>{true_peak}</green> dBTP achieved, ensuring distortion-free streaming playback."
       },
       "S11_REPORT_GENERATION": {
-        "title": "报告生成",
-        "description": "生成了此分析报告。"
+        "title": "Report Generation",
+        "description": "Comprehensive technical report generated."
       },
       "S13_MANUAL_CORRECTION": {
-        "title": "手动校正",
-        "description": "根据用户在 Piroola Studio 中的反馈应用了手动调整。"
+        "title": "Manual Correction",
+        "description": "Manual adjustments applied based on user feedback in Piroola Studio."
       }
     }
   }
