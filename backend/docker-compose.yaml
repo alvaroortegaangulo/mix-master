@@ -117,7 +117,7 @@ services:
       dockerfile: Dockerfile
       args:
         NEXT_PUBLIC_GA_MEASUREMENT_ID: ${NEXT_PUBLIC_GA_MEASUREMENT_ID}
-        FAST_BUILD: ${FAST_BUILD:-0}
+        FAST_BUILD: ${FAST_BUILD:-1}
     command: npm run start -- -p 3000
     environment:
       NODE_ENV: production
