@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useTranslations } from 'next-intl';
 
 export function PipelineInteractiveDiagram({ className }: { className?: string }) {
-  const [activeStep, setActiveStep] = useState<number | null>(null);
+  const [activeStep, setActiveStep] = useState(0);
   const t = useTranslations('PipelineInteractiveDiagram');
 
   const stepsData = [
@@ -70,17 +70,6 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
     }
   ];
 
-  const handleStepClick = (index: number) => {
-    setActiveStep(activeStep === index ? null : index);
-  };
-
-  const getPopupPositionClass = (index: number) => {
-    // Default (Mobile/Tablet): Centered/Full width logic handled by stacking
-    // Desktop:
-    if (index <= 2) return "lg:left-0 lg:origin-bottom-left";
-    return "lg:right-0 lg:origin-bottom-right";
-  };
-
   return (
     <section className={`py-6 md:py-8 lg:py-10 2xl:py-12 relative z-20 ${className || 'bg-slate-900'}`}>
     <div className="w-full max-w-7xl mx-auto px-4 md:px-8 relative z-10">
@@ -99,124 +88,101 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
 
       {/* Main Pipeline Diagram */}
       <div className="w-full relative z-10">
-
         {/* Steps Container */}
-        <div className="flex flex-col lg:flex-row justify-between items-start gap-6 lg:gap-4 relative">
+        <div className="flex flex-col lg:flex-row items-stretch gap-4 lg:gap-5">
           {stepsData.map((step, index) => {
             const isActive = index === activeStep;
+            const stepNumber = String(index + 1).padStart(2, '0');
 
             return (
-              <div
+              <button
                 key={index}
-                className="relative group w-full lg:w-1/5"
-                onMouseEnter={() => setActiveStep(index)}
-                onMouseLeave={() => setActiveStep(null)}
-                onClick={() => handleStepClick(index)}
+                type="button"
+                aria-expanded={isActive}
+                onClick={() => setActiveStep(index)}
+                className={`relative w-full overflow-hidden rounded-2xl border border-white/10 text-left backdrop-blur-xl transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400/70
+                  ${isActive
+                    ? 'bg-slate-900/70 shadow-[0_0_35px_rgba(45,212,191,0.18)] lg:flex-[3] lg:-translate-y-1'
+                    : 'bg-slate-900/30 hover:bg-slate-900/45 lg:flex-[1]'
+                  }`}
               >
-                <div
-                  className={`step-card cursor-pointer rounded-2xl p-3 h-full flex flex-col transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] backdrop-blur-xl border border-white/10
-                    ${isActive
-                      ? 'border-teal-400 bg-slate-800/70 shadow-[0_0_30px_rgba(45,212,191,0.15)] opacity-100 scale-105 -translate-y-2'
-                      : 'bg-slate-800/40 opacity-70 group-hover:-translate-y-2 group-hover:scale-105 group-hover:border-violet-500/50 group-hover:shadow-xl'
+                <div className="absolute inset-0">
+                  <img
+                    src={step.image}
+                    alt=""
+                    className={`h-full w-full object-cover transition duration-700 ${isActive ? 'scale-110' : 'scale-100'}`}
+                  />
+                  <div
+                    className={`absolute inset-0 ${isActive
+                      ? 'bg-gradient-to-br from-slate-950/90 via-slate-950/60 to-slate-900/40'
+                      : 'bg-gradient-to-br from-slate-950/95 via-slate-950/70 to-slate-900/60'
                     }`}
-                >
-                  <div className="relative h-24 sm:h-28 w-full overflow-hidden rounded-xl mb-4">
-                    <img
-                      src={step.image}
-                      alt={step.title}
-                      className="object-cover w-full h-full transform transition duration-700 group-hover:scale-110"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900 to-transparent opacity-60"></div>
-                    <div className="absolute bottom-2 left-2 flex items-center gap-2">
+                  ></div>
+                </div>
+
+                <div className="relative z-10 flex h-full min-h-[180px] lg:min-h-[520px] flex-col p-4 sm:p-5 lg:p-6">
+                  <div className="flex items-start gap-3">
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-600/70 bg-slate-900/60 shadow-sm">
                       <img
                         src={step.icon}
                         alt=""
-                        className="w-6 h-6 object-contain"
+                        className="h-5 w-5 object-contain"
                       />
                     </div>
-                  </div>
-                  <h3 className={`text-lg sm:text-xl font-bold text-white mb-1 transition-colors ${isActive ? step.colorClass : 'group-hover:text-violet-300'}`}>
-                    {index + 1}. {step.title}
-                  </h3>
-                  <p className="text-sm text-slate-300 line-clamp-2">
-                    {step.shortDesc}
-                  </p>
-                </div>
-
-                {/* Connector */}
-                {index < stepsData.length - 1 && (
-                  <div className="connector-line hidden lg:block absolute top-1/2 -right-4 w-8 h-0.5 bg-slate-700 -z-10"></div>
-                )}
-
-                {/* Floating Detail Popup */}
-                {isActive && (
-                  <div className={`
-                    z-50 w-full lg:w-[520px] 2xl:w-[600px]
-                    ${/* Mobile: Relative (Accordion) */ "relative mt-4"}
-                    ${/* Desktop: Absolute (Popup) */ "lg:absolute lg:bottom-0 lg:top-auto lg:mt-0"}
-                    ${getPopupPositionClass(index)}
-                  `}>
-                    <div className="relative bg-slate-900/95 border border-slate-700/50 rounded-2xl p-5 2xl:p-6 shadow-2xl backdrop-blur-xl overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-                      {/* Decorative Background Elements */}
-                      <div className="absolute top-0 right-0 w-32 h-32 bg-teal-500/10 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
-                      <div className="absolute bottom-0 left-0 w-32 h-32 bg-violet-500/10 rounded-full blur-2xl -ml-10 -mb-10 pointer-events-none"></div>
-
-                      <div className="relative z-10 grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {/* Text Info */}
-                        <div className="text-left">
-                          <div className="flex items-center gap-3 mb-3">
-                            <img
-                              src={step.icon}
-                              alt=""
-                              className="w-8 h-8 object-contain"
-                            />
-                            <h3 className="text-xl sm:text-2xl font-bold text-white font-display leading-tight">
-                              {step.title}
-                            </h3>
-                          </div>
-                          <p className="text-slate-300 text-sm leading-relaxed mb-4">
-                            {step.desc}
-                          </p>
-
-                          <div className="bg-slate-800/50 rounded-lg p-3 border border-slate-700">
-                            <h3 className="text-[10px] font-bold uppercase tracking-widest text-slate-300 mb-2">
-                              {t('keyTools')}
-                            </h3>
-                            <div className="flex flex-wrap gap-1.5">
-                              {step.tools.map((tool, idx) => (
-                                <span
-                                  key={idx}
-                                  className={`px-2 py-0.5 ${step.bgClass} text-[10px] md:text-xs rounded-full border ${step.borderClass} text-white/90`}
-                                >
-                                  {tool}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Visual Context */}
-                        <div className="relative rounded-xl overflow-hidden border border-slate-700/50 shadow-lg min-h-[160px] sm:min-h-[180px] md:min-h-0">
-                            <img
-                              src={step.image}
-                              className="absolute inset-0 w-full h-full object-cover"
-                              alt={step.title}
-                            />
-                            <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent opacity-80"></div>
-                            <div className="absolute bottom-3 left-3 right-3">
-                              <div className="text-[10px] text-white/70 font-mono bg-black/50 inline-block px-1.5 py-0.5 rounded mb-1">
-                                {t('proTip')}
-                              </div>
-                              <p className="text-xs font-medium text-white italic leading-tight">
-                                "{step.tip}"
-                              </p>
-                            </div>
-                        </div>
-                      </div>
+                    <div className={`flex flex-col ${isActive ? '' : 'lg:hidden'}`}>
+                      <span className="text-[10px] uppercase tracking-[0.3em] text-slate-300/80">
+                        {stepNumber}
+                      </span>
+                      <h3 className={`text-lg sm:text-xl font-bold text-white ${isActive ? step.colorClass : ''}`}>
+                        {step.title}
+                      </h3>
+                      <p className="text-xs sm:text-sm text-slate-300">
+                        {step.shortDesc}
+                      </p>
                     </div>
                   </div>
-                )}
-              </div>
+
+                  <div className={`mt-4 space-y-4 ${isActive ? 'block' : 'hidden lg:hidden'}`}>
+                    <p className="text-sm text-slate-200/90 leading-relaxed">
+                      {step.desc}
+                    </p>
+
+                    <div className="rounded-lg border border-slate-700/60 bg-slate-900/60 p-3">
+                      <h4 className="text-[10px] font-bold uppercase tracking-widest text-slate-300 mb-2">
+                        {t('keyTools')}
+                      </h4>
+                      <div className="flex flex-wrap gap-1.5">
+                        {step.tools.map((tool, idx) => (
+                          <span
+                            key={idx}
+                            className={`px-2 py-0.5 ${step.bgClass} text-[10px] md:text-xs rounded-full border ${step.borderClass} text-white/90`}
+                          >
+                            {tool}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className={`rounded-lg border ${step.borderClass} bg-slate-900/70 p-3`}>
+                      <div className={`text-[10px] font-bold uppercase tracking-widest mb-2 ${step.colorClass}`}>
+                        {t('proTip')}
+                      </div>
+                      <p className="text-xs text-white/90 italic leading-relaxed">
+                        "{step.tip}"
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className={`hidden lg:flex flex-1 items-center justify-center ${isActive ? 'lg:hidden' : ''}`}>
+                    <span
+                      className="text-xs uppercase tracking-[0.4em] text-slate-200/70"
+                      style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
+                    >
+                      {step.title}
+                    </span>
+                  </div>
+                </div>
+              </button>
             );
           })}
         </div>
