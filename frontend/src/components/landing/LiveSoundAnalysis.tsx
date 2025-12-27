@@ -103,7 +103,7 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
              </div>
 
              {/* Spectrum Visualizer */}
-             <div className="flex-1 flex items-end justify-between gap-1 px-2 mb-4 relative z-10 h-16">
+             <div className="flex-1 flex items-end justify-between gap-1 px-2 mb-4 relative z-10 h-12">
                 {spectrumData.map((height, i) => (
                     <div
                         key={i}
