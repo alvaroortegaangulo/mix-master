@@ -30,9 +30,9 @@
     "tracksMastered": "+10k 曲目已母带处理"
   },
   "FeaturesSection": {
-    "workflow": "工作流程",
-    "title": "从您的 DAW 到<span class='text-cyan-400'>世界</span>。",
-    "subtitle": "我们简化了复杂的工程流程。没有无尽的菜单，只有卓越的声音结果。",
+    "workflow": "统一工作流程",
+    "title": "从您的 DAW 到<gradient>世界。</gradient>",
+    "subtitle": "我们将复杂的工程简化为无缝体验。没有无尽的菜单，只有卓越的声音结果。",
     "steps": {
       "0": {
         "title": "智能分析",
