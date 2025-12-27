@@ -35,20 +35,32 @@
     "subtitle": "We have simplified the complex engineering process. No infinite menus, only superior sonic results.",
     "steps": {
       "0": {
-        "title": "Intelligent Analysis",
-        "description": "Our AI scans your tracks to understand key, tempo, genre, and instrumentation, creating a custom mixing strategy."
+        "tabStep": "01. Connection",
+        "tabTitle": "DAW Integration",
+        "slideLabel": "STEP 1",
+        "title": "Seamless Integration",
+        "description": "Forget about exporting and importing. Piroola lives inside your favorite DAW (Ableton, Logic, Pro Tools) as a native VST3/AU plugin."
       },
       "1": {
-        "title": "Precision Mixing",
-        "description": "Piroola applies surgical EQ, dynamic compression, and spatial enhancements tailored to each stem's role in the mix."
+        "tabStep": "02. Process",
+        "tabTitle": "Neural Engine",
+        "slideLabel": "STEP 2",
+        "title": "Sonic Intelligence",
+        "description": "Our AI scans your tracks to understand key, tempo, genre, and instrumentation, creating a custom mixing strategy."
       },
       "2": {
-        "title": "Creative Control",
-        "description": "Adjust the workflow to your needs for optimal sound. Configure your instruments and musical styles to their fullest potential."
-      },
-      "3": {
+        "tabStep": "03. Results",
+        "tabTitle": "Mastering Grade",
+        "slideLabel": "STEP 3",
         "title": "Mastering Grade Polish",
         "description": "Finalizes your track with industry-standard loudness matching, stereo widening, and limiter safety."
+      },
+      "3": {
+        "tabStep": "04. Release",
+        "tabTitle": "Ready for the World",
+        "slideLabel": "STEP 4",
+        "title": "Ready for the World",
+        "description": "Export your masters in high-resolution WAV and MP3 formats ready for distribution on Spotify, Apple Music, and more."
       }
     }
   },
