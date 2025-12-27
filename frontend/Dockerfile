@@ -17,7 +17,7 @@ FROM base AS deps
 COPY package*.json ./
 
 # Instalamos deps con caché de npm (BuildKit)
-RUN --mount=type=cache,target=/root/.npm npm ci
+RUN --mount=type=cache,target=/root/.npm npm ci --prefer-offline --no-audit
 
 # ============================
 # 3) Etapa: build de Next
@@ -36,8 +36,8 @@ ENV NODE_ENV=production
 ARG NEXT_PUBLIC_GA_MEASUREMENT_ID
 ENV NEXT_PUBLIC_GA_MEASUREMENT_ID=$NEXT_PUBLIC_GA_MEASUREMENT_ID
 
-# Construimos la app
-RUN npm run build
+# Construimos la app (cachea .next para builds repetidos)
+RUN --mount=type=cache,target=/app/.next/cache npm run build
 
 # ============================
 # 4) Etapa: runtime endurecida

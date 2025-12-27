@@ -9,7 +9,9 @@ ENV DEBIAN_FRONTEND=noninteractive \
     MPLCONFIGDIR=/tmp/mplconfig \
     XDG_CACHE_HOME=/tmp/.cache \
     APP_PROJECT_ROOT=/app \
-    PYTHONPATH=/app:/app/src
+    PYTHONPATH=/app:/app/src \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PIP_NO_PYTHON_VERSION_WARNING=1
 
 WORKDIR /app
 
@@ -38,8 +40,8 @@ RUN groupadd -r app && useradd -r -g app app
 COPY requirements.txt .
 RUN --mount=type=cache,target=/root/.cache/pip \
     pip install --upgrade pip && \
-    pip install -r requirements.txt && \
-    pip install hypercorn
+    pip install --prefer-binary -r requirements.txt && \
+    pip install --prefer-binary hypercorn
 
 # Código de la aplicación
 # Esta capa solo se rehace si cambian los fuentes / config no ignorados por .dockerignore
