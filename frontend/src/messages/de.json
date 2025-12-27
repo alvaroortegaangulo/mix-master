@@ -30,9 +30,9 @@
     "tracksMastered": "+10k Tracks gemastert"
   },
   "FeaturesSection": {
-    "workflow": "WORKFLOW",
-    "title": "Von Ihrer DAW in die <span class='text-cyan-400'>Welt</span>.",
-    "subtitle": "Wir haben den komplexen Engineering-Prozess vereinfacht. Keine unendlichen Menüs, nur überlegene Klangergebnisse.",
+    "workflow": "Einheitlicher Workflow",
+    "title": "Von Ihrer DAW in die <gradient>Welt.</gradient>",
+    "subtitle": "Wir haben den komplexen Engineering-Prozess in eine nahtlose Erfahrung vereinfacht. Keine unendlichen Menüs, nur überlegene Klangergebnisse.",
     "steps": {
       "0": {
         "title": "Intelligente Analyse",

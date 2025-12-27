@@ -30,9 +30,9 @@
     "tracksMastered": "+10k Faixas Masterizadas"
   },
   "FeaturesSection": {
-    "workflow": "FLUXO DE TRABALHO",
-    "title": "Da sua DAW para o <span class='text-cyan-400'>Mundo</span>.",
-    "subtitle": "Simplificamos o complexo processo de engenharia. Sem menus infinitos, apenas resultados sonoros superiores.",
+    "workflow": "Fluxo de Trabalho Unificado",
+    "title": "Da sua DAW para o <gradient>Mundo.</gradient>",
+    "subtitle": "Simplificamos a complexa engenharia em uma experiência perfeita. Sem menus infinitos, apenas resultados sonoros superiores.",
     "steps": {
       "0": {
         "title": "Análise Inteligente",
