@@ -99,10 +99,10 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
                 type="button"
                 aria-expanded={isActive}
                 onClick={() => setActiveStep(index)}
-                className={`relative w-full lg:flex-1 lg:self-stretch overflow-hidden rounded-2xl border border-white/5 text-left backdrop-blur-xl transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400/70
+                className={`relative w-full lg:self-stretch overflow-hidden rounded-2xl border border-white/5 text-left backdrop-blur-xl transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-400/70
                   ${isActive
-                    ? 'bg-slate-950/90 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),_inset_0_-1px_0_rgba(0,0,0,0.65),_0_0_28px_rgba(34,211,238,0.18),_0_0_46px_rgba(139,92,246,0.14)]'
-                    : 'bg-slate-950/70 hover:bg-slate-950/80 shadow-[inset_0_1px_0_rgba(255,255,255,0.05),_inset_0_-1px_0_rgba(0,0,0,0.7),_0_0_22px_rgba(34,211,238,0.08),_0_0_30px_rgba(139,92,246,0.08)]'
+                    ? 'bg-slate-950/90 lg:flex-[3] shadow-[inset_0_1px_0_rgba(255,255,255,0.08),_inset_0_-1px_0_rgba(0,0,0,0.65),_0_0_28px_rgba(34,211,238,0.18),_0_0_46px_rgba(139,92,246,0.14)]'
+                    : 'bg-slate-950/70 hover:bg-slate-950/80 lg:flex-[1] shadow-[inset_0_1px_0_rgba(255,255,255,0.05),_inset_0_-1px_0_rgba(0,0,0,0.7),_0_0_22px_rgba(34,211,238,0.08),_0_0_30px_rgba(139,92,246,0.08)]'
                   }`}
               >
                 <div className="absolute inset-0">

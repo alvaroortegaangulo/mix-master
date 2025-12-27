@@ -33,27 +33,41 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     };
 
-    const bands = [
-      { amplitude: 18, frequency: 0.006, speed: 0.9, y: 0.35, color: "rgba(34,211,238,0.35)", phase: 0.2 },
-      { amplitude: 14, frequency: 0.008, speed: 1.15, y: 0.55, color: "rgba(139,92,246,0.28)", phase: 1.1 },
-      { amplitude: 10, frequency: 0.012, speed: 0.75, y: 0.72, color: "rgba(45,212,191,0.22)", phase: 2.4 }
-    ];
+    const lineCount = 9;
+    const lines = Array.from({ length: lineCount }, (_, i) => ({
+      amplitude: 10 + i * 2.2,
+      frequency: 0.003 + i * 0.00055,
+      speed: 0.45 + i * 0.07,
+      phase: i * 0.85,
+      offset: i / (lineCount - 1)
+    }));
 
     const draw = (time: number) => {
       const t = time * 0.001;
       ctx.clearRect(0, 0, width, height);
-      ctx.lineWidth = 1.35;
+      ctx.lineWidth = 1.4;
       ctx.lineJoin = "round";
       ctx.lineCap = "round";
 
-      for (const band of bands) {
+      for (let i = 0; i < lines.length; i += 1) {
+        const line = lines[i];
+        const centerBias = 1 - Math.abs(line.offset - 0.5) * 1.6;
+        const intensity = 0.12 + Math.max(0, centerBias) * 0.22;
+        const baseY =
+          height * (0.22 + line.offset * 0.56) +
+          Math.sin(t * 0.35 + line.phase) * 10;
+        const mod = 0.6 + 0.4 * Math.sin(t * 0.8 + i);
+        const amplitude = line.amplitude * mod;
+        const color = i % 2 === 0
+          ? `rgba(34,211,238,${intensity.toFixed(3)})`
+          : `rgba(139,92,246,${(intensity * 0.9).toFixed(3)})`;
+
         ctx.beginPath();
-        const baseY = height * band.y;
-        const step = 6;
+        const step = 5;
 
         for (let x = 0; x <= width; x += step) {
-          const wave = Math.sin(x * band.frequency + t * band.speed + band.phase) * band.amplitude;
-          const shimmer = Math.sin(x * band.frequency * 2.1 - t * band.speed * 1.4) * band.amplitude * 0.35;
+          const wave = Math.sin(x * line.frequency + t * line.speed + line.phase) * amplitude;
+          const shimmer = Math.sin(x * line.frequency * 2.2 - t * line.speed * 1.5) * amplitude * 0.35;
           const y = baseY + wave + shimmer;
           if (x === 0) {
             ctx.moveTo(x, y);
@@ -62,11 +76,31 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
           }
         }
 
-        ctx.shadowColor = band.color;
-        ctx.shadowBlur = 14;
-        ctx.strokeStyle = band.color;
+        ctx.shadowColor = color;
+        ctx.shadowBlur = 18;
+        ctx.strokeStyle = color;
         ctx.stroke();
       }
+
+      ctx.beginPath();
+      const leadBase = height * 0.56 + Math.sin(t * 0.45) * 8;
+      const leadAmp = 28 + Math.sin(t * 0.9) * 6;
+      for (let x = 0; x <= width; x += 4) {
+        const wave = Math.sin(x * 0.0045 + t * 0.85) * leadAmp;
+        const shimmer = Math.sin(x * 0.009 - t * 1.1) * leadAmp * 0.3;
+        const y = leadBase + wave + shimmer;
+        if (x === 0) {
+          ctx.moveTo(x, y);
+        } else {
+          ctx.lineTo(x, y);
+        }
+      }
+      ctx.lineWidth = 2.2;
+      ctx.shadowColor = "rgba(45,212,191,0.45)";
+      ctx.shadowBlur = 26;
+      ctx.strokeStyle = "rgba(45,212,191,0.32)";
+      ctx.stroke();
+      ctx.lineWidth = 1.4;
 
       ctx.shadowBlur = 0;
 
@@ -111,6 +145,14 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
       <div className="absolute top-0 left-0 h-full w-full overflow-hidden pointer-events-none z-0">
         <div className="absolute -top-[20%] -left-[10%] h-[50%] w-[50%] rounded-full bg-teal-500/10 blur-[120px]" />
         <div className="absolute top-[40%] -right-[10%] h-[60%] w-[60%] rounded-full bg-violet-600/10 blur-[120px]" />
+      </div>
+
+      <div className="absolute inset-0 z-[1] pointer-events-none opacity-85 mix-blend-screen">
+        <canvas
+          ref={waveformRef}
+          className="h-full w-full"
+          aria-hidden="true"
+        />
       </div>
 
       <div className="relative z-10 max-w-5xl space-y-2 sm:space-y-3 lg:space-y-4 flex flex-col items-center">
@@ -189,13 +231,6 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
         </div>
       </div>
 
-      <div className="absolute bottom-0 left-0 w-full h-28 sm:h-32 lg:h-36 opacity-35 pointer-events-none">
-        <canvas
-          ref={waveformRef}
-          className="h-full w-full"
-          aria-hidden="true"
-        />
-      </div>
     </section>
   );
 }
