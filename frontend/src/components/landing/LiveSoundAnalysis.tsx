@@ -78,7 +78,7 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
           <h2 className="text-2xl sm:text-3xl 2xl:text-4xl font-bold tracking-tight text-white mb-4">
             {t('title')}
           </h2>
-          <p className="max-w-2xl text-sm sm:text-base text-slate-300 leading-relaxed">
+          <p className="max-w-3xl text-sm sm:text-base text-slate-300 leading-relaxed">
             {t('description')}
           </p>
         </div>
