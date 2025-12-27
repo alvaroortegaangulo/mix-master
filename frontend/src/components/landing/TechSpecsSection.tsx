@@ -33,7 +33,6 @@ export function TechSpecsSection({ className }: { className?: string }) {
       const marquee = marqueeRef.current;
       if (!marquee) return;
 
-      const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
       const durationMs = 44000;
       let frameId: number | null = null;
       let lastTime = performance.now();
@@ -51,7 +50,7 @@ export function TechSpecsSection({ className }: { className?: string }) {
         const delta = time - lastTime;
         lastTime = time;
 
-        if (!prefersReducedMotion && !isDraggingRef.current) {
+        if (!isDraggingRef.current) {
           const halfWidth = marquee.scrollWidth / 2;
           if (halfWidth > 0) {
             const move = (halfWidth * delta) / durationMs;
@@ -67,9 +66,7 @@ export function TechSpecsSection({ className }: { className?: string }) {
         frameId = requestAnimationFrame(step);
       };
 
-      if (!prefersReducedMotion) {
-        frameId = requestAnimationFrame(step);
-      }
+      frameId = requestAnimationFrame(step);
 
       let resizeObserver: ResizeObserver | null = null;
       if (typeof ResizeObserver !== "undefined") {
