@@ -54,6 +54,16 @@
   --color-teal-800: #115e59;
   --color-teal-900: #134e4a;
   --color-teal-950: #042f2e;
+
+  --animate-zoom-slow: zoom 20s infinite alternate;
+  @keyframes zoom {
+    0% { transform: scale(1); }
+    100% { transform: scale(1.1); }
+  }
+}
+
+.animate-zoom-slow {
+  animation: var(--animate-zoom-slow);
 }
 
 @media (prefers-color-scheme: dark) {

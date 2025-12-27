@@ -35,20 +35,32 @@
     "subtitle": "Hemos simplificado el complejo proceso de ingeniería. Sin menús infinitos, solo resultados sonoros superiores.",
     "steps": {
       "0": {
-        "title": "Análisis Inteligente",
-        "description": "Nuestra IA escanea tus pistas para entender la tonalidad, tempo, género e instrumentación, creando una estrategia de mezcla personalizada."
+        "tabStep": "01. Conexión",
+        "tabTitle": "Integración DAW",
+        "slideLabel": "PASO 1",
+        "title": "Integración sin fisuras",
+        "description": "Olvídate de exportar e importar. Piroola vive dentro de tu DAW favorito (Ableton, Logic, Pro Tools) como un plugin VST3/AU nativo."
       },
       "1": {
-        "title": "Mezcla de Precisión",
-        "description": "Piroola aplica EQ quirúrgico, compresión dinámica y mejoras espaciales adaptadas al rol de cada stem en la mezcla."
+        "tabStep": "02. Proceso",
+        "tabTitle": "Motor Neuronal",
+        "slideLabel": "PASO 2",
+        "title": "Inteligencia Sonora",
+        "description": "Nuestra IA escanea tus pistas para entender la tonalidad, tempo, género e instrumentación, creando una estrategia de mezcla personalizada."
       },
       "2": {
-        "title": "Control Creativo",
-        "description": "Ajusta el flujo de trabajo a tus necesidades para un sonido óptimo. Configura tus instrumentos y estilos musicales a su máximo potencial."
-      },
-      "3": {
+        "tabStep": "03. Resultados",
+        "tabTitle": "Grado Mastering",
+        "slideLabel": "PASO 3",
         "title": "Pulido de Grado Mastering",
         "description": "Finaliza tu pista con igualación de sonoridad estándar de la industria, ensanchamiento estéreo y seguridad de limitador."
+      },
+      "3": {
+        "tabStep": "04. Lanzamiento",
+        "tabTitle": "Listo para el Mundo",
+        "slideLabel": "PASO 4",
+        "title": "Listo para el Mundo",
+        "description": "Exporta tus masters en formatos WAV de alta resolución y MP3 listos para distribución en Spotify, Apple Music y más."
       }
     }
   },
