@@ -182,18 +182,40 @@ export function FeaturesSection({ className }: { className?: string }) {
           <button
             type="button"
             onClick={() => setActiveStep((prev) => (prev - 1 + features.length) % features.length)}
-            className="absolute left-3 top-1/2 z-30 -translate-y-1/2 h-11 w-14 sm:h-12 sm:w-16 rounded-full border border-slate-700/60 bg-slate-900/60 text-2xl sm:text-3xl font-light leading-none text-white/70 backdrop-blur transition hover:bg-slate-800/70 hover:text-white hover:scale-105 focus-visible:text-white shadow-[0_8px_18px_rgba(15,23,42,0.35)]"
+            className="absolute left-3 top-1/2 z-30 -translate-y-1/2 h-12 w-12 sm:h-14 sm:w-14 flex items-center justify-center text-white/70 transition hover:text-white focus-visible:text-white drop-shadow-[0_8px_18px_rgba(15,23,42,0.45)]"
             aria-label="Previous slide"
           >
-            <span aria-hidden="true">&lt;</span>
+            <svg
+              aria-hidden="true"
+              className="h-7 w-7 sm:h-9 sm:w-9"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={4.5}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M15 5l-7 7 7 7" />
+            </svg>
           </button>
           <button
             type="button"
             onClick={() => setActiveStep((prev) => (prev + 1) % features.length)}
-            className="absolute right-3 top-1/2 z-30 -translate-y-1/2 h-11 w-14 sm:h-12 sm:w-16 rounded-full border border-slate-700/60 bg-slate-900/60 text-2xl sm:text-3xl font-light leading-none text-white/70 backdrop-blur transition hover:bg-slate-800/70 hover:text-white hover:scale-105 focus-visible:text-white shadow-[0_8px_18px_rgba(15,23,42,0.35)]"
+            className="absolute right-3 top-1/2 z-30 -translate-y-1/2 h-12 w-12 sm:h-14 sm:w-14 flex items-center justify-center text-white/70 transition hover:text-white focus-visible:text-white drop-shadow-[0_8px_18px_rgba(15,23,42,0.45)]"
             aria-label="Next slide"
           >
-            <span aria-hidden="true">&gt;</span>
+            <svg
+              aria-hidden="true"
+              className="h-7 w-7 sm:h-9 sm:w-9"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={4.5}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M9 5l7 7-7 7" />
+            </svg>
           </button>
 
           {/* Navigation Dots */}

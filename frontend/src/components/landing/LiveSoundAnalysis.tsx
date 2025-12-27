@@ -87,10 +87,10 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-5">
 
           {/* LEFT PANEL: Frequency Spectrum */}
-          <div className="lg:col-span-2 bg-slate-900/50 rounded-3xl border border-slate-800 p-4 md:p-5 2xl:p-6 flex flex-col justify-between min-h-[240px] md:min-h-[300px] shadow-2xl relative overflow-hidden">
+          <div className="lg:col-span-2 bg-slate-900/50 rounded-3xl border border-slate-800 p-3 md:p-4 2xl:p-5 flex flex-col justify-between min-h-[210px] md:min-h-[260px] shadow-2xl relative overflow-hidden">
 
              {/* Top Bar of Panel */}
-             <div className="flex justify-between items-start mb-4 relative z-10">
+             <div className="flex justify-between items-start mb-3 relative z-10">
                  <div className="flex items-center gap-2">
                      <div className="bg-teal-500/20 p-1.5 rounded-lg">
                         <svg className="w-5 h-5 text-teal-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true" focusable="false">
@@ -103,7 +103,7 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
              </div>
 
              {/* Spectrum Visualizer */}
-             <div className="flex-1 flex items-end justify-between gap-1 px-2 mb-4 relative z-10 h-12">
+             <div className="flex-1 flex items-end justify-between gap-1 px-2 mb-3 relative z-10 h-10">
                 {spectrumData.map((height, i) => (
                     <div
                         key={i}
@@ -120,7 +120,7 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
              </div>
 
              {/* Bottom Metrics */}
-             <div className="grid grid-cols-3 gap-3 border-t border-slate-800 pt-4 relative z-10">
+             <div className="grid grid-cols-3 gap-2 border-t border-slate-800 pt-3 relative z-10">
                  <div>
                      <div className="text-[10px] font-mono uppercase tracking-wider text-slate-300 mb-1">{t('spectrum.sub')}</div>
                      <div className="text-white font-medium">{t('spectrum.balanced')}</div>
