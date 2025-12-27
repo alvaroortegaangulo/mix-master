@@ -49,27 +49,6 @@ export function TechSpecsSection({ className }: { className?: string }) {
             </div>
           </div>
         </div>
-        <style jsx>{`
-          @keyframes techSpecsMarquee {
-            0% {
-              transform: translateX(0);
-            }
-            100% {
-              transform: translateX(-50%);
-            }
-          }
-          .tech-specs-track {
-            animation: techSpecsMarquee 28s linear infinite;
-            animation-direction: reverse;
-            will-change: transform;
-          }
-          @media (prefers-reduced-motion: reduce) {
-            .tech-specs-track {
-              animation: none;
-              transform: translateX(0);
-            }
-          }
-        `}</style>
       </section>
     );
   }
