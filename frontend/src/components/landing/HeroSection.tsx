@@ -7,7 +7,7 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
   const t = useTranslations('HeroSection');
 
   return (
-    <section className="relative flex min-h-[70vh] lg:min-h-[75vh] 2xl:min-h-[85vh] flex-col items-center justify-center overflow-hidden bg-slate-950 px-4 text-center py-10 md:py-12 2xl:py-16">
+    <section className="relative flex min-h-[70vh] lg:min-h-[75vh] 2xl:min-h-[85vh] flex-col items-center justify-center overflow-hidden bg-slate-950 px-4 text-center py-8 md:py-10 2xl:py-14">
       {/* Background Image */}
       <div className="absolute inset-0 z-0 pointer-events-none">
         <Image
@@ -28,9 +28,9 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
         <div className="absolute top-[40%] -right-[10%] h-[60%] w-[60%] rounded-full bg-violet-600/10 blur-[120px]" />
       </div>
 
-      <div className="relative z-10 max-w-5xl space-y-3 sm:space-y-4 lg:space-y-5 flex flex-col items-center">
+      <div className="relative z-10 max-w-5xl space-y-2 sm:space-y-3 lg:space-y-4 flex flex-col items-center">
         {/* Logo */}
-        <div className="mx-auto flex justify-center mb-2 animate-in fade-in zoom-in duration-1000">
+        <div className="mx-auto flex justify-center mb-1 animate-in fade-in zoom-in duration-1000">
           <Image
             src="/logo.webp"
             alt="Piroola logo"
@@ -52,7 +52,7 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
           </span>
         </h1>
 
-        <p className="mx-auto max-w-3xl text-sm font-light leading-[1.55] text-slate-300 sm:text-base lg:text-lg animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-100 fill-mode-backwards">
+        <p className="mx-auto max-w-3xl text-xs font-light leading-[1.5] text-slate-300 sm:text-sm lg:text-base animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-100 fill-mode-backwards">
           {t('description')}
         </p>
 
@@ -65,7 +65,7 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
           {/* Button 1: Mezclar mi Track */}
           <button
             onClick={onTryIt}
-            className="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-full bg-teal-400 px-5 py-2.5 text-sm font-bold text-slate-950 transition-all hover:bg-teal-300 hover:scale-105 focus:outline-none focus:ring-4 focus:ring-teal-500/30 sm:px-6 sm:py-3 sm:text-base"
+            className="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-full bg-teal-400 px-4 py-2 text-xs font-bold text-slate-950 transition-all hover:bg-teal-300 hover:scale-105 focus:outline-none focus:ring-4 focus:ring-teal-500/30 sm:px-5 sm:py-2.5 sm:text-sm"
           >
             {/* Simple Circle Icon */}
             <svg
@@ -86,9 +86,9 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
           {/* Button 2: Escuchar Demos */}
           <Link
             href="/examples"
-            className="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-full bg-slate-800/80 px-5 py-2.5 text-sm font-semibold text-white transition-all hover:bg-slate-700 hover:scale-105 focus:outline-none focus:ring-4 focus:ring-violet-500/30 border border-slate-700 sm:px-6 sm:py-3 sm:text-base"
+            className="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-full bg-slate-800/80 px-4 py-2 text-xs font-semibold text-white transition-all hover:bg-slate-700 hover:scale-105 focus:outline-none focus:ring-4 focus:ring-violet-500/30 border border-slate-700 sm:px-5 sm:py-2.5 sm:text-sm"
           >
-            <PlayCircleIcon className="h-4 w-4 sm:h-5 sm:w-5 text-white" aria-hidden="true" />
+            <PlayCircleIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-white" aria-hidden="true" />
             <span>{t('listenToDemos')}</span>
           </Link>
         </div>
