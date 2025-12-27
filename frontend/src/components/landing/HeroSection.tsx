@@ -21,8 +21,6 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
     let width = 0;
     let height = 0;
     let dpr = window.devicePixelRatio || 1;
-    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-
     const resize = () => {
       const rect = canvas.getBoundingClientRect();
       width = Math.max(1, rect.width);
@@ -70,18 +68,12 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
 
       ctx.shadowBlur = 0;
 
-      if (!prefersReducedMotion) {
-        frameId = window.requestAnimationFrame(draw);
-      }
+      frameId = window.requestAnimationFrame(draw);
     };
 
     resize();
     window.addEventListener("resize", resize);
-    if (prefersReducedMotion) {
-      draw(0);
-    } else {
-      frameId = window.requestAnimationFrame(draw);
-    }
+    frameId = window.requestAnimationFrame(draw);
 
     return () => {
       window.removeEventListener("resize", resize);
@@ -94,13 +86,13 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
   return (
     <section className="relative flex min-h-[70vh] lg:min-h-[75vh] 2xl:min-h-[85vh] flex-col items-center justify-center overflow-hidden bg-slate-950 px-4 text-center py-8 md:py-10 2xl:py-14">
       {/* Background Image */}
-      <div className="absolute inset-0 z-0 pointer-events-none">
+      <div className="absolute inset-0 z-0 pointer-events-none animate-[hero-pan_26s_ease-in-out_infinite]">
         <Image
           src="/background_hero.webp"
           alt=""
           fill
           sizes="100vw"
-          className="object-cover opacity-[0.15]"
+          className="object-cover opacity-[0.1]"
           quality={60}
           loading="lazy"
           aria-hidden="true"
@@ -189,7 +181,7 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
         </div>
       </div>
 
-      <div className="absolute bottom-0 left-0 w-full h-28 sm:h-32 lg:h-36 opacity-[0.5] pointer-events-none mix-blend-screen">
+      <div className="absolute bottom-0 left-0 w-full h-28 sm:h-32 lg:h-36 opacity-[0.6] pointer-events-none mix-blend-screen z-[1]">
         <canvas
           ref={waveformRef}
           className="h-full w-full"
