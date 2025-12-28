@@ -235,7 +235,7 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
 
   return (
     <section
-      className={`relative min-h-screen flex flex-col items-center justify-center p-4 lg:p-8 overflow-x-hidden selection:bg-cyan-500 selection:text-white ${className || ''} bg-[#050508]`}
+      className={`relative min-h-screen flex flex-col items-center justify-center p-4 lg:p-8 overflow-x-hidden selection:bg-cyan-500 selection:text-white font-inter ${className || ''} bg-[#050508]`}
     >
       <div className="absolute inset-0 pointer-events-none z-0">
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-cyan-900/20 rounded-full blur-[120px]"></div>

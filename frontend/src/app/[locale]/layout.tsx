@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { Geist_Mono, Space_Grotesk, Orbitron } from "next/font/google";
+import { Geist_Mono, Space_Grotesk, Orbitron, Inter } from "next/font/google";
 import "../globals.css";
 import { GoogleAnalytics } from "@next/third-parties/google";
 import Script from "next/script";
@@ -30,6 +30,12 @@ const geistMono = Geist_Mono({
 
 const orbitron = Orbitron({
   variable: "--font-orbitron",
+  subsets: ["latin"],
+  display: "swap",
+});
+
+const inter = Inter({
+  variable: "--font-inter",
   subsets: ["latin"],
   display: "swap",
 });
@@ -225,7 +231,7 @@ export default async function LocaleLayout({
           href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,1,0"
         />
       </head>
-      <body className={`${spaceGrotesk.variable} ${geistMono.variable} ${orbitron.variable} antialiased`}>
+      <body className={`${spaceGrotesk.variable} ${geistMono.variable} ${orbitron.variable} ${inter.variable} antialiased`}>
         <NextIntlClientProvider messages={messages}>
           <GoogleOAuthProvider clientId={googleClientId}>
             <AuthProvider>
