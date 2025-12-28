@@ -8,8 +8,8 @@ import {
   SpeakerWaveIcon
 } from "@heroicons/react/24/outline";
 
-// Helper to draw a simulated waveform
-const drawWaveform = (
+// Helper to draw a simulated equalizer animation
+const drawEqualizer = (
   ctx: CanvasRenderingContext2D,
   width: number,
   height: number,
@@ -18,63 +18,37 @@ const drawWaveform = (
 ) => {
   ctx.clearRect(0, 0, width, height);
 
-  // Settings based on mode
-  const color = isManual ? '#64748b' : '#22d3ee'; // Slate-500 vs Cyan-400
-  const lineWidth = 2;
-  const amplitude = isManual ? height * 0.15 : height * 0.35; // Manual is quiet/dynamic, AI is mastered/loud
-  const frequency = 0.02;
-  const speed = 0.1;
+  const barCount = 48;
+  const gap = Math.max(1, Math.floor(width / 200));
+  const totalGap = gap * (barCount - 1);
+  const barWidth = Math.max(2, (width - totalGap) / barCount);
+  const t = frameCount * 0.06;
+  const baseY = height - 4;
+  const minHeight = height * (isManual ? 0.03 : 0.12);
+  const maxHeight = height * (isManual ? 0.18 : 0.75);
+  const modeAlpha = isManual ? 0.08 : 0.75;
 
-  ctx.beginPath();
-  ctx.lineWidth = lineWidth;
-  ctx.strokeStyle = color;
+  ctx.shadowBlur = isManual ? 0 : 12;
 
-  const centerY = height / 2;
+  for (let i = 0; i < barCount; i += 1) {
+    const waveA = Math.sin(t + i * 0.35);
+    const waveB = Math.sin(t * 0.6 + i * 0.18);
+    const waveC = Math.sin(t * 1.3 + i * 0.05);
+    const mix = (waveA * 0.6 + waveB * 0.3 + waveC * 0.1 + 1.5) / 3;
+    const barHeight = Math.max(minHeight, minHeight + mix * maxHeight);
+    const x = i * (barWidth + gap);
+    const y = baseY - barHeight;
+    const hue = 190 + (i / (barCount - 1)) * 70;
+    const saturation = isManual ? 35 : 70;
+    const lightness = isManual ? 55 : 60;
+    const alpha = modeAlpha * (0.6 + 0.4 * Math.sin(t + i * 0.2));
 
-  // Draw multiple sine waves combined to simulate audio
-  for (let x = 0; x < width; x++) {
-    const t = x * frequency + frameCount * speed;
-    let y = centerY;
-
-    if (isManual) {
-        // Messy, irregular wave
-        y += Math.sin(t) * amplitude * (Math.sin(t * 0.5) + 0.5);
-        y += Math.sin(t * 2.5) * (amplitude * 0.3);
-    } else {
-        // Maximized, consistent wave (mastered)
-        y += Math.sin(t) * amplitude;
-        y += Math.sin(t * 3) * (amplitude * 0.2);
-        // Soft clipping simulation
-        if (y > centerY + amplitude * 0.9) y = centerY + amplitude * 0.9 + Math.random();
-        if (y < centerY - amplitude * 0.9) y = centerY - amplitude * 0.9 - Math.random();
-    }
-
-    if (x === 0) {
-      ctx.moveTo(x, y);
-    } else {
-      ctx.lineTo(x, y);
-    }
+    ctx.shadowColor = `hsla(${hue}, ${saturation}%, ${lightness}%, ${modeAlpha})`;
+    ctx.fillStyle = `hsla(${hue}, ${saturation}%, ${lightness}%, ${alpha})`;
+    ctx.fillRect(x, y, barWidth, barHeight);
   }
 
-  ctx.stroke();
-
-  // Draw a second mirrored line for "stereo" look or just fill
-  ctx.beginPath();
-  ctx.strokeStyle = isManual ? 'rgba(100, 116, 139, 0.3)' : 'rgba(34, 211, 238, 0.3)';
-  for (let x = 0; x < width; x++) {
-    const t = x * frequency + frameCount * speed;
-    let y = centerY;
-    // Mirrored slightly
-     if (isManual) {
-        y -= Math.sin(t) * amplitude * (Math.sin(t * 0.5) + 0.5);
-    } else {
-        y -= Math.sin(t) * amplitude;
-    }
-
-    if (x === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
-  }
-  ctx.stroke();
+  ctx.shadowBlur = 0;
 };
 
 
@@ -103,7 +77,7 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
         if (ctx) {
            // Handle resize or static size
            // Note: canvas width/height attributes are set in JSX
-           drawWaveform(ctx, canvas.width, canvas.height, isManual, frameCountRef.current);
+           drawEqualizer(ctx, canvas.width, canvas.height, isManual, frameCountRef.current);
         }
       }
       frameCountRef.current += 1;
@@ -266,28 +240,25 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
                     <div className="grid grid-cols-4 gap-2 relative z-10">
                         <div className="flex items-center justify-center p-2 rounded-lg bg-[#1DB954]/10 border border-[#1DB954]/20">
                             <svg className="w-4 h-4 text-[#1DB954]" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                                <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.019.6-1.141 4.32-1.32 9.78-.6 13.5 1.62.42.181.6.719.3 1.141zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 14.82 1.14.54.3.719.96.42 1.5-.239.54-.899.72-1.44.36z"/>
+                                <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z" />
                             </svg>
                             <span className="sr-only">Spotify</span>
                         </div>
                         <div className="flex items-center justify-center p-2 rounded-lg bg-[#A4CC35]/10 border border-[#A4CC35]/20">
                             <svg className="w-4 h-4 text-[#A4CC35]" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                                <circle cx="7" cy="12" r="2" />
-                                <path d="M13 7h4a3 3 0 0 1 0 6h-4V7z" />
-                                <path d="M12 7h-1a4 4 0 0 0 0 10h1V7z" />
+                                <path d="M18.81 4.16v3.03H24V4.16h-5.19zM6.27 8.38v3.027h5.189V8.38h-5.19zm12.54 0v3.027H24V8.38h-5.19zM6.27 12.594v3.027h5.189v-3.027h-5.19zm6.271 0v3.027h5.19v-3.027h-5.19zm6.27 0v3.027H24v-3.027h-5.19zM0 16.81v3.029h5.19v-3.03H0zm6.27 0v3.029h5.189v-3.03h-5.19zm6.271 0v3.029h5.19v-3.03h-5.19zm6.27 0v3.029H24v-3.03h-5.19Z" />
                             </svg>
                             <span className="sr-only">Deezer</span>
                         </div>
                         <div className="flex items-center justify-center p-2 rounded-lg bg-[#FF5500]/10 border border-[#FF5500]/20">
                             <svg className="w-4 h-4 text-[#FF5500]" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                                <path d="M6 14.5c0-1.9 1.5-3.5 3.5-3.5H13a3.5 3.5 0 1 1 0 7h-.5A6.5 6.5 0 0 1 6 14.5z" />
-                                <path d="M8 14.5c0-1 0.8-1.8 1.8-1.8h2.6a1.8 1.8 0 1 1 0 3.6H12a4 4 0 0 1-4-4z" />
+                                <path d="M23.999 14.165c-.052 1.796-1.612 3.169-3.4 3.169h-8.18a.68.68 0 0 1-.675-.683V7.862a.747.747 0 0 1 .452-.724s.75-.513 2.333-.513a5.364 5.364 0 0 1 2.763.755 5.433 5.433 0 0 1 2.57 3.54c.282-.08.574-.121.868-.12.884 0 1.73.358 2.347.992s.948 1.49.922 2.373ZM10.721 8.421c.247 2.98.427 5.697 0 8.672a.264.264 0 0 1-.53 0c-.395-2.946-.22-5.718 0-8.672a.264.264 0 0 1 .53 0ZM9.072 9.448c.285 2.659.37 4.986-.006 7.655a.277.277 0 0 1-.55 0c-.331-2.63-.256-5.02 0-7.655a.277.277 0 0 1 .556 0Zm-1.663-.257c.27 2.726.39 5.171 0 7.904a.266.266 0 0 1-.532 0c-.38-2.69-.257-5.21 0-7.904a.266.266 0 0 1 .532 0Zm-1.647.77a26.108 26.108 0 0 1-.008 7.147.272.272 0 0 1-.542 0 27.955 27.955 0 0 1 0-7.147.275.275 0 0 1 .55 0Zm-1.67 1.769c.421 1.865.228 3.5-.029 5.388a.257.257 0 0 1-.514 0c-.21-1.858-.398-3.549 0-5.389a.272.272 0 0 1 .543 0Zm-1.655-.273c.388 1.897.26 3.508-.01 5.412-.026.28-.514.283-.54 0-.244-1.878-.347-3.54-.01-5.412a.283.283 0 0 1 .56 0Zm-1.668.911c.4 1.268.257 2.292-.026 3.572a.257.257 0 0 1-.514 0c-.241-1.262-.354-2.312-.023-3.572a.283.283 0 0 1 .563 0Z" />
                             </svg>
                             <span className="sr-only">SoundCloud</span>
                         </div>
                         <div className="flex items-center justify-center p-2 rounded-lg bg-[#00D2FF]/10 border border-[#00D2FF]/20">
                             <svg className="w-4 h-4 text-[#00D2FF]" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                                <path d="M12.7 6.2a5.5 5.5 0 0 1 5.5 5.5c0 .6-.1 1.2-.3 1.8h-5.2V6.2zM5 12.5h2.5v3H5v-3zm3.5-1h2.5v4H8.5v-4zm3.5-2h2.5v6H12v-6z"/>
+                                <path d="M12.012 3.992L8.008 7.996 4.004 3.992 0 7.996 4.004 12l4.004-4.004L12.012 12l-4.004 4.004 4.004 4.004 4.004-4.004L12.012 12l4.004-4.004-4.004-4.004zM16.042 7.996l3.979-3.979L24 7.996l-3.979 3.979z" />
                             </svg>
                             <span className="sr-only">Tidal</span>
                         </div>
