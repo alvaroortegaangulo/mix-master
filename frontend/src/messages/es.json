@@ -65,20 +65,41 @@
     }
   },
   "BenefitsSection": {
-    "efficiencyBadge": "EFICIENCIA IA",
-    "speedTitle": "Horas de trabajo, <highlight>hechas en minutos.</highlight>",
-    "speedDescription": "Olvídate de la tediosa ganancia, alineación de fase y limpieza de resonancias. Piroola se encarga del trabajo técnico pesado para que puedas concentrarte en la vibra creativa.",
-    "speedPoints": [
-      "Configuración de sesión y enrutamiento instantáneos",
-      "EQ correctivo automatizado",
-      "Verificación de cumplimiento de sonoridad en tiempo real"
-    ],
-    "qualityBadge": "CALIDAD PREMIUM",
-    "qualityTitle": "Calidad de Estudio, <highlight>accesible para todos.</highlight>",
-    "qualityDescription": "No necesitas un estudio de un millón de dólares o décadas de experiencia para obtener un sonido profesional. Nuestros algoritmos están entrenados con éxitos discográficos para ofrecer resultados comercialmente competitivos.",
-    "readyFor": "LISTO PARA",
-    "spotifyReady": "Spotify",
-    "appleMusicReady": "Apple Music"
+    "headerBadge": "Piroola AI Engine v2.0",
+    "headerTitle": "Revoluciona tu sonido",
+    "headerDesc": "La suite de masterización inteligente que transforma maquetas caseras en éxitos comerciales en segundos.",
+    "efficiencyBadge": "Eficiencia IA",
+    "manual": "MANUAL",
+    "speedTitle": "<strike>Horas</strike> de trabajo,<brTag></brTag><highlight>hechas en minutos.</highlight>",
+    "speedDescription": "Olvídate de la ganancia manual y la limpieza de resonancias. Piroola automatiza el trabajo técnico pesado para que tú crees.",
+    "deepAnalysisTitle": "Análisis Profundo",
+    "deepAnalysisPoints": {
+      "0": "Detección de resonancias",
+      "1": "Balance espectral dinámico",
+      "2": "Imagen estéreo inteligente"
+    },
+    "qualityBadge": "Calidad Premium",
+    "qualityTitle": "Sonido de Estudio",
+    "qualityDescription": "Algoritmos entrenados con éxitos de Billboard para resultados competitivos.",
+    "toolkitTitle": "Toolkit Automático",
+    "toolkitItems": {
+      "0": {
+        "title": "Enrutamiento Instantáneo",
+        "desc": "Configuración de sesión automática."
+      },
+      "1": {
+        "title": "EQ Correctivo",
+        "desc": "Elimina frecuencias molestas."
+      },
+      "2": {
+        "title": "Loudness Check",
+        "desc": "Verificación LUFS tiempo real."
+      }
+    },
+    "readyForWorldTitle": "Listo para el mundo",
+    "readyForWorldDesc": "Optimizado para plataformas de streaming.",
+    "spotify": "Spotify",
+    "appleMusic": "Music"
   },
   "LiveSoundAnalysis": {
     "label": "Motor de Análisis en Vivo",

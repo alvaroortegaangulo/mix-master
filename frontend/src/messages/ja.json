@@ -1,33 +1,33 @@
 {
   "Metadata": {
-    "title": "Piroola: オンラインでのプロフェッショナルなAIオーディオミキシング＆マスタリング",
-    "description": "Piroolaであなたのトラックを変革しましょう。私たちのAI搭載のミキシング＆マスタリングサービスは、数分でマルチトラックのステムからプロのスタジオ品質の結果を提供します。"
+    "title": "Piroola: Professional AI Audio Mixing & Mastering Online",
+    "description": "Transform your tracks with Piroola. Our AI-powered mixing and mastering service delivers professional studio-quality results from your multi-track stems in minutes."
   },
   "Navigation": {
-    "examples": "例",
-    "pricing": "価格",
+    "examples": "Examples",
+    "pricing": "Pricing",
     "faq": "FAQ",
-    "howItWorks": "仕組み",
-    "blog": "ブログ",
+    "howItWorks": "How it works",
+    "blog": "Blog",
     "rss": "RSS",
-    "support": "サポート",
-    "goToApp": "アプリへ移動",
-    "logIn": "ログイン",
-    "tryForFree": "無料お試し"
+    "support": "Support",
+    "goToApp": "Go to App",
+    "logIn": "Log In",
+    "tryForFree": "Try for free"
   },
   "LandingPage": {
-    "readyToElevate": "サウンドを向上させる準備はできましたか？",
-    "startMixing": "無料でミキシングを開始"
+    "readyToElevate": "Ready to elevate your sound?",
+    "startMixing": "Start Mixing for Free"
   },
   "HeroSection": {
-    "alertConstruction": "BETA V2.0 アクセス可能",
-    "studioSound": "スタジオサウンド。",
-    "perfectedByAI": "AIによって完成。",
-    "description": "数分で自宅の録音（ステム）をSpotify対応のプロフェッショナルなミックスに変えます。Piroolaが技術的なエンジニアリングを処理するので、あなたは音楽に集中できます。",
-    "mixMyTracks": "トラックをミックス",
-    "listenToDemos": "デモを聴く",
-    "rating": "4.9/5 評価",
-    "tracksMastered": "+10k トラックマスタリング済み"
+    "alertConstruction": "BETA ACCESS V2.0 AVAILABLE",
+    "studioSound": "Studio Sound.",
+    "perfectedByAI": "Perfected by AI.",
+    "description": "Transform your home recordings (stems) into professional, Spotify-ready mixes in minutes. Piroola handles the technical engineering so you can focus on the music.",
+    "mixMyTracks": "Mix my Tracks",
+    "listenToDemos": "Listen to Demos",
+    "rating": "4.9/5 Rating",
+    "tracksMastered": "+10k Tracks Mastered"
   },
   "FeaturesSection": {
     "workflow": "統合ワークフロー",
@@ -35,465 +35,521 @@
     "subtitle": "複雑なエンジニアリングプロセスをシームレスな体験に簡素化しました。無限のメニューはなく、優れたサウンド結果のみ。",
     "steps": {
       "0": {
-        "title": "インテリジェント分析",
-        "description": "私たちのAIは、キー、テンポ、ジャンル、楽器編成を理解するためにトラックをスキャンし、カスタムミキシング戦略を作成します。"
+        "tabStep": "01. Connection",
+        "tabTitle": "DAW Integration",
+        "slideLabel": "STEP 1",
+        "title": "Seamless Integration",
+        "description": "Forget about exporting and importing. Piroola lives inside your favorite DAW (Ableton, Logic, Pro Tools) as a native VST3/AU plugin."
       },
       "1": {
-        "title": "精密ミキシング",
-        "description": "Piroolaは、ミックス内の各ステムの役割に合わせて、外科的なEQ、ダイナミックコンプレッション、空間強化を適用します。"
+        "tabStep": "02. Process",
+        "tabTitle": "Neural Engine",
+        "slideLabel": "STEP 2",
+        "title": "Sonic Intelligence",
+        "description": "Our AI scans your tracks to understand key, tempo, genre, and instrumentation, creating a custom mixing strategy."
       },
       "2": {
-        "title": "クリエイティブコントロール",
-        "description": "最適なサウンドのためにワークフローをニーズに合わせて調整します。楽器と音楽スタイルを最大限の可能性で設定します。"
+        "tabStep": "03. Results",
+        "tabTitle": "Mastering Grade",
+        "slideLabel": "STEP 3",
+        "title": "Mastering Grade Polish",
+        "description": "Finalizes your track with industry-standard loudness matching, stereo widening, and limiter safety."
       },
       "3": {
-        "title": "マスタリング品質",
-        "description": "業界標準のラウドネスマッチング、ステレオの広がり、リミッターの安全性でトラックを仕上げます。"
+        "tabStep": "04. Release",
+        "tabTitle": "Ready for the World",
+        "slideLabel": "STEP 4",
+        "title": "Ready for the World",
+        "description": "Export your masters in high-resolution WAV and MP3 formats ready for distribution on Spotify, Apple Music, and more."
       }
     }
   },
   "BenefitsSection": {
-    "efficiencyBadge": "効率化AI",
-    "speedTitle": "何時間もの作業が、数分で完了。",
-    "speedDescription": "退屈なゲインステージング、位相調整、共鳴除去を忘れてください。Piroolaは技術的な重労働を処理するので、クリエイティブな雰囲気に集中できます。",
-    "speedPoints": [
-      "即時のセッション設定とルーティング",
-      "自動化された修正EQ",
-      "リアルタイムのラウドネス適合チェック"
-    ],
-    "qualityTitle": "スタジオ品質を、誰にでも。",
-    "qualityDescription": "プロフェッショナルなサウンドを得るために、数百万ドルのスタジオや数十年の経験は必要ありません。私たちのアルゴリズムは、商業的に競争力のある結果を提供するためにヒットレコードでトレーニングされています。",
-    "readyFor": "準備完了",
-    "qualityBadge": "プレミアム品質",
-    "spotifyReady": "Spotify対応",
-    "appleMusicReady": "Apple Music対応"
+    "headerBadge": "Piroola AI Engine v2.0",
+    "headerTitle": "Revolutionize your sound",
+    "headerDesc": "The intelligent mastering suite that transforms home demos into commercial hits in seconds.",
+    "efficiencyBadge": "AI Efficiency",
+    "manual": "MANUAL",
+    "speedTitle": "<strike>Hours</strike> of work,<br /><highlight>done in minutes.</highlight>",
+    "speedDescription": "Forget manual gain staging and resonance cleanup. Piroola automates the heavy technical lifting so you can create.",
+    "deepAnalysisTitle": "Deep Analysis",
+    "deepAnalysisPoints": {
+      "0": "Resonance detection",
+      "1": "Dynamic spectral balance",
+      "2": "Intelligent stereo image"
+    },
+    "qualityBadge": "Premium Quality",
+    "qualityTitle": "Studio Sound",
+    "qualityDescription": "Algorithms trained on Billboard hits for competitive results.",
+    "toolkitTitle": "Automatic Toolkit",
+    "toolkitItems": {
+      "0": {
+        "title": "Instant Routing",
+        "desc": "Automatic session setup."
+      },
+      "1": {
+        "title": "Corrective EQ",
+        "desc": "Eliminates annoying frequencies."
+      },
+      "2": {
+        "title": "Loudness Check",
+        "desc": "Real-time LUFS verification."
+      }
+    },
+    "readyForWorldTitle": "Ready for the World",
+    "readyForWorldDesc": "Optimized for streaming platforms.",
+    "spotify": "Spotify",
+    "appleMusic": "Music"
   },
   "LiveSoundAnalysis": {
-    "label": "ライブ分析エンジン",
-    "title": "見えないものを可視化。",
-    "description": "推測はやめましょう。Piroolaは、ミックスがストリーミング（Spotify、Apple Music）および放送基準を満たしていることを確認するための外科的精度のメトリクスを提供します。",
+    "label": "Live Analytics Engine",
+    "title": "Visualize the Invisible.",
+    "description": "Stop guessing. Piroola provides surgical precision metrics to ensure your mix meets streaming standards (Spotify, Apple Music) and broadcast.",
     "spectrum": {
-      "title": "周波数スペクトル",
+      "title": "Frequency Spectrum",
       "range": "20Hz - 20kHz",
-      "sub": "重低音 (Sub)",
-      "vocal": "ボーカルの存在感",
-      "air": "空気感 / 輝き",
-      "balanced": "バランス",
-      "optimal": "最適"
+      "sub": "Low End (Sub)",
+      "vocal": "Vocal Presence",
+      "air": "Air / Shine",
+      "balanced": "Balanced",
+      "optimal": "Optimal"
     },
     "controls": {
-      "reScan": "再スキャン",
-      "target": "ターゲット"
+      "reScan": "Re-Scan",
+      "target": "Target"
     },
     "metrics": {
-      "loudness": "統合ラウドネス",
-      "stereoImage": "ステレオイメージ",
-      "dynamicRange": "ダイナミックレンジ",
-      "target": "ターゲット",
-      "wide": "ワイド",
-      "correlation": "相関",
-      "description": "優れたモノラル互換性。重大な位相キャンセルなし。"
+      "loudness": "Integrated Loudness",
+      "stereoImage": "Stereo Image",
+      "dynamicRange": "Dynamic Range",
+      "target": "Target",
+      "wide": "Wide",
+      "correlation": "Correlation",
+      "description": "Excellent mono compatibility. No critical phase cancellations."
     }
   },
   "PipelineInteractiveDiagram": {
-    "label": "オーディオエンジニアリングワークフロー",
-    "title": "ミキシング＆マスタリングパイプライン",
-    "description": "初期分析から最終仕上げまで、オーディオ制作プロセスの各段階をインタラクティブに探索します。",
-    "keyTools": "主要ツール",
-    "proTip": "プロのヒント",
+    "label": "Audio Engineering Workflow",
+    "title": "Mixing & Mastering Pipeline",
+    "description": "Interactively explore each stage of the audio production process, from initial analysis to final polishing.",
+    "keyTools": "Key Tools",
+    "proTip": "PRO TIP",
     "steps": {
       "0": {
-        "title": "分析",
-        "shortDesc": "周波数、位相、ダイナミックレンジの診断。",
-        "desc": "処理の前に、ソース素材を理解することが重要です。スペクトラムアナライザー、位相相関メーター、LUFSメーターを使用して、共鳴の問題、音色の不均衡、または位相の問題を特定します。",
-        "tip": "位相キャンセルを検出するために、最初は常にモノラルで聴いてください。",
+        "title": "Analysis",
+        "shortDesc": "Frequency, phase, and dynamic range diagnosis.",
+        "desc": "Before processing, understanding the source material is crucial. We use spectrum analyzers, phase correlation meters, and LUFS meters to identify resonant issues, tonal imbalances, or phase problems.",
+        "tip": "Always listen in mono initially to detect phase cancellations.",
         "tools": [
-          "スペクトラムアナライザー",
-          "ゴニオメーター",
-          "LUFSメーター"
+          "Spectrum Analyzer",
+          "Goniometer",
+          "LUFS Meter"
         ]
       },
       "1": {
-        "title": "修正",
-        "shortDesc": "クリーンアップ、減算EQ、ノイズリダクション。",
-        "desc": "外科的な段階。減算EQで問題のある周波数を取り除き、背景ノイズを減らし、必要に応じてボーカルのピッチを修正します。目標は、強化する前にきれいにすることです。",
-        "tip": "明瞭さを得るために、必要のない楽器の低周波数をカット（ハイパス）します。",
+        "title": "Correction",
+        "shortDesc": "Cleaning, subtractive EQ, and noise reduction.",
+        "desc": "The surgical stage. We remove problematic frequencies with subtractive EQ, reduce background noise, and correct vocal pitch if necessary. The goal is to clean before enhancing.",
+        "tip": "Cut low frequencies (High Pass) on instruments that don't need them to gain clarity.",
         "tools": [
-          "パラメトリックEQ",
-          "デノイザー",
-          "ピッチ補正"
+          "Parametric EQ",
+          "De-noiser",
+          "Pitch Correction"
         ]
       },
       "2": {
-        "title": "ダイナミクス",
-        "shortDesc": "トランジェント制御、コンプレッション、バランス。",
-        "desc": "一貫したミックスのためにダイナミックレンジを制御します。コンプレッサーを使用して要素を結び付け、ソフトリミッターを使用して不要なピークを抑えます。",
-        "tip": "より自然なサウンドのために、1つの攻撃的なコンプレッサーではなく、直列コンプレッション（複数の穏やかなコンプレッサー）を使用してください。",
+        "title": "Dynamics",
+        "shortDesc": "Transient control, compression, and balance.",
+        "desc": "We control the dynamic range for a consistent mix. We use compressors to glue elements together and soft limiters to tame unruly peaks.",
+        "tip": "Use serial compression (multiple gentle compressors) instead of a single aggressive one for a more natural sound.",
         "tools": [
-          "VCAコンプレッサー",
-          "マルチバンドコンプレッサー",
-          "ディエッサー",
-          "リミッター"
+          "VCA Compressor",
+          "Multiband Compressor",
+          "De-esser",
+          "Limiter"
         ]
       },
       "3": {
-        "title": "空間",
-        "shortDesc": "深さ、リバーブ、ステレオイメージ。",
-        "desc": "曲の3D世界を作成します。ステレオフィールド（パンニング）に楽器を配置し、リバーブとディレイで深さを追加します。",
-        "tip": "キック、ベース、リードボーカルを中央に保ちます。リズムとハーモニーの要素をサイドに移動します。",
+        "title": "Spatial",
+        "shortDesc": "Depth, reverberation, and stereo image.",
+        "desc": "We create the song's 3D world. We place instruments in the stereo field (panning) and add depth with reverb and delay.",
+        "tip": "Keep the kick, bass, and lead vocal in the center. Move rhythmic and harmonic elements to the sides.",
         "tools": [
-          "プレート/ホールリバーブ",
-          "ステレオディレイ",
-          "ステレオワイドナー",
-          "パンポット"
+          "Reverb Plate/Hall",
+          "Stereo Delay",
+          "Stereo Widener",
+          "Pan Pot"
         ]
       },
       "4": {
-        "title": "マスタリング",
-        "shortDesc": "ラウドネス、最終的なまとまり、配信フォーマット。",
-        "desc": "最後の仕上げ。競争力のある商業的なラウドネス、全体的な音色のバランスを目指し、あらゆる再生システム（車、電話、クラブ）で曲がうまく聞こえるようにします。",
-        "tip": "常に同じジャンルのリファレンス曲とマスターを比較してください（A/Bテスト）。",
+        "title": "Mastering",
+        "shortDesc": "Loudness, final cohesion, and delivery formats.",
+        "desc": "The final polish. We aim for competitive commercial loudness, global tonal balance, and ensure the song translates well to any playback system (car, phone, club).",
+        "tip": "Always compare your master with reference songs of the same genre (A/B testing).",
         "tools": [
-          "マスターバスコンプ",
-          "リニアEQ",
-          "マキシマイザー",
-          "ディザリング"
+          "Master Bus Comp",
+          "Linear EQ",
+          "Maximizer",
+          "Dithering"
         ]
       }
     }
   },
   "TechSpecsSection": {
-    "title": "パワー＆精度",
-    "internalProcessing": "内部処理",
-    "floatDepth": "フロート深度",
-    "processingStages": "処理段階",
-    "latency": "レイテンシ (クラウド)"
+    "title": "Power & Precision",
+    "internalProcessing": "Internal Processing",
+    "floatDepth": "Float Depth",
+    "processingStages": "Processing Stages",
+    "latency": "Latency (Cloud)"
   },
   "Footer": {
-    "terms": "利用規約",
-    "privacy": "プライバシー",
-    "cookies": "クッキー",
-    "contact": "連絡先",
+    "terms": "Terms",
+    "privacy": "Privacy",
+    "cookies": "Cookies",
+    "contact": "Contact",
     "rss": "RSS",
     "copyright": "© 2025 Piroola."
   },
   "AuthModal": {
-    "seamlessMastering": "シームレスなマスタリング",
-    "experiencePower": "高度なAIマスタリングエンジンのパワーを体験してください。",
-    "signIn": "サインイン",
-    "createAccount": "アカウント作成",
-    "signInGoogle": "Googleでログイン",
-    "or": "または",
-    "fullName": "氏名",
-    "email": "メールアドレス",
-    "password": "パスワード",
-    "forgotPassword": "パスワードをお忘れですか？",
-    "processing": "処理中...",
-    "newUser": "新規ユーザーですか？",
-    "register": "登録 +",
-    "alreadyHaveAccount": "すでにアカウントをお持ちですか？"
+    "seamlessMastering": "Seamless Mastering",
+    "experiencePower": "Experience the power of an advanced AI mastering engine.",
+    "signIn": "Sign In",
+    "createAccount": "Create Account",
+    "signInGoogle": "Sign in with Google",
+    "or": "or",
+    "fullName": "Full Name",
+    "email": "Email Address",
+    "password": "Password",
+    "forgotPassword": "Forgot password?",
+    "processing": "Processing...",
+    "newUser": "New user?",
+    "register": "Register +",
+    "alreadyHaveAccount": "Already have an account?"
   },
   "MixTool": {
-    "loadingStudio": "スタジオを読み込み中...",
-    "loadingResult": "結果を読み込み中...",
-    "spaceDepthSettings": "空間＆深さの設定",
-    "uploadMixConfig": "アップロード＆ミックス設定",
+    "title": "Upload Center",
+    "subtitle": "Drag your audio files to start. Our AI engine will automatically analyze, mix, and master your tracks.",
+    "loadingStudio": "Loading studio...",
+    "loadingResult": "Loading result...",
+    "spaceDepthSettings": "Space & Depth Settings",
+    "uploadMixConfig": "Upload & Mix Configuration",
     "uploadSteps": {
-      "stepCounter": "ステップ {current}/3",
+      "stepCounter": "Step {current}/3",
       "labels": {
-        "uploadTracks": "1/3 オーディオトラックをアップロード",
-        "selectProfiles": "2/3 ステムプロファイルを選択",
-        "busSelection": "3/3 バスの選択"
+        "uploadTracks": "1/3 Upload your audio tracks",
+        "selectProfiles": "2/3 Select stems profile",
+        "busSelection": "3/3 Bus selection"
       },
       "notes": {
-        "profiles": "次に進む前に各ステムにプロファイルを割り当ててください。",
-        "buses": "バスを構成し、確認してパイプラインに移動します。"
+        "profiles": "Assign each stem a profile before proceeding.",
+        "buses": "Fine-tune bus routing and confirm to jump to the pipeline."
       },
     "buttons": {
-      "confirmProfiles": "プロファイルを確認",
-      "confirmBuses": "バス選択を確認",
-      "back": "戻る"
+      "confirmProfiles": "Confirm profiles",
+      "confirmBuses": "Confirm bus selection",
+      "back": "Back"
     }
     ,
     "messages": {
-      "mixReady": "ミックス用のトラックが準備できました。「Generar Mix IA」を押してミックス＆マスタリングを開始してください。"
+      "mixReady": "Tracks prepared for mixing; press Generate Mix IA to start mixing and mastering."
     }
     },
-    "songMode": "ソング（マスタリング）",
-    "stemsMode": "ステム（フルミックス）",
-    "songModeWarning": "ソングモードには正確に1つのWAVファイルが必要です。",
-    "selectionWarning": "ステムを1つだけ選択しました。ソングをマスタリングしたい場合は、ソング（マスタリング）を選択してください。",
-    "pipelineSteps": "パイプラインステップ",
-    "enabled": "有効",
-    "pipelineStepsDesc": "このジョブのパイプラインステージを有効または無効にします。",
-    "all": "すべて",
-    "none": "なし",
-    "generateMix": "AIミックスを生成",
-    "processing": "処理中...",
-    "waitingQueue": "キューで待機中…",
-    "runningStage": "ステージを実行中",
+    "songMode": "Song (Mastering)",
+    "stemsMode": "Stems (Full Mix)",
+    "songModeWarning": "Song mode requires exactly one WAV/AIFF/MP3 file.",
+    "selectionWarning": "You have selected only one stem. If you want to master a song, select Song (Mastering).",
+    "pipelineSteps": "Pipeline steps",
+    "enabled": "enabled",
+    "pipelineStepsDesc": "Enable or disable pipeline stages for this job.",
+    "all": "All",
+    "none": "None",
+    "generateMix": "Generate AI Mix",
+    "processing": "Processing...",
+    "waitingQueue": "Waiting in queue…",
+    "runningStage": "Running stage",
     "stage": {
       "S0_SESSION_FORMAT": {
-        "title": "セッションフォーマット＆ルーティング",
-        "description": "サンプリングレート/ビット深度を正規化し、きれいに開始するために論理バスを割り当てます。"
+        "title": "Session format & routing",
+        "description": "Normalizes samplerate/bit depth and assigns logical buses to start clean."
       },
       "S1_STEM_DC_OFFSET": {
-        "title": "DCオフセットチェック",
-        "description": "各ステムのDCオフセットを検出して修正します。"
+        "title": "DC offset check",
+        "description": "Detects and fixes DC offsets on each stem."
       },
       "S1_STEM_WORKING_LOUDNESS": {
-        "title": "作業ラウドネス",
-        "description": "楽器プロファイルに基づいて、ステムごとの作業レベルを一致させます。"
+        "title": "Working loudness",
+        "description": "Matches working level per stem based on its instrument profile."
       },
       "S1_KEY_DETECTION": {
-        "title": "キー検出",
-        "description": "曲の全体的なキーとスケールを推定します。"
+        "title": "Key detection",
+        "description": "Estimates the song's global key and scale."
       },
       "S1_VOX_TUNING": {
-        "title": "ボーカルチューニング",
-        "description": "検出されたキーを尊重してリードボーカルをチューニングします。"
+        "title": "Vocal tuning",
+        "description": "Tunes the lead vocal while respecting the detected key."
       },
       "S1_MIXBUS_HEADROOM": {
-        "title": "ミックスバスヘッドルーム",
-        "description": "処理のためのスペースを残すために、全体的なヘッドルームを調整します。"
+        "title": "Mixbus headroom",
+        "description": "Adjusts global headroom to leave space for processing."
       },
       "S2_GROUP_PHASE_DRUMS": {
-        "title": "位相調整（ドラム）",
-        "description": "ドラムとパーカッション全体の位相/極性を調整します。"
+        "title": "Phase alignment (drums)",
+        "description": "Aligns phase/polarity across drums and percussion."
       },
       "S3_MIXBUS_HEADROOM": {
-        "title": "ミックスバスヘッドルーム",
-        "description": "処理のためのスペースを残すために、全体的なヘッドルームを調整します。"
+        "title": "Mixbus headroom",
+        "description": "Adjusts global headroom to leave space for processing."
       },
       "S3_LEADVOX_AUDIBILITY": {
-        "title": "リードボーカルの可聴性",
-        "description": "静的なミックスに対してリードボーカルのバランスをとります。"
+        "title": "Lead vocal audibility",
+        "description": "Balances the lead vocal against the static mix."
       },
       "S4_STEM_HPF_LPF": {
-        "title": "ステムごとのHPF/LPF",
-        "description": "楽器プロファイルに基づいて、ステムごとにハイパス/ローパスフィルターを適用します。"
+        "title": "HPF/LPF per stem",
+        "description": "Applies high/low-pass filters per stem based on instrument profile."
       },
       "S4_STEM_RESONANCE_CONTROL": {
-        "title": "共鳴制御",
-        "description": "各ステムの狭い共鳴を検出して抑えます。"
+        "title": "Resonance control",
+        "description": "Detects and tames narrow resonances on each stem."
       },
       "S5_STEM_DYNAMICS_GENERIC": {
-        "title": "ステムダイナミクス",
-        "description": "トラックごとの一般的なダイナミクス制御（コンプレッション/ゲート）。"
+        "title": "Stem dynamics",
+        "description": "Generic per-track dynamics control (compression/gate)."
       },
       "S5_LEADVOX_DYNAMICS": {
-        "title": "リードボーカルダイナミクス",
-        "description": "リードボーカルのコンプレッションとダイナミクス制御。"
+        "title": "Lead vocal dynamics",
+        "description": "Compression and dynamics control for the lead vocal."
       },
       "S5_BUS_DYNAMICS_DRUMS": {
-        "title": "ドラムバスダイナミクス",
-        "description": "パンチとまとまりのためのドラムのバスコンプレッション。"
+        "title": "Drum bus dynamics",
+        "description": "Drum-bus compression on drums for punch and glue."
       },
       "S6_BUS_REVERB_STYLE": {
-        "title": "バスリバーブ＆スペース",
-        "description": "バスファミリーごとのスタイルを意識したリバーブとスペースの割り当て。"
+        "title": "Bus reverb & space",
+        "description": "Style-aware reverb and space assignment per bus family."
       },
       "S6_MANUAL_CORRECTION": {
-        "title": "手動修正",
-        "description": "Piroola Studioでの手動調整。"
+        "title": "Manual Correction",
+        "description": "Manual adjustments in Piroola Studio."
       },
       "S7_MIXBUS_TONAL_BALANCE": {
-        "title": "ミックスバス音色バランス",
-        "description": "ターゲットスタイルの音色バランスに合わせるための広帯域EQ。"
+        "title": "Mixbus tonal balance",
+        "description": "Broad EQ to match the tonal balance to the target style."
       },
       "S8_MIXBUS_COLOR_GENERIC": {
-        "title": "ミックスバスカラー",
-        "description": "まとまりのためのミックスバス上の穏やかなサチュレーション/カラー。"
+        "title": "Mixbus color",
+        "description": "Gentle saturation/color on the mixbus for cohesion."
       },
       "S9_MASTER_GENERIC": {
-        "title": "マスター準備",
-        "description": "最終的な品質管理の前のプレマスター調整（レベルとバランス）。"
+        "title": "Master prep",
+        "description": "Pre-master adjustment (level and balance) before final QC."
       },
       "S10_MASTER_FINAL_LIMITS": {
-        "title": "マスター最終QC",
-        "description": "マイクロ調整によるTP/LUFS/相関の最終チェック。"
+        "title": "Master final QC",
+        "description": "Final check of TP/LUFS/correlation with micro-adjustments."
       },
       "S11_REPORT_GENERATION": {
-        "title": "レポート生成",
-        "description": "最終プロセスレポートの生成。"
+        "title": "Report Generation",
+        "description": "Generation of the final process report."
       }
     },
-    "stemsProfile": "ステムプロファイルを選択",
-    "stemsProfileDesc": "各ステムにミックス内での機能をラベル付けします。後で、これらのプロファイルを使用してバスをルーティングします。",
-    "spaceDepthTitle": "バスごとのスペース / 深さ",
-    "spaceDepthDesc": "後のステージをガイドするために、バスファミリーごとにリバーブ/スペーススタイルを割り当てます。",
+    "stageGroups": {
+      "technicalPreparation": "Technical Preparation",
+      "technicalCalibrationEq": "Technical Calibration & EQ",
+      "phaseAlignment": "Phase & Polarity Alignment",
+      "mixBusPrep": "MixBus Prep",
+      "spectralCleanup": "Spectral Cleanup",
+      "dynamics": "Dynamics",
+      "space": "Space & Depth",
+      "mastering": "MASTERING",
+      "manualCorrection": "Manual Correction",
+      "other": "Other"
+    },
+    "stemsProfile": "Select stems profile",
+    "stemsProfileDesc": "Label each stem with its function in the mix. Later we will use these profiles to route buses.",
+    "spaceDepthTitle": "Space / Depth by bus",
+    "spaceDepthDesc": "Assign a reverb/space style per bus family to guide later stages.",
     "spaceDepthBuses": {
       "drums": {
-        "label": "ドラムバス",
-        "description": "ドラムキット、打ち込みドラム、ループなど。"
+        "label": "Drums bus",
+        "description": "Drum kit, programmed drums, loops, etc."
       },
       "percussion": {
-        "label": "パーカッションバス",
-        "description": "追加のパーカッション、クラップ、シェイカーなど。"
+        "label": "Percussion bus",
+        "description": "Additional percussion, claps, shakers, etc."
       },
       "bass": {
-        "label": "ベースバス",
-        "description": "エレキベース、シンセベース、サブベース。"
+        "label": "Bass bus",
+        "description": "Electric bass, synth bass, sub-bass."
       },
       "guitars": {
-        "label": "ギターバス",
-        "description": "アコースティックおよびエレキギター。"
+        "label": "Guitars bus",
+        "description": "Acoustic and electric guitars."
       },
       "keys_synths": {
-        "label": "キーボード / シンセバス",
-        "description": "ピアノ、ローズ、パッド、シンセサイザー。"
+        "label": "Keys / Synths bus",
+        "description": "Pianos, Rhodes, pads, synthesizers."
       },
       "lead_vocal": {
-        "label": "リードボーカルバス",
-        "description": "リードボーカル。"
+        "label": "Lead vocal bus",
+        "description": "Lead vocal."
       },
       "backing_vocals": {
-        "label": "バッキングボーカルバス",
-        "description": "バックコーラス、ダブリング、ハーモニー。"
+        "label": "Backing vocals bus",
+        "description": "Backing vocals, doubles, harmonies."
       },
       "fx": {
-        "label": "FXバス",
-        "description": "ライザー、インパクト、ボーカルチョップ、クリエイティブFX。"
+        "label": "FX / Ear candy bus",
+        "description": "Risers, impacts, vocal chops, creative FX."
       },
       "ambience": {
-        "label": "アンビエンス / アトモスバス",
-        "description": "アンビエンス、アトモスフィア、ルームマイク、背景FX。"
+        "label": "Ambience / Atmos bus",
+        "description": "Ambiences, atmospheres, room mics, background FX."
       },
       "other": {
-        "label": "その他バス",
-        "description": "前のカテゴリに分類されないステム。"
+        "label": "Other bus",
+        "description": "Any stem not classified in the previous categories."
       }
     },
-    "auto": "自動",
-    "autoRecommended": "自動検出（推奨）",
+    "auto": "Auto",
+    "autoRecommended": "Auto-detect (recommended)",
     "profileOptions": {
-      "Kick": "キック（メインキックドラム）",
-      "Snare": "スネア（メインスネア）",
-      "Percussion": "パーカッション（クラップ、ボンゴ...）",
-      "Bass_Electric": "エレキベース / シンセベース",
-      "Acoustic_Guitar": "アコースティックギター",
-      "Electric_Guitar_Rhythm": "エレキギター",
-      "Keys_Piano": "ピアノ / キーボード",
-      "Synth_Pads": "シンセパッド",
-      "Lead_Vocal_Melodic": "リードボーカル（メロディック）",
-      "Lead_Vocal_Rap": "リードボーカル（ラップ）",
-      "Backing_Vocals": "バッキングボーカル",
-      "FX_EarCandy": "FX / イヤーキャンディ",
-      "Ambience_Atmos": "アンビエンス / アトモスフィア",
-      "Other": "その他"
+      "Kick": "Kick (main kick drum)",
+      "Snare": "Snare (main snare)",
+      "Percussion": "Percussion (palmas, bongos...)",
+      "Bass_Electric": "Electric / synth bass",
+      "Acoustic_Guitar": "Acoustic guitar",
+      "Electric_Guitar_Rhythm": "Electric guitar",
+      "Keys_Piano": "Piano / keys",
+      "Synth_Pads": "Synth pads",
+      "Lead_Vocal_Melodic": "Lead vocal (melodic)",
+      "Lead_Vocal_Rap": "Lead vocal (rap)",
+      "Backing_Vocals": "Backing vocals",
+      "FX_EarCandy": "FX / ear candy",
+      "Ambience_Atmos": "Ambience / atmos",
+      "Other": "Other"
     },
     "styleOptions": {
-      "Flamenco_Rumba": "フラメンコ / ルンバ",
-      "EDM_Club": "EDM / クラブ",
-      "Acoustic_SingerSongwriter": "アコースティック / シンガーソングライター"
+      "Flamenco_Rumba": "Flamenco / Rumba",
+      "EDM_Club": "EDM / Club",
+      "Acoustic_SingerSongwriter": "Acoustic / Singer-songwriter"
     },
     "result": {
-      "originalMix": "オリジナルミックス",
-      "aiMix": "AIミックス＆マスタリング（結果）",
-      "originalDesc": "オリジナルミックス（処理前）。",
-      "aiDesc": "AIミックス＆マスタリング（結果）。処理後の最終ミックスを聴いてください。",
-      "backToResult": "結果に戻る",
-      "listenOriginal": "オリジナルを聴く",
-      "viewReport": "完全なレポートを見る",
-      "loadingReport": "レポートを読み込み中...",
-      "finalReport": "最終ミックスレポート",
-      "close": "閉じる",
-      "retry": "レポートの読み込みを再試行",
-      "unavailable": "レポートデータは利用できません。",
-      "share": "共有",
-      "shareMix": "ミックスを共有",
-      "shareMixDesc": "以下のリンクをコピーして、クライアントや友人とこのミックスを共有します。リンクは結果を聴くための読み取り専用アクセスを提供します。",
-      "copy": "コピー"
+      "originalMix": "Original mix",
+      "aiMix": "AI mix & mastering (result)",
+      "originalDesc": "Original mix (before processing).",
+      "aiDesc": "AI mix & mastering (result). Listen to the final mix after processing.",
+      "backToResult": "Back to Result",
+      "listenOriginal": "Listen to Original",
+      "viewReport": "View Full Report",
+      "loadingReport": "Loading Report...",
+      "finalReport": "Final Mix Report",
+      "close": "Close",
+      "retry": "Retry loading report",
+      "unavailable": "Report data is not available.",
+      "share": "Share Mix",
+      "shareMix": "Share Your Mix",
+      "shareMixDesc": "Copy the link below to share this mix with clients or friends. The link provides read-only access to listen to the result.",
+      "copy": "Copy"
+    },
+    "share": {
+      "invalidLink": "Invalid or expired link.",
+      "notFound": "Shared mix not found.",
+      "sharedMixTitle": "Shared AI Mix",
+      "sharedMixDesc": "Listen to this track mixed and mastered by Piroola AI.",
+      "aiMix": "AI Mix & Master",
+      "originalMix": "Original Mix (Reference)",
+      "createYourOwn": "Create your own mix with Piroola"
     }
   },
   "Studio": {
     "title": "Piroola Studio",
-    "project": "プロジェクト",
-    "stemsZip": "ステム (ZIP)",
-    "mixdown": "ミックスダウン",
-    "downloading": "ダウンロード中...",
-    "finishHere": "ここで終了（マスタリングなし）",
-    "proceedMastering": "マスタリングへ進む",
-    "tracks": "トラック",
-    "masterOut": "マスター出力",
-    "monitor": "モニター",
-    "selectedChannel": "選択されたチャンネル",
-    "noTrackSelected": "トラックが選択されていません",
-    "parametricEq": "パラメトリックEQ",
-    "compressor": "コンプレッサー",
-    "panning": "パンニング",
-    "reverb": "リバーブ",
-    "loading": "Piroola Studioを読み込み中...",
-    "loadingStems": "ステムと波形を読み込み中",
-    "selectTrack": "波形を表示するにはトラックを選択してください"
+    "project": "Project",
+    "stemsZip": "Stems (ZIP)",
+    "mixdown": "Mixdown",
+    "downloading": "Downloading...",
+    "finishHere": "Finish here (not Mastering)",
+    "proceedMastering": "Proceed to Mastering",
+    "tracks": "Tracks",
+    "masterOut": "MASTER OUT",
+    "monitor": "MONITOR",
+    "selectedChannel": "Selected Channel",
+    "noTrackSelected": "No Track Selected",
+    "parametricEq": "Parametric EQ",
+    "compressor": "Compressor",
+    "panning": "Panning",
+    "reverb": "Reverb",
+    "loading": "Loading Piroola Studio...",
+    "loadingStems": "Loading stems and waveform",
+    "selectTrack": "Select a track to view waveform"
   },
   "FAQ": {
-    "title": "よくある質問",
-    "subtitle": "AIミキシング＆マスタリングサービスについて知っておくべきことすべて。",
+    "title": "Frequently Asked Questions",
+    "subtitle": "Everything you need to know about our AI mixing and mastering service.",
     "items": {
       "0": {
-        "question": "Piroolaとは何ですか？",
-        "answer": "Piroolaは、人工知能を使用してマルチトラックオーディオファイルをミックスおよびマスタリングする高度なオンラインサービスです。ステムを分析し、プロのスタジオ技術を適用して、数分でラジオ品質のトラックを提供します。"
+        "question": "What is Piroola?",
+        "answer": "Piroola is an advanced online service that uses Artificial Intelligence to mix and master your multi-track audio files. It analyzes your stems and applies professional studio techniques to deliver radio-ready quality tracks in minutes."
       },
       "1": {
-        "question": "AIミキシングはどのように機能しますか？",
-        "answer": "私たちのAIパイプラインは、各ステムの周波数成分、ダイナミクス、音色のバランスを分析します。次に、修正処理（EQ、コンプレッション）を適用し、レベルを調整し、ステレオフィールドに楽器を配置し、リバーブなどの効果を追加して、ジャンルに合わせたまとまりのあるミックスを作成します。"
+        "question": "How does the AI mixing work?",
+        "answer": "Our AI pipeline analyzes each stem for frequency content, dynamics, and tonal balance. It then applies corrective processing (EQ, compression), balances levels, places instruments in the stereo field, and adds effects like reverb to create a cohesive mix, tailored to your genre."
       },
       "2": {
-        "question": "どのファイル形式がサポートされていますか？",
-        "answer": "WAV、AIFF、FLAC、MP3など、ほとんどの標準オーディオ形式をサポートしています。最良の結果を得るには、高品質の非圧縮WAVまたはAIFFファイル（24ビット/44.1kHz以上）をアップロードすることをお勧めします。"
+        "question": "What file formats are supported?",
+        "answer": "We support most standard audio formats including WAV, AIFF, FLAC, and MP3. For the best results, we recommend uploading high-quality uncompressed WAV or AIFF files (24-bit / 44.1kHz or higher)."
       },
       "3": {
-        "question": "私の音楽は安全ですか？",
-        "answer": "はい、あなたのセキュリティは私たちの優先事項です。あなたのファイルは私たちのサーバーで安全に処理され、短期間後に自動的に削除されます。私たちはあなたの音楽に対するいかなる権利も主張しません。あなたはあなたの作品の100％の所有権を保持します。"
+        "question": "Is my music secure?",
+        "answer": "Yes, your security is our priority. Your files are processed securely on our servers and are automatically deleted after a short period. We do not claim any rights to your music; you retain 100% ownership of your work."
       },
       "4": {
-        "question": "プロセスにはどれくらい時間がかかりますか？",
-        "answer": "ほとんどのミックスは、ステムの数とトラックの長さに応じて、数分以内に完了します。分析とミキシングプロセスの各段階を示すプログレスバーが表示されます。"
+        "question": "How long does the process take?",
+        "answer": "Most mixes are completed within a few minutes, depending on the number of stems and the length of the track. You will see a progress bar indicating each step of the analysis and mixing process."
       },
       "5": {
-        "question": "ステムをアップロードできますか？",
-        "answer": "もちろんです。実際、私たちのサービスはステム用に設計されています！個々の楽器トラック（キック、スネア、ベース、ボーカルなど）をアップロードして、私たちのAIがそれらを完璧にミックスできるようにすることができます。"
+        "question": "Can I upload stems?",
+        "answer": "Absolutely. In fact, our service is designed for stems! You can upload individual instrument tracks (like kick, snare, bass, vocals) to allow our AI to mix them together perfectly."
       },
       "6": {
-        "question": "ミキシングとマスタリングの違いは何ですか？",
-        "answer": "ミキシングには、レベルの調整、パンニング、エフェクトの追加など、個々のトラック（ステム）のバランスをとって曲を形成することが含まれます。マスタリングは、ミックスされた曲を磨き、一貫して聞こえ、商業リリースに十分な音量になるようにする最終段階です。"
+        "question": "What is the difference between mixing and mastering?",
+        "answer": "Mixing involves balancing individual tracks (stems) to form a song, including adjusting levels, panning, and adding effects. Mastering is the final step that polishes the mixed song, ensuring it sounds consistent and loud enough for commercial release."
       },
       "7": {
-        "question": "ミックスされたトラックの権利は私が所有していますか？",
-        "answer": "はい！あなたはオリジナルの音楽とPiroolaによって生成された最終ミックスの完全な著作権と所有権を保持します。私たちにロイヤリティを支払うことなく、任意のストリーミングプラットフォームでトラックをリリースできます。"
+        "question": "Do I own the rights to the mixed track?",
+        "answer": "Yes! You maintain full copyright and ownership of your original music and the final mix produced by Piroola. You can release your tracks on any streaming platform without paying us royalties."
       },
       "8": {
-        "question": "結果に満足できない場合はどうなりますか？",
-        "answer": "適用された処理の詳細なレポートを提供します。結果が期待どおりでない場合は、入力ステムを調整（ノイズのクリーンアップなど）するか、ファイルが正しくラベル付けされていることを確認して、プロセスを再実行できます。"
+        "question": "What if I'm not satisfied with the result?",
+        "answer": "We provide a detailed report of the processing applied. If the result isn't what you expected, you can try adjusting the input stems (e.g., cleaning up noise) or ensuring your files are correctly labeled, and run the process again."
       },
       "9": {
-        "question": "ファイルサイズ制限はありますか？",
-        "answer": "現在、音楽制作のステムに典型的な妥当なファイルサイズをサポートしています。非常に大きなプロジェクトで問題が発生した場合は、ステムを標準のサンプリングレート（44.1kHzまたは48kHzなど）でエクスポートすることを検討してください。"
+        "question": "Is there a file size limit?",
+        "answer": "Currently, we support reasonable file sizes typical for music production stems. If you encounter issues with extremely large projects, consider exporting your stems at a standard sample rate (e.g., 44.1kHz or 48kHz)."
       },
       "10": {
-        "question": "結果をダウンロードするにはどうすればよいですか？",
-        "answer": "処理が完了すると、「ダウンロード」ボタンが表示されます。最終的なミックスおよびマスタリングされたステレオファイルをデバイスに直接ダウンロードできます。"
+        "question": "How do I download my results?",
+        "answer": "Once the processing is complete, a 'Download' button will appear. You can download the final mixed and mastered stereo file directly to your device."
       },
       "11": {
-        "question": "モバイルでPiroolaを使用できますか？",
-        "answer": "はい、当社のウェブサイトは完全に応答性が高く、モバイルデバイスで動作します。ただし、複数のステムファイルを管理するには、デスクトップコンピューターの方がスムーズなワークフローを提供する場合があります。"
+        "question": "Can I use Piroola on mobile?",
+        "answer": "Yes, our website is fully responsive and works on mobile devices. However, for managing multiple stem files, a desktop computer might offer a smoother workflow."
       }
     }
   },
   "Pricing": {
-    "title": "価格",
-    "subtitle": "あなたの旅の各段階のための価格プラン",
-    "description": "オーディオ制作のニーズに最適なプランを選択してください。デモからプロのリリースまで、私たちはあなたをカバーします。",
-    "monthlyBilling": "月額請求",
-    "yearlyBilling": "年額請求",
-    "save20": "〜20％節約",
-    "month": "月",
-    "billedYearly": "年額請求",
-    "mostPopular": "最も人気",
-    "startForFree": "無料で開始",
-    "getPlus": "プラスを取得",
-    "getPro": "プロを取得",
+    "title": "Pricing",
+    "subtitle": "Pricing plans for every stage of your journey",
+    "description": "Choose the perfect plan for your audio production needs. From demos to professional releases, we have you covered.",
+    "monthlyBilling": "Monthly billing",
+    "yearlyBilling": "Yearly billing",
+    "save20": "Save ~20%",
+    "month": "month",
+    "billedYearly": "Billed yearly",
+    "mostPopular": "Most Popular",
+    "startForFree": "Start for Free",
+    "getPlus": "Get Plus",
+    "getPro": "Get Pro",
     "Tiers": {
       "free": {
         "name": "Free",
@@ -976,202 +1032,229 @@
     }
   },
   "Cookie": {
-    "title": "クッキーポリシー",
-    "lastUpdated": "最終更新日: {date}",
+    "title": "Cookie Policy",
+    "lastUpdated": "Last updated: {date}",
     "sections": {
       "0": {
-        "title": "1. クッキーとは",
-        "content": "クッキーは、ウェブサイトを閲覧する際にお使いのコンピュータやモバイルデバイスに配置される小さなテキストファイルです。これらはウェブサイトを機能させる、またはより効率的に機能させるため、およびサイトの所有者に情報を提供するために広く使用されています。"
+        "title": "1. What Are Cookies",
+        "content": "Cookies are small text files that are placed on your computer or mobile device when you browse websites. They are widely used to make websites work, or work more efficiently, as well as to provide information to the owners of the site."
       },
       "1": {
-        "title": "2. クッキーの使用方法",
-        "content": "当社は以下に詳述するさまざまな理由でクッキーを使用します。残念ながら、ほとんどの場合、このサイトに追加する機能や特徴を完全に無効にすることなくクッキーを無効にする業界標準のオプションはありません。使用するサービスを提供するために使用される場合に備えて、必要かどうかわからない場合はすべてのクッキーをオンのままにしておくことをお勧めします。"
+        "title": "2. How We Use Cookies",
+        "content": "We use cookies for a variety of reasons detailed below. Unfortunately, in most cases there are no industry standard options for disabling cookies without completely disabling the functionality and features they add to this site. It is recommended that you leave on all cookies if you are not sure whether you need them or not in case they are used to provide a service that you use."
       },
       "2": {
-        "title": "3. 当社が設定するクッキー",
+        "title": "3. The Cookies We Set",
         "list": {
-          "0": "<strong>必須クッキー:</strong> これらのクッキーはウェブサイトが機能するために必要であり、当社のシステムでオフにすることはできません。これらは通常、プライバシー設定の設定、ログイン、フォームへの入力など、サービスのリクエストに相当するアクションに応じてのみ設定されます。",
-          "1": "<strong>機能性クッキー:</strong> これらのクッキーにより、ウェブサイトは強化された機能とパーソナライゼーションを提供できます。これらは当社、または当社がページにサービスを追加したサードパーティプロバイダーによって設定される場合があります。",
-          "2": "<strong>分析クッキー:</strong> 当社はGoogle Analyticsを使用して、訪問者がウェブサイトとどのようにやり取りするかを理解します。これはユーザーエクスペリエンスの向上に役立ちます。これらのクッキーは、サイトでの滞在時間や訪問したページなどを追跡します。"
+          "0": "<strong>Essential Cookies:</strong> These cookies are necessary for the website to function and cannot be switched off in our systems. They are usually only set in response to actions made by you which amount to a request for services, such as setting your privacy preferences, logging in or filling in forms.",
+          "1": "<strong>Functionality Cookies:</strong> These cookies enable the website to provide enhanced functionality and personalization. They may be set by us or by third party providers whose services we have added to our pages.",
+          "2": "<strong>Analytics Cookies:</strong> We use Google Analytics to understand how our visitors interact with the website. This helps us improve the user experience. These cookies track things such as how long you spend on the site and the pages that you visit."
         }
       },
       "3": {
-        "title": "4. サードパーティクッキー",
-        "content": "特別な場合には、信頼できるサードパーティが提供するクッキーも使用します。次のセクションでは、このサイトを通じて遭遇する可能性のあるサードパーティクッキーについて詳しく説明します。",
-        "p2": "このサイトでは、ウェブ上で最も普及しており信頼できる分析ソリューションの1つであるGoogle Analyticsを使用して、サイトの使用方法やエクスペリエンスを向上させる方法を理解するのに役立てています。これらのクッキーは、魅力的なコンテンツを作成し続けるために、サイトでの滞在時間や訪問したページなどを追跡する場合があります。"
+        "title": "4. Third Party Cookies",
+        "content": "In some special cases we also use cookies provided by trusted third parties. The following section details which third party cookies you might encounter through this site.",
+        "p2": "This site uses Google Analytics which is one of the most widespread and trusted analytics solutions on the web for helping us to understand how you use the site and ways that we can improve your experience. These cookies may track things such as how long you spend on the site and the pages that you visit so we can continue to produce engaging content."
       },
       "4": {
-        "title": "5. クッキーの管理",
-        "content": "ブラウザの設定を調整することで、クッキーの設定を防ぐことができます（方法についてはブラウザのヘルプを参照してください）。クッキーを無効にすると、このサイトや訪問する他の多くのウェブサイトの機能に影響することに注意してください。クッキーを無効にすると、通常、このサイトの特定の機能や特徴も無効になります。したがって、クッキーを無効にしないことをお勧めします。"
+        "title": "5. Managing Cookies",
+        "content": "You can prevent the setting of cookies by adjusting the settings on your browser (see your browser Help for how to do this). Be aware that disabling cookies will affect the functionality of this and many other websites that you visit. Disabling cookies will usually result in also disabling certain functionality and features of this site. Therefore it is recommended that you do not disable cookies."
       },
       "5": {
-        "title": "6. 連絡先",
-        "content": "このクッキーポリシーについてご質問がある場合は、以下までお問い合わせください。<br /><span class='text-teal-400'>privacy@audioalchemy.com</span>"
+        "title": "6. Contact Details",
+        "content": "If you have any questions about this cookie policy, please contact us at: <br /><span class='text-teal-400'>privacy@audioalchemy.com</span>"
       }
     }
   },
   "UploadDropzone": {
-    "uploadSong": "曲をアップロード",
-    "uploadStems": "ステムをアップロード",
-    "songModeDesc": "単一のステレオバウンスをマスタリングします。",
-    "stemsModeDesc": "完全なAIミックスのために個々のトラックをアップロードします。",
-    "dragDropSong": "ここに曲をドラッグ＆ドロップするか、クリックしてファイルを選択してください",
-    "dragDropStems": "ここにステムをドラッグ＆ドロップするか、クリックしてファイルを選択してください",
-    "supportedFormats": "サポートされている形式: WAV, AIFF, MP3",
-    "filesSelected": "{count} 個のオーディオファイルが選択されました"
+    "uploadSong": "Upload Your Song",
+    "uploadStems": "Upload Your Stems",
+    "songModeDesc": "Master a single stereo bounce.",
+    "stemsModeDesc": "Upload individual tracks for a full AI mix.",
+    "dragDropSong": "Drag & drop your song here, or click to select a file",
+    "dragDropStems": "Drag & drop stems here, or click to select files",
+    "supportedFormats": "Supported formats: WAV, AIFF, MP3",
+    "filesSelected": "{count} audio file{count, plural, =1 {} other {s}} selected"
   },
   "PipelinePhases": {
     "inputMetadata": {
-      "title": "入力＆メタデータ",
-      "body": "アップロードされたすべてのファイルを整理し、フォーマット、サンプリングレート、基本的なメタデータを正規化して、残りのパイプラインが一貫して機能するようにセッションを準備します。"
+      "title": "Input & Metadata",
+      "body": "We prepare your session by organizing all uploaded files and normalizing formats, sample rates and basic metadata so the rest of the pipeline can work consistently."
     },
     "technicalPreparation": {
-      "title": "技術的な準備",
-      "body": "各ステムの基本的な技術的問題を修正します：DCオフセット、作業ラウドネス、初期ヘッドルームを修正して、ミキシングのためのクリーンで信頼できる出発点を確保します。"
+      "title": "Technical Preparation",
+      "body": "We fix basic technical issues on each stem: DC offset, working loudness and initial headroom to ensure a clean, reliable starting point for mixing."
     },
     "phasePolarityAlignment": {
-      "title": "位相＆極性の調整",
-      "body": "マルチマイクグループ（ドラムなど）を分析して位相を調整し、極性を修正し、キャンセルを回避してインパクトと低域の明瞭さを回復します。"
+      "title": "Phase & Polarity Alignment",
+      "body": "We analyze multi-mic groups (like drums) to align phase and correct polarity, avoiding cancellations and restoring impact and low-end clarity."
     },
     "staticMixRouting": {
-      "title": "静的ミックス＆ルーティング",
-      "body": "静的なバランスとバスルーティングを構築し、フェーダーとパンの位置を配置して、重い処理の前にすべての要素が明確に聞こえるようにします。"
+      "title": "Static Mix & Routing",
+      "body": "We build a static balance and bus routing, placing faders and pan positions so that all elements are heard clearly before any heavy processing."
     },
     "spectralCleanup": {
-      "title": "スペクトルクリーンアップ",
-      "body": "ハイパスフィルターと穏やかなノッチフィルターを使用して各ステムをクリーンアップし、ランブルと耳障りな共鳴を取り除き、ミックス内のスペースを解放します。"
+      "title": "Spectral Cleanup",
+      "body": "We clean each stem using high-pass filters and gentle notch filters to remove rumble and harsh resonances, freeing up space in the mix."
     },
     "dynamicsLevelAutomation": {
-      "title": "ダイナミクス＆レベルオートメーション",
-      "body": "コンプレッション、リミッティング、レベルオートメーションを使用してダイナミクスを制御し、パフォーマンスを表現豊かに保ちながら、ピークがミックスから飛び出すのを防ぎます。"
+      "title": "Dynamics & Level Automation",
+      "body": "We control dynamics using compression, limiting and level automation, keeping performances expressive but preventing peaks from jumping out of the mix."
     },
     "spaceDepthByBuses": {
-      "title": "バスによる空間＆深さ",
-      "body": "楽器を専用のリバーブおよびアンビエンスバスに送り、サウンドステージの近くまたは遠くに配置して、深さと空間の感覚を作り出します。"
+      "title": "Space & Depth by Buses",
+      "body": "We send instruments to dedicated reverb and ambience buses, placing them closer or farther in the soundstage to create a sense of depth and space."
     },
     "multibandEqTonalBalance": {
-      "title": "マルチバンドEQ＆音色バランス",
-      "body": "全体的なスペクトルバランスを微調整して、ミックスが自然に感じられ、さまざまな再生システムでうまく聞こえるようにします。"
+      "title": "Multiband EQ & Tonal Balance",
+      "body": "We fine-tune the overall spectral balance so the mix feels natural and translates well across different playback systems."
     },
     "mixBusColor": {
-      "title": "ミックスバスカラー",
-      "body": "穏やかなサチュレーションとバス処理を追加してミックスを結び付け、ダイナミクスを破壊することなく暖かさ、パンチ、知覚されるラウドネスを向上させます。"
+      "title": "Mix Bus Color",
+      "body": "We add gentle saturation and bus processing to glue the mix together, enhancing warmth, punch and perceived loudness without destroying dynamics."
     },
     "mastering": {
-      "title": "マスタリング",
-      "body": "トラックをターゲットのラウドネスまで上げ、最終的なEQ、ステレオ幅、リミッティングを調整して、ストリーミングプラットフォームでのリリースの準備を整えます。"
+      "title": "Mastering",
+      "body": "We bring the track up to its target loudness, adjust final EQ, stereo width and limiting so it is ready for release on streaming platforms."
     },
     "masterStereoQc": {
-      "title": "マスターステレオQC",
-      "body": "最終的な品質チェック（トゥルーピーク、ラウドネス、ステレオイメージ、バランス）を実行して、マスターが技術的な目標を満たしていることを確認します。"
+      "title": "Master Stereo QC",
+      "body": "We run final quality checks (true peak, loudness, stereo image and balance) to ensure the master meets the technical targets."
     },
     "reporting": {
-      "title": "レポート",
-      "body": "技術レポートを生成し、最終マスターをエクスポートして、パイプラインの各段階で行われたことを確認できるようにします。"
+      "title": "Reporting",
+      "body": "We generate a technical report and export the final master so you can review what was done at each stage of the pipeline."
     }
   },
   "MixPipelinePanel": {
-    "title": "パイプライン",
-    "description": "主要な処理ブロックごとの累積結果を聞くことで、各フェーズでミックスがどのように進化するかを探ります。",
-    "loading": "パイプライン定義を読み込み中...",
-    "error": "パイプライン定義の読み込み中にエラーが発生しました。",
-    "activeContract": "アクティブな契約:"
+    "title": "Pipeline",
+    "description": "Explore how the mix evolves at each phase by listening to the cumulative result after every major processing block.",
+    "loading": "Loading pipeline definition...",
+    "error": "Error loading the pipeline definition.",
+    "activeContract": "Active contract:"
   },
   "Report": {
-    "title": "マスタリングレポート",
-    "downloadPdf": "PDFをダウンロード",
-    "generatingPdf": "PDFを生成中...",
-    "mixSummary": "ミックス概要",
-    "interactiveAnalysis": "インタラクティブ分析",
-    "detailedStageReport": "詳細ステージレポート",
+    "title": "Mastering Report",
+    "downloadPdf": "Download PDF",
+    "downloadLogs": "Download Logs",
+    "generatingPdf": "Generating PDF...",
+    "mixSummary": "Mix Summary",
+    "interactiveAnalysis": "Interactive Analysis",
+    "detailedStageReport": "Detailed Stage Report",
+    "stageChangesTitle": "Key Changes",
+    "noChangesDetected": "No significant changes were applied in this stage.",
+    "metrics": {
+      "noiseFloor": "Noise Floor",
+      "inputLoudness": "Input Loudness (RMS)",
+      "inputTruePeak": "Input True Peak",
+      "harmonicDistortion": "Harmonic Distortion (THD)",
+      "sampleRate": "Sample Rate",
+      "targetTruePeakMax": "Target True Peak (Max)",
+      "targetTruePeakMin": "Target True Peak (Min)",
+      "dynamicRange": "Dynamic Range",
+      "clippingCount": "Clipped Samples",
+      "maxEqAdjustment": "Max EQ Adjustment per Band",
+      "eqCorrection": "EQ Correction Gains",
+      "avgGainReduction": "Avg. Gain Reduction",
+      "maxGainReduction": "Max Gain Reduction",
+      "compressionRatio": "Compression Ratio",
+      "compressionThreshold": "Compression Threshold",
+      "saturationDrive": "Saturation Drive Limit",
+      "saturationDriveUsed": "Saturation Applied",
+      "finalLoudness": "Integrated Loudness (LUFS)",
+      "finalTruePeak": "True Peak (dBTP)",
+      "limiterCeiling": "Limiter Ceiling",
+      "limiterGain": "Limiter Pre-Gain",
+      "limiterReduction": "Limiter Gain Reduction"
+    },
     "stages": {
       "S0_SESSION_FORMAT": {
-        "title": "入力＆メタデータ",
-        "description": "{count}個のステムでセッションを初期化しました。フォーマットは{format}として確認されました。一貫した処理のためにサンプリングレートを{sample_rate}Hzに正規化しました。"
+        "title": "Input & Metadata",
+        "description": "Session started with <green>{count}</green> stems imported. Format verification and sample rate unification to <green>{sample_rate}</green>Hz have been performed to ensure maximum fidelity throughout the processing pipeline."
       },
       "S0_SEPARATE_STEMS": {
-        "title": "ステム分離",
-        "description": "アップロードされたファイルを処理し、ミキシング用の個々のステムを準備しました。"
+        "title": "Stem Separation",
+        "description": "Processed uploaded files to prepare individual stems for mixing."
       },
       "S1_STEM_DC_OFFSET": {
-        "title": "DCオフセット補正",
-        "description": "ステムの不可聴DCオフセットノイズを分析しました。最大ヘッドルームを確保するために補正されました。"
+        "title": "DC Offset Correction",
+        "description": "Deep technical analysis performed to detect inaudible DC offset noise. Corrected to ensure maximum headroom and prevent phase issues."
       },
       "S1_KEY_DETECTION": {
-        "title": "キー検出",
-        "description": "グローバルキーは{key}、信頼度{confidence}%で検出されました。"
+        "title": "Key Detection",
+        "description": "Harmonic analysis engine determined the global key is <green>{key}</green> with <green>{confidence}</green>% confidence. This informs melodic tuning and frequency resonance decisions."
       },
       "S1_VOX_TUNING": {
-        "title": "ボーカルチューニング",
-        "description": "検出されたキー{key}に合わせてボーカルにピッチ補正を適用しました。"
+        "title": "Vocal Tuning",
+        "description": "Transparent pitch correction applied to vocals to match the detected key of <green>{key}</green>, maintaining natural performance while ensuring perfect tuning."
       },
       "S1_MIXBUS_HEADROOM": {
-        "title": "ミックスバスヘッドルーム",
-        "description": "処理の準備のためにミックスバスヘッドルームを{headroom_db}dBに調整しました。"
+        "title": "Mixbus Headroom",
+        "description": "Initial mixbus gain structure adjusted to establish <green>{headroom_db}</green>dB safety headroom, providing dynamic space for subsequent processing."
       },
       "S1_STEM_WORKING_LOUDNESS": {
-        "title": "作業ラウドネス",
-        "description": "ステムレベルを一貫した作業ラウドネスに正規化しました。"
+        "title": "Working Loudness",
+        "description": "Working loudness normalized for each stem, ensuring all faders start at a balanced point for predictable compressor behavior."
       },
       "S2_GROUP_PHASE_DRUMS": {
-        "title": "ドラム位相調整",
-        "description": "パンチと低音の明瞭さを向上させるために、ドラムグループトラックの位相を調整しました。"
+        "title": "Drum Phase Alignment",
+        "description": "Phase coherence analyzed across drum microphones. Time alignment and polarity correction applied to recover lost low-end energy and impact."
       },
       "S3_MIXBUS_HEADROOM": {
-        "title": "ミックスバスヘッドルーム確認",
-        "description": "ヘッドルームを{headroom_db}dBで再確認しました。"
+        "title": "Mixbus Headroom Check",
+        "description": "Mixbus headroom re-verified to <green>{headroom_db}</green>dB to ensure summing integrity before critical mixing."
       },
       "S3_LEADVOX_AUDIBILITY": {
-        "title": "リードボーカルバランス",
-        "description": "ミックスに対して最適な聴こえやすさになるよう、リードボーカルレベルを{gain_db}dB調整しました。"
+        "title": "Lead Vocal Balance",
+        "description": "Lead vocal level balanced by <green>{gain_db}</green>dB to sit correctly against the instrumental backing, ensuring intelligibility."
       },
       "S4_STEM_HPF_LPF": {
-        "title": "スペクトルクリーンアップ",
-        "description": "周波数スペクトルをクリーンアップするためにハイパス/ローパスフィルターを適用しました。"
+        "title": "Spectral Cleanup",
+        "description": "Surgical High-Pass and Low-Pass filters applied to clean the frequency spectrum, removing subsonic rumble and ultrasonic hiss."
       },
       "S4_STEM_RESONANCE_CONTROL": {
-        "title": "共鳴制御",
-        "description": "不快な共鳴を抑制し、ピークを最大{max_reduction_db}dB削減しました。"
+        "title": "Resonance Control",
+        "description": "Harsh frequency resonances suppressed, reducing peaks by up to <green>{max_reduction_db}</green>dB for a smoother, less fatiguing sound."
       },
       "S5_STEM_DYNAMICS_GENERIC": {
-        "title": "ステムダイナミクス",
-        "description": "ステムにダイナミクスコントロールを適用しました。平均ゲインリダクション: {avg_gr_db}dB。"
+        "title": "Stem Dynamics",
+        "description": "Individual dynamic control applied to stems. Average gain reduction of <green>{avg_gr_db}</green>dB achieved for consistent levels without killing micro-dynamics."
       },
       "S5_LEADVOX_DYNAMICS": {
-        "title": "ボーカルダイナミクス",
-        "description": "一貫したパフォーマンスのために、{gr_db}dBのゲインリダクションでボーカルダイナミクスを制御しました。"
+        "title": "Vocal Dynamics",
+        "description": "Lead vocal processed with dedicated compression, applying <green>{gr_db}</green>dB reduction to keep the vocal firm and upfront."
       },
       "S5_BUS_DYNAMICS_DRUMS": {
-        "title": "ドラムバスコンプレッション",
-        "description": "ドラムバスにグルーコンプレッションを適用しました。ゲインリダクション: {gr_db}dB。"
+        "title": "Drum Bus Compression",
+        "description": "Glue compression applied to the drum bus with <green>{gr_db}</green>dB reduction, unifying the kit into a cohesive, punchy instrument."
       },
       "S6_BUS_REVERB_STYLE": {
-        "title": "空間的奥行き",
-        "description": "バスに'{style}'リバーブスタイルを使用して空間的奥行きを強化しました。"
+        "title": "Spatial Depth",
+        "description": "Spatial dimension added using '<green>{style}</green>' reverb style, placing instruments in their own acoustic space for depth."
       },
       "S7_MIXBUS_TONAL_BALANCE": {
-        "title": "トーンバランス",
-        "description": "ミックスバススペクトルをバランスさせました。適用された最大補正: {max_correction_db}dB。"
+        "title": "Tonal Balance",
+        "description": "Global frequency spectrum analyzed and corrected by up to <green>{max_correction_db}</green>dB. Tonal balance sculpted to match genre standards, ensuring clear bass, mids, and highs."
       },
       "S8_MIXBUS_COLOR_GENERIC": {
-        "title": "ミックスバスサチュレーション",
-        "description": "ミックスバスに倍音サチュレーションを追加しました。ドライブ量: {drive_percent}%。"
+        "title": "Mixbus Saturation",
+        "description": "Analog character injected via soft saturation (<green>{drive_percent}</green>%) acting as sonic glue. This increased density (RMS <green>{diff_inputLoudness}</green>dB) and raised the noise floor by <green>{diff_noiseFloor}</green>dB for rich texture."
       },
       "S9_MASTER_GENERIC": {
-        "title": "マスタリングリミッター",
-        "description": "商業的なラウドネスのために、{ceiling_db}dBのシーリングで最終リミッティングを適用しました。"
+        "title": "Mastering Limiter",
+        "description": "Loudness maximized for commercial competition with a <green>{ceiling_db}</green>dB safety ceiling. Dynamics controlled for a large, present sound while preserving transient punch."
       },
       "S10_MASTER_FINAL_LIMITS": {
-        "title": "最終品質管理",
-        "description": "基準を確認しました。統合ラウドネス: {lufs} LUFS、トゥルーピーク: {true_peak} dBTP。"
+        "title": "Final QC",
+        "description": "Final Quality Control passed. Integrated loudness of <green>{lufs}</green> LUFS and True Peak of <green>{true_peak}</green> dBTP achieved, ensuring distortion-free streaming playback."
       },
       "S11_REPORT_GENERATION": {
-        "title": "レポート生成",
-        "description": "この分析レポートを生成しました。"
+        "title": "Report Generation",
+        "description": "Comprehensive technical report generated."
       },
       "S13_MANUAL_CORRECTION": {
-        "title": "手動補正",
-        "description": "Piroola Studioでのユーザーフィードバックに基づいて手動調整を適用しました。"
+        "title": "Manual Correction",
+        "description": "Manual adjustments applied based on user feedback in Piroola Studio."
       }
     }
   }

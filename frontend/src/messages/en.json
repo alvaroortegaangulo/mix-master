@@ -65,20 +65,41 @@
     }
   },
   "BenefitsSection": {
-    "efficiencyBadge": "AI EFFICIENCY",
-    "speedTitle": "Hours of work, <highlight>done in minutes.</highlight>",
-    "speedDescription": "Forget about tedious gain staging, phase alignment, and resonance cleanup. Piroola handles the technical heavy lifting so you can focus on the creative vibe.",
-    "speedPoints": [
-      "Instant session setup and routing",
-      "Automated corrective EQ",
-      "Real-time loudness compliance check"
-    ],
-    "qualityBadge": "PREMIUM QUALITY",
-    "qualityTitle": "Studio Quality, <highlight>accessible to everyone.</highlight>",
-    "qualityDescription": "You don't need a million-dollar studio or decades of experience to get a professional sound. Our algorithms are trained on hit records to deliver commercially competitive results.",
-    "readyFor": "READY FOR",
-    "spotifyReady": "Spotify",
-    "appleMusicReady": "Apple Music"
+    "headerBadge": "Piroola AI Engine v2.0",
+    "headerTitle": "Revolutionize your sound",
+    "headerDesc": "The intelligent mastering suite that transforms home demos into commercial hits in seconds.",
+    "efficiencyBadge": "AI Efficiency",
+    "manual": "MANUAL",
+    "speedTitle": "<strike>Hours</strike> of work,<brTag></brTag><highlight>done in minutes.</highlight>",
+    "speedDescription": "Forget manual gain staging and resonance cleanup. Piroola automates the heavy technical lifting so you can create.",
+    "deepAnalysisTitle": "Deep Analysis",
+    "deepAnalysisPoints": {
+      "0": "Resonance detection",
+      "1": "Dynamic spectral balance",
+      "2": "Intelligent stereo image"
+    },
+    "qualityBadge": "Premium Quality",
+    "qualityTitle": "Studio Sound",
+    "qualityDescription": "Algorithms trained on Billboard hits for competitive results.",
+    "toolkitTitle": "Automatic Toolkit",
+    "toolkitItems": {
+      "0": {
+        "title": "Instant Routing",
+        "desc": "Automatic session setup."
+      },
+      "1": {
+        "title": "Corrective EQ",
+        "desc": "Eliminates annoying frequencies."
+      },
+      "2": {
+        "title": "Loudness Check",
+        "desc": "Real-time LUFS verification."
+      }
+    },
+    "readyForWorldTitle": "Ready for the World",
+    "readyForWorldDesc": "Optimized for streaming platforms.",
+    "spotify": "Spotify",
+    "appleMusic": "Music"
   },
   "LiveSoundAnalysis": {
     "label": "Live Analytics Engine",

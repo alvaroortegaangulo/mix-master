@@ -53,20 +53,41 @@
     }
   },
   "BenefitsSection": {
-    "efficiencyBadge": "Efficacit? IA",
-    "speedTitle": "Des heures de travail, faites en quelques minutes.",
-    "speedDescription": "Oubliez le gain staging fastidieux, l'alignement de phase et le nettoyage des résonances. Piroola gère le gros travail technique pour que vous puissiez vous concentrer sur la vibe créative.",
-    "speedPoints": [
-      "Configuration de session et routage instantanés",
-      "EQ correctif automatisé",
-      "Vérification de conformité de sonie en temps réel"
-    ],
-    "qualityTitle": "Qualité Studio, accessible à tous.",
-    "qualityDescription": "Vous n'avez pas besoin d'un studio à un million de dollars ou de décennies d'expérience pour obtenir un son professionnel. Nos algorithmes sont entraînés sur des disques à succès pour fournir des résultats commercialement compétitifs.",
-    "readyFor": "Pr?t pour",
-    "qualityBadge": "Qualit? Premium",
-    "spotifyReady": "Prêt pour Spotify",
-    "appleMusicReady": "Prêt pour Apple Music"
+    "headerBadge": "Piroola AI Engine v2.0",
+    "headerTitle": "Révolutionnez votre son",
+    "headerDesc": "La suite de mastering intelligente qui transforme les démos maison en succès commerciaux en quelques secondes.",
+    "efficiencyBadge": "Efficacité IA",
+    "manual": "MANUEL",
+    "speedTitle": "<strike>Heures</strike> de travail,<brTag></brTag><highlight>faites en minutes.</highlight>",
+    "speedDescription": "Oubliez le gain staging manuel et le nettoyage des résonances. Piroola automatise le gros travail technique pour que vous créiez.",
+    "deepAnalysisTitle": "Analyse Approfondie",
+    "deepAnalysisPoints": {
+      "0": "Détection de résonance",
+      "1": "Équilibre spectral dynamique",
+      "2": "Image stéréo intelligente"
+    },
+    "qualityBadge": "Qualité Premium",
+    "qualityTitle": "Son Studio",
+    "qualityDescription": "Algorithmes entraînés sur des succès du Billboard pour des résultats compétitifs.",
+    "toolkitTitle": "Toolkit Automatique",
+    "toolkitItems": {
+      "0": {
+        "title": "Routage Instantané",
+        "desc": "Configuration de session automatique."
+      },
+      "1": {
+        "title": "EQ Correctif",
+        "desc": "Élimine les fréquences gênantes."
+      },
+      "2": {
+        "title": "Vérification Sonie",
+        "desc": "Vérification LUFS en temps réel."
+      }
+    },
+    "readyForWorldTitle": "Prêt pour le Monde",
+    "readyForWorldDesc": "Optimisé pour les plateformes de streaming.",
+    "spotify": "Spotify",
+    "appleMusic": "Music"
   },
   "LiveSoundAnalysis": {
     "label": "Moteur d'Analyse en Direct",
