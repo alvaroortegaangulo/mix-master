@@ -158,7 +158,7 @@ export function FeaturesSection({ className }: { className?: string }) {
 
         {/* Main Card Container */}
         <div
-          className="relative w-full aspect-[16/10] md:aspect-[21/9] lg:h-[520px] rounded-3xl overflow-hidden group shadow-2xl border border-white/5 bg-slate-950"
+          className="relative w-full aspect-[16/10] md:aspect-[21/9] lg:h-[260px] rounded-3xl overflow-hidden group shadow-2xl border border-white/5 bg-slate-950"
           id="slider-root"
         >
           {/* Background Images Layer */}
@@ -186,19 +186,19 @@ export function FeaturesSection({ className }: { className?: string }) {
           <div className="absolute inset-0 bg-gradient-to-r from-[#0B0F19]/80 via-transparent to-transparent opacity-60 z-10 pointer-events-none"></div>
 
           {/* Content Overlay (Text) */}
-          <div className="absolute inset-0 flex flex-col justify-end md:justify-center px-6 md:px-12 pb-24 md:pb-0 z-20 pointer-events-none">
+          <div className="absolute inset-0 flex flex-col justify-end md:justify-center px-5 md:px-10 pb-16 md:pb-0 z-20 pointer-events-none">
             <div
-              className="glass-overlay p-5 md:p-7 rounded-2xl max-w-lg transform transition-all duration-500 pointer-events-auto backdrop-blur-md bg-slate-950/40 border border-white/10"
+              className="glass-overlay p-4 md:p-5 rounded-2xl max-w-md transform transition-all duration-500 pointer-events-auto backdrop-blur-md bg-slate-950/40 border border-white/10"
               key={activeStep}
               // Key forces re-mount for animation
             >
-              <div className={`flex items-center gap-3 mb-4 ${colorMap[activeFeature.color].text}`}>
-                <PuzzlePieceIcon className="w-6 h-6" />
+              <div className={`flex items-center gap-3 mb-3 ${colorMap[activeFeature.color].text}`}>
+                <PuzzlePieceIcon className="w-5 h-5" />
+                <h3 className="text-xl md:text-2xl font-display font-bold leading-tight animate-in fade-in slide-in-from-bottom-2 duration-500">
+                  {activeFeature.title}
+                </h3>
               </div>
-              <h3 className={`text-2xl md:text-3xl font-display font-bold mb-3 leading-tight animate-in fade-in slide-in-from-bottom-2 duration-500 ${colorMap[activeFeature.color].text}`}>
-                {activeFeature.title}
-              </h3>
-              <p className="text-slate-300 text-sm md:text-lg leading-relaxed animate-in fade-in slide-in-from-bottom-3 duration-500 delay-100">
+              <p className="text-slate-300 text-xs md:text-sm leading-relaxed animate-in fade-in slide-in-from-bottom-3 duration-500 delay-100">
                 {activeFeature.description}
               </p>
             </div>
@@ -206,7 +206,7 @@ export function FeaturesSection({ className }: { className?: string }) {
 
           {/* Navigation Controls (Bottom Tabs) */}
           <div className="absolute bottom-0 left-0 w-full z-30 bg-[#0B0F19]/80 backdrop-blur-md border-t border-white/5">
-            <div className="flex flex-col md:flex-row divide-y md:divide-y-0 md:divide-x divide-white/10 h-auto md:h-20">
+            <div className="flex flex-col md:flex-row divide-y md:divide-y-0 md:divide-x divide-white/10 h-auto md:h-14">
               {features.map((feature, idx) => {
                  const isActive = activeStep === idx;
                  const colors = colorMap[feature.color];
@@ -217,14 +217,7 @@ export function FeaturesSection({ className }: { className?: string }) {
                     className="nav-tab flex-1 flex items-center justify-between px-6 py-3 md:py-0 hover:bg-white/5 transition-colors text-left group relative outline-none focus:bg-white/5"
                     onClick={() => handleStepChange(idx)}
                   >
-                    <div className="flex flex-col gap-1 z-10">
-                      <span
-                        className={`text-[10px] font-mono uppercase tracking-widest transition-colors ${
-                           isActive ? colors.text : "text-slate-500 " + colors.groupHoverText
-                        }`}
-                      >
-                        {feature.tabStep}
-                      </span>
+                    <div className="flex flex-col z-10">
                       <span
                         className={`text-sm font-bold transition-colors ${
                           isActive ? "text-white" : "text-slate-300 group-hover:text-white"
