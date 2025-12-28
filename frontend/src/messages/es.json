@@ -103,7 +103,7 @@
   },
   "LiveSoundAnalysis": {
     "label": "Motor de Análisis en Vivo",
-    "title": "Visualiza lo Invisible.",
+    "title": "Motor de Análisis en Vivo",
     "description": "Deja de adivinar. Piroola proporciona métricas de precisión quirúrgica para asegurar que tu mezcla cumpla con los estándares de streaming (Spotify, Apple Music) y transmisión.",
     "spectrum": {
       "title": "Espectro de Frecuencia",

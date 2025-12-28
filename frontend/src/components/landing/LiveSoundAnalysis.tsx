@@ -69,12 +69,6 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         {/* Header */}
         <div className="mb-8">
-          <div className="flex items-center gap-2 mb-4">
-             <div className="h-2 w-2 rounded-full bg-teal-400 animate-pulse"></div>
-             <div className="text-xs font-bold tracking-widest text-teal-400 uppercase">
-                {t('label')}
-             </div>
-          </div>
           <h2 className="text-2xl sm:text-3xl 2xl:text-4xl font-bold tracking-tight text-white mb-4">
             {t('title')}
           </h2>
@@ -87,7 +81,7 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-5">
 
           {/* LEFT PANEL: Frequency Spectrum */}
-          <div className="lg:col-span-2 bg-slate-900/50 rounded-3xl border border-slate-800 p-3 md:p-4 2xl:p-5 flex flex-col justify-between min-h-[210px] md:min-h-[260px] shadow-2xl relative overflow-hidden">
+          <div className="lg:col-span-2 bg-slate-900/50 rounded-3xl border border-slate-800 p-3 md:p-4 2xl:p-5 flex flex-col justify-between min-h-[190px] md:min-h-[220px] shadow-2xl relative overflow-hidden">
 
              {/* Top Bar of Panel */}
              <div className="flex justify-between items-start mb-3 relative z-10">
@@ -103,7 +97,7 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
              </div>
 
              {/* Spectrum Visualizer */}
-             <div className="flex-1 flex items-end justify-between gap-1 px-2 mb-3 relative z-10 h-10">
+             <div className="flex-1 flex items-end justify-between gap-1 px-2 mb-3 relative z-10 h-8">
                 {spectrumData.map((height, i) => (
                     <div
                         key={i}
@@ -141,23 +135,23 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
 
 
           {/* RIGHT COLUMN: Metrics Cards */}
-          <div className="flex flex-col gap-4">
+          <div className="flex flex-col gap-3">
 
              {/* Card 1: Integrated Loudness */}
-             <div className="bg-slate-900/50 rounded-2xl border border-slate-800 p-4 2xl:p-6 shadow-lg relative group overflow-hidden">
+             <div className="bg-slate-900/50 rounded-2xl border border-slate-800 p-3 2xl:p-4 shadow-lg relative group overflow-hidden">
                 <div className="flex justify-between items-start mb-2">
                     <div className="text-[10px] font-mono uppercase tracking-wider text-slate-300">{t('metrics.loudness')}</div>
                     <SpeakerWaveIcon className="w-4 h-4 text-teal-500/50" aria-hidden="true" />
                 </div>
-                <div className="text-3xl 2xl:text-4xl font-bold text-white mb-1 tabular-nums tracking-tight">
-                    {lufs.toFixed(1)} <span className="text-base sm:text-lg font-normal text-slate-200">LUFS</span>
+                <div className="text-2xl 2xl:text-3xl font-bold text-white mb-1 tabular-nums tracking-tight">
+                    {lufs.toFixed(1)} <span className="text-sm sm:text-base font-normal text-slate-200">LUFS</span>
                 </div>
 
                 {/* Progress Bar */}
-                <div className="mt-3 mb-2 relative h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                <div className="mt-2 mb-2 relative h-1.5 bg-slate-800 rounded-full overflow-hidden">
                     <div className="absolute top-0 left-0 h-full bg-teal-400 w-[85%] rounded-full shadow-[0_0_10px_rgba(45,212,191,0.5)] transition-all duration-300" style={{ width: `${Math.min(100, ((-1 * lufs) / 14) * 85)}%` }}></div>
                 </div>
-                <div className="flex justify-between text-[10px] text-slate-300 font-mono mb-4">
+                <div className="flex justify-between text-[9px] text-slate-300 font-mono mb-3">
                     <span>-30</span>
                     <span>-14 ({t('metrics.target')})</span>
                     <span>-8</span>
@@ -166,37 +160,37 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
              </div>
 
              {/* Card 2: Stereo Image */}
-             <div className="bg-slate-900/50 rounded-2xl border border-slate-800 p-4 2xl:p-6 shadow-lg relative overflow-hidden">
+             <div className="bg-slate-900/50 rounded-2xl border border-slate-800 p-3 2xl:p-4 shadow-lg relative overflow-hidden">
                  <div className="flex justify-between items-start">
                      <div>
                         <div className="text-[10px] font-mono uppercase tracking-wider text-slate-300 mb-1">{t('metrics.stereoImage')}</div>
-                        <div className="text-xl sm:text-2xl font-bold text-white mb-1">{t('metrics.wide')}</div>
-                        <div className="text-sm font-mono text-slate-300 mb-3 tabular-nums">{t('metrics.correlation')}: <span className="text-white">+{correlation.toFixed(2)}</span></div>
+                        <div className="text-lg sm:text-xl font-bold text-white mb-1">{t('metrics.wide')}</div>
+                        <div className="text-xs font-mono text-slate-300 mb-3 tabular-nums">{t('metrics.correlation')}: <span className="text-white">+{correlation.toFixed(2)}</span></div>
                      </div>
 
                      {/* Visual representation of Stereo Field (Circle) */}
-                     <div className="h-12 w-12 rounded-full border border-slate-700 bg-slate-950 relative flex items-center justify-center overflow-hidden">
+                     <div className="h-10 w-10 rounded-full border border-slate-700 bg-slate-950 relative flex items-center justify-center overflow-hidden">
                         <div className="absolute inset-0 bg-violet-500/20 animate-pulse rounded-full transform scale-75"></div>
-                        <div className="w-8 h-4 border border-violet-400/50 rounded-[100%] transform -rotate-12 opacity-80"></div>
-                        <div className="w-8 h-4 border border-teal-400/50 rounded-[100%] absolute transform rotate-12 opacity-80"></div>
+                        <div className="w-7 h-3.5 border border-violet-400/50 rounded-[100%] transform -rotate-12 opacity-80"></div>
+                        <div className="w-7 h-3.5 border border-teal-400/50 rounded-[100%] absolute transform rotate-12 opacity-80"></div>
                      </div>
                  </div>
 
              </div>
 
              {/* Card 3: Dynamic Range */}
-             <div className="bg-slate-900/50 rounded-2xl border border-slate-800 p-4 2xl:p-6 shadow-lg flex items-center justify-between">
+             <div className="bg-slate-900/50 rounded-2xl border border-slate-800 p-3 2xl:p-4 shadow-lg flex items-center justify-between">
                  <div>
                     <div className="text-[10px] font-mono uppercase tracking-wider text-slate-300 mb-1">{t('metrics.dynamicRange')}</div>
-                    <div className="text-2xl sm:text-3xl font-bold text-white tabular-nums">{dynamicRange} <span className="text-base sm:text-lg font-normal text-slate-200">dB</span></div>
+                    <div className="text-xl sm:text-2xl font-bold text-white tabular-nums">{dynamicRange} <span className="text-sm sm:text-base font-normal text-slate-200">dB</span></div>
                  </div>
 
                  {/* Mini Histogram */}
-                 <div className="flex items-end gap-1 h-9">
-                    <div className="w-2 bg-violet-900/40 h-4 rounded-sm"></div>
-                    <div className="w-2 bg-violet-800/60 h-6 rounded-sm"></div>
-                    <div className="w-2 bg-violet-500 h-10 rounded-sm shadow-[0_0_10px_rgba(139,92,246,0.4)]"></div>
-                    <div className="w-2 bg-violet-800/60 h-7 rounded-sm"></div>
+                 <div className="flex items-end gap-1 h-8">
+                    <div className="w-1.5 bg-violet-900/40 h-3 rounded-sm"></div>
+                    <div className="w-1.5 bg-violet-800/60 h-5 rounded-sm"></div>
+                    <div className="w-1.5 bg-violet-500 h-8 rounded-sm shadow-[0_0_10px_rgba(139,92,246,0.4)]"></div>
+                    <div className="w-1.5 bg-violet-800/60 h-6 rounded-sm"></div>
                  </div>
              </div>
 

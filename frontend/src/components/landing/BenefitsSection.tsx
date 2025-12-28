@@ -123,10 +123,10 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
 
             {/* Header */}
             <div className="text-center space-y-4">
-                <h2 className="text-3xl md:text-5xl font-display font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white via-violet-100 to-slate-400 pb-2">
+                <h2 className="text-2xl md:text-4xl font-display font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white via-violet-100 to-slate-400 pb-2">
                     {t('headerTitle')}
                 </h2>
-                <p className="text-slate-400 text-base max-w-2xl mx-auto font-light">
+                <p className="text-slate-400 text-sm max-w-2xl mx-auto font-light">
                     {t('headerDesc')}
                 </p>
             </div>
@@ -135,7 +135,7 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
             <div className="grid grid-cols-1 md:grid-cols-12 gap-6 auto-rows-[minmax(110px,auto)]">
 
                 {/* Card 1: AI Efficiency (Interactive) - Spans 7 cols */}
-                <div className="md:col-span-7 bg-slate-900/60 backdrop-blur-md border border-slate-800 rounded-3xl p-5 relative overflow-hidden group flex flex-col justify-between min-h-[220px]">
+                <div className="md:col-span-7 bg-slate-900/60 backdrop-blur-md border border-slate-800 rounded-3xl p-4 relative overflow-hidden group flex flex-col justify-between min-h-[200px]">
                     <div className="relative z-10">
                         <div className="flex items-center justify-between mb-3">
                             <div className="inline-flex items-center px-3 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold uppercase tracking-wider">
@@ -155,20 +155,21 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
                             </button>
                         </div>
 
-                        <h3 className="text-xl md:text-3xl font-display font-bold leading-tight mb-2 transition-all duration-500">
+                        <h3 className="text-lg md:text-2xl font-display font-bold leading-tight mb-2 transition-all duration-500">
                             {t.rich('speedTitle', {
                                 strike: (chunks) => <span className={`text-slate-500 line-through decoration-slate-600 decoration-2 transition-opacity duration-500 ${!isManual ? 'opacity-100' : 'opacity-100'}`}>{chunks}</span>,
                                 highlight: (chunks) => <span className={`text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-cyan-400 transition-all duration-500 ${!isManual ? 'opacity-100 blur-0' : 'opacity-50 blur-[1px]'}`}>{chunks}</span>,
-                                brTag: () => <br />
+                                brTag: () => " ",
+                                br: () => " "
                             })}
                         </h3>
-                        <p className="text-slate-300 text-xs md:text-sm leading-relaxed max-w-2xl">
+                        <p className="text-slate-300 text-[11px] md:text-xs leading-relaxed w-full md:w-2/3">
                             {t('speedDescription')}
                         </p>
                     </div>
 
                     {/* Canvas Visualization */}
-                    <div className="absolute bottom-0 left-0 right-0 h-24 w-full z-0 pointer-events-none opacity-60">
+                    <div className="absolute bottom-0 left-0 right-0 h-20 w-full z-0 pointer-events-none opacity-60">
                         <canvas ref={canvasRef} className="w-full h-full" width="734" height="192"></canvas>
                     </div>
 
@@ -177,7 +178,7 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
                 </div>
 
                 {/* Card 2: Visual Interface Scan - Spans 5 cols */}
-                <div className="md:col-span-5 bg-slate-900/60 backdrop-blur-md border border-slate-800 rounded-3xl relative overflow-hidden group min-h-[220px]">
+                <div className="md:col-span-5 bg-slate-900/60 backdrop-blur-md border border-slate-800 rounded-3xl relative overflow-hidden group min-h-[200px]">
                     <img
                         src="/hours_to_minutes.webp"
                         alt="Piroola Interface"
@@ -224,12 +225,12 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
                 </div>
 
                 {/* Card 4: Feature List - Spans 4 cols */}
-                <div className="md:col-span-4 bg-slate-900/60 backdrop-blur-md border border-slate-800 rounded-3xl p-3 flex flex-col">
+                <div className="md:col-span-4 bg-slate-900/60 backdrop-blur-md border border-slate-800 rounded-3xl p-3 flex flex-col min-h-[140px]">
                     <h3 className="text-sm font-display font-bold text-white mb-2 flex items-center">
                         <AdjustmentsVerticalIcon className="w-3.5 h-3.5 mr-2 text-violet-400" />
                         {t('toolkitTitle')}
                     </h3>
-                    <div className="space-y-1 custom-scrollbar overflow-y-auto max-h-[96px] pr-1">
+                    <div className="space-y-1 custom-scrollbar overflow-y-hidden max-h-[120px] pr-1">
                         {/* Feature Item */}
                         <div className="group flex items-center gap-2 p-1 rounded-lg hover:bg-white/5 transition-colors cursor-default">
                             <div className="w-6 h-6 rounded-full bg-violet-500/20 flex items-center justify-center shrink-0 group-hover:bg-violet-500 group-hover:text-white transition-colors text-violet-400">
@@ -269,24 +270,26 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
                             </svg>
                             <span className="sr-only">Spotify</span>
                         </div>
-                        <div className="flex items-center justify-center p-2 rounded-lg bg-[#FB233B]/10 border border-[#FB233B]/20">
-                            <svg className="w-4 h-4 text-[#FB233B]" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                                <path d="M14 4v9.2a2.3 2.3 0 1 1-1-2V7.3l-5 1.2v6.3a2.3 2.3 0 1 1-1-2V6.4L14 4z"/>
+                        <div className="flex items-center justify-center p-2 rounded-lg bg-[#A4CC35]/10 border border-[#A4CC35]/20">
+                            <svg className="w-4 h-4 text-[#A4CC35]" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                <circle cx="7" cy="12" r="2" />
+                                <path d="M13 7h4a3 3 0 0 1 0 6h-4V7z" />
+                                <path d="M12 7h-1a4 4 0 0 0 0 10h1V7z" />
                             </svg>
-                            <span className="sr-only">Apple Music</span>
+                            <span className="sr-only">Deezer</span>
                         </div>
-                        <div className="flex items-center justify-center p-2 rounded-lg bg-[#FF0000]/10 border border-[#FF0000]/20">
-                            <svg className="w-4 h-4 text-[#FF0000]" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                                <path d="M21.6 7.2c-.2-.8-.8-1.4-1.6-1.6C18.3 5 12 5 12 5s-6.3 0-8 0.6c-.8.2-1.4.8-1.6 1.6C2 8.9 2 12 2 12s0 3.1.4 4.8c.2.8.8 1.4 1.6 1.6 1.7.6 8 .6 8 .6s6.3 0 8-.6c.8-.2 1.4-.8 1.6-1.6.4-1.7.4-4.8.4-4.8s0-3.1-.4-4.8zM10 15V9l5 3-5 3z"/>
+                        <div className="flex items-center justify-center p-2 rounded-lg bg-[#FF5500]/10 border border-[#FF5500]/20">
+                            <svg className="w-4 h-4 text-[#FF5500]" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                <path d="M6 14.5c0-1.9 1.5-3.5 3.5-3.5H13a3.5 3.5 0 1 1 0 7h-.5A6.5 6.5 0 0 1 6 14.5z" />
+                                <path d="M8 14.5c0-1 0.8-1.8 1.8-1.8h2.6a1.8 1.8 0 1 1 0 3.6H12a4 4 0 0 1-4-4z" />
                             </svg>
-                            <span className="sr-only">YouTube Music</span>
+                            <span className="sr-only">SoundCloud</span>
                         </div>
-                        <div className="flex items-center justify-center p-2 rounded-lg bg-[#00A8E1]/10 border border-[#00A8E1]/20">
-                            <svg className="w-4 h-4 text-[#00A8E1]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                                <path d="M5 15c3 2.2 11 2.2 14 0" />
-                                <path d="M16 14.5l2.2.5-1.2-2" />
+                        <div className="flex items-center justify-center p-2 rounded-lg bg-[#00D2FF]/10 border border-[#00D2FF]/20">
+                            <svg className="w-4 h-4 text-[#00D2FF]" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                                <path d="M12.7 6.2a5.5 5.5 0 0 1 5.5 5.5c0 .6-.1 1.2-.3 1.8h-5.2V6.2zM5 12.5h2.5v3H5v-3zm3.5-1h2.5v4H8.5v-4zm3.5-2h2.5v6H12v-6z"/>
                             </svg>
-                            <span className="sr-only">Amazon Music</span>
+                            <span className="sr-only">Tidal</span>
                         </div>
                     </div>
                 </div>
