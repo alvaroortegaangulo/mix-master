@@ -70,7 +70,7 @@
     "headerDesc": "The intelligent mastering suite that transforms home demos into commercial hits in seconds.",
     "efficiencyBadge": "AI Efficiency",
     "manual": "MANUAL",
-    "speedTitle": "<strike>Stunden</strike> der Arbeit,<brTag></brTag><highlight>in Minuten erledigt.</highlight>",
+    "speedTitle": "<strike>Stunden der Arbeit</strike>,<brTag></brTag><highlight>in Minuten erledigt.</highlight>",
     "speedDescription": "Forget manual gain staging and resonance cleanup. Piroola automates the heavy technical lifting so you can create.",
     "deepAnalysisTitle": "Deep Analysis",
     "deepAnalysisPoints": {

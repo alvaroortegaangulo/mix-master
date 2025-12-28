@@ -8,12 +8,11 @@ import {
   SpeakerWaveIcon
 } from "@heroicons/react/24/outline";
 
-// Helper to draw a simulated equalizer animation
-const drawEqualizer = (
+// Helper to draw a simulated equalizer animation (manual mode)
+const drawEqualizerBars = (
   ctx: CanvasRenderingContext2D,
   width: number,
   height: number,
-  isManual: boolean,
   frameCount: number
 ) => {
   ctx.clearRect(0, 0, width, height);
@@ -24,11 +23,11 @@ const drawEqualizer = (
   const barWidth = Math.max(2, (width - totalGap) / barCount);
   const t = frameCount * 0.06;
   const baseY = height - 4;
-  const minHeight = height * (isManual ? 0.03 : 0.12);
-  const maxHeight = height * (isManual ? 0.18 : 0.75);
-  const modeAlpha = isManual ? 0.08 : 0.75;
+  const minHeight = height * 0.12;
+  const maxHeight = height * 0.75;
+  const modeAlpha = 0.75;
 
-  ctx.shadowBlur = isManual ? 0 : 12;
+  ctx.shadowBlur = 12;
 
   for (let i = 0; i < barCount; i += 1) {
     const waveA = Math.sin(t + i * 0.35);
@@ -39,13 +38,54 @@ const drawEqualizer = (
     const x = i * (barWidth + gap);
     const y = baseY - barHeight;
     const hue = 190 + (i / (barCount - 1)) * 70;
-    const saturation = isManual ? 35 : 70;
-    const lightness = isManual ? 55 : 60;
+    const saturation = 70;
+    const lightness = 60;
     const alpha = modeAlpha * (0.6 + 0.4 * Math.sin(t + i * 0.2));
 
     ctx.shadowColor = `hsla(${hue}, ${saturation}%, ${lightness}%, ${modeAlpha})`;
     ctx.fillStyle = `hsla(${hue}, ${saturation}%, ${lightness}%, ${alpha})`;
     ctx.fillRect(x, y, barWidth, barHeight);
+  }
+
+  ctx.shadowBlur = 0;
+};
+
+// Helper to draw a left-moving audio spectrum (auto mode)
+const drawSpectrumFlow = (
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  frameCount: number
+) => {
+  ctx.clearRect(0, 0, width, height);
+
+  const barCount = 56;
+  const gap = Math.max(1, Math.floor(width / 220));
+  const totalGap = gap * (barCount - 1);
+  const barWidth = Math.max(2, (width - totalGap) / barCount);
+  const baseY = height - 4;
+  const minHeight = height * 0.1;
+  const maxHeight = height * 0.6;
+  const travel = frameCount * 0.08;
+
+  ctx.shadowBlur = 10;
+
+  for (let i = 0; i < barCount; i += 1) {
+    const phase = i + travel;
+    const waveA = Math.sin(phase * 0.35);
+    const waveB = Math.sin(phase * 0.12 + 1.7);
+    const waveC = Math.sin(phase * 0.06 - 0.8);
+    const mix = (waveA * 0.6 + waveB * 0.3 + waveC * 0.2 + 1.5) / 2.2;
+    const barHeight = Math.max(minHeight, minHeight + mix * maxHeight);
+    const x = i * (barWidth + gap);
+    const hue = 195 + (i / (barCount - 1)) * 45;
+    const gradient = ctx.createLinearGradient(0, baseY - barHeight, 0, baseY);
+    gradient.addColorStop(0, `hsla(${hue}, 75%, 65%, 0.85)`);
+    gradient.addColorStop(1, `hsla(${hue}, 75%, 45%, 0.15)`);
+
+    ctx.shadowColor = `hsla(${hue}, 70%, 60%, 0.6)`;
+    ctx.fillStyle = gradient;
+    ctx.fillRect(x, baseY - barHeight, barWidth, barHeight);
   }
 
   ctx.shadowBlur = 0;
@@ -77,7 +117,11 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
         if (ctx) {
            // Handle resize or static size
            // Note: canvas width/height attributes are set in JSX
-           drawEqualizer(ctx, canvas.width, canvas.height, isManual, frameCountRef.current);
+           if (isManual) {
+             drawEqualizerBars(ctx, canvas.width, canvas.height, frameCountRef.current);
+           } else {
+             drawSpectrumFlow(ctx, canvas.width, canvas.height, frameCountRef.current);
+           }
         }
       }
       frameCountRef.current += 1;
@@ -89,7 +133,7 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
   }, [isManual]);
 
   return (
-    <section id="benefits" className={`py-24 relative overflow-hidden ${className || 'bg-slate-950'}`}>
+    <section id="benefits" className={`py-0 relative overflow-hidden ${className || 'bg-slate-950'}`}>
         {/* Background Elements */}
         <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-slate-950 pointer-events-none"></div>
 
@@ -109,12 +153,12 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
             <div className="grid grid-cols-1 md:grid-cols-12 gap-6 auto-rows-[minmax(110px,auto)]">
 
                 {/* Card 1: AI Efficiency (Interactive) - Spans 7 cols */}
-                <div className="md:col-span-7 bg-slate-900/60 backdrop-blur-md border border-slate-800 rounded-3xl p-4 relative overflow-hidden group flex flex-col justify-between min-h-[200px]">
+                <div className="md:col-span-7 bg-slate-900/60 backdrop-blur-md border border-slate-800 rounded-3xl p-4 relative overflow-hidden group flex flex-col justify-between min-h-[160px]">
                     <div className="relative z-10">
                         <div className="flex items-center justify-between mb-3">
-                            <div className="inline-flex items-center px-3 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold uppercase tracking-wider">
-                                <BoltIcon className="w-4 h-4 mr-1" /> {t('efficiencyBadge')}
-                            </div>
+                        <div className="inline-flex items-center px-2 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-bold uppercase tracking-wider">
+                            <BoltIcon className="w-3 h-3 mr-1" /> {t('efficiencyBadge')}
+                        </div>
                             {/* Interactive Toggle */}
                             <button
                                 onClick={toggleAI}
@@ -131,8 +175,22 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
 
                         <h3 className="text-lg md:text-2xl font-display font-bold leading-tight mb-2 transition-all duration-500">
                             {t.rich('speedTitle', {
-                                strike: (chunks) => <span className={`text-slate-500 line-through decoration-slate-600 decoration-2 transition-opacity duration-500 ${!isManual ? 'opacity-100' : 'opacity-100'}`}>{chunks}</span>,
-                                highlight: (chunks) => <span className={`text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-cyan-400 transition-all duration-500 ${!isManual ? 'opacity-100 blur-0' : 'opacity-50 blur-[1px]'}`}>{chunks}</span>,
+                                strike: (chunks) => (
+                                  <span className="relative inline-block">
+                                    <span className={`transition-[color,filter] duration-500 ${isManual ? 'text-slate-200 blur-0' : 'text-slate-500 blur-[1px]'}`}>
+                                      {chunks}
+                                    </span>
+                                    <span
+                                      aria-hidden="true"
+                                      className={`pointer-events-none absolute left-0 top-1/2 h-[2px] w-full -translate-y-1/2 bg-slate-500/70 shadow-[0_0_6px_rgba(148,163,184,0.6)] transform origin-left transition-[transform,opacity] duration-500 ease-out ${isManual ? 'scale-x-0 opacity-0' : 'scale-x-100 opacity-100'}`}
+                                    />
+                                  </span>
+                                ),
+                                highlight: (chunks) => (
+                                  <span className={`text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-cyan-400 transition-all duration-500 ${!isManual ? 'opacity-100 blur-0' : 'opacity-50 blur-[1px]'}`}>
+                                    {chunks}
+                                  </span>
+                                ),
                                 brTag: () => " ",
                                 br: () => " "
                             })}
@@ -152,7 +210,7 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
                 </div>
 
                 {/* Card 2: Visual Interface Scan - Spans 5 cols */}
-                <div className="md:col-span-5 bg-slate-900/60 backdrop-blur-md border border-slate-800 rounded-3xl relative overflow-hidden group min-h-[200px]">
+                <div className="md:col-span-5 bg-slate-900/60 backdrop-blur-md border border-slate-800 rounded-3xl relative overflow-hidden group min-h-[160px]">
                     <img
                         src="/hours_to_minutes.webp"
                         alt="Piroola Interface"

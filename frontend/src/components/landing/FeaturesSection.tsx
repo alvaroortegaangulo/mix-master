@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import Image from "next/image";
 import { useTranslations } from "next-intl";
 import {
   PuzzlePieceIcon,
@@ -29,6 +28,7 @@ export function FeaturesSection({ className }: { className?: string }) {
   const [activeStep, setActiveStep] = useState(0);
   const t = useTranslations("FeaturesSection");
   const autoAdvanceRef = useRef<NodeJS.Timeout | null>(null);
+  const videoRefs = useRef<Array<HTMLVideoElement | null>>([]);
 
   // Data Definition
   const features: Feature[] = [
@@ -39,7 +39,7 @@ export function FeaturesSection({ className }: { className?: string }) {
       slideLabel: t("steps.0.slideLabel"),
       title: t("steps.0.title"),
       description: t("steps.0.description"),
-      image: "/integration.webp",
+      image: "/integration.mp4",
       color: "teal",
       Icon: ArrowRightStartOnRectangleIcon,
     },
@@ -50,7 +50,7 @@ export function FeaturesSection({ className }: { className?: string }) {
       slideLabel: t("steps.1.slideLabel"),
       title: t("steps.1.title"),
       description: t("steps.1.description"),
-      image: "/neural.webp",
+      image: "/neural.mp4",
       color: "purple",
       Icon: SparklesIcon,
     },
@@ -61,7 +61,7 @@ export function FeaturesSection({ className }: { className?: string }) {
       slideLabel: t("steps.2.slideLabel"),
       title: t("steps.2.title"),
       description: t("steps.2.description"),
-      image: "/mastering_grade.webp",
+      image: "/mastering_grade.mp4",
       color: "blue",
       Icon: AdjustmentsVerticalIcon,
     },
@@ -72,7 +72,7 @@ export function FeaturesSection({ className }: { className?: string }) {
       slideLabel: t("steps.3.slideLabel"),
       title: t("steps.3.title"),
       description: t("steps.3.description"),
-      image: "/ready_world.webp",
+      image: "/ready_world.mp4",
       color: "orange",
       Icon: GlobeAmericasIcon,
     },
@@ -94,6 +94,20 @@ export function FeaturesSection({ className }: { className?: string }) {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [t]); // Added t as dependency to update text on locale change
+
+  useEffect(() => {
+    videoRefs.current.forEach((video, idx) => {
+      if (!video) return;
+      if (idx === activeStep) {
+        const playPromise = video.play();
+        if (playPromise && typeof playPromise.catch === "function") {
+          playPromise.catch(() => undefined);
+        }
+      } else {
+        video.pause();
+      }
+    });
+  }, [activeStep]);
 
   const handleStepChange = (index: number) => {
     setActiveStep(index);
@@ -170,12 +184,18 @@ export function FeaturesSection({ className }: { className?: string }) {
                   activeStep === idx ? "opacity-100 z-10" : "opacity-0 z-0"
                 }`}
               >
-                 <Image
+                 <video
+                    className={`absolute inset-0 w-full h-full object-cover ${activeStep === idx ? "animate-zoom-slow" : ""}`}
                     src={feature.image}
-                    alt={feature.title}
-                    fill
-                    className={`object-cover ${activeStep === idx ? 'animate-zoom-slow' : ''}`}
-                    priority={idx === 0}
+                    autoPlay={activeStep === idx}
+                    loop
+                    muted
+                    playsInline
+                    preload={idx === 0 ? "auto" : "metadata"}
+                    aria-label={feature.title}
+                    ref={(el) => {
+                      videoRefs.current[idx] = el;
+                    }}
                  />
               </div>
             ))}
