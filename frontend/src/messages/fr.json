@@ -181,7 +181,8 @@
           "Dithering"
         ]
       }
-    }
+    },
+    "verified": "Verified data"
   },
   "TechSpecsSection": {
     "title": "Puissance & Précision",
@@ -230,15 +231,14 @@
         "profiles": "Attribuez un profil à chaque piste avant de poursuivre.",
         "buses": "Choisissez les bus puis confirmez pour afficher le pipeline."
       },
-    "buttons": {
-      "confirmProfiles": "Confirmer les profils",
-      "confirmBuses": "Confirmer la sélection des bus",
-      "back": "Retour"
-    }
-    ,
-    "messages": {
-      "mixReady": "Pistes prêtes pour le mixage, appuyez sur Générer Mix IA pour lancer le mixage et le mastering."
-    }
+      "buttons": {
+        "confirmProfiles": "Confirmer les profils",
+        "confirmBuses": "Confirmer la sélection des bus",
+        "back": "Retour"
+      },
+      "messages": {
+        "mixReady": "Pistes prêtes pour le mixage, appuyez sur Générer Mix IA pour lancer le mixage et le mastering."
+      }
     },
     "songMode": "Chanson (Mastering)",
     "stemsMode": "Stems (Mixage Complet)",

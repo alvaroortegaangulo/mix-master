@@ -129,68 +129,66 @@
     }
   },
   "PipelineInteractiveDiagram": {
-    "label": "Flujo de Trabajo de Ingeniería de Audio",
-    "title": "Pipeline de Mezcla y Masterización",
-    "description": "Explora interactivamente cada etapa del proceso de producción de audio, desde el análisis inicial hasta el pulido final.",
+    "label": "Flujo de Trabajo de Ingenier?a de Audio",
+    "title": "Pipeline de Audio",
+    "description": "Explora interactivamente cada etapa del proceso de producci?n, desde el <highlight>An?lisis</highlight> hasta la <highlight>Masterizaci?n</highlight>.",
     "keyTools": "Herramientas Clave",
-    "proTip": "CONSEJO PRO",
+    "proTip": "Consejo Pro",
+    "verified": "Datos verificados",
     "steps": {
       "0": {
-        "title": "Análisis",
-        "shortDesc": "Diagnóstico de frecuencia, fase y rango dinámico.",
-        "desc": "Antes de procesar, entender el material fuente es crucial. Usamos analizadores de espectro, medidores de correlación de fase y medidores LUFS para identificar problemas resonantes, desequilibrios tonales o problemas de fase.",
-        "tip": "Siempre escucha en mono inicialmente para detectar cancelaciones de fase.",
+        "title": "An?lisis",
+        "shortDesc": "Diagn?stico Espectral",
+        "desc": "Antes de procesar, entender el material fuente es crucial. Usamos herramientas de medici?n para identificar problemas resonantes, desequilibrios tonales y correlaci?n de fase.",
+        "tip": "Siempre escucha en mono inicialmente. Si un instrumento desaparece o suena d?bil al cambiar a mono, tienes problemas de cancelaci?n de fase que debes corregir antes de mezclar.",
         "tools": [
           "Analizador de Espectro",
-          "Goniómetro",
+          "Goniometro",
           "Medidor LUFS"
         ]
       },
       "1": {
-        "title": "Corrección",
-        "shortDesc": "Limpieza, EQ sustractivo y reducción de ruido.",
-        "desc": "La etapa quirúrgica. Eliminamos frecuencias problemáticas con EQ sustractivo, reducimos el ruido de fondo y corregimos el tono vocal si es necesario. El objetivo es limpiar antes de mejorar.",
-        "tip": "Corta las frecuencias bajas (Paso Alto) en instrumentos que no las necesitan para ganar claridad.",
+        "title": "Correcci?n",
+        "shortDesc": "Ecualizaci?n Sustractiva",
+        "desc": "Limpieza quir?rgica. Eliminamos frecuencias no deseadas, resonancias molestas y \"barro\" (mud) para dar claridad a cada instrumento antes de realzarlo.",
+        "tip": "Corta estrecho, realza ancho. Usa un factor Q alto (estrecho) para eliminar resonancias quir?rgicamente, y un Q bajo (ancho) para dar color musicalmente.",
         "tools": [
-          "EQ Paramétrico",
-          "De-noiser",
-          "Corrección de Tono"
+          "EQ Param?trico",
+          "Filtro Pasa Altos",
+          "EQ Din?mico"
         ]
       },
       "2": {
-        "title": "Dinámica",
-        "shortDesc": "Control de transitorios, compresión y equilibrio.",
-        "desc": "Controlamos el rango dinámico para una mezcla consistente. Usamos compresores para unir elementos y limitadores suaves para domar picos rebeldes.",
-        "tip": "Usa compresión en serie (múltiples compresores suaves) en lugar de uno solo agresivo para un sonido más natural.",
+        "title": "Din?mica",
+        "shortDesc": "Control y Pegada",
+        "desc": "Controlamos el rango din?mico para mantener la consistencia. Usamos compresores para dar \"pegada\" (punch) a la bater?a o suavizar voces, y saturaci?n para arm?nicos.",
+        "tip": "Usa compresi?n en serie. En lugar de un compresor reduciendo 10dB, usa dos compresores seguidos reduciendo 3-5dB cada uno para un sonido mucho m?s natural y transparente.",
         "tools": [
-          "Compresor VCA",
+          "Compresor FET/VCA",
           "Compresor Multibanda",
-          "De-esser",
-          "Limitador"
+          "Saturaci?n"
         ]
       },
       "3": {
         "title": "Espacial",
-        "shortDesc": "Profundidad, reverberación e imagen estéreo.",
-        "desc": "Creamos el mundo 3D de la canción. Colocamos instrumentos en el campo estéreo (paneo) y añadimos profundidad con reverberación e delay.",
-        "tip": "Mantén el bombo, el bajo y la voz principal en el centro. Mueve elementos rítmicos y armónicos a los lados.",
+        "shortDesc": "Profundidad y Est?reo",
+        "desc": "Creamos un mundo tridimensional. Ubicamos sonidos en el campo est?reo (pan) y a?adimos profundidad con reverberaciones y delays para situar elementos al frente o atr?s.",
+        "tip": "Mant?n los graves en mono. Generalmente, todo lo que est? por debajo de 120Hz debe estar centrado para mantener la energ?a y evitar problemas de fase en sistemas grandes.",
         "tools": [
-          "Reverb Plate/Hall",
-          "Delay Estéreo",
-          "Ensanchador Estéreo",
-          "Pan Pot"
+          "Reverb (Plate/Hall)",
+          "Delay / Echo",
+          "Stereo Imager"
         ]
       },
       "4": {
-        "title": "Masterización",
-        "shortDesc": "Sonoridad, cohesión final y formatos de entrega.",
-        "desc": "El pulido final. Apuntamos a una sonoridad comercial competitiva, equilibrio tonal global y aseguramos que la canción se traduzca bien en cualquier sistema de reproducción (coche, teléfono, club).",
-        "tip": "Siempre compara tu master con canciones de referencia del mismo género (Prueba A/B).",
+        "title": "Mastering",
+        "shortDesc": "Pulido Final y Loudness",
+        "desc": "El paso final. Aseguramos que la mezcla se traduzca bien en todos los sistemas (coche, celular, club) y alcanzamos el nivel de volumen comercial competitivo.",
+        "tip": "No sacrifiques din?mica por volumen. Apunta a -14 LUFS para streaming, pero prioriza que la canci?n \"respire\". Un master sobre-comprimido fatiga el o?do r?pidamente.",
         "tools": [
-          "Compresor Master Bus",
-          "EQ Lineal",
-          "Maximizador",
-          "Dithering"
+          "Limitador (Limiter)",
+          "Compresor de Bus",
+          "Analizador de Referencia"
         ]
       }
     }
@@ -244,15 +242,14 @@
         "profiles": "Asigna un perfil a cada pista antes de continuar.",
         "buses": "Configura los buses y confirma para ver el pipeline."
       },
-    "buttons": {
-      "confirmProfiles": "Confirmar perfiles",
-      "confirmBuses": "Confirmar selección de bus",
-      "back": "Atrás"
-    }
-    ,
-    "messages": {
-      "mixReady": "Pistas preparadas para mezcla, pulsa Generar Mezcla IA para comenzar mezcla y masterización."
-    }
+      "buttons": {
+        "confirmProfiles": "Confirmar perfiles",
+        "confirmBuses": "Confirmar selección de bus",
+        "back": "Atrás"
+      },
+      "messages": {
+        "mixReady": "Pistas preparadas para mezcla, pulsa Generar Mezcla IA para comenzar mezcla y masterización."
+      }
     },
     "songMode": "Canción (Masterización)",
     "stemsMode": "Pistas (Mezcla Completa)",

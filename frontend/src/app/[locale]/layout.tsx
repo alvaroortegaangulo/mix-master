@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { Geist_Mono, Space_Grotesk } from "next/font/google";
+import { Geist_Mono, Space_Grotesk, Orbitron } from "next/font/google";
 import "../globals.css";
 import { GoogleAnalytics } from "@next/third-parties/google";
 import Script from "next/script";
@@ -26,6 +26,12 @@ const spaceGrotesk = Space_Grotesk({
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+});
+
+const orbitron = Orbitron({
+  variable: "--font-orbitron",
+  subsets: ["latin"],
+  display: "swap",
 });
 
 const fallbackSiteUrl = "https://music-mix-master.com";
@@ -213,7 +219,13 @@ export default async function LocaleLayout({
 
   return (
     <html lang={locale}>
-      <body className={`${spaceGrotesk.variable} ${geistMono.variable} antialiased`}>
+      <head>
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,1,0"
+        />
+      </head>
+      <body className={`${spaceGrotesk.variable} ${geistMono.variable} ${orbitron.variable} antialiased`}>
         <NextIntlClientProvider messages={messages}>
           <GoogleOAuthProvider clientId={googleClientId}>
             <AuthProvider>
