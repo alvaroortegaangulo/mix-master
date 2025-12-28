@@ -86,7 +86,7 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
       {/* Main Pipeline Diagram */}
       <div className="w-full relative z-10">
         {/* Steps Container */}
-        <div className="flex flex-col lg:flex-row items-stretch gap-4 lg:gap-5 lg:h-[520px]">
+        <div className="flex flex-col lg:flex-row items-stretch gap-4 lg:gap-5 lg:h-[420px]">
           {stepsData.map((step, index) => {
             const isActive = index === activeStep;
 

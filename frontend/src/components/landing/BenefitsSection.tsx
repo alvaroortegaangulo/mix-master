@@ -135,9 +135,9 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
             <div className="grid grid-cols-1 md:grid-cols-12 gap-6 auto-rows-[minmax(110px,auto)]">
 
                 {/* Card 1: AI Efficiency (Interactive) - Spans 7 cols */}
-                <div className="md:col-span-7 bg-slate-900/60 backdrop-blur-md border border-slate-800 rounded-3xl p-6 relative overflow-hidden group flex flex-col justify-between min-h-[260px]">
+                <div className="md:col-span-7 bg-slate-900/60 backdrop-blur-md border border-slate-800 rounded-3xl p-5 relative overflow-hidden group flex flex-col justify-between min-h-[220px]">
                     <div className="relative z-10">
-                        <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center justify-between mb-3">
                             <div className="inline-flex items-center px-3 py-1 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold uppercase tracking-wider">
                                 <BoltIcon className="w-4 h-4 mr-1" /> {t('efficiencyBadge')}
                             </div>
@@ -155,20 +155,20 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
                             </button>
                         </div>
 
-                        <h3 className="text-2xl md:text-4xl font-display font-bold leading-tight mb-3 transition-all duration-500">
+                        <h3 className="text-xl md:text-3xl font-display font-bold leading-tight mb-2 transition-all duration-500">
                             {t.rich('speedTitle', {
                                 strike: (chunks) => <span className={`text-slate-500 line-through decoration-slate-600 decoration-2 transition-opacity duration-500 ${!isManual ? 'opacity-100' : 'opacity-100'}`}>{chunks}</span>,
                                 highlight: (chunks) => <span className={`text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-cyan-400 transition-all duration-500 ${!isManual ? 'opacity-100 blur-0' : 'opacity-50 blur-[1px]'}`}>{chunks}</span>,
                                 brTag: () => <br />
                             })}
                         </h3>
-                        <p className="text-slate-300 text-sm md:text-base leading-relaxed max-w-md">
+                        <p className="text-slate-300 text-xs md:text-sm leading-relaxed max-w-2xl">
                             {t('speedDescription')}
                         </p>
                     </div>
 
                     {/* Canvas Visualization */}
-                    <div className="absolute bottom-0 left-0 right-0 h-32 w-full z-0 pointer-events-none opacity-60">
+                    <div className="absolute bottom-0 left-0 right-0 h-24 w-full z-0 pointer-events-none opacity-60">
                         <canvas ref={canvasRef} className="w-full h-full" width="734" height="192"></canvas>
                     </div>
 
@@ -177,7 +177,7 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
                 </div>
 
                 {/* Card 2: Visual Interface Scan - Spans 5 cols */}
-                <div className="md:col-span-5 bg-slate-900/60 backdrop-blur-md border border-slate-800 rounded-3xl relative overflow-hidden group min-h-[260px]">
+                <div className="md:col-span-5 bg-slate-900/60 backdrop-blur-md border border-slate-800 rounded-3xl relative overflow-hidden group min-h-[220px]">
                     <img
                         src="/hours_to_minutes.webp"
                         alt="Piroola Interface"
