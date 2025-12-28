@@ -75,9 +75,6 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
     <div className="w-full max-w-7xl mx-auto px-4 md:px-8 relative z-10">
       {/* Header */}
       <header className="text-center mx-auto mb-6 relative z-10 max-w-4xl">
-        <div className="inline-block mb-3 px-3 py-1 rounded-full border border-teal-500/30 bg-teal-500/10 text-teal-300 text-xs font-semibold tracking-wider uppercase">
-          {t('label')}
-        </div>
         <h2 className="text-2xl sm:text-3xl lg:text-4xl 2xl:text-5xl font-bold mb-3 bg-clip-text text-transparent bg-gradient-to-r from-white via-teal-200 to-violet-200 drop-shadow-lg">
           {t('title')}
         </h2>
