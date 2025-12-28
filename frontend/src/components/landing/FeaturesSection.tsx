@@ -12,6 +12,7 @@ import {
   GlobeAmericasIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
+  CpuChipIcon,
 } from "@heroicons/react/24/outline";
 
 interface Feature {
@@ -144,6 +145,24 @@ export function FeaturesSection({ className }: { className?: string }) {
   return (
     <section className={`py-8 md:py-12 ${className}`} id="features">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
+        {/* Section Header */}
+        <div className="text-center mb-12 space-y-4 relative z-10">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-teal-500/10 border border-teal-500/20 mb-2">
+            <CpuChipIcon className="text-teal-400 w-4 h-4" />
+            <span className="text-teal-400 text-xs font-bold tracking-wider uppercase">
+              {t("workflow")}
+            </span>
+          </div>
+          <h2 className="text-4xl md:text-5xl font-bold font-display text-white">
+            {t.rich("title", {
+              gradient: (chunks) => <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-blue-500">{chunks}</span>
+            })}
+          </h2>
+          <p className="text-slate-400 max-w-2xl mx-auto text-lg">
+            {t("subtitle")}
+          </p>
+        </div>
 
         {/* Main Card Container */}
         <div

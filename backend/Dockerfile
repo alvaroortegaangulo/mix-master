@@ -39,9 +39,7 @@ RUN groupadd -r app && useradd -r -g app app
 # Esta capa solo se invalida si cambia requirements.txt
 COPY requirements.txt .
 RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install --upgrade pip && \
-    pip install --prefer-binary -r requirements.txt && \
-    pip install --prefer-binary hypercorn
+    pip install --prefer-binary -r requirements.txt hypercorn
 
 # Código de la aplicación
 # Esta capa solo se rehace si cambian los fuentes / config no ignorados por .dockerignore

@@ -30,9 +30,9 @@
     "tracksMastered": "+10k Tracks Mastered"
   },
   "FeaturesSection": {
-    "workflow": "WORKFLOW",
-    "title": "From your DAW to the <span className='text-cyan-400'>World</span>.",
-    "subtitle": "We have simplified the complex engineering process. No infinite menus, only superior sonic results.",
+    "workflow": "统一工作流程",
+    "title": "从您的 DAW 到<gradient>世界。</gradient>",
+    "subtitle": "我们将复杂的工程简化为无缝体验。没有无尽的菜单，只有卓越的声音结果。",
     "steps": {
       "0": {
         "tabStep": "01. Connection",
