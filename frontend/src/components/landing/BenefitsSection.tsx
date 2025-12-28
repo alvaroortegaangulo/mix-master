@@ -123,13 +123,6 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
 
             {/* Header */}
             <div className="text-center space-y-4">
-                <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full border border-violet-500/30 bg-violet-500/10 backdrop-blur-sm">
-                    <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-violet-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-violet-500"></span>
-                    </span>
-                    <span className="text-xs font-medium tracking-wide text-violet-300 uppercase">{t('headerBadge')}</span>
-                </div>
                 <h2 className="text-4xl md:text-6xl font-display font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white via-violet-100 to-slate-400 pb-2">
                     {t('headerTitle')}
                 </h2>
@@ -186,7 +179,7 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
                 {/* Card 2: Visual Interface Scan - Spans 5 cols */}
                 <div className="md:col-span-5 bg-slate-900/60 backdrop-blur-md border border-slate-800 rounded-3xl relative overflow-hidden group min-h-[400px]">
                     <img
-                        src="/master_interface.webp"
+                        src="/hours_to_minutes.webp"
                         alt="Piroola Interface"
                         className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 opacity-80 group-hover:opacity-40"
                     />

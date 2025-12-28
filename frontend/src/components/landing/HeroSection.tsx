@@ -32,9 +32,9 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
     };
 
     const bands = [
-      { amplitude: 18, frequency: 0.006, speed: 0.9, y: 0.35, color: "rgba(34,211,238,0.35)", phase: 0.2 },
-      { amplitude: 14, frequency: 0.008, speed: 1.15, y: 0.55, color: "rgba(139,92,246,0.28)", phase: 1.1 },
-      { amplitude: 10, frequency: 0.012, speed: 0.75, y: 0.72, color: "rgba(45,212,191,0.22)", phase: 2.4 }
+      { amplitude: 18, frequency: 0.006, speed: 0.9, y: 0.45, color: "rgba(34,211,238,0.35)", phase: 0.2 },
+      { amplitude: 14, frequency: 0.008, speed: 1.15, y: 0.5, color: "rgba(139,92,246,0.28)", phase: 1.1 },
+      { amplitude: 10, frequency: 0.012, speed: 0.75, y: 0.55, color: "rgba(45,212,191,0.22)", phase: 2.4 }
     ];
 
     const draw = (time: number) => {
@@ -85,20 +85,6 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
 
   return (
     <section className="relative flex min-h-[70vh] lg:min-h-[75vh] 2xl:min-h-[85vh] flex-col items-center justify-center overflow-hidden bg-slate-950 px-4 text-center py-8 md:py-10 2xl:py-14">
-      {/* Background Image */}
-      <div className="absolute inset-0 z-0 pointer-events-none animate-[hero-pan_26s_ease-in-out_infinite]">
-        <Image
-          src="/background_hero.webp"
-          alt=""
-          fill
-          sizes="100vw"
-          className="object-cover opacity-[0.1]"
-          quality={60}
-          loading="lazy"
-          aria-hidden="true"
-        />
-      </div>
-
       {/* Background gradients/blobs */}
       <div className="absolute top-0 left-0 h-full w-full overflow-hidden pointer-events-none z-0">
         <div className="absolute -top-[20%] -left-[10%] h-[50%] w-[50%] rounded-full bg-teal-500/10 blur-[120px]" />
@@ -181,7 +167,7 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
         </div>
       </div>
 
-      <div className="absolute bottom-0 left-0 w-full h-28 sm:h-32 lg:h-36 opacity-[0.6] pointer-events-none mix-blend-screen z-[1]">
+      <div className="absolute inset-0 opacity-[0.55] pointer-events-none mix-blend-screen z-[1]">
         <canvas
           ref={waveformRef}
           className="h-full w-full"

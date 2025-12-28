@@ -5,7 +5,6 @@ import Image from "next/image";
 import { useTranslations } from "next-intl";
 import {
   PuzzlePieceIcon,
-  ArrowRightIcon,
   ArrowRightStartOnRectangleIcon,
   SparklesIcon,
   AdjustmentsVerticalIcon,
@@ -40,7 +39,7 @@ export function FeaturesSection({ className }: { className?: string }) {
       slideLabel: t("steps.0.slideLabel"),
       title: t("steps.0.title"),
       description: t("steps.0.description"),
-      image: "/master_interface.webp",
+      image: "/integration.webp",
       color: "teal",
       Icon: ArrowRightStartOnRectangleIcon,
     },
@@ -51,7 +50,7 @@ export function FeaturesSection({ className }: { className?: string }) {
       slideLabel: t("steps.1.slideLabel"),
       title: t("steps.1.title"),
       description: t("steps.1.description"),
-      image: "/intelligent_analysis.webp",
+      image: "/neural.webp",
       color: "purple",
       Icon: SparklesIcon,
     },
@@ -62,7 +61,7 @@ export function FeaturesSection({ className }: { className?: string }) {
       slideLabel: t("steps.2.slideLabel"),
       title: t("steps.2.title"),
       description: t("steps.2.description"),
-      image: "/mastering_grade_polish.webp",
+      image: "/mastering_grade.webp",
       color: "blue",
       Icon: AdjustmentsVerticalIcon,
     },
@@ -73,7 +72,7 @@ export function FeaturesSection({ className }: { className?: string }) {
       slideLabel: t("steps.3.slideLabel"),
       title: t("steps.3.title"),
       description: t("steps.3.description"),
-      image: "/creative_control.webp",
+      image: "/ready_world.webp",
       color: "orange",
       Icon: GlobeAmericasIcon,
     },
@@ -147,19 +146,19 @@ export function FeaturesSection({ className }: { className?: string }) {
 
         {/* Section Header */}
         <div className="text-center mb-12 space-y-4 relative z-10">
-          <h2 className="text-4xl md:text-5xl font-bold font-display text-white">
+          <h2 className="text-3xl md:text-4xl font-bold font-display text-white">
             {t.rich("title", {
               gradient: (chunks) => <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-blue-500">{chunks}</span>
             })}
           </h2>
-          <p className="text-slate-400 max-w-2xl mx-auto text-lg">
+          <p className="text-slate-400 max-w-2xl mx-auto text-base">
             {t("subtitle")}
           </p>
         </div>
 
         {/* Main Card Container */}
         <div
-          className="relative w-full aspect-[16/10] md:aspect-[21/9] lg:h-[600px] rounded-3xl overflow-hidden group shadow-2xl border border-white/5 bg-slate-950"
+          className="relative w-full aspect-[16/10] md:aspect-[21/9] lg:h-[520px] rounded-3xl overflow-hidden group shadow-2xl border border-white/5 bg-slate-950"
           id="slider-root"
         >
           {/* Background Images Layer */}
@@ -187,30 +186,21 @@ export function FeaturesSection({ className }: { className?: string }) {
           <div className="absolute inset-0 bg-gradient-to-r from-[#0B0F19]/80 via-transparent to-transparent opacity-60 z-10 pointer-events-none"></div>
 
           {/* Content Overlay (Text) */}
-          <div className="absolute inset-0 flex flex-col justify-end md:justify-center px-6 md:px-16 pb-32 md:pb-0 z-20 pointer-events-none">
+          <div className="absolute inset-0 flex flex-col justify-end md:justify-center px-6 md:px-12 pb-24 md:pb-0 z-20 pointer-events-none">
             <div
-              className="glass-overlay p-6 md:p-10 rounded-2xl max-w-xl transform transition-all duration-500 pointer-events-auto backdrop-blur-md bg-slate-950/40 border border-white/10"
+              className="glass-overlay p-5 md:p-7 rounded-2xl max-w-lg transform transition-all duration-500 pointer-events-auto backdrop-blur-md bg-slate-950/40 border border-white/10"
               key={activeStep}
               // Key forces re-mount for animation
             >
               <div className={`flex items-center gap-3 mb-4 ${colorMap[activeFeature.color].text}`}>
                 <PuzzlePieceIcon className="w-6 h-6" />
-                <span className="text-xs font-bold uppercase tracking-wider">
-                  {activeFeature.slideLabel}
-                </span>
               </div>
-              <h3 className="text-2xl md:text-3xl font-display font-bold text-white mb-3 leading-tight animate-in fade-in slide-in-from-bottom-2 duration-500">
+              <h3 className={`text-2xl md:text-3xl font-display font-bold mb-3 leading-tight animate-in fade-in slide-in-from-bottom-2 duration-500 ${colorMap[activeFeature.color].text}`}>
                 {activeFeature.title}
               </h3>
               <p className="text-slate-300 text-sm md:text-lg leading-relaxed animate-in fade-in slide-in-from-bottom-3 duration-500 delay-100">
                 {activeFeature.description}
               </p>
-              <div className="mt-6 animate-in fade-in slide-in-from-bottom-4 duration-500 delay-200">
-                <button className="flex items-center gap-2 text-white font-semibold hover:text-teal-400 transition-colors group/btn text-sm md:text-base">
-                  Saber más
-                  <ArrowRightIcon className="w-4 h-4 group-hover/btn:translate-x-1 transition-transform" />
-                </button>
-              </div>
             </div>
           </div>
 
