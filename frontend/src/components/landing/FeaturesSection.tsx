@@ -145,7 +145,7 @@ export function FeaturesSection({ className }: { className?: string }) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
         {/* Section Header */}
-        <div className="text-center mb-12 space-y-4 relative z-10">
+        <div className="text-center mb-6 space-y-4 relative z-10">
           <h2 className="text-3xl md:text-4xl font-bold font-display text-white">
             {t.rich("title", {
               gradient: (chunks) => <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-blue-500">{chunks}</span>
@@ -158,7 +158,7 @@ export function FeaturesSection({ className }: { className?: string }) {
 
         {/* Main Card Container */}
         <div
-          className="relative w-full aspect-[16/10] md:aspect-[21/9] lg:h-[260px] rounded-3xl overflow-hidden group shadow-2xl border border-white/5 bg-slate-950"
+          className="relative w-full aspect-[16/10] md:aspect-[21/9] lg:h-[340px] rounded-3xl overflow-hidden group shadow-2xl border border-white/5 bg-slate-950"
           id="slider-root"
         >
           {/* Background Images Layer */}
