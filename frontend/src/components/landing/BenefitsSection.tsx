@@ -50,7 +50,7 @@ const drawEqualizerBars = (
   ctx.shadowBlur = 0;
 };
 
-// Helper to draw a left-moving audio spectrum (auto mode)
+// Helper to draw a flowing wave spectrum (auto mode)
 const drawSpectrumFlow = (
   ctx: CanvasRenderingContext2D,
   width: number,
@@ -59,33 +59,43 @@ const drawSpectrumFlow = (
 ) => {
   ctx.clearRect(0, 0, width, height);
 
-  const barCount = 56;
-  const gap = Math.max(1, Math.floor(width / 220));
+  const barCount = 72;
+  const gap = Math.max(1, Math.floor(width / 260));
   const totalGap = gap * (barCount - 1);
   const barWidth = Math.max(2, (width - totalGap) / barCount);
-  const baseY = height - 4;
-  const minHeight = height * 0.1;
-  const maxHeight = height * 0.6;
-  const travel = frameCount * 0.08;
+  const baseY = height - 6;
+  const minHeight = height * 0.08;
+  const maxHeight = height * 0.75;
+  const time = frameCount * 0.055;
+  const center = (barCount - 1) / 2;
+  const spread = barCount * 0.42;
+  const pulse = 0.85 + 0.15 * Math.sin(time * 0.7);
 
-  ctx.shadowBlur = 10;
+  ctx.shadowBlur = 14;
 
   for (let i = 0; i < barCount; i += 1) {
-    const phase = i + travel;
-    const waveA = Math.sin(phase * 0.35);
-    const waveB = Math.sin(phase * 0.12 + 1.7);
-    const waveC = Math.sin(phase * 0.06 - 0.8);
-    const mix = (waveA * 0.6 + waveB * 0.3 + waveC * 0.2 + 1.5) / 2.2;
-    const barHeight = Math.max(minHeight, minHeight + mix * maxHeight);
+    const offset = i - center;
+    const envelope = Math.exp(-Math.pow(offset / spread, 2) * 2.4);
+    const waveA = Math.sin(i * 0.46 - time);
+    const waveB = Math.sin(i * 0.15 + time * 1.3);
+    const waveC = Math.sin(i * 0.08 - time * 0.6);
+    const mix = Math.max(0, 0.58 + 0.32 * waveA + 0.2 * waveB + 0.1 * waveC);
+    const heightFactor = Math.min(1, Math.max(0.05, (0.12 + envelope * 0.95) * mix * pulse));
+    const barHeight = minHeight + heightFactor * maxHeight;
     const x = i * (barWidth + gap);
-    const hue = 195 + (i / (barCount - 1)) * 45;
+    const hue = 178 + (i / (barCount - 1)) * 70;
     const gradient = ctx.createLinearGradient(0, baseY - barHeight, 0, baseY);
-    gradient.addColorStop(0, `hsla(${hue}, 75%, 65%, 0.85)`);
-    gradient.addColorStop(1, `hsla(${hue}, 75%, 45%, 0.15)`);
+    gradient.addColorStop(0, `hsla(${hue + 8}, 80%, 72%, 0.9)`);
+    gradient.addColorStop(0.55, `hsla(${hue}, 78%, 56%, 0.55)`);
+    gradient.addColorStop(1, `hsla(${hue - 8}, 82%, 40%, 0.18)`);
 
-    ctx.shadowColor = `hsla(${hue}, 70%, 60%, 0.6)`;
+    ctx.shadowColor = `hsla(${hue}, 85%, 60%, 0.55)`;
     ctx.fillStyle = gradient;
     ctx.fillRect(x, baseY - barHeight, barWidth, barHeight);
+
+    const highlightHeight = Math.max(1, barHeight * 0.08);
+    ctx.fillStyle = `hsla(${hue + 12}, 90%, 78%, 0.7)`;
+    ctx.fillRect(x, baseY - barHeight, barWidth, highlightHeight);
   }
 
   ctx.shadowBlur = 0;
@@ -133,18 +143,18 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
   }, [isManual]);
 
   return (
-    <section id="benefits" className={`py-0 relative overflow-hidden ${className || 'bg-slate-950'}`}>
+    <section id="benefits" className={`py-8 md:py-10 lg:py-12 relative overflow-hidden ${className || 'bg-slate-950'}`}>
         {/* Background Elements */}
         <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-slate-950 pointer-events-none"></div>
 
-        <div className="relative z-10 max-w-7xl w-full mx-auto space-y-6 px-6">
+        <div className="relative z-10 max-w-7xl w-full mx-auto space-y-8 px-4 sm:px-6 lg:px-8">
 
             {/* Header */}
             <div className="text-center space-y-4">
-                <h2 className="text-2xl md:text-4xl font-display font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white via-violet-100 to-slate-400 pb-2">
+                <h2 className="text-3xl md:text-4xl font-display font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white via-violet-100 to-slate-400 pb-2">
                     {t('headerTitle')}
                 </h2>
-                <p className="text-slate-400 text-sm max-w-2xl mx-auto font-light">
+                <p className="text-slate-400 text-sm sm:text-base max-w-2xl mx-auto font-light">
                     {t('headerDesc')}
                 </p>
             </div>
@@ -296,26 +306,26 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
                     <p className="text-[10px] text-slate-400 mb-3 relative z-10">{t('readyForWorldDesc')}</p>
 
                     <div className="grid grid-cols-4 gap-2 relative z-10">
-                        <div className="flex items-center justify-center p-2 rounded-lg bg-[#1DB954]/10 border border-[#1DB954]/20">
-                            <svg className="w-4 h-4 text-[#1DB954]" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                        <div className="flex items-center justify-center p-2 rounded-full opacity-80 hover:opacity-100 hover:scale-105 transition-all duration-300">
+                            <svg className="w-6 h-6 text-[#1ED760]" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                                 <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z" />
                             </svg>
                             <span className="sr-only">Spotify</span>
                         </div>
-                        <div className="flex items-center justify-center p-2 rounded-lg bg-[#A4CC35]/10 border border-[#A4CC35]/20">
-                            <svg className="w-4 h-4 text-[#A4CC35]" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                                <path d="M18.81 4.16v3.03H24V4.16h-5.19zM6.27 8.38v3.027h5.189V8.38h-5.19zm12.54 0v3.027H24V8.38h-5.19zM6.27 12.594v3.027h5.189v-3.027h-5.19zm6.271 0v3.027h5.19v-3.027h-5.19zm6.27 0v3.027H24v-3.027h-5.19zM0 16.81v3.029h5.19v-3.03H0zm6.27 0v3.029h5.189v-3.03h-5.19zm6.271 0v3.029h5.19v-3.03h-5.19zm6.27 0v3.029H24v-3.03h-5.19Z" />
+                        <div className="flex items-center justify-center p-2 rounded-full opacity-80 hover:opacity-100 hover:scale-105 transition-all duration-300">
+                            <svg className="w-7 h-5 text-[#FF1A2D]" viewBox="0 0 576 512" fill="currentColor" aria-hidden="true">
+                                <path d="M451.46 244.71H576V172H451.46zm0-173.89v72.67H576V70.82zm0 275.06H576V273.2H451.46zM0 447.09h124.54v-72.67H0zm150.47 0H275v-72.67H150.47zm150.52 0H425.53v-72.67H301zm150.47 0H576v-72.67H451.46zM301 345.88h124.53V273.2H301zm-150.52 0H275V273.2H150.47zm0-101.17H275V172H150.47z" />
                             </svg>
                             <span className="sr-only">Deezer</span>
                         </div>
-                        <div className="flex items-center justify-center p-2 rounded-lg bg-[#FF5500]/10 border border-[#FF5500]/20">
-                            <svg className="w-4 h-4 text-[#FF5500]" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                        <div className="flex items-center justify-center p-2 rounded-full opacity-80 hover:opacity-100 hover:scale-105 transition-all duration-300">
+                            <svg className="w-6 h-6 text-[#FF5500]" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                                 <path d="M23.999 14.165c-.052 1.796-1.612 3.169-3.4 3.169h-8.18a.68.68 0 0 1-.675-.683V7.862a.747.747 0 0 1 .452-.724s.75-.513 2.333-.513a5.364 5.364 0 0 1 2.763.755 5.433 5.433 0 0 1 2.57 3.54c.282-.08.574-.121.868-.12.884 0 1.73.358 2.347.992s.948 1.49.922 2.373ZM10.721 8.421c.247 2.98.427 5.697 0 8.672a.264.264 0 0 1-.53 0c-.395-2.946-.22-5.718 0-8.672a.264.264 0 0 1 .53 0ZM9.072 9.448c.285 2.659.37 4.986-.006 7.655a.277.277 0 0 1-.55 0c-.331-2.63-.256-5.02 0-7.655a.277.277 0 0 1 .556 0Zm-1.663-.257c.27 2.726.39 5.171 0 7.904a.266.266 0 0 1-.532 0c-.38-2.69-.257-5.21 0-7.904a.266.266 0 0 1 .532 0Zm-1.647.77a26.108 26.108 0 0 1-.008 7.147.272.272 0 0 1-.542 0 27.955 27.955 0 0 1 0-7.147.275.275 0 0 1 .55 0Zm-1.67 1.769c.421 1.865.228 3.5-.029 5.388a.257.257 0 0 1-.514 0c-.21-1.858-.398-3.549 0-5.389a.272.272 0 0 1 .543 0Zm-1.655-.273c.388 1.897.26 3.508-.01 5.412-.026.28-.514.283-.54 0-.244-1.878-.347-3.54-.01-5.412a.283.283 0 0 1 .56 0Zm-1.668.911c.4 1.268.257 2.292-.026 3.572a.257.257 0 0 1-.514 0c-.241-1.262-.354-2.312-.023-3.572a.283.283 0 0 1 .563 0Z" />
                             </svg>
                             <span className="sr-only">SoundCloud</span>
                         </div>
-                        <div className="flex items-center justify-center p-2 rounded-lg bg-[#00D2FF]/10 border border-[#00D2FF]/20">
-                            <svg className="w-4 h-4 text-[#00D2FF]" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                        <div className="flex items-center justify-center p-2 rounded-full opacity-80 hover:opacity-100 hover:scale-105 transition-all duration-300">
+                            <svg className="w-6 h-6 text-slate-100" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                                 <path d="M12.012 3.992L8.008 7.996 4.004 3.992 0 7.996 4.004 12l4.004-4.004L12.012 12l-4.004 4.004 4.004 4.004 4.004-4.004L12.012 12l4.004-4.004-4.004-4.004zM16.042 7.996l3.979-3.979L24 7.996l-3.979 3.979z" />
                             </svg>
                             <span className="sr-only">Tidal</span>
