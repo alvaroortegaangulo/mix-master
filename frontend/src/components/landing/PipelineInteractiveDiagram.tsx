@@ -333,26 +333,26 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
                     </div>
                   ) : (
                     <>
-                      <div className="flex items-center justify-start gap-2 lg:gap-3 text-left animate-fade-in">
+                      <div className="flex items-center justify-start gap-2 text-left animate-fade-in">
                         <div className={`w-9 h-9 lg:w-10 lg:h-10 rounded-full border ${colors.ringBorder} flex items-center justify-center ${colors.ringBg} backdrop-blur-md icon-pulse`}>
                           <step.icon className={`w-5 h-5 lg:w-6 lg:h-6 ${colors.text}`} />
                         </div>
                         <div>
-                          <h3 className="text-xl lg:text-3xl font-black text-white font-['Orbitron'] mb-1 tracking-wide glow-text">
+                          <h3 className="text-xl lg:text-3xl font-black text-white font-['Orbitron'] mb-0.5 tracking-wide glow-text">
                             {step.title}
                           </h3>
-                          <p className={`${colors.textSoft} font-medium tracking-wider text-[10px] lg:text-xs uppercase opacity-90`}>
+                          <p className={`${colors.textSoft} font-medium tracking-wider text-[10px] lg:text-xs uppercase opacity-90 leading-tight`}>
                             {step.subtitle}
                           </p>
                         </div>
                       </div>
 
-                      <div className="flex-grow flex flex-col justify-center items-start py-1.5 lg:py-3 space-y-2 lg:space-y-3 text-left">
-                        <p className={`text-xs lg:text-sm text-slate-200 leading-relaxed max-w-2xl border-l-2 ${colors.border} pl-3 bg-gradient-to-r ${colors.gradientFrom} to-transparent p-1.5 rounded-r-lg`}>
+                      <div className="flex-grow flex flex-col justify-center items-start py-1 lg:py-2 space-y-1.5 lg:space-y-2 text-left">
+                        <p className={`text-xs lg:text-sm text-slate-200 leading-snug max-w-2xl border-l-2 ${colors.border} pl-3 bg-gradient-to-r ${colors.gradientFrom} to-transparent p-1.5 rounded-r-lg`}>
                           {step.description}
                         </p>
 
-                        <div className="grid grid-cols-3 gap-1.5 sm:gap-3 max-w-lg text-left">
+                        <div className="grid grid-cols-3 gap-1 sm:gap-2.5 max-w-lg text-left">
                           {step.tools.map((tool) => (
                             <div
                               key={tool.name}
