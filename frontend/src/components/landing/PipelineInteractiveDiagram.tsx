@@ -2,12 +2,34 @@
 
 import React, { useMemo, useState } from 'react';
 import { useTranslations } from 'next-intl';
+import {
+  PresentationChartLineIcon,
+  WrenchScrewdriverIcon,
+  ArrowsPointingInIcon,
+  GlobeAltIcon,
+  CheckBadgeIcon,
+  AdjustmentsVerticalIcon,
+  CpuChipIcon,
+  BoltIcon,
+  MusicalNoteIcon,
+  ScissorsIcon,
+  SignalIcon,
+  AdjustmentsHorizontalIcon,
+  SwatchIcon,
+  FireIcon,
+  SparklesIcon,
+  ArrowPathIcon,
+  ArrowsRightLeftIcon,
+  ArrowUpTrayIcon,
+  Cog6ToothIcon,
+  ScaleIcon
+} from '@heroicons/react/24/outline';
 
 type PipelineColor = 'cyan' | 'blue' | 'indigo' | 'violet' | 'fuchsia';
 
 type PipelineTool = {
   name: string;
-  icon: string;
+  icon: React.ElementType;
 };
 
 type PipelineStep = {
@@ -17,7 +39,7 @@ type PipelineStep = {
   description: string;
   tools: PipelineTool[];
   proTip: string;
-  icon: string;
+  icon: React.ElementType;
   color: PipelineColor;
   bgImage: string;
 };
@@ -158,12 +180,12 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
         subtitle: t('steps.0.shortDesc'),
         description: t('steps.0.desc'),
         tools: [
-          { name: t('steps.0.tools.0'), icon: 'equalizer' },
-          { name: t('steps.0.tools.1'), icon: 'leak_add' },
-          { name: t('steps.0.tools.2'), icon: 'speed' },
+          { name: t('steps.0.tools.0'), icon: AdjustmentsVerticalIcon },
+          { name: t('steps.0.tools.1'), icon: CpuChipIcon },
+          { name: t('steps.0.tools.2'), icon: BoltIcon },
         ],
         proTip: t('steps.0.tip'),
-        icon: 'query_stats',
+        icon: PresentationChartLineIcon,
         color: 'cyan',
         bgImage: '/analysis.webp',
       },
@@ -173,12 +195,12 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
         subtitle: t('steps.1.shortDesc'),
         description: t('steps.1.desc'),
         tools: [
-          { name: t('steps.1.tools.0'), icon: 'tune' },
-          { name: t('steps.1.tools.1'), icon: 'cut' },
-          { name: t('steps.1.tools.2'), icon: 'waves' },
+          { name: t('steps.1.tools.0'), icon: MusicalNoteIcon },
+          { name: t('steps.1.tools.1'), icon: ScissorsIcon },
+          { name: t('steps.1.tools.2'), icon: SignalIcon },
         ],
         proTip: t('steps.1.tip'),
-        icon: 'build',
+        icon: WrenchScrewdriverIcon,
         color: 'blue',
         bgImage: '/correction.webp',
       },
@@ -188,12 +210,12 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
         subtitle: t('steps.2.shortDesc'),
         description: t('steps.2.desc'),
         tools: [
-          { name: t('steps.2.tools.0'), icon: 'graphic_eq' },
-          { name: t('steps.2.tools.1'), icon: 'hub' },
-          { name: t('steps.2.tools.2'), icon: 'local_fire_department' },
+          { name: t('steps.2.tools.0'), icon: AdjustmentsHorizontalIcon },
+          { name: t('steps.2.tools.1'), icon: SwatchIcon },
+          { name: t('steps.2.tools.2'), icon: FireIcon },
         ],
         proTip: t('steps.2.tip'),
-        icon: 'compress',
+        icon: ArrowsPointingInIcon,
         color: 'indigo',
         bgImage: '/dynamics.webp',
       },
@@ -203,12 +225,12 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
         subtitle: t('steps.3.shortDesc'),
         description: t('steps.3.desc'),
         tools: [
-          { name: t('steps.3.tools.0'), icon: 'church' },
-          { name: t('steps.3.tools.1'), icon: 'repeat' },
-          { name: t('steps.3.tools.2'), icon: 'panorama_horizontal' },
+          { name: t('steps.3.tools.0'), icon: SparklesIcon },
+          { name: t('steps.3.tools.1'), icon: ArrowPathIcon },
+          { name: t('steps.3.tools.2'), icon: ArrowsRightLeftIcon },
         ],
         proTip: t('steps.3.tip'),
-        icon: 'surround_sound',
+        icon: GlobeAltIcon,
         color: 'violet',
         bgImage: '/spatial.webp',
       },
@@ -218,12 +240,12 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
         subtitle: t('steps.4.shortDesc'),
         description: t('steps.4.desc'),
         tools: [
-          { name: t('steps.4.tools.0'), icon: 'vertical_align_top' },
-          { name: t('steps.4.tools.1'), icon: 'settings_input_component' },
-          { name: t('steps.4.tools.2'), icon: 'compare_arrows' },
+          { name: t('steps.4.tools.0'), icon: ArrowUpTrayIcon },
+          { name: t('steps.4.tools.1'), icon: Cog6ToothIcon },
+          { name: t('steps.4.tools.2'), icon: ScaleIcon },
         ],
         proTip: t('steps.4.tip'),
-        icon: 'album',
+        icon: CheckBadgeIcon,
         color: 'fuchsia',
         bgImage: '/mastering.webp',
       },
@@ -235,7 +257,7 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
 
   return (
     <section
-      className={`relative min-h-screen flex flex-col items-center justify-center p-4 lg:p-8 overflow-x-hidden selection:bg-cyan-500 selection:text-white font-inter ${className || ''} bg-[#050508]`}
+      className={`relative min-h-[400px] flex flex-col items-center justify-center p-2 lg:p-4 selection:bg-cyan-500 selection:text-white font-inter overflow-hidden ${className || ''} bg-[#050508]`}
     >
       <div className="absolute inset-0 pointer-events-none z-0">
         <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-cyan-900/20 rounded-full blur-[120px]"></div>
@@ -243,22 +265,21 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
       </div>
 
       <div className="relative z-10 w-full max-w-7xl">
-        <header className="text-center mb-8 lg:mb-12 relative z-10 animate-fade-in-down">
-          <h2 className="text-4xl md:text-6xl font-bold font-orbitron mb-4 bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-blue-500 glow-text">
+        <header className="text-center mb-6 lg:mb-8 relative z-10 animate-fade-in-down">
+          <h2 className="text-3xl md:text-5xl font-bold font-orbitron mb-2 bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-blue-500 glow-text">
             {t('title')}
           </h2>
-          <p className="text-slate-400 text-lg max-w-2xl mx-auto font-light">
+          <p className="text-slate-400 text-base md:text-lg max-w-2xl mx-auto font-light">
             {t.rich('description', {
               highlight: (chunks) => <span className="text-cyan-400 font-medium">{chunks}</span>,
             })}
           </p>
         </header>
 
-        <main className="w-full max-w-7xl h-[80vh] min-h-[600px] flex flex-col md:flex-row gap-2 md:gap-4 relative z-10">
+        <main className="w-full max-w-7xl h-[350px] md:h-[400px] flex flex-col md:flex-row gap-2 md:gap-4 relative z-10">
           {steps.map((step, index) => {
             const isActive = index === activeStep;
             const colors = colorStyles[step.color];
-            const stepNumber = `0${index + 1}`;
 
             return (
               <button
@@ -298,55 +319,45 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
                   </div>
                 )}
 
-                <div className="absolute inset-0 p-6 flex flex-col justify-between h-full z-10">
+                <div className="absolute inset-0 p-2 lg:p-4 flex flex-col justify-between h-full z-10">
                   {!isActive ? (
-                    <div className="h-full flex flex-col items-center justify-center py-4">
-                      <span className={`material-symbols-outlined text-3xl mb-8 ${colors.text} group-hover:scale-125 transition-transform duration-300 drop-shadow-lg`}>
-                        {step.icon}
-                      </span>
+                    <div className="h-full flex flex-col items-center justify-center py-2">
+                      <step.icon className={`w-8 h-8 lg:w-10 lg:h-10 mb-4 ${colors.text} group-hover:scale-125 transition-transform duration-300 drop-shadow-lg`} />
                       <div className="flex-grow flex items-center justify-center">
-                        <h3 className="vertical-text text-xl lg:text-2xl font-bold tracking-widest text-slate-400 group-hover:text-white transition-colors font-orbitron uppercase">
+                        <h3 className="vertical-text text-sm lg:text-base font-bold tracking-widest text-slate-400 group-hover:text-white transition-colors font-orbitron uppercase">
                           {step.title}
                         </h3>
                       </div>
-                      <div className={`text-xs font-mono text-slate-600 mt-8 ${colors.hoverText}`}>{stepNumber}</div>
                     </div>
                   ) : (
                     <>
-                      <div className="flex items-start justify-between animate-fade-in">
-                        <div className="flex items-center gap-4 text-left">
-                          <div className={`w-12 h-12 rounded-full border ${colors.ringBorder} flex items-center justify-center ${colors.ringBg} backdrop-blur-md icon-pulse`}>
-                            <span className={`material-symbols-outlined ${colors.text} text-2xl`}>{step.icon}</span>
-                          </div>
-                          <div>
-                            <h3 className="text-3xl lg:text-5xl font-bold text-white font-orbitron mb-1 tracking-wide glow-text">
-                              {step.title}
-                            </h3>
-                            <p className={`${colors.textSoft} font-medium tracking-wider text-sm uppercase opacity-90`}>
-                              {step.subtitle}
-                            </p>
-                          </div>
+                      <div className="flex items-center justify-start gap-3 lg:gap-4 text-left animate-fade-in">
+                        <div className={`w-10 h-10 lg:w-12 lg:h-12 rounded-full border ${colors.ringBorder} flex items-center justify-center ${colors.ringBg} backdrop-blur-md icon-pulse`}>
+                          <step.icon className={`w-6 h-6 lg:w-8 lg:h-8 ${colors.text}`} />
                         </div>
-                        <span className="text-6xl font-black text-slate-800 opacity-30 select-none font-orbitron hidden sm:block">
-                          {stepNumber}
-                        </span>
+                        <div>
+                          <h3 className="text-xl lg:text-3xl font-bold text-white font-orbitron mb-1 tracking-wide glow-text">
+                            {step.title}
+                          </h3>
+                          <p className={`${colors.textSoft} font-medium tracking-wider text-xs lg:text-sm uppercase opacity-90`}>
+                            {step.subtitle}
+                          </p>
+                        </div>
                       </div>
 
-                      <div className="flex-grow flex flex-col justify-center py-4 space-y-6 text-left">
-                        <p className={`text-lg text-slate-200 leading-relaxed max-w-2xl border-l-2 ${colors.border} pl-4 bg-gradient-to-r ${colors.gradientFrom} to-transparent p-2 rounded-r-lg`}>
+                      <div className="flex-grow flex flex-col justify-center items-center py-2 lg:py-4 space-y-2 lg:space-y-4 text-center">
+                        <p className={`text-sm lg:text-base text-slate-200 leading-relaxed max-w-2xl border-l-2 ${colors.border} pl-4 bg-gradient-to-r ${colors.gradientFrom} to-transparent p-2 rounded-r-lg`}>
                           {step.description}
                         </p>
 
-                        <div className="grid grid-cols-3 gap-2 sm:gap-4 max-w-lg text-left">
+                        <div className="grid grid-cols-3 gap-2 sm:gap-4 max-w-lg text-center mx-auto">
                           {step.tools.map((tool) => (
                             <div
                               key={tool.name}
-                              className={`flex flex-col items-start justify-center p-3 rounded-xl bg-slate-800/50 ${colors.toolHoverBg} border border-slate-700/50 ${colors.toolHoverBorder} transition-all duration-300 group/tool backdrop-blur-sm`}
+                              className={`flex flex-col items-center justify-center p-2 lg:p-3 rounded-xl bg-slate-800/50 ${colors.toolHoverBg} border border-slate-700/50 ${colors.toolHoverBorder} transition-all duration-300 group/tool backdrop-blur-sm`}
                             >
-                              <span className={`material-symbols-outlined text-slate-400 ${colors.toolHoverText} mb-2 transition-colors`}>
-                                {tool.icon}
-                              </span>
-                              <span className="text-[10px] sm:text-xs font-semibold text-left text-slate-300 group-hover/tool:text-white uppercase leading-tight">
+                              <tool.icon className={`w-5 h-5 lg:w-6 lg:h-6 text-slate-400 ${colors.toolHoverText} mb-1 lg:mb-2 transition-colors`} />
+                              <span className="text-[10px] sm:text-xs font-semibold text-center text-slate-300 group-hover/tool:text-white uppercase leading-tight">
                                 {tool.name}
                               </span>
                             </div>
@@ -355,19 +366,6 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
                       </div>
 
                       <div className="mt-auto">
-                        <div className={`shine-box relative overflow-hidden rounded-lg bg-slate-800/80 border ${colors.borderSoft} p-4 lg:p-5 shadow-lg text-left`}>
-                          <div className="flex items-start gap-3 relative z-10">
-                            <span className={`material-symbols-outlined ${colors.text} mt-1`}>lightbulb</span>
-                            <div>
-                              <h4 className={`${colors.text} font-bold text-xs uppercase tracking-widest mb-1`}>
-                                {t('proTip')}
-                              </h4>
-                              <p className="text-sm lg:text-base text-slate-200 italic font-medium">
-                                &quot;{step.proTip}&quot;
-                              </p>
-                            </div>
-                          </div>
-                        </div>
                       </div>
                     </>
                   )}
@@ -377,10 +375,6 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
           })}
         </main>
 
-        <div className="mt-8 text-slate-600 text-sm flex gap-2 justify-center items-center">
-          <span>{t('verified')}</span>
-          <span className="material-symbols-outlined text-xs">check_circle</span>
-        </div>
       </div>
     </section>
   );
