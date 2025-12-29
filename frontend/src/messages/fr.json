@@ -35,18 +35,30 @@
     "subtitle": "Nous avons simplifié le processus d'ingénierie complexe en une expérience fluide. Pas de menus infinis, seulement des résultats sonores supérieurs.",
     "steps": {
       "0": {
+        "tabStep": "01. Connexion",
+        "tabTitle": "Intégration DAW",
+        "slideLabel": "ÉTAPE 1",
         "title": "Analyse Intelligente",
         "description": "Notre IA scanne vos pistes pour comprendre la tonalité, le tempo, le genre et l'instrumentation, créant une stratégie de mixage personnalisée."
       },
       "1": {
+        "tabStep": "02. Processus",
+        "tabTitle": "Moteur Neural",
+        "slideLabel": "ÉTAPE 2",
         "title": "Mixage de Précision",
         "description": "Piroola applique une EQ chirurgicale, une compression dynamique et des améliorations spatiales adaptées au rôle de chaque stem dans le mix."
       },
       "2": {
+        "tabStep": "03. Résultats",
+        "tabTitle": "Grade Mastering",
+        "slideLabel": "ÉTAPE 3",
         "title": "Contrôle Créatif",
         "description": "Ajustez le flux de travail à vos besoins pour un son optimal. Configurez vos instruments et styles musicaux à leur plein potentiel."
       },
       "3": {
+        "tabStep": "04. Lancement",
+        "tabTitle": "Prêt pour le Monde",
+        "slideLabel": "ÉTAPE 4",
         "title": "Finition Qualité Mastering",
         "description": "Finalise votre piste avec une correspondance de sonie standard de l'industrie, un élargissement stéréo et une sécurité de limiteur."
       }
