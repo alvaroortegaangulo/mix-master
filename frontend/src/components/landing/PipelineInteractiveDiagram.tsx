@@ -314,7 +314,7 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
                   ) : (
                     <>
                       <div className="flex items-start justify-between animate-fade-in">
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-4 text-left">
                           <div className={`w-12 h-12 rounded-full border ${colors.ringBorder} flex items-center justify-center ${colors.ringBg} backdrop-blur-md icon-pulse`}>
                             <span className={`material-symbols-outlined ${colors.text} text-2xl`}>{step.icon}</span>
                           </div>
@@ -332,21 +332,21 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
                         </span>
                       </div>
 
-                      <div className="flex-grow flex flex-col justify-center py-4 space-y-6">
+                      <div className="flex-grow flex flex-col justify-center py-4 space-y-6 text-left">
                         <p className={`text-lg text-slate-200 leading-relaxed max-w-2xl border-l-2 ${colors.border} pl-4 bg-gradient-to-r ${colors.gradientFrom} to-transparent p-2 rounded-r-lg`}>
                           {step.description}
                         </p>
 
-                        <div className="grid grid-cols-3 gap-2 sm:gap-4 max-w-lg">
+                        <div className="grid grid-cols-3 gap-2 sm:gap-4 max-w-lg text-left">
                           {step.tools.map((tool) => (
                             <div
                               key={tool.name}
-                              className={`flex flex-col items-center justify-center p-3 rounded-xl bg-slate-800/50 ${colors.toolHoverBg} border border-slate-700/50 ${colors.toolHoverBorder} transition-all duration-300 group/tool backdrop-blur-sm`}
+                              className={`flex flex-col items-start justify-center p-3 rounded-xl bg-slate-800/50 ${colors.toolHoverBg} border border-slate-700/50 ${colors.toolHoverBorder} transition-all duration-300 group/tool backdrop-blur-sm`}
                             >
                               <span className={`material-symbols-outlined text-slate-400 ${colors.toolHoverText} mb-2 transition-colors`}>
                                 {tool.icon}
                               </span>
-                              <span className="text-[10px] sm:text-xs font-semibold text-center text-slate-300 group-hover/tool:text-white uppercase leading-tight">
+                              <span className="text-[10px] sm:text-xs font-semibold text-left text-slate-300 group-hover/tool:text-white uppercase leading-tight">
                                 {tool.name}
                               </span>
                             </div>
@@ -355,7 +355,7 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
                       </div>
 
                       <div className="mt-auto">
-                        <div className={`shine-box relative overflow-hidden rounded-lg bg-slate-800/80 border ${colors.borderSoft} p-4 lg:p-5 shadow-lg`}>
+                        <div className={`shine-box relative overflow-hidden rounded-lg bg-slate-800/80 border ${colors.borderSoft} p-4 lg:p-5 shadow-lg text-left`}>
                           <div className="flex items-start gap-3 relative z-10">
                             <span className={`material-symbols-outlined ${colors.text} mt-1`}>lightbulb</span>
                             <div>

@@ -32,6 +32,7 @@ const orbitron = Orbitron({
   variable: "--font-orbitron",
   subsets: ["latin"],
   display: "swap",
+  weight: ["500", "700", "900"],
 });
 
 const inter = Inter({
@@ -225,12 +226,6 @@ export default async function LocaleLayout({
 
   return (
     <html lang={locale}>
-      <head>
-        <link
-          rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,1,0"
-        />
-      </head>
       <body className={`${spaceGrotesk.variable} ${geistMono.variable} ${orbitron.variable} ${inter.variable} antialiased`}>
         <NextIntlClientProvider messages={messages}>
           <GoogleOAuthProvider clientId={googleClientId}>

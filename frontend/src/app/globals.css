@@ -1,3 +1,5 @@
+@import url("https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,1,0");
 @import "tailwindcss";
 
 @plugin "tailwindcss-animate";
@@ -236,11 +238,11 @@ body {
 }
 
 .font-orbitron {
-  font-family: var(--font-orbitron), var(--font-sans);
+  font-family: var(--font-orbitron, "Orbitron"), var(--font-sans);
 }
 
 .font-inter {
-  font-family: var(--font-inter), var(--font-sans);
+  font-family: var(--font-inter, var(--font-sans));
 }
 
 .material-symbols-outlined {
