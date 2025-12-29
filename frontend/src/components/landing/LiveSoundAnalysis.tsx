@@ -72,13 +72,13 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
           <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-white mb-4 font-['Orbitron']">
             {t('title')}
           </h2>
-          <p className="max-w-3xl text-sm sm:text-base text-slate-400 leading-relaxed font-['Orbitron']">
+          <p className="max-w-3xl text-sm sm:text-base text-slate-400 leading-relaxed">
             {t('description')}
           </p>
         </div>
 
         {/* Dashboard Container */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-5">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-5 font-['Orbitron']">
 
           {/* LEFT PANEL: Frequency Spectrum */}
           <div className="lg:col-span-2 bg-slate-900/50 rounded-3xl border border-slate-800 p-3 md:p-4 2xl:p-5 flex flex-col justify-between min-h-[190px] md:min-h-[220px] shadow-2xl relative overflow-hidden">
@@ -93,7 +93,7 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
                      </div>
                      <h3 className="text-base sm:text-lg font-semibold text-white">{t('spectrum.title')}</h3>
                  </div>
-                 <div className="text-xs font-mono text-slate-300 pt-2">{t('spectrum.range')}</div>
+                 <div className="text-xs text-slate-300 pt-2">{t('spectrum.range')}</div>
              </div>
 
              {/* Spectrum Visualizer */}
@@ -116,15 +116,15 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
              {/* Bottom Metrics */}
              <div className="grid grid-cols-3 gap-2 border-t border-slate-800 pt-3 relative z-10">
                  <div>
-                     <div className="text-[10px] font-mono uppercase tracking-wider text-slate-300 mb-1">{t('spectrum.sub')}</div>
+                     <div className="text-[10px] uppercase tracking-wider text-slate-300 mb-1">{t('spectrum.sub')}</div>
                      <div className="text-white font-medium">{t('spectrum.balanced')}</div>
                  </div>
                  <div>
-                     <div className="text-[10px] font-mono uppercase tracking-wider text-slate-300 mb-1">{t('spectrum.vocal')}</div>
+                     <div className="text-[10px] uppercase tracking-wider text-slate-300 mb-1">{t('spectrum.vocal')}</div>
                      <div className="text-teal-400 font-medium">{t('spectrum.optimal')}</div>
                  </div>
                  <div className="text-right">
-                     <div className="text-[10px] font-mono uppercase tracking-wider text-slate-300 mb-1">{t('spectrum.air')}</div>
+                     <div className="text-[10px] uppercase tracking-wider text-slate-300 mb-1">{t('spectrum.air')}</div>
                      <div className="text-white font-medium">+1.2 dB</div>
                  </div>
              </div>
@@ -140,7 +140,7 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
              {/* Card 1: Integrated Loudness */}
              <div className="bg-slate-900/50 rounded-2xl border border-slate-800 p-3 2xl:p-4 shadow-lg relative group overflow-hidden">
                 <div className="flex justify-between items-start mb-2">
-                    <div className="text-[10px] font-mono uppercase tracking-wider text-slate-300">{t('metrics.loudness')}</div>
+                    <div className="text-[10px] uppercase tracking-wider text-slate-300">{t('metrics.loudness')}</div>
                     <SpeakerWaveIcon className="w-4 h-4 text-teal-400/70 icon-float" aria-hidden="true" />
                 </div>
                 <div className="text-2xl 2xl:text-3xl font-bold text-white mb-1 tabular-nums tracking-tight">
@@ -151,7 +151,7 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
                 <div className="mt-2 mb-2 relative h-1.5 bg-slate-800 rounded-full overflow-hidden">
                     <div className="absolute top-0 left-0 h-full bg-teal-400 w-[85%] rounded-full shadow-[0_0_10px_rgba(45,212,191,0.5)] transition-all duration-300" style={{ width: `${Math.min(100, ((-1 * lufs) / 14) * 85)}%` }}></div>
                 </div>
-                <div className="flex justify-between text-[9px] text-slate-300 font-mono mb-3">
+                <div className="flex justify-between text-[9px] text-slate-300 mb-3">
                     <span>-30</span>
                     <span>-14 ({t('metrics.target')})</span>
                     <span>-8</span>
@@ -163,9 +163,9 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
              <div className="bg-slate-900/50 rounded-2xl border border-slate-800 p-3 2xl:p-4 shadow-lg relative overflow-hidden">
                  <div className="flex justify-between items-start">
                      <div>
-                        <div className="text-[10px] font-mono uppercase tracking-wider text-slate-300 mb-1">{t('metrics.stereoImage')}</div>
+                        <div className="text-[10px] uppercase tracking-wider text-slate-300 mb-1">{t('metrics.stereoImage')}</div>
                         <div className="text-lg sm:text-xl font-bold text-white mb-1">{t('metrics.wide')}</div>
-                        <div className="text-xs font-mono text-slate-300 mb-3 tabular-nums">{t('metrics.correlation')}: <span className="text-white">+{correlation.toFixed(2)}</span></div>
+                        <div className="text-xs text-slate-300 mb-3 tabular-nums">{t('metrics.correlation')}: <span className="text-white">+{correlation.toFixed(2)}</span></div>
                      </div>
 
                      {/* Visual representation of Stereo Field (Circle) */}
@@ -181,7 +181,7 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
              {/* Card 3: Dynamic Range */}
              <div className="bg-slate-900/50 rounded-2xl border border-slate-800 p-3 2xl:p-4 shadow-lg flex items-center justify-between">
                  <div>
-                    <div className="text-[10px] font-mono uppercase tracking-wider text-slate-300 mb-1">{t('metrics.dynamicRange')}</div>
+                    <div className="text-[10px] uppercase tracking-wider text-slate-300 mb-1">{t('metrics.dynamicRange')}</div>
                     <div className="text-xl sm:text-2xl font-bold text-white tabular-nums">{dynamicRange} <span className="text-sm sm:text-base font-normal text-slate-200">dB</span></div>
                  </div>
 

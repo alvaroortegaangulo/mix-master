@@ -269,7 +269,7 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
           <h2 className="text-4xl md:text-6xl font-black font-['Orbitron'] tracking-wide mb-3 bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-blue-500 glow-text">
             {t('title')}
           </h2>
-          <p className="text-slate-400 text-sm sm:text-base md:text-lg font-light leading-relaxed font-['Orbitron']">
+          <p className="text-slate-400 text-sm sm:text-base md:text-lg font-light leading-relaxed">
             {t.rich('description', {
               highlight: (chunks) => <span className="text-cyan-400 font-medium">{chunks}</span>,
             })}
@@ -339,7 +339,7 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
                           <h3 className="text-2xl lg:text-4xl font-black text-white font-['Orbitron'] mb-1 tracking-wide glow-text">
                             {step.title}
                           </h3>
-                          <p className={`${colors.textSoft} font-medium tracking-wider text-xs lg:text-sm uppercase opacity-90 font-['Orbitron']`}>
+                          <p className={`${colors.textSoft} font-medium tracking-wider text-xs lg:text-sm uppercase opacity-90`}>
                             {step.subtitle}
                           </p>
                         </div>

@@ -154,7 +154,7 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
                 <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white via-violet-100 to-slate-400 pb-2 font-['Orbitron']">
                     {t('headerTitle')}
                 </h2>
-                <p className="text-slate-400 text-sm sm:text-base max-w-2xl mx-auto font-light font-['Orbitron']">
+                <p className="text-slate-400 text-sm sm:text-base max-w-2xl mx-auto font-light">
                     {t('headerDesc')}
                 </p>
             </div>
@@ -183,7 +183,7 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
                             </button>
                         </div>
 
-                        <h3 className="text-lg md:text-2xl font-display font-bold leading-tight mb-2 transition-all duration-500">
+                        <h3 className="text-lg md:text-2xl font-bold leading-tight mb-2 transition-all duration-500 font-['Orbitron']">
                             {t.rich('speedTitle', {
                                 strike: (chunks) => (
                                   <span className="relative inline-block">
@@ -240,7 +240,7 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
                     `}</style>
 
                     <div className="absolute bottom-0 left-0 p-6 z-30 translate-y-3 group-hover:translate-y-0 transition-transform duration-500">
-                        <h3 className="text-xl md:text-2xl font-display font-bold text-white mb-2">{t('deepAnalysisTitle')}</h3>
+                        <h3 className="text-xl md:text-2xl font-bold text-white mb-2 font-['Orbitron']">{t('deepAnalysisTitle')}</h3>
                         <ul className="space-y-1.5 text-xs md:text-sm text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity duration-500 delay-100">
                             <li className="flex items-center"><CheckCircleIcon className="w-4 h-4 text-cyan-400 mr-2" /> {t('deepAnalysisPoints.0')}</li>
                             <li className="flex items-center"><CheckCircleIcon className="w-4 h-4 text-cyan-400 mr-2" /> {t('deepAnalysisPoints.1')}</li>
@@ -261,14 +261,14 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
                         <div className="inline-flex items-center px-2 py-0.5 rounded bg-amber-500/20 border border-amber-500/30 text-amber-500 text-[8px] font-bold uppercase tracking-wider mb-1.5">
                             {t('qualityBadge')}
                         </div>
-                        <h3 className="text-base font-display font-bold text-white">{t('qualityTitle')}</h3>
+                        <h3 className="text-base font-bold text-white font-['Orbitron']">{t('qualityTitle')}</h3>
                         <p className="text-[10px] text-slate-400 mt-1 line-clamp-2">{t('qualityDescription')}</p>
                     </div>
                 </div>
 
                 {/* Card 4: Feature List - Spans 4 cols */}
                 <div className="md:col-span-4 bg-slate-900/60 backdrop-blur-md border border-slate-800 rounded-3xl p-3 flex flex-col min-h-[140px]">
-                    <h3 className="text-sm font-display font-bold text-white mb-2 flex items-center">
+                    <h3 className="text-sm font-bold text-white mb-2 flex items-center font-['Orbitron']">
                         <AdjustmentsVerticalIcon className="w-3.5 h-3.5 mr-2 text-violet-400" />
                         {t('toolkitTitle')}
                     </h3>
@@ -302,7 +302,7 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
                     {/* Abstract BG */}
                     <div className="absolute top-0 right-0 w-32 h-32 bg-violet-500/10 rounded-full blur-3xl -mr-10 -mt-10"></div>
 
-                    <h3 className="text-sm font-display font-bold text-white mb-1.5 relative z-10">{t('readyForWorldTitle')}</h3>
+                    <h3 className="text-sm font-bold text-white mb-1.5 relative z-10 font-['Orbitron']">{t('readyForWorldTitle')}</h3>
                     <p className="text-[10px] text-slate-400 mb-3 relative z-10">{t('readyForWorldDesc')}</p>
 
                     <div className="grid grid-cols-4 gap-2 relative z-10">

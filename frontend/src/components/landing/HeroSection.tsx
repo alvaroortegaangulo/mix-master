@@ -115,7 +115,7 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
           </span>
         </h1>
 
-        <p className="mx-auto max-w-3xl text-xs font-light leading-[1.5] text-slate-300 sm:text-sm lg:text-base animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-100 fill-mode-backwards font-['Orbitron']">
+        <p className="mx-auto max-w-3xl text-xs font-light leading-[1.5] text-slate-300 sm:text-sm lg:text-base animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-100 fill-mode-backwards">
           {t('description')}
         </p>
 

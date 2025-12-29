@@ -142,7 +142,7 @@ export function FeaturesSection({ className }: { className?: string }) {
               ),
             })}
           </h2>
-          <p className="text-slate-400 text-lg md:text-xl max-w-2xl mx-auto font-light leading-relaxed font-['Orbitron']">
+          <p className="text-slate-400 text-lg md:text-xl max-w-2xl mx-auto font-light leading-relaxed">
             {t("subtitle")}
           </p>
         </div>
