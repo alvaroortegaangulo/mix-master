@@ -99,6 +99,12 @@ export function FeaturesSection({ className }: { className?: string }) {
     videoRefs.current.forEach((video, idx) => {
       if (!video) return;
       if (idx === activeStep) {
+        video.pause();
+        try {
+          video.currentTime = 0;
+        } catch {
+          // Ignore seek errors for not-yet-ready media.
+        }
         const playPromise = video.play();
         if (playPromise && typeof playPromise.catch === "function") {
           playPromise.catch(() => undefined);
@@ -155,17 +161,17 @@ export function FeaturesSection({ className }: { className?: string }) {
   };
 
   return (
-    <section className={`py-8 md:py-12 ${className}`} id="features">
+    <section className={`py-8 md:py-10 lg:py-12 ${className}`} id="features">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
         {/* Section Header */}
-        <div className="text-center mb-6 space-y-4 relative z-10">
+        <div className="text-center mb-8 space-y-4 relative z-10">
           <h2 className="text-3xl md:text-4xl font-bold font-display text-white">
             {t.rich("title", {
               gradient: (chunks) => <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-blue-500">{chunks}</span>
             })}
           </h2>
-          <p className="text-slate-400 max-w-2xl mx-auto text-base">
+          <p className="text-slate-400 max-w-2xl mx-auto text-sm sm:text-base">
             {t("subtitle")}
           </p>
         </div>

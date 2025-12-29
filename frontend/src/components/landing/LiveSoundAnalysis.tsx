@@ -59,7 +59,7 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
   }, []);
 
   return (
-    <section className={`py-6 md:py-8 lg:py-10 2xl:py-12 border-t border-slate-900 relative overflow-hidden ${className || 'bg-slate-950'}`}>
+    <section className={`py-8 md:py-10 lg:py-12 border-t border-slate-900 relative overflow-hidden ${className || 'bg-slate-950'}`}>
         {/* Background Gradients */}
         <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
             <div className="absolute top-1/4 -left-64 w-96 h-96 bg-teal-900/10 rounded-full blur-3xl"></div>
@@ -69,10 +69,10 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         {/* Header */}
         <div className="mb-8">
-          <h2 className="text-2xl sm:text-3xl 2xl:text-4xl font-bold tracking-tight text-white mb-4">
+          <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-white mb-4">
             {t('title')}
           </h2>
-          <p className="max-w-3xl text-sm sm:text-base text-slate-300 leading-relaxed">
+          <p className="max-w-3xl text-sm sm:text-base text-slate-400 leading-relaxed">
             {t('description')}
           </p>
         </div>
@@ -141,7 +141,7 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
              <div className="bg-slate-900/50 rounded-2xl border border-slate-800 p-3 2xl:p-4 shadow-lg relative group overflow-hidden">
                 <div className="flex justify-between items-start mb-2">
                     <div className="text-[10px] font-mono uppercase tracking-wider text-slate-300">{t('metrics.loudness')}</div>
-                    <SpeakerWaveIcon className="w-4 h-4 text-teal-500/50" aria-hidden="true" />
+                    <SpeakerWaveIcon className="w-4 h-4 text-teal-400/70 icon-float" aria-hidden="true" />
                 </div>
                 <div className="text-2xl 2xl:text-3xl font-bold text-white mb-1 tabular-nums tracking-tight">
                     {lufs.toFixed(1)} <span className="text-sm sm:text-base font-normal text-slate-200">LUFS</span>
@@ -169,10 +169,10 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
                      </div>
 
                      {/* Visual representation of Stereo Field (Circle) */}
-                     <div className="h-10 w-10 rounded-full border border-slate-700 bg-slate-950 relative flex items-center justify-center overflow-hidden">
+                     <div className="h-10 w-10 rounded-full border border-slate-700 bg-slate-950 relative flex items-center justify-center overflow-hidden stereo-icon">
                         <div className="absolute inset-0 bg-violet-500/20 animate-pulse rounded-full transform scale-75"></div>
-                        <div className="w-7 h-3.5 border border-violet-400/50 rounded-[100%] transform -rotate-12 opacity-80"></div>
-                        <div className="w-7 h-3.5 border border-teal-400/50 rounded-[100%] absolute transform rotate-12 opacity-80"></div>
+                        <div className="w-7 h-3.5 border border-violet-400/50 rounded-[100%] transform -rotate-12 opacity-80 stereo-orbit"></div>
+                        <div className="w-7 h-3.5 border border-teal-400/50 rounded-[100%] absolute transform rotate-12 opacity-80 stereo-orbit-delayed"></div>
                      </div>
                  </div>
 
@@ -187,16 +187,102 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
 
                  {/* Mini Histogram */}
                  <div className="flex items-end gap-1 h-8">
-                    <div className="w-1.5 bg-violet-900/40 h-3 rounded-sm"></div>
-                    <div className="w-1.5 bg-violet-800/60 h-5 rounded-sm"></div>
-                    <div className="w-1.5 bg-violet-500 h-8 rounded-sm shadow-[0_0_10px_rgba(139,92,246,0.4)]"></div>
-                    <div className="w-1.5 bg-violet-800/60 h-6 rounded-sm"></div>
+                    <div className="w-1.5 bg-violet-900/40 h-3 rounded-sm histogram-bar histogram-bar-1"></div>
+                    <div className="w-1.5 bg-violet-800/60 h-5 rounded-sm histogram-bar histogram-bar-2"></div>
+                    <div className="w-1.5 bg-violet-500 h-8 rounded-sm shadow-[0_0_10px_rgba(139,92,246,0.4)] histogram-bar histogram-bar-3"></div>
+                    <div className="w-1.5 bg-violet-800/60 h-6 rounded-sm histogram-bar histogram-bar-4"></div>
                  </div>
              </div>
 
           </div>
         </div>
       </div>
+
+      <style jsx>{`
+        .icon-float {
+          animation: icon-float 3.2s ease-in-out infinite;
+          filter: drop-shadow(0 0 8px rgba(45, 212, 191, 0.35));
+        }
+
+        .stereo-icon {
+          animation: stereo-pulse 2.8s ease-in-out infinite;
+          box-shadow: 0 0 12px rgba(139, 92, 246, 0.25);
+        }
+
+        .stereo-orbit {
+          animation: stereo-orbit 6s linear infinite;
+          transform-origin: center;
+        }
+
+        .stereo-orbit-delayed {
+          animation: stereo-orbit 6s linear infinite;
+          animation-delay: -1.8s;
+          transform-origin: center;
+        }
+
+        .histogram-bar {
+          transform-origin: bottom;
+          animation: histogram-bounce 1.6s ease-in-out infinite;
+          will-change: transform;
+        }
+
+        .histogram-bar-1 {
+          animation-delay: 0s;
+        }
+
+        .histogram-bar-2 {
+          animation-delay: 0.2s;
+        }
+
+        .histogram-bar-3 {
+          animation-delay: 0.4s;
+        }
+
+        .histogram-bar-4 {
+          animation-delay: 0.1s;
+        }
+
+        @keyframes icon-float {
+          0%,
+          100% {
+            transform: translateY(0);
+            opacity: 0.7;
+          }
+          50% {
+            transform: translateY(-3px);
+            opacity: 1;
+          }
+        }
+
+        @keyframes stereo-pulse {
+          0%,
+          100% {
+            transform: scale(1);
+          }
+          50% {
+            transform: scale(1.05);
+          }
+        }
+
+        @keyframes stereo-orbit {
+          0% {
+            transform: rotate(-10deg);
+          }
+          100% {
+            transform: rotate(350deg);
+          }
+        }
+
+        @keyframes histogram-bounce {
+          0%,
+          100% {
+            transform: scaleY(0.75);
+          }
+          50% {
+            transform: scaleY(1.2);
+          }
+        }
+      `}</style>
     </section>
   );
 }
