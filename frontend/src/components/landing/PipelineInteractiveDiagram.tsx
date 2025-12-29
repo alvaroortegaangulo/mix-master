@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo, useState } from 'react';
+import React, { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import {
   PresentationChartLineIcon,
@@ -171,6 +171,8 @@ const buildParticles = (seed: number) =>
 
 export function PipelineInteractiveDiagram({ className }: { className?: string }) {
   const [activeStep, setActiveStep] = useState(0);
+  const [panelHeight, setPanelHeight] = useState<number | null>(null);
+  const activePanelRef = useRef<HTMLButtonElement | null>(null);
   const t = useTranslations('PipelineInteractiveDiagram');
 
   const steps = useMemo<PipelineStep[]>(
@@ -256,6 +258,28 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
 
   const particles = useMemo(() => buildParticles(activeStep + 1), [activeStep]);
 
+  useLayoutEffect(() => {
+    const panel = activePanelRef.current;
+    if (!panel) return;
+
+    const updateHeight = () => {
+      const nextHeight = Math.ceil(panel.getBoundingClientRect().height);
+      setPanelHeight((prev) => (prev === nextHeight ? prev : nextHeight));
+    };
+
+    updateHeight();
+
+    if (typeof ResizeObserver === 'undefined') return;
+
+    const observer = new ResizeObserver(updateHeight);
+    observer.observe(panel);
+    return () => observer.disconnect();
+  }, [activeStep]);
+
+  const panelHeightStyle = panelHeight
+    ? ({ '--panel-height': `${panelHeight}px` } as React.CSSProperties)
+    : undefined;
+
   return (
     <section
       className={`relative min-h-[400px] flex flex-col items-center justify-center px-2 lg:px-4 py-10 md:py-14 lg:py-16 2xl:py-20 selection:bg-cyan-500 selection:text-white overflow-hidden ${className || ''} bg-[#050508]`}
@@ -278,7 +302,10 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
           </p>
         </header>
 
-        <main className="w-full max-w-7xl flex flex-col md:flex-row gap-2 md:gap-4 relative z-10 md:items-stretch">
+        <main
+          className="w-full max-w-7xl flex flex-col md:flex-row gap-2 md:gap-4 relative z-10 md:items-stretch"
+          style={panelHeightStyle}
+        >
           {steps.map((step, index) => {
             const isActive = index === activeStep;
             const colors = colorStyles[step.color];
@@ -286,12 +313,13 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
             return (
               <button
                 key={step.id}
+                ref={isActive ? activePanelRef : undefined}
                 type="button"
                 aria-expanded={isActive}
                 onClick={() => {
                   if (!isActive) setActiveStep(index);
                 }}
-                className={`panel-transition relative overflow-hidden rounded-2xl border border-opacity-50 cursor-pointer bg-slate-900 group select-none h-full ${isActive ? `flex-[5] lg:flex-[3] brightness-100 ${colors.border}` : `flex-[1] lg:flex-[0.5] hover:flex-[1.2] brightness-50 hover:brightness-75 border-slate-800 hover:border-slate-600`}`}
+                className={`panel-transition relative overflow-hidden rounded-2xl border border-opacity-50 cursor-pointer bg-slate-900 group select-none md:h-[var(--panel-height)] ${isActive ? `flex-[5] lg:flex-[3] brightness-100 ${colors.border}` : `flex-[1] lg:flex-[0.5] hover:flex-[1.2] brightness-50 hover:brightness-75 border-slate-800 hover:border-slate-600`}`}
                 style={isActive ? { boxShadow: `0 0 30px ${colors.shadow}` } : undefined}
               >
                 <img
