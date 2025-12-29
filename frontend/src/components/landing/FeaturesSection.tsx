@@ -1,291 +1,246 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
-import {
-  PuzzlePieceIcon,
-  ArrowRightStartOnRectangleIcon,
-  SparklesIcon,
-  AdjustmentsVerticalIcon,
-  GlobeAmericasIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
-} from "@heroicons/react/24/outline";
 
-interface Feature {
-  id: number;
-  tabStep: string;
-  tabTitle: string;
-  slideLabel: string;
-  title: string;
-  description: string;
-  image: string;
-  color: "teal" | "purple" | "blue" | "orange";
-  Icon: React.ElementType;
-}
+// Define icons locally to avoid import issues
+const CpuChipIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 3v1.5M4.5 8.25H3m18 0h-1.5M4.5 12H3m18 0h-1.5m-15 3.75H3m18 0h-1.5M8.25 19.5V21M12 3v1.5m0 15V21m3.75-18v1.5m0 15V21m-9-1.5h10.5a2.25 2.25 0 0 0 2.25-2.25V6.75a2.25 2.25 0 0 0-2.25-2.25H6.75A2.25 2.25 0 0 0 4.5 6.75v10.5a2.25 2.25 0 0 0 2.25 2.25Zm.75-12h9v9h-9v-9Z" />
+  </svg>
+);
+
+const AdjustmentsHorizontalIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75" />
+  </svg>
+);
+
+const ChartBarIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75ZM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V8.625ZM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125V4.125Z" />
+  </svg>
+);
+
+const GlobeAmericasIcon = (props: React.SVGProps<SVGSVGElement>) => (
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="m6.115 5.19.319 1.913A6 6 0 0 0 8.11 10.36L9.75 12l-.387.775c-.217.433-.132.956.21 1.298l1.348 1.348c.21.21.329.497.329.795v1.089c0 .426.24.815.622 1.006l.153.076c.433.217.956.132 1.298-.21l.723-.723a8.7 8.7 0 0 0 2.288-4.042 1.087 1.087 0 0 0-.358-1.099l-1.33-1.108c-.251-.21-.582-.299-.905-.245l-1.17.195a1.125 1.125 0 0 1-.98-.314l-.295-.295a1.125 1.125 0 0 1 0-1.591l.13-.132a1.125 1.125 0 0 1 1.3-.21l.603.302a.809.809 0 0 0 1.086-1.086L14.25 7.5l1.256-.837a4.5 4.5 0 0 0 1.528-1.732l.146-.292M6.115 5.19A9 9 0 1 0 17.18 4.64M6.115 5.19A8.965 8.965 0 0 1 12 3c1.929 0 3.716.607 5.18 1.64" />
+  </svg>
+);
 
 export function FeaturesSection({ className }: { className?: string }) {
-  const [activeStep, setActiveStep] = useState(0);
   const t = useTranslations("FeaturesSection");
-  const autoAdvanceRef = useRef<NodeJS.Timeout | null>(null);
-  const videoRefs = useRef<Array<HTMLVideoElement | null>>([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const [progress, setProgress] = useState(0);
 
-  // Data Definition
-  const features: Feature[] = [
+  // Logical mapping of existing content (S0-S3) to new visual themes
+  const features = [
     {
-      id: 0,
-      tabStep: t("steps.0.tabStep"),
-      tabTitle: t("steps.0.tabTitle"),
-      slideLabel: t("steps.0.slideLabel"),
-      title: t("steps.0.title"),
-      description: t("steps.0.description"),
-      image: "/integration.mp4",
-      color: "teal",
-      Icon: ArrowRightStartOnRectangleIcon,
+      // Step 0: Precise Correction -> Integration/DAW (Sky)
+      // Matches "Integración sin fisuras" in es.json
+      id: "correction",
+      Icon: AdjustmentsHorizontalIcon,
+      videoUrl: "/integration.mp4",
+      color: "14, 165, 233", // Sky-500
+      twColor: "text-sky-400",
+      btnColor: "text-sky-400",
+      glowColor: "14, 165, 233",
     },
     {
-      id: 1,
-      tabStep: t("steps.1.tabStep"),
-      tabTitle: t("steps.1.tabTitle"),
-      slideLabel: t("steps.1.slideLabel"),
-      title: t("steps.1.title"),
-      description: t("steps.1.description"),
-      image: "/neural.mp4",
-      color: "purple",
-      Icon: SparklesIcon,
+      // Step 1: Intelligent Analysis -> Neural (Purple)
+      // Matches "Inteligencia Sonora" in es.json
+      id: "analysis",
+      Icon: CpuChipIcon,
+      videoUrl: "/neural.mp4",
+      color: "168, 85, 247", // Purple-500
+      twColor: "text-purple-400",
+      btnColor: "text-purple-400",
+      glowColor: "168, 85, 247",
     },
     {
-      id: 2,
-      tabStep: t("steps.2.tabStep"),
-      tabTitle: t("steps.2.tabTitle"),
-      slideLabel: t("steps.2.slideLabel"),
-      title: t("steps.2.title"),
-      description: t("steps.2.description"),
-      image: "/mastering_grade.mp4",
-      color: "blue",
-      Icon: AdjustmentsVerticalIcon,
+      // Step 2: Mastering -> Mastering Grade (Amber)
+      // Matches "Pulido de Grado Mastering" in es.json
+      id: "mastering",
+      Icon: ChartBarIcon,
+      videoUrl: "/mastering_grade.mp4",
+      color: "245, 158, 11", // Amber-500
+      twColor: "text-amber-400",
+      btnColor: "text-amber-400",
+      glowColor: "245, 158, 11",
     },
     {
-      id: 3,
-      tabStep: t("steps.3.tabStep"),
-      tabTitle: t("steps.3.tabTitle"),
-      slideLabel: t("steps.3.slideLabel"),
-      title: t("steps.3.title"),
-      description: t("steps.3.description"),
-      image: "/ready_world.mp4",
-      color: "orange",
+      // Step 3: Export -> Ready World (Emerald)
+      // Matches "Listo para el Mundo" in es.json
+      id: "export",
       Icon: GlobeAmericasIcon,
+      videoUrl: "/ready_world.mp4",
+      color: "16, 185, 129", // Emerald-500
+      twColor: "text-emerald-400",
+      btnColor: "text-emerald-400",
+      glowColor: "16, 185, 129",
     },
   ];
 
-  const resetTimer = () => {
-    if (autoAdvanceRef.current) {
-      clearInterval(autoAdvanceRef.current);
-    }
-    autoAdvanceRef.current = setInterval(() => {
-      setActiveStep((prev) => (prev + 1) % features.length);
-    }, 6000);
-  };
+  const duration = 6000; // 6 seconds per slide
 
   useEffect(() => {
-    resetTimer();
-    return () => {
-      if (autoAdvanceRef.current) clearInterval(autoAdvanceRef.current);
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [t]); // Added t as dependency to update text on locale change
+    let animationFrameId: number;
+    let startTime: number | null = null;
 
-  useEffect(() => {
-    videoRefs.current.forEach((video, idx) => {
-      if (!video) return;
-      if (idx === activeStep) {
-        const playPromise = video.play();
-        if (playPromise && typeof playPromise.catch === "function") {
-          playPromise.catch(() => undefined);
-        }
+    const animate = (timestamp: number) => {
+      if (!startTime) startTime = timestamp;
+      const elapsed = timestamp - startTime;
+      const newProgress = Math.min((elapsed / duration) * 100, 100);
+
+      setProgress(newProgress);
+
+      if (elapsed < duration) {
+        animationFrameId = requestAnimationFrame(animate);
       } else {
-        video.pause();
+        // Next slide
+        setCurrentIndex((prev) => (prev + 1) % features.length);
+        setProgress(0);
+        startTime = null;
+        animationFrameId = requestAnimationFrame(animate);
       }
-    });
-  }, [activeStep]);
+    };
 
-  const handleStepChange = (index: number) => {
-    setActiveStep(index);
-    resetTimer();
+    animationFrameId = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(animationFrameId);
+  }, [features.length]);
+
+  const manualSwitch = (index: number) => {
+    setCurrentIndex(index);
+    setProgress(0);
+    // Note: The effect will restart the timer naturally because state changed.
   };
 
-  const nextSlide = () => {
-    setActiveStep((prev) => (prev + 1) % features.length);
-    resetTimer();
-  };
+  const currentFeature = features[currentIndex];
 
-  const prevSlide = () => {
-    setActiveStep((prev) => (prev - 1 + features.length) % features.length);
-    resetTimer();
-  };
-
-  const activeFeature = features[activeStep];
-
-  // Color mappings
-  const colorMap = {
-    teal: {
-      text: "text-teal-400",
-      bg: "bg-teal-500",
-      groupHoverText: "group-hover:text-teal-400",
-      groupHoverIcon: "group-hover:text-teal-400",
-    },
-    purple: {
-      text: "text-purple-400",
-      bg: "bg-purple-500",
-      groupHoverText: "group-hover:text-purple-400",
-      groupHoverIcon: "group-hover:text-purple-400",
-    },
-    blue: {
-      text: "text-blue-400",
-      bg: "bg-blue-500",
-      groupHoverText: "group-hover:text-blue-400",
-      groupHoverIcon: "group-hover:text-blue-400",
-    },
-    orange: {
-      text: "text-orange-400",
-      bg: "bg-orange-500",
-      groupHoverText: "group-hover:text-orange-400",
-      groupHoverIcon: "group-hover:text-orange-400",
-    },
+  const getGradientColors = (index: number) => {
+    switch (index) {
+      case 0: return "from-teal-400 to-cyan-400";      // Integration/Correction
+      case 1: return "from-purple-400 to-fuchsia-400"; // Neural
+      case 2: return "from-amber-400 to-orange-400";   // Mastering
+      case 3: return "from-emerald-400 to-teal-400";   // Export
+      default: return "from-slate-400 to-white";
+    }
   };
 
   return (
-    <section className={`py-8 md:py-12 ${className}`} id="features">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <section id="features" className={`min-h-screen flex items-center justify-center p-4 bg-slate-950 text-white ${className || ''}`}>
+      <div className="max-w-7xl w-full mx-auto">
 
-        {/* Section Header */}
-        <div className="text-center mb-6 space-y-4 relative z-10">
-          <h2 className="text-3xl md:text-4xl font-bold font-display text-white">
+        {/* Header */}
+        <div className="text-center mb-10 space-y-4">
+          <h2 className="text-4xl md:text-6xl font-black font-['Orbitron'] tracking-wide">
             {t.rich("title", {
-              gradient: (chunks) => <span className="text-transparent bg-clip-text bg-gradient-to-r from-teal-400 to-blue-500">{chunks}</span>
+              gradient: (chunks) => (
+                <span className={`text-transparent bg-clip-text bg-gradient-to-r ${getGradientColors(currentIndex)} transition-all duration-500`}>
+                  {chunks}
+                </span>
+              ),
             })}
           </h2>
-          <p className="text-slate-400 max-w-2xl mx-auto text-base">
+          <p className="text-slate-400 text-lg md:text-xl max-w-2xl mx-auto font-light leading-relaxed">
             {t("subtitle")}
           </p>
         </div>
 
-        {/* Main Card Container */}
-        <div
-          className="relative w-full aspect-[16/10] md:aspect-[21/9] lg:h-[340px] rounded-3xl overflow-hidden group shadow-2xl border border-white/5 bg-slate-950"
-          id="slider-root"
-        >
-          {/* Background Images Layer */}
-          <div className="absolute inset-0 bg-black" id="bg-container">
-            {features.map((feature, idx) => (
-              <div
-                key={feature.id}
-                className={`absolute inset-0 w-full h-full transition-opacity duration-1000 ${
-                  activeStep === idx ? "opacity-100 z-10" : "opacity-0 z-0"
+        {/* Main Interactive Component */}
+        <div className="relative w-full rounded-2xl overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5)] border border-slate-800 bg-slate-900">
+
+          {/* Video Display Area */}
+          <div className="relative h-[400px] md:h-[550px] w-full overflow-hidden bg-black group">
+             {/* Background Video */}
+            <video
+              key={currentFeature.videoUrl} // Key forces re-render/fade for new source
+              src={currentFeature.videoUrl}
+              autoPlay
+              muted
+              loop
+              playsInline
+              className="absolute inset-0 w-full h-full object-cover"
+              style={{ animation: 'fadeIn 1s ease-out forwards' }}
+            />
+
+            <style jsx>{`
+              @keyframes fadeIn {
+                from { opacity: 0; transform: scale(1.05); }
+                to { opacity: 0.6; transform: scale(1); } /* 0.6 opacity to blend with bg */
+              }
+            `}</style>
+
+            {/* Overlay Gradients */}
+            <div className="absolute inset-0 bg-gradient-to-r from-slate-950/90 via-slate-950/40 to-transparent z-10 pointer-events-none"></div>
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent z-10 pointer-events-none"></div>
+
+            {/* Neural Scanline Effect (Only for Neural/Analysis step) */}
+            {currentIndex === 1 && (
+              <div className="scanline"></div>
+            )}
+
+            {/* Floating Content Card */}
+            <div className="absolute top-1/2 -translate-y-1/2 left-6 md:left-16 z-20 max-w-lg w-full pr-4">
+              <div className="glass-card p-8 rounded-2xl floating transition-all duration-500 hover:scale-[1.02]">
+                <div className="flex items-center gap-3 mb-4">
+                  <span className={`text-3xl animate-pulse ${currentFeature.twColor}`}>
+                    <currentFeature.Icon className="w-8 h-8" />
+                  </span>
+                  <h3
+                    className={`text-2xl md:text-3xl font-bold font-['Orbitron'] ${currentFeature.twColor} glow-text`}
+                    style={{ '--glow-color': currentFeature.glowColor } as React.CSSProperties}
+                  >
+                    {t(`steps.${currentIndex}.title`)}
+                  </h3>
+                </div>
+                <p className="text-slate-300 text-base md:text-lg leading-relaxed">
+                  {t(`steps.${currentIndex}.description`)}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom Navigation Bar */}
+          <div className="grid grid-cols-2 md:grid-cols-4 bg-slate-950 border-t border-slate-800">
+            {features.map((feature, index) => (
+              <button
+                key={index}
+                onClick={() => manualSwitch(index)}
+                style={{ '--glow-color': feature.glowColor } as React.CSSProperties}
+                className={`relative p-4 md:p-6 flex flex-col md:flex-row items-center justify-center md:justify-start gap-3 transition-all duration-300 group hover:bg-slate-900 border-r border-slate-800 last:border-r-0 ${
+                  index === currentIndex
+                    ? "nav-item-active" // Uses global css class for gradient & border
+                    : "text-slate-500 hover:text-slate-300"
                 }`}
               >
-                 <video
-                    className={`absolute inset-0 w-full h-full object-cover ${activeStep === idx ? "animate-zoom-slow" : ""}`}
-                    src={feature.image}
-                    autoPlay={activeStep === idx}
-                    loop
-                    muted
-                    playsInline
-                    preload={idx === 0 ? "auto" : "metadata"}
-                    aria-label={feature.title}
-                    ref={(el) => {
-                      videoRefs.current[idx] = el;
+                <span className={`transition-colors group-hover:scale-110 ${
+                   index === currentIndex ? feature.twColor : "text-slate-600 group-hover:text-slate-400"
+                }`}>
+                  <feature.Icon className="w-6 h-6 md:w-8 md:h-8" />
+                </span>
+
+                <div className="text-center md:text-left">
+                  <span className={`block text-xs md:text-sm font-bold uppercase tracking-wider font-['Orbitron'] ${
+                     index === currentIndex ? "text-white" : "text-slate-500"
+                  }`}>
+                    {t(`steps.${index}.title`)}
+                  </span>
+                </div>
+
+                {/* Progress Bar for this tab */}
+                <div className="absolute bottom-0 left-0 h-[2px] w-full bg-slate-800">
+                  <div
+                    className="h-full w-0 transition-none"
+                    style={{
+                      backgroundColor: `rgb(${feature.color})`,
+                      width: index === currentIndex ? `${progress}%` : "0%",
                     }}
-                 />
-              </div>
+                  />
+                </div>
+              </button>
             ))}
           </div>
-
-          {/* Vignette & Gradient Overlays */}
-          <div className="absolute inset-0 bg-gradient-to-t from-[#0B0F19] via-transparent to-transparent opacity-90 z-10 pointer-events-none"></div>
-          <div className="absolute inset-0 bg-gradient-to-r from-[#0B0F19]/80 via-transparent to-transparent opacity-60 z-10 pointer-events-none"></div>
-
-          {/* Content Overlay (Text) */}
-          <div className="absolute inset-0 flex flex-col justify-end md:justify-center px-5 md:px-10 pb-16 md:pb-0 z-20 pointer-events-none">
-            <div
-              className="glass-overlay p-4 md:p-5 rounded-2xl max-w-md transform transition-all duration-500 pointer-events-auto backdrop-blur-md bg-slate-950/40 border border-white/10"
-              key={activeStep}
-              // Key forces re-mount for animation
-            >
-              <div className={`flex items-center gap-3 mb-3 ${colorMap[activeFeature.color].text}`}>
-                <PuzzlePieceIcon className="w-5 h-5" />
-                <h3 className="text-xl md:text-2xl font-display font-bold leading-tight animate-in fade-in slide-in-from-bottom-2 duration-500">
-                  {activeFeature.title}
-                </h3>
-              </div>
-              <p className="text-slate-300 text-xs md:text-sm leading-relaxed animate-in fade-in slide-in-from-bottom-3 duration-500 delay-100">
-                {activeFeature.description}
-              </p>
-            </div>
-          </div>
-
-          {/* Navigation Controls (Bottom Tabs) */}
-          <div className="absolute bottom-0 left-0 w-full z-30 bg-[#0B0F19]/80 backdrop-blur-md border-t border-white/5">
-            <div className="flex flex-col md:flex-row divide-y md:divide-y-0 md:divide-x divide-white/10 h-auto md:h-14">
-              {features.map((feature, idx) => {
-                 const isActive = activeStep === idx;
-                 const colors = colorMap[feature.color];
-
-                 return (
-                  <button
-                    key={feature.id}
-                    className="nav-tab flex-1 flex items-center justify-between px-6 py-3 md:py-0 hover:bg-white/5 transition-colors text-left group relative outline-none focus:bg-white/5"
-                    onClick={() => handleStepChange(idx)}
-                  >
-                    <div className="flex flex-col z-10">
-                      <span
-                        className={`text-sm font-bold transition-colors ${
-                          isActive ? "text-white" : "text-slate-300 group-hover:text-white"
-                        }`}
-                      >
-                        {feature.tabTitle}
-                      </span>
-                    </div>
-
-                    <feature.Icon
-                        className={`w-6 h-6 transition-all duration-300 md:block hidden ${
-                            isActive
-                            ? `opacity-100 ${colors.text}`
-                            : `opacity-0 group-hover:opacity-100 text-slate-600 ${colors.groupHoverIcon}`
-                        }`}
-                    />
-
-                    {/* Progress Bar Background */}
-                    <div className="absolute bottom-0 left-0 h-1 bg-white/10 w-full">
-                      <div
-                        className={`progress-fill h-full ${colors.bg}`}
-                        style={{
-                          width: isActive ? "100%" : "0%",
-                          transition: isActive ? "width 6000ms linear" : "none",
-                        }}
-                      ></div>
-                    </div>
-                  </button>
-                 )
-              })}
-            </div>
-          </div>
-
-          {/* Arrow Controls */}
-          <button
-            className="absolute top-1/2 left-4 -translate-y-1/2 z-30 p-3 rounded-full bg-black/20 hover:bg-black/50 backdrop-blur text-white/50 hover:text-white border border-white/5 transition-all hidden md:flex"
-            onClick={prevSlide}
-            aria-label="Previous Slide"
-          >
-            <ChevronLeftIcon className="w-6 h-6" />
-          </button>
-          <button
-            className="absolute top-1/2 right-4 -translate-y-1/2 z-30 p-3 rounded-full bg-black/20 hover:bg-black/50 backdrop-blur text-white/50 hover:text-white border border-white/5 transition-all hidden md:flex"
-            onClick={nextSlide}
-            aria-label="Next Slide"
-          >
-            <ChevronRightIcon className="w-6 h-6" />
-          </button>
         </div>
       </div>
     </section>
