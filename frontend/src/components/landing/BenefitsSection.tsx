@@ -1,5 +1,6 @@
 import { useRef, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
+import { ScrollReveal } from "./ScrollReveal";
 import {
   BoltIcon,
   CheckCircleIcon,
@@ -108,6 +109,7 @@ type BenefitsSectionProps = {
 
 export function BenefitsSection({ className }: BenefitsSectionProps) {
   const t = useTranslations('BenefitsSection');
+  const headerTitle = t('headerTitle');
   const [isManual, setIsManual] = useState(true);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const requestRef = useRef<number>(0);
@@ -154,20 +156,26 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
             <div className="relative z-10 max-w-7xl w-full mx-auto space-y-6 px-4 sm:px-6 lg:px-8">
 
             {/* Header */}
-            <div className="text-right">
-                <h2 className="text-3xl md:text-5xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-amber-400 to-amber-500 mb-4 font-['Orbitron'] glow-amber">
-                    {t('headerTitle')}
+            <ScrollReveal className="text-right" delay={0.05}>
+                <h2
+                    className="text-3xl md:text-5xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-amber-400 to-amber-500 mb-4 font-['Orbitron'] glow-amber metallic-sheen"
+                    data-text={headerTitle}
+                >
+                    {headerTitle}
                 </h2>
                 <p className="text-slate-400 text-sm sm:text-base max-w-2xl ml-auto font-light">
                     {t('headerDesc')}
                 </p>
-            </div>
+            </ScrollReveal>
 
             {/* Bento Grid Layout */}
             <div className="grid grid-cols-1 md:grid-cols-12 gap-3 auto-rows-[minmax(110px,auto)]">
 
                 {/* Card 1: AI Efficiency (Interactive) - Spans 7 cols */}
-                <div className="md:col-span-7 bg-slate-900/60 backdrop-blur-md border border-slate-800 rounded-3xl p-4 relative overflow-hidden group flex flex-col justify-between min-h-[160px]">
+                <ScrollReveal
+                    className="md:col-span-7 bg-slate-900/60 backdrop-blur-md border border-slate-800 rounded-3xl p-4 relative overflow-hidden group flex flex-col justify-between min-h-[160px]"
+                    delay={0.1}
+                >
                     <div className="relative z-10">
                         <div className="flex items-center justify-between mb-3">
                         <div className="inline-flex items-center px-2 py-0.5 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-bold uppercase tracking-wider">
@@ -221,10 +229,13 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
 
                     {/* Background Gradient overlay for text readability */}
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent z-0 pointer-events-none"></div>
-                </div>
+                </ScrollReveal>
 
                 {/* Card 2: Visual Interface Scan - Spans 5 cols */}
-                <div className="md:col-span-5 bg-slate-900/60 backdrop-blur-md border border-slate-800 rounded-3xl relative overflow-hidden group min-h-[160px]">
+                <ScrollReveal
+                    className="md:col-span-5 bg-slate-900/60 backdrop-blur-md border border-slate-800 rounded-3xl relative overflow-hidden group min-h-[160px]"
+                    delay={0.15}
+                >
                     <img
                         src="/hours_to_minutes.webp"
                         alt="Piroola Interface"
@@ -251,10 +262,13 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
                             <li className="flex items-center"><CheckCircleIcon className="w-4 h-4 text-cyan-400 mr-2" /> {t('deepAnalysisPoints.2')}</li>
                         </ul>
                     </div>
-                </div>
+                </ScrollReveal>
 
                 {/* Card 3: Quality Spectrum - Spans 4 cols */}
-                <div className="md:col-span-4 bg-slate-900/60 backdrop-blur-md border border-slate-800 rounded-3xl p-3 relative overflow-hidden flex flex-col justify-end min-h-[110px] group">
+                <ScrollReveal
+                    className="md:col-span-4 bg-slate-900/60 backdrop-blur-md border border-slate-800 rounded-3xl p-3 relative overflow-hidden flex flex-col justify-end min-h-[110px] group"
+                    delay={0.2}
+                >
                     <img
                         src="/accesible_quality.webp"
                         alt="Spectrum Analyzer"
@@ -268,10 +282,13 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
                         <h3 className="text-lg font-bold text-white font-['Orbitron']">{t('qualityTitle')}</h3>
                         <p className="text-xs text-slate-400 mt-1 line-clamp-2">{t('qualityDescription')}</p>
                     </div>
-                </div>
+                </ScrollReveal>
 
                 {/* Card 4: Feature List - Spans 4 cols */}
-                <div className="md:col-span-4 bg-slate-900/60 backdrop-blur-md border border-slate-800 rounded-3xl p-3 flex flex-col min-h-[140px]">
+                <ScrollReveal
+                    className="md:col-span-4 bg-slate-900/60 backdrop-blur-md border border-slate-800 rounded-3xl p-3 flex flex-col min-h-[140px]"
+                    delay={0.25}
+                >
                     <h3 className="text-base font-bold text-white mb-2 flex items-center font-['Orbitron']">
                         <AdjustmentsVerticalIcon className="w-3.5 h-3.5 mr-2 text-violet-400" />
                         {t('toolkitTitle')}
@@ -299,10 +316,13 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
                             <h4 className="text-xs font-semibold text-slate-200">{t('toolkitItems.2.title')}</h4>
                         </div>
                     </div>
-                </div>
+                </ScrollReveal>
 
                 {/* Card 5: Export Targets - Spans 4 cols */}
-                <div className="md:col-span-4 bg-slate-900/60 backdrop-blur-md border border-slate-800 rounded-3xl p-3 flex flex-col justify-between relative overflow-hidden min-h-[110px]">
+                <ScrollReveal
+                    className="md:col-span-4 bg-slate-900/60 backdrop-blur-md border border-slate-800 rounded-3xl p-3 flex flex-col justify-between relative overflow-hidden min-h-[110px]"
+                    delay={0.3}
+                >
                     {/* Abstract BG */}
                     <div className="absolute top-0 right-0 w-32 h-32 bg-violet-500/10 rounded-full blur-3xl -mr-10 -mt-10"></div>
 
@@ -335,7 +355,7 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
                             <span className="sr-only">Tidal</span>
                         </div>
                     </div>
-                </div>
+                </ScrollReveal>
             </div>
         </div>
     </section>

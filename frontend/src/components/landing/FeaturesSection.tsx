@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
+import { ScrollReveal } from "./ScrollReveal";
 
 // Define icons locally to avoid import issues
 const CpuChipIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -32,6 +33,8 @@ export function FeaturesSection({ className }: { className?: string }) {
   const t = useTranslations("FeaturesSection");
   const [currentIndex, setCurrentIndex] = useState(0);
   const [progress, setProgress] = useState(0);
+  const titleText = t("title");
+  const titlePlain = titleText.replace(/<[^>]+>/g, "");
 
   // Logical mapping of existing content (S0-S3) to new visual themes
   const features = [
@@ -40,44 +43,36 @@ export function FeaturesSection({ className }: { className?: string }) {
       // Matches "Integración sin fisuras" in es.json
       id: "correction",
       Icon: AdjustmentsHorizontalIcon,
-      videoUrl: "/integration.mp4",
-      color: "14, 165, 233", // Sky-500
-      twColor: "text-sky-400",
-      btnColor: "text-sky-400",
-      glowColor: "14, 165, 233",
+      imageUrl: "/integration.webp",
+      color: "249, 115, 22", // Orange-500
+      glowColor: "249, 115, 22",
     },
     {
       // Step 1: Intelligent Analysis -> Neural (Purple)
       // Matches "Inteligencia Sonora" in es.json
       id: "analysis",
       Icon: CpuChipIcon,
-      videoUrl: "/neural.mp4",
-      color: "168, 85, 247", // Purple-500
-      twColor: "text-purple-400",
-      btnColor: "text-purple-400",
-      glowColor: "168, 85, 247",
+      imageUrl: "/neural.webp",
+      color: "245, 158, 11", // Amber-500
+      glowColor: "245, 158, 11",
     },
     {
       // Step 2: Mastering -> Mastering Grade (Amber)
       // Matches "Pulido de Grado Mastering" in es.json
       id: "mastering",
       Icon: ChartBarIcon,
-      videoUrl: "/mastering_grade.mp4",
-      color: "245, 158, 11", // Amber-500
-      twColor: "text-amber-400",
-      btnColor: "text-amber-400",
-      glowColor: "245, 158, 11",
+      imageUrl: "/mastering_grade.webp",
+      color: "217, 119, 6", // Amber-600
+      glowColor: "217, 119, 6",
     },
     {
       // Step 3: Export -> Ready World (Emerald)
       // Matches "Listo para el Mundo" in es.json
       id: "export",
       Icon: GlobeAmericasIcon,
-      videoUrl: "/ready_world.mp4",
-      color: "16, 185, 129", // Emerald-500
-      twColor: "text-emerald-400",
-      btnColor: "text-emerald-400",
-      glowColor: "16, 185, 129",
+      imageUrl: "/ready_world.webp",
+      color: "234, 88, 12", // Orange-600
+      glowColor: "234, 88, 12",
     },
   ];
 
@@ -116,32 +111,34 @@ export function FeaturesSection({ className }: { className?: string }) {
   };
 
   const currentFeature = features[currentIndex];
+  const stats = [
+    { label: t("stats.labels.latency"), value: t(`stats.values.${currentIndex}.latency`) },
+    { label: t("stats.labels.processing"), value: t(`stats.values.${currentIndex}.processing`) },
+    { label: t("stats.labels.status"), value: t(`stats.values.${currentIndex}.status`) },
+  ];
 
-  const getGradientColors = (index: number) => {
-    switch (index) {
-      case 0: return "from-teal-400 to-cyan-400";      // Integration/Correction
-      case 1: return "from-purple-400 to-fuchsia-400"; // Neural
-      case 2: return "from-amber-400 to-orange-400";   // Mastering
-      case 3: return "from-emerald-400 to-teal-400";   // Export
-      default: return "from-slate-400 to-white";
-    }
-  };
+  const getGradientColors = () => "from-amber-300 via-amber-400 to-orange-400";
 
   return (
     <section id="features" className={`relative min-h-screen flex items-center justify-center px-4 py-10 md:py-14 lg:py-16 2xl:py-20 text-white overflow-hidden ${className || 'bg-[#050508]'}`}>
       <div className="absolute inset-0 pointer-events-none z-0">
-        <div className="absolute top-[-25%] left-[-15%] h-[55%] w-[55%] rounded-full bg-gradient-to-br from-amber-400/25 via-amber-500/10 to-transparent blur-[140px]" />
-        <div className="absolute top-[15%] right-[-20%] h-[60%] w-[60%] rounded-full bg-gradient-to-bl from-rose-400/25 via-rose-500/10 to-transparent blur-[150px]" />
-        <div className="absolute bottom-[-25%] left-[20%] h-[45%] w-[45%] rounded-full bg-gradient-to-tr from-cyan-400/20 via-cyan-500/10 to-transparent blur-[130px]" />
+        <div className="absolute inset-0 bg-[#050508]" />
+        <div className="absolute inset-0 grid-landing-overlay" />
+        <div className="absolute inset-0 grid-landing-vignette" />
+        <div className="absolute -top-[22%] left-1/2 h-[42%] w-[42%] -translate-x-1/2 rounded-full bg-amber-500/12 blur-[140px]" />
+        <div className="absolute top-[6%] left-1/2 h-[28%] w-[28%] -translate-x-1/2 rounded-full bg-orange-400/12 blur-[120px]" />
       </div>
       <div className="relative z-10 max-w-7xl w-full mx-auto">
 
         {/* Header */}
-        <div className="text-left mb-8 max-w-3xl">
-          <h2 className="text-3xl md:text-5xl font-black font-['Orbitron'] tracking-wide mb-4">
+        <ScrollReveal className="text-left mb-8 max-w-3xl" delay={0.05}>
+          <h2
+            className="text-3xl md:text-5xl font-black font-['Orbitron'] tracking-wide mb-4 metallic-sheen"
+            data-text={titlePlain}
+          >
             {t.rich("title", {
               gradient: (chunks) => (
-                <span className={`text-transparent bg-clip-text bg-gradient-to-r ${getGradientColors(currentIndex)} transition-all duration-500`}>
+                <span className={`text-transparent bg-clip-text bg-gradient-to-r ${getGradientColors()} transition-all duration-500`}>
                   {chunks}
                 </span>
               ),
@@ -150,104 +147,147 @@ export function FeaturesSection({ className }: { className?: string }) {
           <p className="text-slate-400 text-sm sm:text-base max-w-2xl font-light leading-relaxed">
             {t("subtitle")}
           </p>
-        </div>
+        </ScrollReveal>
 
         {/* Main Interactive Component */}
-        <div className="relative w-full md:w-2/3 max-w-4xl mx-auto rounded-2xl overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5)] border border-slate-800 bg-slate-900">
+        <ScrollReveal
+          className="relative w-full md:w-4/5 max-w-6xl mx-auto rounded-[28px] overflow-hidden border border-amber-500/20 bg-slate-950/70 shadow-[0_40px_90px_rgba(0,0,0,0.65)]"
+          delay={0.1}
+        >
 
-          {/* Video Display Area */}
-          <div className="relative h-[180px] md:h-[250px] w-full overflow-hidden bg-black group">
-             {/* Background Video */}
-            <video
-              key={currentFeature.videoUrl} // Key forces re-render/fade for new source
-              src={currentFeature.videoUrl}
-              autoPlay
-              muted
-              loop
-              playsInline
+          {/* Image Display Area */}
+          <div className="relative h-[240px] md:h-[360px] lg:h-[420px] w-full overflow-hidden bg-black group">
+            <img
+              key={currentFeature.imageUrl}
+              src={currentFeature.imageUrl}
+              alt={t(`steps.${currentIndex}.title`)}
               className="absolute inset-0 w-full h-full object-cover"
-              style={{ animation: 'fadeIn 1s ease-out forwards' }}
+              style={{ animation: "fadeIn 0.9s ease-out forwards" }}
+              loading="lazy"
             />
 
             <style jsx>{`
               @keyframes fadeIn {
                 from { opacity: 0; transform: scale(1.05); }
-                to { opacity: 0.6; transform: scale(1); } /* 0.6 opacity to blend with bg */
+                to { opacity: 0.82; transform: scale(1); }
               }
             `}</style>
 
             {/* Overlay Gradients */}
-            <div className="absolute inset-0 bg-gradient-to-r from-slate-950/90 via-slate-950/40 to-transparent z-10 pointer-events-none"></div>
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent z-10 pointer-events-none"></div>
+            <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/40 to-transparent z-10 pointer-events-none"></div>
+            <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-transparent to-transparent z-10 pointer-events-none"></div>
 
-            {/* Neural Scanline Effect (Only for Neural/Analysis step) */}
-            {currentIndex === 1 && (
-              <div className="scanline"></div>
-            )}
+            {/* Scanline Effect */}
+            <div className="scanline"></div>
 
             {/* Floating Content Card */}
-            <div className="absolute top-1/2 -translate-y-1/2 left-6 md:left-16 z-20 max-w-lg w-full pr-4">
-              <div className="glass-card p-6 rounded-2xl floating transition-all duration-500 hover:scale-[1.02]">
-                <div className="flex items-center gap-3 mb-2.5">
-                  <span className={`text-2xl animate-pulse ${currentFeature.twColor}`}>
-                    <currentFeature.Icon className="w-7 h-7" />
-                  </span>
-                  <h3
-                    className={`text-lg md:text-xl font-bold font-['Orbitron'] ${currentFeature.twColor} glow-text`}
-                    style={{ '--glow-color': currentFeature.glowColor } as React.CSSProperties}
-                  >
-                    {t(`steps.${currentIndex}.title`)}
-                  </h3>
+            <div className="absolute top-1/2 -translate-y-1/2 left-5 md:left-10 lg:left-12 z-20 w-[88%] sm:w-[70%] md:w-[440px] lg:w-[480px]">
+              <div className="relative rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-4 md:px-6 md:py-6 shadow-[0_22px_60px_rgba(0,0,0,0.6)] backdrop-blur-xl">
+                <div className="absolute inset-0 rounded-2xl ring-1 ring-amber-500/15 pointer-events-none" />
+                <div className="relative flex items-center gap-3 mb-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-amber-500/30 bg-amber-500/15 text-amber-300 shadow-[0_0_12px_rgba(251,146,60,0.35)]">
+                    <currentFeature.Icon className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <span className="block text-[9px] uppercase tracking-[0.35em] text-amber-300/70">
+                      {t(`steps.${currentIndex}.slideLabel`)}
+                    </span>
+                    <h3
+                      className="text-lg md:text-2xl font-semibold font-['Orbitron'] text-white glow-text"
+                      style={{ '--glow-color': currentFeature.glowColor } as React.CSSProperties}
+                    >
+                      {t(`steps.${currentIndex}.title`)}
+                    </h3>
+                  </div>
                 </div>
-                <p className="text-slate-300 text-xs md:text-sm leading-relaxed">
+                <p className="text-slate-200 text-[11px] md:text-sm leading-relaxed">
                   {t(`steps.${currentIndex}.description`)}
                 </p>
+                <div className="mt-4 border-t border-white/10 pt-3 grid grid-cols-3 gap-3">
+                  {stats.map((stat, index) => (
+                    <div key={stat.label} className="space-y-1">
+                      <div className="text-[9px] uppercase tracking-[0.22em] text-amber-300/70">
+                        {stat.label}
+                      </div>
+                      <div className={`text-[10px] md:text-xs font-semibold tabular-nums ${index === 2 ? "text-emerald-300" : "text-slate-200"}`}>
+                        {stat.value}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
 
           {/* Bottom Navigation Bar */}
-          <div className="grid grid-cols-2 md:grid-cols-4 bg-slate-950 border-t border-slate-800">
-            {features.map((feature, index) => (
-              <button
+          <div className="grid grid-cols-2 md:grid-cols-4 bg-slate-950/90 border-t border-white/10">
+            {features.map((feature, index) => {
+              const isActive = index === currentIndex;
+              return (
+                <button
                 key={index}
                 onClick={() => manualSwitch(index)}
                 style={{ '--glow-color': feature.glowColor } as React.CSSProperties}
-                className={`relative p-2.5 md:p-3 flex flex-col md:flex-row items-center justify-center md:justify-start gap-2.5 transition-all duration-300 group hover:bg-slate-900 border-r border-slate-800 last:border-r-0 ${
-                  index === currentIndex
-                    ? "nav-item-active" // Uses global css class for gradient & border
-                    : "text-slate-500 hover:text-slate-300"
+                className={`group relative flex items-center gap-3 px-3 py-3 md:py-4 text-left transition-colors duration-300 border-r border-white/10 last:border-r-0 ${
+                  isActive
+                    ? "bg-gradient-to-b from-amber-500/15 via-slate-950 to-slate-950 text-white"
+                    : "bg-slate-950/60 text-slate-500 hover:text-slate-200"
                 }`}
               >
-                <span className={`transition-colors group-hover:scale-110 ${
-                   index === currentIndex ? feature.twColor : "text-slate-600 group-hover:text-slate-400"
+                <span className={`flex h-9 w-9 items-center justify-center rounded-xl border transition-colors ${
+                  isActive
+                    ? "border-amber-500/30 bg-amber-500/15 text-amber-300 shadow-[0_0_12px_rgba(251,146,60,0.25)]"
+                    : "border-slate-800 bg-slate-900/80 text-slate-500 group-hover:text-amber-300/80"
                 }`}>
-                  <feature.Icon className="w-4 h-4 md:w-5 md:h-5" />
+                  <feature.Icon className="h-4 w-4" />
                 </span>
 
-                <div className="text-center md:text-left">
-                  <span className={`block text-[9px] md:text-[10px] font-bold uppercase tracking-wider font-['Orbitron'] ${
-                     index === currentIndex ? "text-white" : "text-slate-500"
+                <div className="min-w-0">
+                  <span className={`block text-[10px] font-semibold uppercase tracking-wider font-['Orbitron'] ${
+                    isActive ? "text-amber-200" : "text-slate-400"
+                  }`}>
+                    {t(`steps.${index}.tabTitle`)}
+                  </span>
+                  <span className={`block text-[9px] truncate ${
+                    isActive ? "text-slate-300" : "text-slate-600"
                   }`}>
                     {t(`steps.${index}.title`)}
                   </span>
                 </div>
 
                 {/* Progress Bar for this tab */}
-                <div className="absolute bottom-0 left-0 h-[2px] w-full bg-slate-800">
+                <div className="absolute bottom-0 left-0 h-[2px] w-full bg-slate-800/70">
                   <div
                     className="h-full w-0 transition-none"
                     style={{
                       backgroundColor: `rgb(${feature.color})`,
-                      width: index === currentIndex ? `${progress}%` : "0%",
+                      width: isActive ? `${progress}%` : "0%",
                     }}
                   />
                 </div>
-              </button>
-            ))}
+                </button>
+              );
+            })}
           </div>
-        </div>
+        </ScrollReveal>
       </div>
+
+      <style jsx>{`
+        .grid-landing-overlay {
+          background-image:
+            linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+          background-size: 26px 26px;
+          background-position: center;
+          opacity: 0.4;
+        }
+
+        .grid-landing-vignette {
+          background:
+            radial-gradient(circle at 50% 18%, rgba(255, 195, 120, 0.12), transparent 45%),
+            radial-gradient(circle at 50% 60%, rgba(5, 5, 8, 0), rgba(5, 5, 8, 0.7) 55%, rgba(5, 5, 8, 0.95) 100%);
+        }
+      `}</style>
     </section>
   );
 }

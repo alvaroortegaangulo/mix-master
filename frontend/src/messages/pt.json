@@ -62,6 +62,35 @@
         "title": "Ready for the World",
         "description": "Export your masters in high-resolution WAV and MP3 formats ready for distribution on Spotify, Apple Music, and more."
       }
+    },
+    "stats": {
+      "labels": {
+        "latency": "Latência",
+        "processing": "Processamento",
+        "status": "Estado"
+      },
+      "values": {
+        "0": {
+          "latency": "< 1 ms",
+          "processing": "Nativo",
+          "status": "Ativo"
+        },
+        "1": {
+          "latency": "Núcleo IA",
+          "processing": "Tempo real",
+          "status": "Ativo"
+        },
+        "2": {
+          "latency": "-14 LUFS",
+          "processing": "True Peak",
+          "status": "Ativo"
+        },
+        "3": {
+          "latency": "Global",
+          "processing": "Multi-formato",
+          "status": "Ativo"
+        }
+      }
     }
   },
   "BenefitsSection": {

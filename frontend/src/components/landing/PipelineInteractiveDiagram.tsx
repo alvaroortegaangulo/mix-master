@@ -2,6 +2,7 @@
 
 import React, { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { ScrollReveal } from "./ScrollReveal";
 import {
   PresentationChartLineIcon,
   WrenchScrewdriverIcon,
@@ -174,6 +175,7 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
   const [panelHeight, setPanelHeight] = useState<number | null>(null);
   const activePanelRef = useRef<HTMLButtonElement | null>(null);
   const t = useTranslations('PipelineInteractiveDiagram');
+  const title = t('title');
 
   const steps = useMemo<PipelineStep[]>(
     () => [
@@ -291,132 +293,139 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
       </div>
 
       <div className="relative z-10 w-full max-w-7xl">
-        <header className="text-left mb-6 lg:mb-8 relative z-10 animate-fade-in-down max-w-3xl">
-          <h2 className="text-3xl md:text-5xl font-black font-['Orbitron'] tracking-wide mb-4 bg-clip-text text-transparent bg-gradient-to-r from-teal-300 via-teal-400 to-teal-500 glow-teal">
-            {t('title')}
-          </h2>
-          <p className="text-slate-400 text-sm sm:text-base font-light leading-relaxed">
-            {t.rich('description', {
-              highlight: (chunks) => <span className="text-cyan-400 font-medium">{chunks}</span>,
-            })}
-          </p>
-        </header>
+        <ScrollReveal delay={0.05}>
+          <header className="text-left mb-6 lg:mb-8 relative z-10 max-w-3xl">
+            <h2
+              className="text-3xl md:text-5xl font-black font-['Orbitron'] tracking-wide mb-4 bg-clip-text text-transparent bg-gradient-to-r from-teal-300 via-teal-400 to-teal-500 glow-teal metallic-sheen"
+              data-text={title}
+            >
+              {title}
+            </h2>
+            <p className="text-slate-400 text-sm sm:text-base font-light leading-relaxed">
+              {t.rich('description', {
+                highlight: (chunks) => <span className="text-cyan-400 font-medium">{chunks}</span>,
+              })}
+            </p>
+          </header>
+        </ScrollReveal>
 
-        <main
-          className="w-full max-w-7xl flex flex-col md:flex-row gap-2 md:gap-4 relative z-10 md:items-stretch"
-          style={panelHeightStyle}
-        >
-          {steps.map((step, index) => {
-            const isActive = index === activeStep;
-            const colors = colorStyles[step.color];
+        <ScrollReveal delay={0.1}>
+          <main
+            className="w-full max-w-7xl flex flex-col md:flex-row gap-2 md:gap-4 relative z-10 md:items-stretch"
+            style={panelHeightStyle}
+          >
+            {steps.map((step, index) => {
+              const isActive = index === activeStep;
+              const colors = colorStyles[step.color];
 
-            return (
-              <button
-                key={step.id}
-                ref={isActive ? activePanelRef : undefined}
-                type="button"
-                aria-expanded={isActive}
-                onClick={() => {
-                  if (!isActive) setActiveStep(index);
-                }}
-                className={`panel-transition relative overflow-hidden rounded-2xl border border-opacity-50 cursor-pointer bg-slate-900 group select-none md:h-[var(--panel-height)] ${isActive ? `flex-[5] lg:flex-[3] brightness-100 ${colors.border}` : `flex-[1] lg:flex-[0.5] hover:flex-[1.2] brightness-50 hover:brightness-75 border-slate-800 hover:border-slate-600`}`}
-                style={isActive ? { boxShadow: `0 0 30px ${colors.shadow}` } : undefined}
-              >
-                <img
-                  src={step.bgImage}
-                  alt={`${step.title} Background`}
-                  className={`absolute inset-0 w-full h-full object-cover transition-transform duration-1000 ${isActive ? 'scale-110' : 'scale-100 opacity-60'}`}
-                />
+              return (
+                <button
+                  key={step.id}
+                  ref={isActive ? activePanelRef : undefined}
+                  type="button"
+                  aria-expanded={isActive}
+                  onClick={() => {
+                    if (!isActive) setActiveStep(index);
+                  }}
+                  className={`panel-transition relative overflow-hidden rounded-2xl border border-opacity-50 cursor-pointer bg-slate-900 group select-none md:h-[var(--panel-height)] ${isActive ? `flex-[5] lg:flex-[3] brightness-100 ${colors.border}` : `flex-[1] lg:flex-[0.5] hover:flex-[1.2] brightness-50 hover:brightness-75 border-slate-800 hover:border-slate-600`}`}
+                  style={isActive ? { boxShadow: `0 0 30px ${colors.shadow}` } : undefined}
+                >
+                  <img
+                    src={step.bgImage}
+                    alt={`${step.title} Background`}
+                    className={`absolute inset-0 w-full h-full object-cover transition-transform duration-1000 ${isActive ? 'scale-110' : 'scale-100 opacity-60'}`}
+                  />
 
-                <div className={`absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-900/80 to-slate-900/40 ${isActive ? 'opacity-90' : 'opacity-80'}`}></div>
+                  <div className={`absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-900/80 to-slate-900/40 ${isActive ? 'opacity-90' : 'opacity-80'}`}></div>
 
-                {isActive && (
-                  <div className="particles">
-                    {particles.map((particle, particleIndex) => (
-                      <div
-                        key={`${step.id}-particle-${particleIndex}`}
-                        className="particle"
-                        style={{
-                          left: particle.left,
-                          width: particle.size,
-                          height: particle.size,
-                          animationDuration: particle.duration,
-                          animationDelay: particle.delay,
-                          background: colors.particle,
-                        }}
-                      />
-                    ))}
-                  </div>
-                )}
-
-                <div className="relative p-2 lg:p-3 flex flex-col gap-[1cm] z-10">
-                  {!isActive ? (
-                    <div className="h-full flex flex-col items-center pt-3">
-                      <step.icon className={`w-6 h-6 lg:w-8 lg:h-8 ${colors.text} group-hover:scale-125 transition-transform duration-300 drop-shadow-lg`} />
-                      <div className="flex-1 flex items-center justify-center">
-                        <h3 className="vertical-text text-[10px] lg:text-sm font-bold tracking-widest text-slate-400 group-hover:text-white transition-colors font-['Orbitron'] uppercase">
-                          {step.title}
-                        </h3>
-                      </div>
+                  {isActive && (
+                    <div className="particles">
+                      {particles.map((particle, particleIndex) => (
+                        <div
+                          key={`${step.id}-particle-${particleIndex}`}
+                          className="particle"
+                          style={{
+                            left: particle.left,
+                            width: particle.size,
+                            height: particle.size,
+                            animationDuration: particle.duration,
+                            animationDelay: particle.delay,
+                            background: colors.particle,
+                          }}
+                        />
+                      ))}
                     </div>
-                  ) : (
-                    <>
-                      <div className="flex items-center justify-start gap-2 text-left animate-fade-in">
-                        <div className={`w-9 h-9 lg:w-10 lg:h-10 rounded-full border ${colors.ringBorder} flex items-center justify-center ${colors.ringBg} backdrop-blur-md icon-pulse`}>
-                          <step.icon className={`w-5 h-5 lg:w-6 lg:h-6 ${colors.text}`} />
-                        </div>
-                        <div>
-                          <h3 className="text-xl lg:text-3xl font-black text-white font-['Orbitron'] mb-0.5 tracking-wide glow-text">
+                  )}
+
+                  <div className="relative p-2 lg:p-3 flex flex-col gap-[1cm] z-10">
+                    {!isActive ? (
+                      <div className="h-full flex flex-col items-center pt-3">
+                        <step.icon className={`w-6 h-6 lg:w-8 lg:h-8 ${colors.text} group-hover:scale-125 transition-transform duration-300 drop-shadow-lg`} />
+                        <div className="flex-1 flex items-center justify-center">
+                          <h3 className="vertical-text text-[10px] lg:text-sm font-bold tracking-widest text-slate-400 group-hover:text-white transition-colors font-['Orbitron'] uppercase">
                             {step.title}
                           </h3>
-                          <p className={`${colors.textSoft} font-medium tracking-wider text-[10px] lg:text-xs uppercase opacity-90 leading-tight`}>
-                            {step.subtitle}
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="flex items-center justify-start gap-2 text-left animate-fade-in">
+                          <div className={`w-9 h-9 lg:w-10 lg:h-10 rounded-full border ${colors.ringBorder} flex items-center justify-center ${colors.ringBg} backdrop-blur-md icon-pulse`}>
+                            <step.icon className={`w-5 h-5 lg:w-6 lg:h-6 ${colors.text}`} />
+                          </div>
+                          <div>
+                            <h3 className="text-xl lg:text-3xl font-black text-white font-['Orbitron'] mb-0.5 tracking-wide glow-text">
+                              {step.title}
+                            </h3>
+                            <p className={`${colors.textSoft} font-medium tracking-wider text-[10px] lg:text-xs uppercase opacity-90 leading-tight`}>
+                              {step.subtitle}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col items-start py-1 lg:py-2 space-y-0 text-left">
+                          <p className={`text-xs lg:text-sm text-slate-200 leading-snug max-w-2xl border-l-2 ${colors.border} pl-3 bg-gradient-to-r ${colors.gradientFrom} to-transparent p-1.5 rounded-r-lg`}>
+                            {step.description}
                           </p>
+
+                          <div className="grid grid-cols-3 gap-1 sm:gap-2.5 max-w-lg text-left">
+                            {step.tools.map((tool) => (
+                              <div
+                                key={tool.name}
+                                className={`flex flex-col items-start justify-center p-1.5 lg:p-2 rounded-xl bg-slate-800/50 ${colors.toolHoverBg} border border-slate-700/50 ${colors.toolHoverBorder} transition-all duration-300 group/tool backdrop-blur-sm`}
+                              >
+                                <tool.icon className={`w-4 h-4 lg:w-5 lg:h-5 text-slate-400 ${colors.toolHoverText} mb-0.5 lg:mb-1 transition-colors`} />
+                                <span className="text-[9px] sm:text-[10px] font-semibold text-left text-slate-300 group-hover/tool:text-white uppercase leading-tight">
+                                  {tool.name}
+                                </span>
+                              </div>
+                            ))}
+                          </div>
                         </div>
-                      </div>
 
-                      <div className="flex flex-col items-start py-1 lg:py-2 space-y-0 text-left">
-                        <p className={`text-xs lg:text-sm text-slate-200 leading-snug max-w-2xl border-l-2 ${colors.border} pl-3 bg-gradient-to-r ${colors.gradientFrom} to-transparent p-1.5 rounded-r-lg`}>
-                          {step.description}
-                        </p>
-
-                        <div className="grid grid-cols-3 gap-1 sm:gap-2.5 max-w-lg text-left">
-                          {step.tools.map((tool) => (
-                            <div
-                              key={tool.name}
-                              className={`flex flex-col items-start justify-center p-1.5 lg:p-2 rounded-xl bg-slate-800/50 ${colors.toolHoverBg} border border-slate-700/50 ${colors.toolHoverBorder} transition-all duration-300 group/tool backdrop-blur-sm`}
-                            >
-                              <tool.icon className={`w-4 h-4 lg:w-5 lg:h-5 text-slate-400 ${colors.toolHoverText} mb-0.5 lg:mb-1 transition-colors`} />
-                              <span className="text-[9px] sm:text-[10px] font-semibold text-left text-slate-300 group-hover/tool:text-white uppercase leading-tight">
-                                {tool.name}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-
-                      <div>
-                        <div className={`shine-box relative overflow-hidden rounded-lg bg-slate-800/80 border ${colors.borderSoft} p-2.5 lg:p-3 shadow-lg text-left`}>
-                          <div className="flex items-start gap-2 relative z-10">
-                            <LightBulbIcon className={`w-4 h-4 lg:w-5 lg:h-5 ${colors.text} mt-1`} aria-hidden="true" />
-                            <div>
-                              <h4 className={`${colors.text} font-bold text-[10px] uppercase tracking-widest mb-1`}>
-                                {t('proTip')}
-                              </h4>
-                              <p className="text-[10px] lg:text-xs text-slate-200 italic font-medium">
-                                &quot;{step.proTip}&quot;
-                              </p>
+                        <div>
+                          <div className={`shine-box relative overflow-hidden rounded-lg bg-slate-800/80 border ${colors.borderSoft} p-2.5 lg:p-3 shadow-lg text-left`}>
+                            <div className="flex items-start gap-2 relative z-10">
+                              <LightBulbIcon className={`w-4 h-4 lg:w-5 lg:h-5 ${colors.text} mt-1`} aria-hidden="true" />
+                              <div>
+                                <h4 className={`${colors.text} font-bold text-[10px] uppercase tracking-widest mb-1`}>
+                                  {t('proTip')}
+                                </h4>
+                                <p className="text-[10px] lg:text-xs text-slate-200 italic font-medium">
+                                  &quot;{step.proTip}&quot;
+                                </p>
+                              </div>
                             </div>
                           </div>
                         </div>
-                      </div>
-                    </>
-                  )}
-                </div>
-              </button>
-            );
-          })}
-        </main>
+                      </>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
+          </main>
+        </ScrollReveal>
 
       </div>
     </section>

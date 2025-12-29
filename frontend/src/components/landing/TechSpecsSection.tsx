@@ -3,9 +3,11 @@
 import { useEffect, useRef, useState } from "react";
 import type { PointerEvent } from "react";
 import { useTranslations } from "next-intl";
+import { ScrollReveal } from "./ScrollReveal";
 
 export function TechSpecsSection({ className }: { className?: string }) {
     const t = useTranslations('TechSpecsSection');
+    const title = t('title');
     const marqueeRef = useRef<HTMLDivElement>(null);
     const dragStartXRef = useRef(0);
     const dragStartScrollLeftRef = useRef(0);
@@ -157,40 +159,47 @@ export function TechSpecsSection({ className }: { className?: string }) {
           <div className="absolute top-[40%] -right-[10%] h-[60%] w-[60%] rounded-full bg-violet-600/10 blur-[120px]" />
         </div>
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl md:text-5xl font-bold mb-8 font-['Orbitron'] text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 via-emerald-400 to-emerald-500 glow-emerald">
-            {t('title')}
-          </h2>
-
-          <div className="relative max-w-5xl mx-auto">
-            <div className="pointer-events-none absolute inset-y-0 left-0 w-16 bg-gradient-to-r from-slate-950 to-transparent" />
-            <div className="pointer-events-none absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-slate-950 to-transparent" />
-            <div
-              ref={marqueeRef}
-              className={`overflow-hidden select-none ${isDragging ? "cursor-grabbing" : "cursor-grab"}`}
-              onPointerDown={handlePointerDown}
-              onPointerMove={handlePointerMove}
-              onPointerUp={handlePointerUp}
-              onPointerCancel={handlePointerUp}
-              style={{ touchAction: "pan-y" }}
+          <ScrollReveal delay={0.05}>
+            <h2
+              className="text-3xl md:text-5xl font-bold mb-8 font-['Orbitron'] text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 via-emerald-400 to-emerald-500 glow-emerald metallic-sheen"
+              data-text={title}
             >
-              <div className="flex w-max gap-3 py-2">
-                {marqueeSpecs.map((spec, index) => (
-                  <div
-                    key={`${spec.label}-${index}`}
-                    aria-hidden={index >= specs.length ? "true" : undefined}
-                    className="flex items-center gap-3 rounded-full border border-slate-800/80 bg-slate-900/60 px-4 py-2 shadow-sm"
-                  >
-                    <span className={`text-sm sm:text-base font-semibold tabular-nums ${valueColors[index % valueColors.length]}`}>
-                      {spec.value}
-                    </span>
-                    <span className="text-[10px] sm:text-xs font-medium uppercase tracking-widest text-slate-300">
-                      {spec.label}
-                    </span>
-                  </div>
-                ))}
+              {title}
+            </h2>
+          </ScrollReveal>
+
+          <ScrollReveal delay={0.1}>
+            <div className="relative max-w-5xl mx-auto">
+              <div className="pointer-events-none absolute inset-y-0 left-0 w-16 bg-gradient-to-r from-slate-950 to-transparent" />
+              <div className="pointer-events-none absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-slate-950 to-transparent" />
+              <div
+                ref={marqueeRef}
+                className={`overflow-hidden select-none ${isDragging ? "cursor-grabbing" : "cursor-grab"}`}
+                onPointerDown={handlePointerDown}
+                onPointerMove={handlePointerMove}
+                onPointerUp={handlePointerUp}
+                onPointerCancel={handlePointerUp}
+                style={{ touchAction: "pan-y" }}
+              >
+                <div className="flex w-max gap-3 py-2">
+                  {marqueeSpecs.map((spec, index) => (
+                    <div
+                      key={`${spec.label}-${index}`}
+                      aria-hidden={index >= specs.length ? "true" : undefined}
+                      className="flex items-center gap-3 rounded-full border border-slate-800/80 bg-slate-900/60 px-4 py-2 shadow-sm"
+                    >
+                      <span className={`text-sm sm:text-base font-semibold tabular-nums ${valueColors[index % valueColors.length]}`}>
+                        {spec.value}
+                      </span>
+                      <span className="text-[10px] sm:text-xs font-medium uppercase tracking-widest text-slate-300">
+                        {spec.label}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
+          </ScrollReveal>
         </div>
       </section>
     );

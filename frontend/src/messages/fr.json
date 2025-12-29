@@ -62,6 +62,35 @@
         "title": "Finition Qualité Mastering",
         "description": "Finalise votre piste avec une correspondance de sonie standard de l'industrie, un élargissement stéréo et une sécurité de limiteur."
       }
+    },
+    "stats": {
+      "labels": {
+        "latency": "Latence",
+        "processing": "Traitement",
+        "status": "Statut"
+      },
+      "values": {
+        "0": {
+          "latency": "< 1 ms",
+          "processing": "Natif",
+          "status": "Actif"
+        },
+        "1": {
+          "latency": "Noyau IA",
+          "processing": "Temps réel",
+          "status": "Actif"
+        },
+        "2": {
+          "latency": "-14 LUFS",
+          "processing": "True Peak",
+          "status": "Actif"
+        },
+        "3": {
+          "latency": "Global",
+          "processing": "Multi-format",
+          "status": "Actif"
+        }
+      }
     }
   },
   "BenefitsSection": {

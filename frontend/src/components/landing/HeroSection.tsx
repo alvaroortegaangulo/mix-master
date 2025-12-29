@@ -5,9 +5,11 @@ import Image from "next/image";
 import { PlayCircleIcon, StarIcon } from "@heroicons/react/24/solid";
 import { useTranslations } from 'next-intl';
 import { Link } from '../../i18n/routing';
+import { ScrollReveal } from "./ScrollReveal";
 
 export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
   const t = useTranslations('HeroSection');
+  const perfectedByAI = t('perfectedByAI');
   const waveformRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
@@ -93,7 +95,7 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
 
       <div className="relative z-10 max-w-5xl space-y-2 sm:space-y-3 lg:space-y-4 flex flex-col items-center">
         {/* Logo */}
-        <div className="mx-auto flex justify-center mb-1 animate-in fade-in zoom-in duration-1000">
+        <ScrollReveal className="mx-auto flex justify-center mb-1">
           <Image
             src="/logo.webp"
             alt="Piroola logo"
@@ -103,28 +105,39 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
             className="h-14 w-14 sm:h-16 sm:w-16"
             priority
           />
-        </div>
+        </ScrollReveal>
 
         {/* Main Heading - LCP Element (No entrance animation to minimize render delay) */}
         <h1 className="flex flex-col text-4xl font-extrabold tracking-[-0.02em] sm:text-5xl lg:text-6xl 2xl:text-7xl gap-1 font-['Orbitron']">
           <span className="text-white leading-[0.95]">
             {t('studioSound')}
           </span>
-          <span className="bg-gradient-to-r from-teal-400 to-violet-500 bg-clip-text text-transparent leading-[0.95]">
-            {t('perfectedByAI')}
+          <span
+            className="bg-gradient-to-r from-teal-400 to-violet-500 bg-clip-text text-transparent leading-[0.95] metallic-sheen"
+            data-text={perfectedByAI}
+          >
+            {perfectedByAI}
           </span>
         </h1>
 
-        <p className="mx-auto max-w-3xl text-xs font-light leading-[1.5] text-slate-300 sm:text-sm lg:text-base animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-100 fill-mode-backwards">
-          {t('description')}
-        </p>
+        <ScrollReveal delay={0.1}>
+          <p className="mx-auto max-w-3xl text-xs font-light leading-[1.5] text-slate-300 sm:text-sm lg:text-base">
+            {t('description')}
+          </p>
+        </ScrollReveal>
 
-        <div className="beta-badge flex items-center gap-2 px-3 py-1.5 text-[9px] font-semibold uppercase tracking-[0.18em] text-violet-100 backdrop-blur-sm leading-none sm:text-[10px]">
+        <ScrollReveal
+          className="beta-badge flex items-center gap-2 px-3 py-1.5 text-[9px] font-semibold uppercase tracking-[0.18em] text-violet-100 backdrop-blur-sm leading-none sm:text-[10px]"
+          delay={0.15}
+        >
           <span className="beta-dot" aria-hidden="true" />
           <span>{t('alertConstruction')}</span>
-        </div>
+        </ScrollReveal>
 
-        <div className="flex flex-col items-center gap-3 sm:gap-4 sm:flex-row sm:justify-center mt-2 sm:mt-3 animate-in fade-in slide-in-from-bottom-6 duration-1000 delay-200 fill-mode-backwards">
+        <ScrollReveal
+          className="flex flex-col items-center gap-3 sm:gap-4 sm:flex-row sm:justify-center mt-2 sm:mt-3"
+          delay={0.2}
+        >
           {/* Button 1: Mezclar mi Track */}
           <button
             onClick={onTryIt}
@@ -154,7 +167,7 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
             <PlayCircleIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-white" aria-hidden="true" />
             <span>{t('listenToDemos')}</span>
           </Link>
-        </div>
+        </ScrollReveal>
 
         <style jsx>{`
           .glow-pulse {
@@ -174,14 +187,17 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
         `}</style>
 
         {/* Rating Section */}
-        <div className="flex items-center gap-2 text-[11px] font-medium text-slate-300 mt-1 sm:mt-2 sm:text-xs animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-300 fill-mode-backwards">
+        <ScrollReveal
+          className="flex items-center gap-2 text-[11px] font-medium text-slate-300 mt-1 sm:mt-2 sm:text-xs"
+          delay={0.25}
+        >
           <div className="flex items-center gap-1 text-amber-300">
             <StarIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4" aria-hidden="true" />
             <span>{t('rating')}</span>
           </div>
           <span className="text-slate-400">&bull;</span>
           <span>{t('tracksMastered')}</span>
-        </div>
+        </ScrollReveal>
       </div>
 
       <div className="absolute inset-0 opacity-[0.55] pointer-events-none mix-blend-screen z-[1]">

@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { useTranslations } from 'next-intl';
 import { useHomeView } from "../../context/HomeViewContext";
 import { ElectricDivider } from "./ElectricDivider";
+import { ScrollReveal } from "./ScrollReveal";
 
 const PipelineInteractiveDiagram = dynamic(() => import("./PipelineInteractiveDiagram").then(mod => mod.PipelineInteractiveDiagram), {
   loading: () => <div className="h-96 bg-slate-900" />
@@ -30,6 +31,7 @@ export function LandingPage() {
 
   const t = useTranslations('LandingPage');
   const { handleTryIt } = useHomeView();
+  const readyToElevate = t('readyToElevate');
 
   return (
     <div className="flex-1 flex flex-col bg-slate-950">
@@ -69,9 +71,12 @@ export function LandingPage() {
           <div className="absolute -top-[20%] -left-[10%] h-[50%] w-[50%] rounded-full bg-teal-500/10 blur-[120px]" />
           <div className="absolute top-[40%] -right-[10%] h-[60%] w-[60%] rounded-full bg-violet-600/10 blur-[120px]" />
         </div>
-        <div className="relative z-10">
-          <h2 className="text-xl sm:text-2xl lg:text-3xl 2xl:text-4xl font-bold text-white mb-5 font-['Orbitron']">
-            {t('readyToElevate')}
+        <ScrollReveal className="relative z-10" delay={0.05}>
+          <h2
+            className="text-xl sm:text-2xl lg:text-3xl 2xl:text-4xl font-bold text-white mb-5 font-['Orbitron'] metallic-sheen"
+            data-text={readyToElevate}
+          >
+            {readyToElevate}
           </h2>
           <button
             onClick={handleTryIt}
@@ -79,7 +84,7 @@ export function LandingPage() {
           >
             {t('startMixing')}
           </button>
-        </div>
+        </ScrollReveal>
       </section>
 
       {/* Footer removed from here, now in GlobalLayout */}

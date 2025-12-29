@@ -3,9 +3,11 @@
 import { useState, useEffect } from "react";
 import { SpeakerWaveIcon } from "@heroicons/react/24/outline";
 import { useTranslations } from "next-intl";
+import { ScrollReveal } from "./ScrollReveal";
 
 export function LiveSoundAnalysis({ className }: { className?: string }) {
   const t = useTranslations('LiveSoundAnalysis');
+  const title = t('title');
 
   // State for animations
   const [spectrumData, setSpectrumData] = useState<number[]>([]);
@@ -68,20 +70,26 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         {/* Header */}
-        <div className="mb-6 text-right">
-          <h2 className="text-3xl md:text-5xl font-bold tracking-tight mb-4 font-['Orbitron'] text-transparent bg-clip-text bg-gradient-to-r from-violet-300 via-violet-400 to-violet-600 glow-violet">
-            {t('title')}
+        <ScrollReveal className="mb-6 text-right" delay={0.05}>
+          <h2
+            className="text-3xl md:text-5xl font-bold tracking-tight mb-4 font-['Orbitron'] text-transparent bg-clip-text bg-gradient-to-r from-violet-300 via-violet-400 to-violet-600 glow-violet metallic-sheen"
+            data-text={title}
+          >
+            {title}
           </h2>
           <p className="max-w-3xl text-sm sm:text-base text-slate-400 leading-relaxed ml-auto">
             {t('description')}
           </p>
-        </div>
+        </ScrollReveal>
 
         {/* Dashboard Container */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-5 font-['Orbitron']">
 
           {/* LEFT PANEL: Frequency Spectrum */}
-          <div className="lg:col-span-2 bg-slate-900/50 rounded-3xl border border-slate-800 p-3 md:p-4 2xl:p-5 flex flex-col justify-between min-h-[190px] md:min-h-[220px] shadow-2xl relative overflow-hidden">
+          <ScrollReveal
+            className="lg:col-span-2 bg-slate-900/50 rounded-3xl border border-slate-800 p-3 md:p-4 2xl:p-5 flex flex-col justify-between min-h-[190px] md:min-h-[220px] shadow-2xl relative overflow-hidden"
+            delay={0.1}
+          >
 
              {/* Top Bar of Panel */}
              <div className="flex justify-between items-start mb-3 relative z-10">
@@ -131,11 +139,11 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
 
              {/* Background Effects */}
              <div className="absolute bottom-0 left-0 right-0 h-1/2 bg-gradient-to-t from-teal-900/10 to-transparent pointer-events-none"></div>
-          </div>
+          </ScrollReveal>
 
 
           {/* RIGHT COLUMN: Metrics Cards */}
-          <div className="flex flex-col gap-3">
+          <ScrollReveal className="flex flex-col gap-3" delay={0.15}>
 
              {/* Card 1: Integrated Loudness */}
              <div className="bg-slate-900/50 rounded-2xl border border-slate-800 p-3 2xl:p-4 shadow-lg relative group overflow-hidden">
@@ -194,7 +202,7 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
                  </div>
              </div>
 
-          </div>
+          </ScrollReveal>
         </div>
       </div>
 
