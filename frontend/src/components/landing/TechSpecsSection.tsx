@@ -153,7 +153,7 @@ export function TechSpecsSection({ className }: { className?: string }) {
     return (
       <section className={`py-8 md:py-10 lg:py-12 overflow-hidden ${className || 'bg-slate-900'}`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-8">{t('title')}</h2>
+          <h2 className="text-3xl md:text-4xl font-bold text-white mb-8 font-['Orbitron']">{t('title')}</h2>
 
           <div className="relative max-w-5xl mx-auto">
             <div className="pointer-events-none absolute inset-y-0 left-0 w-16 bg-gradient-to-r from-slate-950 to-transparent" />

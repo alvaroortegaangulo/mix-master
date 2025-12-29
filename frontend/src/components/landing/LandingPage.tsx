@@ -65,7 +65,7 @@ export function LandingPage() {
 
       {/* Bottom CTA */}
       <section className="py-10 md:py-14 lg:py-16 2xl:py-20 bg-gradient-to-t from-teal-900/20 to-slate-950 text-center px-4">
-        <h2 className="text-xl sm:text-2xl lg:text-3xl 2xl:text-4xl font-bold text-white mb-5">
+        <h2 className="text-xl sm:text-2xl lg:text-3xl 2xl:text-4xl font-bold text-white mb-5 font-['Orbitron']">
           {t('readyToElevate')}
         </h2>
         <button

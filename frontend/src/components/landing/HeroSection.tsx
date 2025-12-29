@@ -106,7 +106,7 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
         </div>
 
         {/* Main Heading - LCP Element (No entrance animation to minimize render delay) */}
-        <h1 className="flex flex-col text-4xl font-extrabold tracking-[-0.02em] sm:text-5xl lg:text-6xl 2xl:text-7xl gap-1">
+        <h1 className="flex flex-col text-4xl font-extrabold tracking-[-0.02em] sm:text-5xl lg:text-6xl 2xl:text-7xl gap-1 font-['Orbitron']">
           <span className="text-white leading-[0.95]">
             {t('studioSound')}
           </span>
@@ -115,7 +115,7 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
           </span>
         </h1>
 
-        <p className="mx-auto max-w-3xl text-xs font-light leading-[1.5] text-slate-300 sm:text-sm lg:text-base animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-100 fill-mode-backwards">
+        <p className="mx-auto max-w-3xl text-xs font-light leading-[1.5] text-slate-300 sm:text-sm lg:text-base animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-100 fill-mode-backwards font-['Orbitron']">
           {t('description')}
         </p>
 
