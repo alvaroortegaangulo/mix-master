@@ -49,7 +49,7 @@ export function LandingPage() {
       <ElectricDivider />
 
       {/* 4. Features (DAW to World): Match Pipeline background */}
-      <FeaturesSection className="bg-[#050508]" />
+      <FeaturesSection className="bg-slate-900" />
 
       <ElectricDivider />
 

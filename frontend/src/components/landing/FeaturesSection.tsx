@@ -128,7 +128,7 @@ export function FeaturesSection({ className }: { className?: string }) {
   };
 
   return (
-    <section id="features" className={`relative min-h-screen flex items-center justify-center px-4 py-10 md:py-14 lg:py-16 2xl:py-20 text-white overflow-hidden ${className || ''} bg-[#050508]`}>
+    <section id="features" className={`relative min-h-screen flex items-center justify-center px-4 py-10 md:py-14 lg:py-16 2xl:py-20 text-white overflow-hidden ${className || 'bg-[#050508]'}`}>
       <div className="absolute inset-0 pointer-events-none z-0">
         <div className="absolute top-[-25%] left-[-15%] h-[55%] w-[55%] rounded-full bg-gradient-to-br from-amber-400/25 via-amber-500/10 to-transparent blur-[140px]" />
         <div className="absolute top-[15%] right-[-20%] h-[60%] w-[60%] rounded-full bg-gradient-to-bl from-rose-400/25 via-rose-500/10 to-transparent blur-[150px]" />
@@ -137,8 +137,8 @@ export function FeaturesSection({ className }: { className?: string }) {
       <div className="relative z-10 max-w-7xl w-full mx-auto">
 
         {/* Header */}
-        <div className="text-left mb-10 max-w-3xl">
-          <h2 className="text-4xl md:text-6xl font-black font-['Orbitron'] tracking-wide mb-4">
+        <div className="text-left mb-8 max-w-3xl">
+          <h2 className="text-3xl md:text-5xl font-black font-['Orbitron'] tracking-wide mb-4">
             {t.rich("title", {
               gradient: (chunks) => (
                 <span className={`text-transparent bg-clip-text bg-gradient-to-r ${getGradientColors(currentIndex)} transition-all duration-500`}>

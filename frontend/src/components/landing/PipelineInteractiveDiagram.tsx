@@ -282,7 +282,7 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
 
   return (
     <section
-      className={`relative min-h-[400px] flex flex-col items-center justify-center px-2 lg:px-4 py-10 md:py-14 lg:py-16 2xl:py-20 selection:bg-cyan-500 selection:text-white overflow-hidden ${className || ''} bg-[#050508]`}
+      className={`relative min-h-[400px] flex flex-col items-center justify-center px-2 lg:px-4 py-10 md:py-14 lg:py-16 2xl:py-20 selection:bg-cyan-500 selection:text-white overflow-hidden ${className || 'bg-[#050508]'}`}
     >
       <div className="absolute inset-0 pointer-events-none z-0">
         <div className="absolute top-[-25%] left-[-15%] h-[55%] w-[55%] rounded-full bg-gradient-to-br from-amber-400/25 via-amber-500/10 to-transparent blur-[140px]" />
@@ -291,8 +291,8 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
       </div>
 
       <div className="relative z-10 w-full max-w-7xl">
-        <header className="text-left mb-8 lg:mb-10 relative z-10 animate-fade-in-down max-w-3xl">
-          <h2 className="text-4xl md:text-6xl font-black font-['Orbitron'] tracking-wide mb-4 bg-clip-text text-transparent bg-gradient-to-r from-teal-300 via-teal-400 to-teal-500 glow-teal">
+        <header className="text-left mb-6 lg:mb-8 relative z-10 animate-fade-in-down max-w-3xl">
+          <h2 className="text-3xl md:text-5xl font-black font-['Orbitron'] tracking-wide mb-4 bg-clip-text text-transparent bg-gradient-to-r from-teal-300 via-teal-400 to-teal-500 glow-teal">
             {t('title')}
           </h2>
           <p className="text-slate-400 text-sm sm:text-base font-light leading-relaxed">
@@ -351,9 +351,9 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
 
                 <div className="relative p-2 lg:p-3 flex flex-col gap-[1cm] z-10">
                   {!isActive ? (
-                    <div className="h-full flex flex-col items-center justify-center py-1">
-                      <step.icon className={`w-6 h-6 lg:w-8 lg:h-8 mb-3 ${colors.text} group-hover:scale-125 transition-transform duration-300 drop-shadow-lg`} />
-                      <div className="flex-grow flex items-center justify-center">
+                    <div className="h-full flex flex-col items-center pt-3">
+                      <step.icon className={`w-6 h-6 lg:w-8 lg:h-8 ${colors.text} group-hover:scale-125 transition-transform duration-300 drop-shadow-lg`} />
+                      <div className="flex-1 flex items-center justify-center">
                         <h3 className="vertical-text text-[10px] lg:text-sm font-bold tracking-widest text-slate-400 group-hover:text-white transition-colors font-['Orbitron'] uppercase">
                           {step.title}
                         </h3>
@@ -375,7 +375,7 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
                         </div>
                       </div>
 
-                      <div className="flex flex-col items-start py-1 lg:py-2 space-y-[1cm] text-left">
+                      <div className="flex flex-col items-start py-1 lg:py-2 space-y-0 text-left">
                         <p className={`text-xs lg:text-sm text-slate-200 leading-snug max-w-2xl border-l-2 ${colors.border} pl-3 bg-gradient-to-r ${colors.gradientFrom} to-transparent p-1.5 rounded-r-lg`}>
                           {step.description}
                         </p>
@@ -403,7 +403,7 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
                               <h4 className={`${colors.text} font-bold text-[10px] uppercase tracking-widest mb-1`}>
                                 {t('proTip')}
                               </h4>
-                              <p className="text-xs lg:text-sm text-slate-200 italic font-medium">
+                              <p className="text-[10px] lg:text-xs text-slate-200 italic font-medium">
                                 &quot;{step.proTip}&quot;
                               </p>
                             </div>

@@ -68,8 +68,8 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         {/* Header */}
-        <div className="mb-8 text-right">
-          <h2 className="text-4xl md:text-6xl font-bold tracking-tight mb-4 font-['Orbitron'] text-transparent bg-clip-text bg-gradient-to-r from-violet-300 via-violet-400 to-violet-600 glow-violet">
+        <div className="mb-6 text-right">
+          <h2 className="text-3xl md:text-5xl font-bold tracking-tight mb-4 font-['Orbitron'] text-transparent bg-clip-text bg-gradient-to-r from-violet-300 via-violet-400 to-violet-600 glow-violet">
             {t('title')}
           </h2>
           <p className="max-w-3xl text-sm sm:text-base text-slate-400 leading-relaxed ml-auto">

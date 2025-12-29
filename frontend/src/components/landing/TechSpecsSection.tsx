@@ -157,7 +157,7 @@ export function TechSpecsSection({ className }: { className?: string }) {
           <div className="absolute top-[40%] -right-[10%] h-[60%] w-[60%] rounded-full bg-violet-600/10 blur-[120px]" />
         </div>
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-4xl md:text-6xl font-bold mb-8 font-['Orbitron'] text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 via-emerald-400 to-emerald-500 glow-emerald">
+          <h2 className="text-3xl md:text-5xl font-bold mb-8 font-['Orbitron'] text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 via-emerald-400 to-emerald-500 glow-emerald">
             {t('title')}
           </h2>
 

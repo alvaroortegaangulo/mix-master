@@ -151,11 +151,11 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
             <div className="absolute bottom-[-25%] left-[20%] h-[45%] w-[45%] rounded-full bg-gradient-to-tr from-cyan-400/20 via-cyan-500/10 to-transparent blur-[130px]" />
         </div>
 
-        <div className="relative z-10 max-w-7xl w-full mx-auto space-y-8 px-4 sm:px-6 lg:px-8">
+            <div className="relative z-10 max-w-7xl w-full mx-auto space-y-6 px-4 sm:px-6 lg:px-8">
 
             {/* Header */}
             <div className="text-right">
-                <h2 className="text-4xl md:text-6xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-amber-400 to-amber-500 mb-4 font-['Orbitron'] glow-amber">
+                <h2 className="text-3xl md:text-5xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-amber-400 to-amber-500 mb-4 font-['Orbitron'] glow-amber">
                     {t('headerTitle')}
                 </h2>
                 <p className="text-slate-400 text-sm sm:text-base max-w-2xl ml-auto font-light">
