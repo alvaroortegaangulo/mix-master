@@ -69,7 +69,7 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         {/* Header */}
         <div className="mb-8 text-right">
-          <h2 className="text-4xl md:text-6xl font-bold tracking-tight text-white mb-4 font-['Orbitron']">
+          <h2 className="text-4xl md:text-6xl font-bold tracking-tight mb-4 font-['Orbitron'] text-transparent bg-clip-text bg-gradient-to-r from-violet-300 via-violet-400 to-violet-600 glow-violet">
             {t('title')}
           </h2>
           <p className="max-w-3xl text-sm sm:text-base text-slate-400 leading-relaxed ml-auto">
@@ -143,7 +143,7 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
                     <div className="text-[10px] uppercase tracking-wider text-slate-300">{t('metrics.loudness')}</div>
                     <SpeakerWaveIcon className="w-4 h-4 text-teal-400/70 icon-float" aria-hidden="true" />
                 </div>
-                <div className="text-2xl 2xl:text-3xl font-bold text-white mb-1 tabular-nums tracking-tight">
+                <div className="text-xl 2xl:text-2xl font-bold text-white mb-1 tabular-nums tracking-tight">
                     {lufs.toFixed(1)} <span className="text-sm sm:text-base font-normal text-slate-200">LUFS</span>
                 </div>
 
@@ -164,7 +164,7 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
                  <div className="flex justify-between items-start">
                      <div>
                         <div className="text-[10px] uppercase tracking-wider text-slate-300 mb-1">{t('metrics.stereoImage')}</div>
-                        <div className="text-lg sm:text-xl font-bold text-white mb-1">{t('metrics.wide')}</div>
+                        <div className="text-base sm:text-lg font-bold text-white mb-1">{t('metrics.wide')}</div>
                         <div className="text-xs text-slate-300 mb-3 tabular-nums">{t('metrics.correlation')}: <span className="text-white">+{correlation.toFixed(2)}</span></div>
                      </div>
 
@@ -182,7 +182,7 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
              <div className="bg-slate-900/50 rounded-2xl border border-slate-800 p-3 2xl:p-4 shadow-lg flex items-center justify-between">
                  <div>
                     <div className="text-[10px] uppercase tracking-wider text-slate-300 mb-1">{t('metrics.dynamicRange')}</div>
-                    <div className="text-xl sm:text-2xl font-bold text-white tabular-nums">{dynamicRange} <span className="text-sm sm:text-base font-normal text-slate-200">dB</span></div>
+                    <div className="text-lg sm:text-xl font-bold text-white tabular-nums">{dynamicRange} <span className="text-sm sm:text-base font-normal text-slate-200">dB</span></div>
                  </div>
 
                  {/* Mini Histogram */}

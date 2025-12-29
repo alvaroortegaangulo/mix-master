@@ -155,7 +155,7 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
 
             {/* Header */}
             <div className="text-right">
-                <h2 className="text-4xl md:text-6xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white via-violet-100 to-slate-400 mb-4 font-['Orbitron']">
+                <h2 className="text-4xl md:text-6xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-amber-400 to-amber-500 mb-4 font-['Orbitron'] glow-amber">
                     {t('headerTitle')}
                 </h2>
                 <p className="text-slate-400 text-sm sm:text-base max-w-2xl ml-auto font-light">
@@ -164,7 +164,7 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
             </div>
 
             {/* Bento Grid Layout */}
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-6 auto-rows-[minmax(110px,auto)]">
+            <div className="grid grid-cols-1 md:grid-cols-12 gap-3 auto-rows-[minmax(110px,auto)]">
 
                 {/* Card 1: AI Efficiency (Interactive) - Spans 7 cols */}
                 <div className="md:col-span-7 bg-slate-900/60 backdrop-blur-md border border-slate-800 rounded-3xl p-4 relative overflow-hidden group flex flex-col justify-between min-h-[160px]">

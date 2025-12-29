@@ -265,6 +265,22 @@ body {
   text-shadow: 0 0 20px rgba(var(--glow-color), 0.5);
 }
 
+.glow-teal {
+  text-shadow: 0 0 24px rgba(45, 212, 191, 0.6);
+}
+
+.glow-violet {
+  text-shadow: 0 0 24px rgba(139, 92, 246, 0.6);
+}
+
+.glow-emerald {
+  text-shadow: 0 0 24px rgba(52, 211, 153, 0.6);
+}
+
+.glow-amber {
+  text-shadow: 0 0 24px rgba(251, 191, 36, 0.6);
+}
+
 .nav-item-active {
     background: linear-gradient(to top, rgba(var(--glow-color), 0.15), transparent);
     border-bottom: 2px solid rgb(var(--glow-color));

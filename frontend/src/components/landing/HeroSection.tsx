@@ -124,11 +124,11 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
           <span>{t('alertConstruction')}</span>
         </div>
 
-        <div className="flex flex-col items-center gap-2 sm:flex-row sm:justify-center mt-2 sm:mt-3 animate-in fade-in slide-in-from-bottom-6 duration-1000 delay-200 fill-mode-backwards">
+        <div className="flex flex-col items-center gap-3 sm:gap-4 sm:flex-row sm:justify-center mt-2 sm:mt-3 animate-in fade-in slide-in-from-bottom-6 duration-1000 delay-200 fill-mode-backwards">
           {/* Button 1: Mezclar mi Track */}
           <button
             onClick={onTryIt}
-            className="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-full bg-teal-400 px-4 py-2 text-xs font-bold text-slate-950 transition-all hover:bg-teal-300 hover:scale-105 focus:outline-none focus:ring-4 focus:ring-teal-500/30 sm:px-5 sm:py-2.5 sm:text-sm"
+            className="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-full bg-teal-400 px-4 py-2 text-xs font-bold text-slate-950 transition-all hover:bg-teal-300 hover:scale-105 focus:outline-none focus:ring-4 focus:ring-teal-500/30 sm:px-5 sm:py-2.5 sm:text-sm glow-pulse"
           >
             {/* Simple Circle Icon */}
             <svg
@@ -155,6 +155,23 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
             <span>{t('listenToDemos')}</span>
           </Link>
         </div>
+
+        <style jsx>{`
+          .glow-pulse {
+            box-shadow: 0 0 16px rgba(45, 212, 191, 0.55), 0 0 32px rgba(45, 212, 191, 0.35);
+            animation: pulse-glow 2.6s ease-in-out infinite;
+          }
+
+          @keyframes pulse-glow {
+            0%,
+            100% {
+              box-shadow: 0 0 14px rgba(45, 212, 191, 0.45), 0 0 26px rgba(45, 212, 191, 0.25);
+            }
+            50% {
+              box-shadow: 0 0 20px rgba(45, 212, 191, 0.7), 0 0 40px rgba(45, 212, 191, 0.4);
+            }
+          }
+        `}</style>
 
         {/* Rating Section */}
         <div className="flex items-center gap-2 text-[11px] font-medium text-slate-300 mt-1 sm:mt-2 sm:text-xs animate-in fade-in slide-in-from-bottom-8 duration-1000 delay-300 fill-mode-backwards">
