@@ -278,7 +278,7 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
           </p>
         </header>
 
-        <main className="w-full max-w-7xl min-h-[420px] md:min-h-[480px] flex flex-col md:flex-row gap-2 md:gap-4 relative z-10">
+        <main className="w-full max-w-7xl flex flex-col md:flex-row gap-2 md:gap-4 relative z-10 md:items-start">
           {steps.map((step, index) => {
             const isActive = index === activeStep;
             const colors = colorStyles[step.color];
@@ -321,7 +321,7 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
                   </div>
                 )}
 
-                <div className="absolute inset-0 p-2 lg:p-3 flex flex-col gap-3 lg:gap-4 h-full z-10">
+                <div className="relative p-2 lg:p-3 flex flex-col gap-[1cm] z-10">
                   {!isActive ? (
                     <div className="h-full flex flex-col items-center justify-center py-1">
                       <step.icon className={`w-6 h-6 lg:w-8 lg:h-8 mb-3 ${colors.text} group-hover:scale-125 transition-transform duration-300 drop-shadow-lg`} />
@@ -347,7 +347,7 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
                         </div>
                       </div>
 
-                      <div className="flex flex-col items-start py-1 lg:py-2 space-y-1 lg:space-y-1.5 text-left">
+                      <div className="flex flex-col items-start py-1 lg:py-2 space-y-[1cm] text-left">
                         <p className={`text-xs lg:text-sm text-slate-200 leading-snug max-w-2xl border-l-2 ${colors.border} pl-3 bg-gradient-to-r ${colors.gradientFrom} to-transparent p-1.5 rounded-r-lg`}>
                           {step.description}
                         </p>
