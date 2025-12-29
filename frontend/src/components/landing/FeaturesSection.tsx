@@ -161,17 +161,9 @@ export function FeaturesSection({ className }: { className?: string }) {
               key={currentFeature.imageUrl}
               src={currentFeature.imageUrl}
               alt={t(`steps.${currentIndex}.title`)}
-              className="absolute inset-0 w-full h-full object-cover"
-              style={{ animation: "fadeIn 0.9s ease-out forwards" }}
+              className="absolute inset-0 w-full h-full object-cover features-fade-in"
               loading="lazy"
             />
-
-            <style jsx>{`
-              @keyframes fadeIn {
-                from { opacity: 0; transform: scale(1.05); }
-                to { opacity: 0.82; transform: scale(1); }
-              }
-            `}</style>
 
             {/* Overlay Gradients */}
             <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/40 to-transparent z-10 pointer-events-none"></div>
@@ -272,22 +264,6 @@ export function FeaturesSection({ className }: { className?: string }) {
         </ScrollReveal>
       </div>
 
-      <style jsx>{`
-        .grid-landing-overlay {
-          background-image:
-            linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
-          background-size: 26px 26px;
-          background-position: center;
-          opacity: 0.4;
-        }
-
-        .grid-landing-vignette {
-          background:
-            radial-gradient(circle at 50% 18%, rgba(255, 195, 120, 0.12), transparent 45%),
-            radial-gradient(circle at 50% 60%, rgba(5, 5, 8, 0), rgba(5, 5, 8, 0.7) 55%, rgba(5, 5, 8, 0.95) 100%);
-        }
-      `}</style>
     </section>
   );
 }

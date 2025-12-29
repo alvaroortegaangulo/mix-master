@@ -349,6 +349,30 @@ body {
     mix-blend-mode: screen;
 }
 
+.grid-landing-overlay {
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 26px 26px;
+  background-position: center;
+  opacity: 0.4;
+}
+
+.grid-landing-vignette {
+  background:
+    radial-gradient(circle at 50% 18%, rgba(255, 195, 120, 0.12), transparent 45%),
+    radial-gradient(circle at 50% 60%, rgba(5, 5, 8, 0), rgba(5, 5, 8, 0.7) 55%, rgba(5, 5, 8, 0.95) 100%);
+}
+
+@keyframes features-fade-in {
+  from { opacity: 0; transform: scale(1.05); }
+  to { opacity: 0.82; transform: scale(1); }
+}
+
+.features-fade-in {
+  animation: features-fade-in 0.9s ease-out forwards;
+}
+
 @keyframes scan {
     0% { top: 0%; opacity: 0; }
     10% { opacity: 1; }
