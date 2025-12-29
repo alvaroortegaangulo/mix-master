@@ -278,7 +278,7 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
           </p>
         </header>
 
-        <main className="w-full max-w-7xl flex flex-col md:flex-row gap-2 md:gap-4 relative z-10 md:items-start">
+        <main className="w-full max-w-7xl flex flex-col md:flex-row gap-2 md:gap-4 relative z-10 md:items-stretch">
           {steps.map((step, index) => {
             const isActive = index === activeStep;
             const colors = colorStyles[step.color];
@@ -291,7 +291,7 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
                 onClick={() => {
                   if (!isActive) setActiveStep(index);
                 }}
-                className={`panel-transition relative overflow-hidden rounded-2xl border border-opacity-50 cursor-pointer bg-slate-900 group select-none ${isActive ? `flex-[5] lg:flex-[3] brightness-100 ${colors.border}` : `flex-[1] lg:flex-[0.5] hover:flex-[1.2] brightness-50 hover:brightness-75 border-slate-800 hover:border-slate-600`}`}
+                className={`panel-transition relative overflow-hidden rounded-2xl border border-opacity-50 cursor-pointer bg-slate-900 group select-none h-full ${isActive ? `flex-[5] lg:flex-[3] brightness-100 ${colors.border}` : `flex-[1] lg:flex-[0.5] hover:flex-[1.2] brightness-50 hover:brightness-75 border-slate-800 hover:border-slate-600`}`}
                 style={isActive ? { boxShadow: `0 0 30px ${colors.shadow}` } : undefined}
               >
                 <img
