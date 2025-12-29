@@ -22,7 +22,8 @@ import {
   ArrowsRightLeftIcon,
   ArrowUpTrayIcon,
   Cog6ToothIcon,
-  ScaleIcon
+  ScaleIcon,
+  LightBulbIcon
 } from '@heroicons/react/24/outline';
 
 type PipelineColor = 'cyan' | 'blue' | 'indigo' | 'violet' | 'fuchsia';
@@ -257,19 +258,20 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
 
   return (
     <section
-      className={`relative min-h-[400px] flex flex-col items-center justify-center p-2 lg:p-4 selection:bg-cyan-500 selection:text-white overflow-hidden ${className || ''} bg-[#050508]`}
+      className={`relative min-h-[400px] flex flex-col items-center justify-center px-2 lg:px-4 py-10 md:py-14 lg:py-16 2xl:py-20 selection:bg-cyan-500 selection:text-white overflow-hidden ${className || ''} bg-[#050508]`}
     >
       <div className="absolute inset-0 pointer-events-none z-0">
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-cyan-900/20 rounded-full blur-[120px]"></div>
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-900/20 rounded-full blur-[120px]"></div>
+        <div className="absolute top-[-25%] left-[-15%] h-[55%] w-[55%] rounded-full bg-gradient-to-br from-amber-400/25 via-amber-500/10 to-transparent blur-[140px]" />
+        <div className="absolute top-[15%] right-[-20%] h-[60%] w-[60%] rounded-full bg-gradient-to-bl from-rose-400/25 via-rose-500/10 to-transparent blur-[150px]" />
+        <div className="absolute bottom-[-25%] left-[20%] h-[45%] w-[45%] rounded-full bg-gradient-to-tr from-cyan-400/20 via-cyan-500/10 to-transparent blur-[130px]" />
       </div>
 
       <div className="relative z-10 w-full max-w-7xl">
         <header className="text-left mb-8 lg:mb-10 relative z-10 animate-fade-in-down max-w-3xl">
-          <h2 className="text-4xl md:text-6xl font-black font-['Orbitron'] tracking-wide mb-3 bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-blue-500 glow-text">
+          <h2 className="text-4xl md:text-6xl font-black font-['Orbitron'] tracking-wide mb-4 bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-blue-500 glow-text">
             {t('title')}
           </h2>
-          <p className="text-slate-400 text-sm sm:text-base md:text-lg font-light leading-relaxed">
+          <p className="text-slate-400 text-sm sm:text-base font-light leading-relaxed">
             {t.rich('description', {
               highlight: (chunks) => <span className="text-cyan-400 font-medium">{chunks}</span>,
             })}
@@ -322,9 +324,9 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
                 <div className="absolute inset-0 p-2 lg:p-4 flex flex-col justify-between h-full z-10">
                   {!isActive ? (
                     <div className="h-full flex flex-col items-center justify-center py-2">
-                      <step.icon className={`w-8 h-8 lg:w-10 lg:h-10 mb-4 ${colors.text} group-hover:scale-125 transition-transform duration-300 drop-shadow-lg`} />
+                      <step.icon className={`w-6 h-6 lg:w-8 lg:h-8 mb-4 ${colors.text} group-hover:scale-125 transition-transform duration-300 drop-shadow-lg`} />
                       <div className="flex-grow flex items-center justify-center">
-                        <h3 className="vertical-text text-sm lg:text-base font-bold tracking-widest text-slate-400 group-hover:text-white transition-colors font-['Orbitron'] uppercase">
+                        <h3 className="vertical-text text-[10px] lg:text-sm font-bold tracking-widest text-slate-400 group-hover:text-white transition-colors font-['Orbitron'] uppercase">
                           {step.title}
                         </h3>
                       </div>
@@ -332,21 +334,21 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
                   ) : (
                     <>
                       <div className="flex items-center justify-start gap-3 lg:gap-4 text-left animate-fade-in">
-                        <div className={`w-10 h-10 lg:w-12 lg:h-12 rounded-full border ${colors.ringBorder} flex items-center justify-center ${colors.ringBg} backdrop-blur-md icon-pulse`}>
-                          <step.icon className={`w-6 h-6 lg:w-8 lg:h-8 ${colors.text}`} />
+                        <div className={`w-9 h-9 lg:w-10 lg:h-10 rounded-full border ${colors.ringBorder} flex items-center justify-center ${colors.ringBg} backdrop-blur-md icon-pulse`}>
+                          <step.icon className={`w-5 h-5 lg:w-6 lg:h-6 ${colors.text}`} />
                         </div>
                         <div>
-                          <h3 className="text-2xl lg:text-4xl font-black text-white font-['Orbitron'] mb-1 tracking-wide glow-text">
+                          <h3 className="text-xl lg:text-3xl font-black text-white font-['Orbitron'] mb-1 tracking-wide glow-text">
                             {step.title}
                           </h3>
-                          <p className={`${colors.textSoft} font-medium tracking-wider text-xs lg:text-sm uppercase opacity-90`}>
+                          <p className={`${colors.textSoft} font-medium tracking-wider text-[10px] lg:text-xs uppercase opacity-90`}>
                             {step.subtitle}
                           </p>
                         </div>
                       </div>
 
                       <div className="flex-grow flex flex-col justify-center items-start py-2 lg:py-4 space-y-3 lg:space-y-4 text-left">
-                        <p className={`text-sm lg:text-base text-slate-200 leading-relaxed max-w-2xl border-l-2 ${colors.border} pl-4 bg-gradient-to-r ${colors.gradientFrom} to-transparent p-2 rounded-r-lg`}>
+                        <p className={`text-xs lg:text-sm text-slate-200 leading-relaxed max-w-2xl border-l-2 ${colors.border} pl-4 bg-gradient-to-r ${colors.gradientFrom} to-transparent p-2 rounded-r-lg`}>
                           {step.description}
                         </p>
 
@@ -356,8 +358,8 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
                               key={tool.name}
                               className={`flex flex-col items-start justify-center p-2 lg:p-3 rounded-xl bg-slate-800/50 ${colors.toolHoverBg} border border-slate-700/50 ${colors.toolHoverBorder} transition-all duration-300 group/tool backdrop-blur-sm`}
                             >
-                              <tool.icon className={`w-5 h-5 lg:w-6 lg:h-6 text-slate-400 ${colors.toolHoverText} mb-1 lg:mb-2 transition-colors`} />
-                              <span className="text-[10px] sm:text-xs font-semibold text-left text-slate-300 group-hover/tool:text-white uppercase leading-tight">
+                              <tool.icon className={`w-4 h-4 lg:w-5 lg:h-5 text-slate-400 ${colors.toolHoverText} mb-1 lg:mb-2 transition-colors`} />
+                              <span className="text-[9px] sm:text-[10px] font-semibold text-left text-slate-300 group-hover/tool:text-white uppercase leading-tight">
                                 {tool.name}
                               </span>
                             </div>
@@ -366,14 +368,14 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
                       </div>
 
                       <div className="mt-auto">
-                        <div className={`shine-box relative overflow-hidden rounded-lg bg-slate-800/80 border ${colors.borderSoft} p-4 lg:p-5 shadow-lg`}>
+                        <div className={`shine-box relative overflow-hidden rounded-lg bg-slate-800/80 border ${colors.borderSoft} p-3 lg:p-4 shadow-lg text-left`}>
                           <div className="flex items-start gap-3 relative z-10">
-                            <span className={`material-symbols-outlined ${colors.text} mt-1`}>lightbulb</span>
+                            <LightBulbIcon className={`w-4 h-4 lg:w-5 lg:h-5 ${colors.text} mt-1`} aria-hidden="true" />
                             <div>
-                              <h4 className={`${colors.text} font-bold text-xs uppercase tracking-widest mb-1`}>
+                              <h4 className={`${colors.text} font-bold text-[10px] uppercase tracking-widest mb-1`}>
                                 {t('proTip')}
                               </h4>
-                              <p className="text-sm lg:text-base text-slate-200 italic font-medium">
+                              <p className="text-xs lg:text-sm text-slate-200 italic font-medium">
                                 &quot;{step.proTip}&quot;
                               </p>
                             </div>

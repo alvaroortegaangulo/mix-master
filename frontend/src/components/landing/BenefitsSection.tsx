@@ -83,18 +83,18 @@ const drawSpectrumFlow = (
     const heightFactor = Math.min(1, Math.max(0.05, (0.12 + envelope * 0.95) * mix * pulse));
     const barHeight = minHeight + heightFactor * maxHeight;
     const x = i * (barWidth + gap);
-    const hue = 178 + (i / (barCount - 1)) * 70;
+    const hue = 300 + (i / (barCount - 1)) * 40;
     const gradient = ctx.createLinearGradient(0, baseY - barHeight, 0, baseY);
-    gradient.addColorStop(0, `hsla(${hue + 8}, 80%, 72%, 0.9)`);
-    gradient.addColorStop(0.55, `hsla(${hue}, 78%, 56%, 0.55)`);
-    gradient.addColorStop(1, `hsla(${hue - 8}, 82%, 40%, 0.18)`);
+    gradient.addColorStop(0, `hsla(${hue + 12}, 88%, 74%, 0.95)`);
+    gradient.addColorStop(0.55, `hsla(${hue - 4}, 85%, 58%, 0.6)`);
+    gradient.addColorStop(1, `hsla(${hue - 18}, 90%, 42%, 0.2)`);
 
-    ctx.shadowColor = `hsla(${hue}, 85%, 60%, 0.55)`;
+    ctx.shadowColor = `hsla(${hue}, 92%, 62%, 0.6)`;
     ctx.fillStyle = gradient;
     ctx.fillRect(x, baseY - barHeight, barWidth, barHeight);
 
     const highlightHeight = Math.max(1, barHeight * 0.08);
-    ctx.fillStyle = `hsla(${hue + 12}, 90%, 78%, 0.7)`;
+    ctx.fillStyle = `hsla(${hue + 16}, 92%, 80%, 0.75)`;
     ctx.fillRect(x, baseY - barHeight, barWidth, highlightHeight);
   }
 
@@ -143,18 +143,22 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
   }, [isManual]);
 
   return (
-    <section id="benefits" className={`py-8 md:py-10 lg:py-12 relative overflow-hidden ${className || 'bg-slate-950'}`}>
+    <section id="benefits" className={`py-10 md:py-14 lg:py-16 2xl:py-20 relative overflow-hidden ${className || 'bg-slate-950'}`}>
         {/* Background Elements */}
-        <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-slate-950 to-slate-950 pointer-events-none"></div>
+        <div className="absolute inset-0 pointer-events-none z-0">
+            <div className="absolute top-[-25%] left-[-15%] h-[55%] w-[55%] rounded-full bg-gradient-to-br from-amber-400/25 via-amber-500/10 to-transparent blur-[140px]" />
+            <div className="absolute top-[15%] right-[-20%] h-[60%] w-[60%] rounded-full bg-gradient-to-bl from-rose-400/25 via-rose-500/10 to-transparent blur-[150px]" />
+            <div className="absolute bottom-[-25%] left-[20%] h-[45%] w-[45%] rounded-full bg-gradient-to-tr from-cyan-400/20 via-cyan-500/10 to-transparent blur-[130px]" />
+        </div>
 
         <div className="relative z-10 max-w-7xl w-full mx-auto space-y-8 px-4 sm:px-6 lg:px-8">
 
             {/* Header */}
-            <div className="text-center space-y-4">
-                <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white via-violet-100 to-slate-400 pb-2 font-['Orbitron']">
+            <div className="text-right">
+                <h2 className="text-4xl md:text-6xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white via-violet-100 to-slate-400 mb-4 font-['Orbitron']">
                     {t('headerTitle')}
                 </h2>
-                <p className="text-slate-400 text-sm sm:text-base max-w-2xl mx-auto font-light">
+                <p className="text-slate-400 text-sm sm:text-base max-w-2xl ml-auto font-light">
                     {t('headerDesc')}
                 </p>
             </div>
@@ -258,17 +262,17 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent z-10"></div>
                     <div className="relative z-20">
-                        <div className="inline-flex items-center px-2 py-0.5 rounded bg-amber-500/20 border border-amber-500/30 text-amber-500 text-[8px] font-bold uppercase tracking-wider mb-1.5">
+                        <div className="inline-flex items-center px-2 py-0.5 rounded bg-amber-500/20 border border-amber-500/30 text-amber-500 text-[10px] font-bold uppercase tracking-wider mb-1.5">
                             {t('qualityBadge')}
                         </div>
-                        <h3 className="text-base font-bold text-white font-['Orbitron']">{t('qualityTitle')}</h3>
-                        <p className="text-[10px] text-slate-400 mt-1 line-clamp-2">{t('qualityDescription')}</p>
+                        <h3 className="text-lg font-bold text-white font-['Orbitron']">{t('qualityTitle')}</h3>
+                        <p className="text-xs text-slate-400 mt-1 line-clamp-2">{t('qualityDescription')}</p>
                     </div>
                 </div>
 
                 {/* Card 4: Feature List - Spans 4 cols */}
                 <div className="md:col-span-4 bg-slate-900/60 backdrop-blur-md border border-slate-800 rounded-3xl p-3 flex flex-col min-h-[140px]">
-                    <h3 className="text-sm font-bold text-white mb-2 flex items-center font-['Orbitron']">
+                    <h3 className="text-base font-bold text-white mb-2 flex items-center font-['Orbitron']">
                         <AdjustmentsVerticalIcon className="w-3.5 h-3.5 mr-2 text-violet-400" />
                         {t('toolkitTitle')}
                     </h3>
@@ -302,8 +306,8 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
                     {/* Abstract BG */}
                     <div className="absolute top-0 right-0 w-32 h-32 bg-violet-500/10 rounded-full blur-3xl -mr-10 -mt-10"></div>
 
-                    <h3 className="text-sm font-bold text-white mb-1.5 relative z-10 font-['Orbitron']">{t('readyForWorldTitle')}</h3>
-                    <p className="text-[10px] text-slate-400 mb-3 relative z-10">{t('readyForWorldDesc')}</p>
+                    <h3 className="text-base font-bold text-white mb-1.5 relative z-10 font-['Orbitron']">{t('readyForWorldTitle')}</h3>
+                    <p className="text-xs text-slate-400 mb-3 relative z-10">{t('readyForWorldDesc')}</p>
 
                     <div className="grid grid-cols-4 gap-2 relative z-10">
                         <div className="flex items-center justify-center p-2 rounded-full opacity-80 hover:opacity-100 hover:scale-105 transition-all duration-300">

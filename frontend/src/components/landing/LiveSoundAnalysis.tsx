@@ -58,21 +58,21 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
     return () => clearInterval(interval);
   }, []);
 
-  return (
-    <section className={`py-8 md:py-10 lg:py-12 border-t border-slate-900 relative overflow-hidden ${className || 'bg-slate-950'}`}>
-        {/* Background Gradients */}
-        <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
-            <div className="absolute top-1/4 -left-64 w-96 h-96 bg-teal-900/10 rounded-full blur-3xl"></div>
-            <div className="absolute bottom-1/4 -right-64 w-96 h-96 bg-violet-900/10 rounded-full blur-3xl"></div>
+    return (
+    <section className={`py-10 md:py-14 lg:py-16 2xl:py-20 border-t border-slate-900 relative overflow-hidden ${className || 'bg-slate-950'}`}>
+        {/* Background gradients/blobs */}
+        <div className="absolute top-0 left-0 h-full w-full overflow-hidden pointer-events-none z-0">
+            <div className="absolute -top-[20%] -left-[10%] h-[50%] w-[50%] rounded-full bg-teal-500/10 blur-[120px]" />
+            <div className="absolute top-[40%] -right-[10%] h-[60%] w-[60%] rounded-full bg-violet-600/10 blur-[120px]" />
         </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         {/* Header */}
-        <div className="mb-8">
-          <h2 className="text-3xl md:text-4xl font-bold tracking-tight text-white mb-4 font-['Orbitron']">
+        <div className="mb-8 text-right">
+          <h2 className="text-4xl md:text-6xl font-bold tracking-tight text-white mb-4 font-['Orbitron']">
             {t('title')}
           </h2>
-          <p className="max-w-3xl text-sm sm:text-base text-slate-400 leading-relaxed">
+          <p className="max-w-3xl text-sm sm:text-base text-slate-400 leading-relaxed ml-auto">
             {t('description')}
           </p>
         </div>

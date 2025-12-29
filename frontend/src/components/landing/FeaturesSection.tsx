@@ -128,12 +128,17 @@ export function FeaturesSection({ className }: { className?: string }) {
   };
 
   return (
-    <section id="features" className={`min-h-screen flex items-center justify-center p-4 bg-slate-950 text-white ${className || ''}`}>
-      <div className="max-w-7xl w-full mx-auto">
+    <section id="features" className={`relative min-h-screen flex items-center justify-center px-4 py-10 md:py-14 lg:py-16 2xl:py-20 bg-[#050508] text-white overflow-hidden ${className || ''}`}>
+      <div className="absolute inset-0 pointer-events-none z-0">
+        <div className="absolute top-[-25%] left-[-15%] h-[55%] w-[55%] rounded-full bg-gradient-to-br from-amber-400/25 via-amber-500/10 to-transparent blur-[140px]" />
+        <div className="absolute top-[15%] right-[-20%] h-[60%] w-[60%] rounded-full bg-gradient-to-bl from-rose-400/25 via-rose-500/10 to-transparent blur-[150px]" />
+        <div className="absolute bottom-[-25%] left-[20%] h-[45%] w-[45%] rounded-full bg-gradient-to-tr from-cyan-400/20 via-cyan-500/10 to-transparent blur-[130px]" />
+      </div>
+      <div className="relative z-10 max-w-7xl w-full mx-auto">
 
         {/* Header */}
-        <div className="text-center mb-10 space-y-4">
-          <h2 className="text-4xl md:text-6xl font-black font-['Orbitron'] tracking-wide">
+        <div className="text-left mb-10 max-w-3xl">
+          <h2 className="text-4xl md:text-6xl font-black font-['Orbitron'] tracking-wide mb-4">
             {t.rich("title", {
               gradient: (chunks) => (
                 <span className={`text-transparent bg-clip-text bg-gradient-to-r ${getGradientColors(currentIndex)} transition-all duration-500`}>
@@ -142,16 +147,16 @@ export function FeaturesSection({ className }: { className?: string }) {
               ),
             })}
           </h2>
-          <p className="text-slate-400 text-lg md:text-xl max-w-2xl mx-auto font-light leading-relaxed">
+          <p className="text-slate-400 text-sm sm:text-base max-w-2xl mx-auto font-light leading-relaxed">
             {t("subtitle")}
           </p>
         </div>
 
         {/* Main Interactive Component */}
-        <div className="relative w-full rounded-2xl overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5)] border border-slate-800 bg-slate-900">
+        <div className="relative w-full md:w-2/3 max-w-4xl mx-auto rounded-2xl overflow-hidden shadow-[0_0_50px_rgba(0,0,0,0.5)] border border-slate-800 bg-slate-900">
 
           {/* Video Display Area */}
-          <div className="relative h-[400px] md:h-[550px] w-full overflow-hidden bg-black group">
+          <div className="relative h-[260px] md:h-[370px] w-full overflow-hidden bg-black group">
              {/* Background Video */}
             <video
               key={currentFeature.videoUrl} // Key forces re-render/fade for new source
@@ -183,18 +188,18 @@ export function FeaturesSection({ className }: { className?: string }) {
             {/* Floating Content Card */}
             <div className="absolute top-1/2 -translate-y-1/2 left-6 md:left-16 z-20 max-w-lg w-full pr-4">
               <div className="glass-card p-8 rounded-2xl floating transition-all duration-500 hover:scale-[1.02]">
-                <div className="flex items-center gap-3 mb-4">
+                <div className="flex items-center gap-3 mb-3">
                   <span className={`text-3xl animate-pulse ${currentFeature.twColor}`}>
                     <currentFeature.Icon className="w-8 h-8" />
                   </span>
                   <h3
-                    className={`text-2xl md:text-3xl font-bold font-['Orbitron'] ${currentFeature.twColor} glow-text`}
+                    className={`text-xl md:text-2xl font-bold font-['Orbitron'] ${currentFeature.twColor} glow-text`}
                     style={{ '--glow-color': currentFeature.glowColor } as React.CSSProperties}
                   >
                     {t(`steps.${currentIndex}.title`)}
                   </h3>
                 </div>
-                <p className="text-slate-300 text-base md:text-lg leading-relaxed">
+                <p className="text-slate-300 text-sm md:text-base leading-relaxed">
                   {t(`steps.${currentIndex}.description`)}
                 </p>
               </div>
@@ -208,7 +213,7 @@ export function FeaturesSection({ className }: { className?: string }) {
                 key={index}
                 onClick={() => manualSwitch(index)}
                 style={{ '--glow-color': feature.glowColor } as React.CSSProperties}
-                className={`relative p-4 md:p-6 flex flex-col md:flex-row items-center justify-center md:justify-start gap-3 transition-all duration-300 group hover:bg-slate-900 border-r border-slate-800 last:border-r-0 ${
+                className={`relative p-3 md:p-4 flex flex-col md:flex-row items-center justify-center md:justify-start gap-3 transition-all duration-300 group hover:bg-slate-900 border-r border-slate-800 last:border-r-0 ${
                   index === currentIndex
                     ? "nav-item-active" // Uses global css class for gradient & border
                     : "text-slate-500 hover:text-slate-300"
@@ -217,11 +222,11 @@ export function FeaturesSection({ className }: { className?: string }) {
                 <span className={`transition-colors group-hover:scale-110 ${
                    index === currentIndex ? feature.twColor : "text-slate-600 group-hover:text-slate-400"
                 }`}>
-                  <feature.Icon className="w-6 h-6 md:w-8 md:h-8" />
+                  <feature.Icon className="w-5 h-5 md:w-6 md:h-6" />
                 </span>
 
                 <div className="text-center md:text-left">
-                  <span className={`block text-xs md:text-sm font-bold uppercase tracking-wider font-['Orbitron'] ${
+                  <span className={`block text-[10px] md:text-xs font-bold uppercase tracking-wider font-['Orbitron'] ${
                      index === currentIndex ? "text-white" : "text-slate-500"
                   }`}>
                     {t(`steps.${index}.title`)}

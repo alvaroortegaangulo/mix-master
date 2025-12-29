@@ -48,8 +48,8 @@ export function LandingPage() {
 
       <ElectricDivider />
 
-      {/* 4. Features (DAW to World): Light (bg-slate-900) */}
-      <FeaturesSection className="bg-slate-900" />
+      {/* 4. Features (DAW to World): Match Pipeline background */}
+      <FeaturesSection className="bg-[#050508]" />
 
       <ElectricDivider />
 
@@ -64,16 +64,22 @@ export function LandingPage() {
       <ElectricDivider />
 
       {/* Bottom CTA */}
-      <section className="py-10 md:py-14 lg:py-16 2xl:py-20 bg-gradient-to-t from-teal-900/20 to-slate-950 text-center px-4">
-        <h2 className="text-xl sm:text-2xl lg:text-3xl 2xl:text-4xl font-bold text-white mb-5 font-['Orbitron']">
-          {t('readyToElevate')}
-        </h2>
-        <button
-          onClick={handleTryIt}
-          className="bg-white text-slate-950 px-6 py-2.5 rounded-full text-sm sm:text-base font-bold hover:bg-teal-50 transition shadow-xl shadow-teal-500/10"
-        >
-          {t('startMixing')}
-        </button>
+      <section className="relative py-10 md:py-14 lg:py-16 2xl:py-20 bg-slate-950 text-center px-4 overflow-hidden">
+        <div className="absolute top-0 left-0 h-full w-full overflow-hidden pointer-events-none z-0">
+          <div className="absolute -top-[20%] -left-[10%] h-[50%] w-[50%] rounded-full bg-teal-500/10 blur-[120px]" />
+          <div className="absolute top-[40%] -right-[10%] h-[60%] w-[60%] rounded-full bg-violet-600/10 blur-[120px]" />
+        </div>
+        <div className="relative z-10">
+          <h2 className="text-xl sm:text-2xl lg:text-3xl 2xl:text-4xl font-bold text-white mb-5 font-['Orbitron']">
+            {t('readyToElevate')}
+          </h2>
+          <button
+            onClick={handleTryIt}
+            className="bg-white text-slate-950 px-6 py-2.5 rounded-full text-sm sm:text-base font-bold hover:bg-teal-50 transition shadow-xl shadow-teal-500/10"
+          >
+            {t('startMixing')}
+          </button>
+        </div>
       </section>
 
       {/* Footer removed from here, now in GlobalLayout */}

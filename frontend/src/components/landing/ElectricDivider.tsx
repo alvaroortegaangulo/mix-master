@@ -6,8 +6,11 @@ type ElectricDividerProps = {
 
 export function ElectricDivider({ className }: ElectricDividerProps) {
   return (
-    <div className={`relative w-full flex justify-center ${className || ""}`} aria-hidden="true">
-      <div className="relative h-0.5 sm:h-1 overflow-hidden" style={{ width: "2cm" }}>
+    <div className={`relative w-full h-0 z-20 pointer-events-none ${className || ""}`} aria-hidden="true">
+      <div
+        className="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/2 h-0.5 sm:h-1 overflow-hidden"
+        style={{ width: "2cm" }}
+      >
         <div className="absolute inset-0 divider-base" />
         <div className="absolute inset-0 divider-flow" />
       </div>
