@@ -4,6 +4,7 @@ import { HeroSection } from "./HeroSection";
 import dynamic from "next/dynamic";
 import { useTranslations } from 'next-intl';
 import { useHomeView } from "../../context/HomeViewContext";
+import { ElectricDivider } from "./ElectricDivider";
 
 const PipelineInteractiveDiagram = dynamic(() => import("./PipelineInteractiveDiagram").then(mod => mod.PipelineInteractiveDiagram), {
   loading: () => <div className="h-96 bg-slate-900" />
@@ -35,20 +36,32 @@ export function LandingPage() {
       {/* 1. Hero: Dark (bg-slate-950) - Default */}
       <HeroSection onTryIt={handleTryIt} />
 
+      <ElectricDivider />
+
       {/* 2. Pipeline: Light (bg-slate-900) */}
       <PipelineInteractiveDiagram className="bg-slate-900" />
+
+      <ElectricDivider />
 
       {/* 3. Live Analysis: Dark (bg-slate-950) */}
       <LiveSoundAnalysis className="bg-slate-950" />
 
+      <ElectricDivider />
+
       {/* 4. Features (DAW to World): Light (bg-slate-900) */}
       <FeaturesSection className="bg-slate-900" />
+
+      <ElectricDivider />
 
       {/* 5. Tech Specs (Power & Precision): Dark (bg-slate-950) */}
       <TechSpecsSection className="bg-slate-950" />
 
+      <ElectricDivider />
+
       {/* 6. Benefits (Hours in minutes): Light (bg-slate-900) */}
       <BenefitsSection className="bg-slate-900" />
+
+      <ElectricDivider />
 
       {/* Bottom CTA */}
       <section className="py-10 md:py-14 lg:py-16 2xl:py-20 bg-gradient-to-t from-teal-900/20 to-slate-950 text-center px-4">

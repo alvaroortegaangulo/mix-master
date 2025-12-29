@@ -96,6 +96,20 @@ export function FeaturesSection({ className }: { className?: string }) {
 
       if (elapsed < duration) {
         animationFrameId = requestAnimationFrame(animate);
+  useEffect(() => {
+    videoRefs.current.forEach((video, idx) => {
+      if (!video) return;
+      if (idx === activeStep) {
+        video.pause();
+        try {
+          video.currentTime = 0;
+        } catch {
+          // Ignore seek errors for not-yet-ready media.
+        }
+        const playPromise = video.play();
+        if (playPromise && typeof playPromise.catch === "function") {
+          playPromise.catch(() => undefined);
+        }
       } else {
         // Next slide
         setCurrentIndex((prev) => (prev + 1) % features.length);
