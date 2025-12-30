@@ -281,6 +281,10 @@ body {
   text-shadow: 0 0 24px rgba(251, 191, 36, 0.6);
 }
 
+.glow-burgundy {
+  text-shadow: 0 0 24px rgba(190, 18, 60, 0.55);
+}
+
 .metallic-sheen {
   position: relative;
   isolation: isolate;
@@ -351,17 +355,59 @@ body {
 
 .grid-landing-overlay {
   background-image:
-    linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px);
-  background-size: 26px 26px;
+    linear-gradient(rgba(255, 255, 255, 0.09) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.09) 1px, transparent 1px);
+  background-size: 22px 22px;
   background-position: center;
-  opacity: 0.4;
+  opacity: 0.6;
 }
 
 .grid-landing-vignette {
   background:
     radial-gradient(circle at 50% 18%, rgba(255, 195, 120, 0.12), transparent 45%),
     radial-gradient(circle at 50% 60%, rgba(5, 5, 8, 0), rgba(5, 5, 8, 0.7) 55%, rgba(5, 5, 8, 0.95) 100%);
+}
+
+.benefits-burgundy-base {
+  background:
+    radial-gradient(circle at 18% 8%, rgba(120, 20, 35, 0.55), transparent 45%),
+    radial-gradient(circle at 78% 20%, rgba(160, 35, 55, 0.45), transparent 50%),
+    linear-gradient(180deg, #0b0608 0%, #14070d 48%, #0a0507 100%);
+}
+
+.benefits-burgundy-grid {
+  background-image:
+    linear-gradient(rgba(170, 60, 80, 0.22) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(170, 60, 80, 0.22) 1px, transparent 1px);
+  background-size: 30px 30px;
+  background-position: center;
+  opacity: 0.35;
+}
+
+.benefits-burgundy-lines {
+  background-image:
+    linear-gradient(rgba(200, 75, 95, 0.18) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(200, 75, 95, 0.18) 1px, transparent 1px);
+  background-size: 160px 160px;
+  opacity: 0.35;
+  mask-image: radial-gradient(circle at 60% 15%, rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0.2) 60%, rgba(0, 0, 0, 0) 100%);
+}
+
+.benefits-burgundy-vignette {
+  background:
+    radial-gradient(circle at 50% 40%, rgba(0, 0, 0, 0) 0%, rgba(5, 2, 4, 0.7) 60%, rgba(5, 2, 4, 0.95) 100%);
+}
+
+.benefits-burgundy-glow {
+  background: radial-gradient(circle, rgba(189, 52, 75, 0.35), transparent 70%);
+  filter: blur(10px);
+  opacity: 0.9;
+}
+
+.benefits-burgundy-glow-soft {
+  background: radial-gradient(circle, rgba(120, 28, 45, 0.35), transparent 70%);
+  filter: blur(22px);
+  opacity: 0.85;
 }
 
 @keyframes features-fade-in {

@@ -148,9 +148,12 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
     <section id="benefits" className={`py-10 md:py-14 lg:py-16 2xl:py-20 relative overflow-hidden ${className || 'bg-slate-950'}`}>
         {/* Background Elements */}
         <div className="absolute inset-0 pointer-events-none z-0">
-            <div className="absolute top-[-25%] left-[-15%] h-[55%] w-[55%] rounded-full bg-gradient-to-br from-amber-400/25 via-amber-500/10 to-transparent blur-[140px]" />
-            <div className="absolute top-[15%] right-[-20%] h-[60%] w-[60%] rounded-full bg-gradient-to-bl from-rose-400/25 via-rose-500/10 to-transparent blur-[150px]" />
-            <div className="absolute bottom-[-25%] left-[20%] h-[45%] w-[45%] rounded-full bg-gradient-to-tr from-cyan-400/20 via-cyan-500/10 to-transparent blur-[130px]" />
+            <div className="absolute inset-0 benefits-burgundy-base" />
+            <div className="absolute inset-0 benefits-burgundy-grid" />
+            <div className="absolute inset-0 benefits-burgundy-lines" />
+            <div className="absolute inset-0 benefits-burgundy-vignette" />
+            <div className="absolute -top-[20%] right-[-15%] h-[48%] w-[48%] rounded-full benefits-burgundy-glow" />
+            <div className="absolute bottom-[-25%] left-[-10%] h-[55%] w-[55%] rounded-full benefits-burgundy-glow-soft" />
         </div>
 
             <div className="relative z-10 max-w-7xl w-full mx-auto space-y-6 px-4 sm:px-6 lg:px-8">
@@ -158,13 +161,17 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
             {/* Header */}
             <ScrollReveal className="text-right" delay={0.05}>
                 <h2
-                    className="text-3xl md:text-5xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-amber-300 via-amber-400 to-amber-500 mb-4 font-['Orbitron'] glow-amber metallic-sheen"
+                    className="text-3xl md:text-5xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-rose-300 via-rose-400 to-rose-600 mb-4 font-['Orbitron'] glow-burgundy metallic-sheen"
                     data-text={headerTitle}
                 >
                     {headerTitle}
                 </h2>
                 <p className="text-slate-400 text-sm sm:text-base max-w-2xl ml-auto font-light">
-                    {t('headerDesc')}
+                    {t.rich('headerDesc', {
+                      highlight: (chunks) => (
+                        <span className="text-rose-400 font-bold">{chunks}</span>
+                      ),
+                    })}
                 </p>
             </ScrollReveal>
 

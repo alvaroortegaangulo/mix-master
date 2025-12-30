@@ -31,7 +31,7 @@
   },
   "FeaturesSection": {
     "workflow": "Flujo de Trabajo Unificado",
-    "title": "De tu DAW al <gradient>Mundo</gradient>",
+    "title": "De tu <daw>DAW</daw> al Mundo",
     "subtitle": "Hemos simplificado la ingeniería compleja en una experiencia fluida. Sin menús infinitos, solo resultados sonoros superiores.",
     "steps": {
       "0": {
@@ -96,7 +96,7 @@
   "BenefitsSection": {
     "headerBadge": "Piroola AI Engine v2.0",
     "headerTitle": "Revoluciona tu sonido",
-    "headerDesc": "La suite de masterización inteligente que transforma maquetas caseras en éxitos comerciales en segundos.",
+    "headerDesc": "La suite de masterización inteligente que transforma maquetas caseras en <highlight>éxitos comerciales</highlight> en segundos.",
     "efficiencyBadge": "Eficiencia IA",
     "manual": "MANUAL",
     "speedTitle": "<strike>Horas de trabajo</strike>,<brTag></brTag><highlight>hechas en minutos.</highlight>",

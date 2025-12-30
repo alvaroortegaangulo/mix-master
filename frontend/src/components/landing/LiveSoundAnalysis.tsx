@@ -72,7 +72,7 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
         {/* Header */}
         <ScrollReveal className="mb-6 text-right" delay={0.05}>
           <h2
-            className="text-3xl md:text-5xl font-bold tracking-tight mb-4 font-['Orbitron'] text-transparent bg-clip-text bg-gradient-to-r from-violet-300 via-violet-400 to-violet-600 glow-violet metallic-sheen"
+            className="text-3xl md:text-5xl font-bold tracking-tight mb-4 font-['Orbitron'] text-transparent bg-clip-text bg-gradient-to-r from-teal-300 via-teal-400 to-teal-500 glow-teal metallic-sheen"
             data-text={title}
           >
             {title}

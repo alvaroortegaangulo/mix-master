@@ -137,11 +137,12 @@ export function FeaturesSection({ className }: { className?: string }) {
             data-text={titlePlain}
           >
             {t.rich("title", {
-              gradient: (chunks) => (
+              daw: (chunks) => (
                 <span className={`text-transparent bg-clip-text bg-gradient-to-r ${getGradientColors()} transition-all duration-500`}>
                   {chunks}
                 </span>
               ),
+              gradient: (chunks) => <span>{chunks}</span>,
             })}
           </h2>
           <p className="text-slate-400 text-sm sm:text-base max-w-2xl font-light leading-relaxed">
@@ -156,7 +157,7 @@ export function FeaturesSection({ className }: { className?: string }) {
         >
 
           {/* Image Display Area */}
-          <div className="relative h-[240px] md:h-[360px] lg:h-[420px] w-full overflow-hidden bg-black group">
+          <div className="relative h-[160px] md:h-[240px] lg:h-[280px] w-full overflow-hidden bg-black group">
             <img
               key={currentFeature.imageUrl}
               src={currentFeature.imageUrl}

@@ -296,14 +296,14 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
         <ScrollReveal delay={0.05}>
           <header className="text-left mb-6 lg:mb-8 relative z-10 max-w-3xl">
             <h2
-              className="text-3xl md:text-5xl font-black font-['Orbitron'] tracking-wide mb-4 bg-clip-text text-transparent bg-gradient-to-r from-teal-300 via-teal-400 to-teal-500 glow-teal metallic-sheen"
+              className="text-3xl md:text-5xl font-black font-['Orbitron'] tracking-wide mb-4 bg-clip-text text-transparent bg-gradient-to-r from-violet-300 via-violet-400 to-violet-600 glow-violet metallic-sheen"
               data-text={title}
             >
               {title}
             </h2>
             <p className="text-slate-400 text-sm sm:text-base font-light leading-relaxed">
               {t.rich('description', {
-                highlight: (chunks) => <span className="text-cyan-400 font-medium">{chunks}</span>,
+                highlight: (chunks) => <span className="text-violet-400 font-bold">{chunks}</span>,
               })}
             </p>
           </header>
