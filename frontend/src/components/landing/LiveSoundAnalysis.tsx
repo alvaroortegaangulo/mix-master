@@ -62,10 +62,14 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
 
     return (
     <section className={`py-10 md:py-14 lg:py-16 2xl:py-20 border-t border-slate-900 relative overflow-hidden ${className || 'bg-slate-950'}`}>
-        {/* Background gradients/blobs */}
-        <div className="absolute top-0 left-0 h-full w-full overflow-hidden pointer-events-none z-0">
-            <div className="absolute -top-[20%] -left-[10%] h-[50%] w-[50%] rounded-full bg-teal-500/10 blur-[120px]" />
-            <div className="absolute top-[40%] -right-[10%] h-[60%] w-[60%] rounded-full bg-violet-600/10 blur-[120px]" />
+        {/* Background grid + glow */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
+            <div className="absolute inset-0 analysis-grid-base" />
+            <div className="absolute inset-0 analysis-grid-glow" />
+            <div className="absolute inset-0 analysis-grid-streak" />
+            <div className="absolute inset-0 analysis-grid-sparkles" />
+            <div className="absolute bottom-[-10%] left-0 right-0 h-[55%] analysis-grid-floor" />
+            <div className="absolute inset-0 analysis-grid-vignette" />
         </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
