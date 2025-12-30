@@ -150,6 +150,7 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
         <div className="absolute inset-0 pointer-events-none z-0">
             <div className="absolute inset-0 benefits-burgundy-base" />
             <div className="absolute inset-0 benefits-burgundy-grid" />
+            <div className="absolute inset-0 benefits-burgundy-pipes" />
             <div className="absolute inset-0 benefits-burgundy-lines" />
             <div className="absolute inset-0 benefits-burgundy-vignette" />
             <div className="absolute -top-[20%] right-[-15%] h-[48%] w-[48%] rounded-full benefits-burgundy-glow" />
@@ -180,7 +181,7 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
 
                 {/* Card 1: AI Efficiency (Interactive) - Spans 7 cols */}
                 <ScrollReveal
-                    className="md:col-span-7 bg-slate-900/60 backdrop-blur-md border border-slate-800 rounded-3xl p-4 relative overflow-hidden group flex flex-col justify-between min-h-[160px]"
+                    className="md:col-span-7 bg-slate-900/60 backdrop-blur-md border border-slate-800 rounded-3xl p-4 relative overflow-hidden group flex flex-col justify-between min-h-[160px] transition-transform duration-300 hover:-translate-y-1 hover:border-rose-500/70 hover:ring-1 hover:ring-rose-500/35"
                     delay={0.1}
                 >
                     <div className="relative z-10">
@@ -240,7 +241,7 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
 
                 {/* Card 2: Visual Interface Scan - Spans 5 cols */}
                 <ScrollReveal
-                    className="md:col-span-5 bg-slate-900/60 backdrop-blur-md border border-slate-800 rounded-3xl relative overflow-hidden group min-h-[160px]"
+                    className="md:col-span-5 bg-slate-900/60 backdrop-blur-md border border-slate-800 rounded-3xl relative overflow-hidden group min-h-[160px] transition-transform duration-300 hover:-translate-y-1 hover:border-rose-500/70 hover:ring-1 hover:ring-rose-500/35"
                     delay={0.15}
                 >
                     <img
@@ -273,7 +274,7 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
 
                 {/* Card 3: Quality Spectrum - Spans 4 cols */}
                 <ScrollReveal
-                    className="md:col-span-4 bg-slate-900/60 backdrop-blur-md border border-slate-800 rounded-3xl p-3 relative overflow-hidden flex flex-col justify-end min-h-[110px] group"
+                    className="md:col-span-4 bg-slate-900/60 backdrop-blur-md border border-slate-800 rounded-3xl p-3 relative overflow-hidden flex flex-col justify-end min-h-[110px] group transition-transform duration-300 hover:-translate-y-1 hover:border-rose-500/70 hover:ring-1 hover:ring-rose-500/35"
                     delay={0.2}
                 >
                     <img
@@ -293,7 +294,7 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
 
                 {/* Card 4: Feature List - Spans 4 cols */}
                 <ScrollReveal
-                    className="md:col-span-4 bg-slate-900/60 backdrop-blur-md border border-slate-800 rounded-3xl p-3 flex flex-col min-h-[140px]"
+                    className="md:col-span-4 bg-slate-900/60 backdrop-blur-md border border-slate-800 rounded-3xl p-3 flex flex-col min-h-[140px] transition-transform duration-300 hover:-translate-y-1 hover:border-rose-500/70 hover:ring-1 hover:ring-rose-500/35"
                     delay={0.25}
                 >
                     <h3 className="text-base font-bold text-white mb-2 flex items-center font-['Orbitron']">
@@ -327,7 +328,7 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
 
                 {/* Card 5: Export Targets - Spans 4 cols */}
                 <ScrollReveal
-                    className="md:col-span-4 bg-slate-900/60 backdrop-blur-md border border-slate-800 rounded-3xl p-3 flex flex-col justify-between relative overflow-hidden min-h-[110px]"
+                    className="md:col-span-4 bg-slate-900/60 backdrop-blur-md border border-slate-800 rounded-3xl p-3 flex flex-col justify-between relative overflow-hidden min-h-[110px] transition-transform duration-300 hover:-translate-y-1 hover:border-rose-500/70 hover:ring-1 hover:ring-rose-500/35"
                     delay={0.3}
                 >
                     {/* Abstract BG */}
