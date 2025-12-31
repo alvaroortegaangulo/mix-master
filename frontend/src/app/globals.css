@@ -419,52 +419,18 @@ body {
   opacity: 0.85;
 }
 
-.analysis-grid-base {
-  background:
-    radial-gradient(circle at 18% 24%, rgba(22, 60, 120, 0.35), transparent 45%),
-    radial-gradient(circle at 55% 70%, rgba(18, 40, 90, 0.35), transparent 60%),
-    linear-gradient(180deg, #050509 0%, #05050b 45%, #04040a 100%);
-}
-
-.analysis-grid-glow {
-  background:
-    radial-gradient(circle at 18% 22%, rgba(90, 160, 255, 0.28), transparent 35%),
-    radial-gradient(circle at 50% 78%, rgba(50, 110, 230, 0.25), transparent 55%);
-}
-
-.analysis-grid-streak {
-  background-image:
-    radial-gradient(circle, rgba(120, 200, 255, 0.7) 0%, rgba(120, 200, 255, 0) 55%),
-    linear-gradient(90deg, rgba(120, 200, 255, 0.45), rgba(120, 200, 255, 0) 70%),
-    linear-gradient(135deg, rgba(120, 200, 255, 0.35), rgba(120, 200, 255, 0) 70%);
+.analysis-wallpaper {
+  background-image: url("/live_analysis_wallpaper.webp");
+  background-size: cover;
+  background-position: center;
   background-repeat: no-repeat;
-  background-size: 120px 120px, 360px 2px, 140px 2px;
-  background-position: 8% 18%, 8% 18%, 21% 23%;
-  opacity: 0.8;
-  filter: drop-shadow(0 0 10px rgba(90, 160, 255, 0.35));
 }
 
-.analysis-grid-sparkles {
-  background-image: radial-gradient(rgba(130, 200, 255, 0.65) 1px, transparent 1.6px);
-  background-size: 160px 160px;
-  opacity: 0.22;
-  mask-image: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.3) 45%, rgba(0, 0, 0, 0.9) 85%);
-}
-
-.analysis-grid-floor {
-  background-image:
-    linear-gradient(rgba(110, 175, 255, 0.4) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(110, 175, 255, 0.4) 1px, transparent 1px);
-  background-size: 56px 56px;
-  transform-origin: bottom;
-  transform: perspective(520px) rotateX(70deg) scale(1.2);
-  opacity: 0.8;
-  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.75) 35%, rgba(0, 0, 0, 1) 100%);
-}
-
-.analysis-grid-vignette {
+.analysis-wallpaper-overlay {
   background:
-    radial-gradient(circle at 50% 40%, rgba(0, 0, 0, 0) 0%, rgba(5, 6, 12, 0.7) 65%, rgba(3, 4, 8, 0.95) 100%);
+    radial-gradient(circle at 20% 30%, rgba(35, 120, 255, 0.18), transparent 45%),
+    radial-gradient(circle at 60% 85%, rgba(18, 60, 160, 0.2), transparent 55%),
+    linear-gradient(180deg, rgba(4, 6, 12, 0.2) 0%, rgba(4, 6, 12, 0.65) 70%, rgba(3, 5, 10, 0.9) 100%);
 }
 
 @keyframes features-fade-in {
