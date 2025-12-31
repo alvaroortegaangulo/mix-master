@@ -362,6 +362,13 @@ body {
   opacity: 0.6;
 }
 
+.grid-landing-diagonal {
+  background-image:
+    repeating-linear-gradient(45deg, rgba(148, 163, 184, 0.25) 0, rgba(148, 163, 184, 0.25) 1px, transparent 1px, transparent 26px),
+    repeating-linear-gradient(135deg, rgba(148, 163, 184, 0.2) 0, rgba(148, 163, 184, 0.2) 1px, transparent 1px, transparent 26px);
+  opacity: 0.4;
+}
+
 .grid-landing-vignette {
   background:
     radial-gradient(circle at 50% 18%, rgba(255, 195, 120, 0.12), transparent 45%),
