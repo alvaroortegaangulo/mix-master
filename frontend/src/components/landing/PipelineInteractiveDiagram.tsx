@@ -287,9 +287,8 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
       className={`relative min-h-[400px] flex flex-col items-center justify-center px-2 lg:px-4 py-10 md:py-14 lg:py-16 2xl:py-20 selection:bg-cyan-500 selection:text-white overflow-hidden ${className || 'bg-[#050508]'}`}
     >
       <div className="absolute inset-0 pointer-events-none z-0">
-        <div className="absolute top-[-25%] left-[-15%] h-[55%] w-[55%] rounded-full bg-gradient-to-br from-amber-400/25 via-amber-500/10 to-transparent blur-[140px]" />
-        <div className="absolute top-[15%] right-[-20%] h-[60%] w-[60%] rounded-full bg-gradient-to-bl from-rose-400/25 via-rose-500/10 to-transparent blur-[150px]" />
-        <div className="absolute bottom-[-25%] left-[20%] h-[45%] w-[45%] rounded-full bg-gradient-to-tr from-cyan-400/20 via-cyan-500/10 to-transparent blur-[130px]" />
+        <div className="absolute inset-0 pipeline-wallpaper" />
+        <div className="absolute inset-0 pipeline-wallpaper-overlay" />
       </div>
 
       <div className="relative z-10 w-full max-w-7xl">
