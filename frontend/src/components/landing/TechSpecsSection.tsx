@@ -161,7 +161,7 @@ export function TechSpecsSection({ className }: { className?: string }) {
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <ScrollReveal delay={0.05}>
             <h2
-              className="text-3xl md:text-5xl font-bold mb-8 font-['Orbitron'] text-transparent bg-clip-text bg-gradient-to-r from-emerald-300 via-emerald-400 to-emerald-500 glow-emerald metallic-sheen"
+              className="text-3xl md:text-5xl font-bold mb-8 font-['Orbitron'] text-white metallic-sheen"
               data-text={title}
             >
               {title}

@@ -8,6 +8,7 @@ import { ScrollReveal } from "./ScrollReveal";
 export function LiveSoundAnalysis({ className }: { className?: string }) {
   const t = useTranslations('LiveSoundAnalysis');
   const title = t('title');
+  const titlePlain = title.replace(/<[^>]+>/g, "");
 
   // State for animations
   const [spectrumData, setSpectrumData] = useState<number[]>([]);
@@ -72,10 +73,12 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
         {/* Header */}
         <ScrollReveal className="mb-6 text-right" delay={0.05}>
           <h2
-            className="text-3xl md:text-5xl font-bold tracking-tight mb-4 font-['Orbitron'] text-transparent bg-clip-text bg-gradient-to-r from-teal-300 via-teal-400 to-teal-500 glow-teal metallic-sheen"
-            data-text={title}
+            className="text-3xl md:text-5xl font-bold tracking-tight mb-4 font-['Orbitron'] text-white metallic-sheen"
+            data-text={titlePlain}
           >
-            {title}
+            {t.rich('title', {
+              teal: (chunks) => <span className="text-teal-400">{chunks}</span>,
+            })}
           </h2>
           <p className="max-w-3xl text-sm sm:text-base text-slate-400 leading-relaxed ml-auto">
             {t('description')}

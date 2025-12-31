@@ -95,7 +95,7 @@
   },
   "BenefitsSection": {
     "headerBadge": "Piroola AI Engine v2.0",
-    "headerTitle": "Revoluciona tu sonido",
+    "headerTitle": "Revoluciona tu <burgundy>sonido</burgundy>",
     "headerDesc": "La suite de masterización inteligente que transforma maquetas caseras en <highlight>éxitos comerciales</highlight> en segundos.",
     "efficiencyBadge": "Eficiencia IA",
     "manual": "MANUAL",
@@ -132,7 +132,7 @@
   },
   "LiveSoundAnalysis": {
     "label": "Motor de Análisis en Vivo",
-    "title": "Motor de Análisis en Vivo",
+    "title": "Motor de Análisis <teal>en Vivo</teal>",
     "description": "Deja de adivinar. Piroola proporciona métricas de precisión quirúrgica para asegurar que tu mezcla cumpla con los estándares de streaming (Spotify, Apple Music) y transmisión.",
     "spectrum": {
       "title": "Espectro de Frecuencia",
@@ -159,7 +159,7 @@
   },
   "PipelineInteractiveDiagram": {
     "label": "Flujo de Trabajo de Ingenier\u00eda de Audio",
-    "title": "Pipeline de Audio",
+    "title": "Pipeline de <violet>Audio</violet>",
     "description": "Explora interactivamente cada etapa del proceso de producci\u00f3n, desde el <highlight>An\u00e1lisis</highlight> hasta la <highlight>Masterizaci\u00f3n</highlight>.",
     "keyTools": "Herramientas Clave",
     "proTip": "Consejo Pro",

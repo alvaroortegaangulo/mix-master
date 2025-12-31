@@ -27,7 +27,7 @@ import {
   LightBulbIcon
 } from '@heroicons/react/24/outline';
 
-type PipelineColor = 'cyan' | 'blue' | 'indigo' | 'violet' | 'fuchsia';
+type PipelineColor = 'violet';
 
 type PipelineTool = {
   name: string;
@@ -66,90 +66,22 @@ const colorStyles: Record<
     shadow: string;
   }
 > = {
-  cyan: {
-    text: 'text-cyan-400',
-    textSoft: 'text-cyan-300',
-    border: 'border-cyan-500',
-    borderSoft: 'border-cyan-500/30',
-    ringBorder: 'border-cyan-500/50',
-    ringBg: 'bg-cyan-500/10',
-    hoverBorder: 'hover:border-cyan-500/50',
-    hoverBg: 'hover:bg-cyan-900/40',
-    hoverText: 'group-hover:text-cyan-400',
-    toolHoverText: 'group-hover/tool:text-cyan-400',
-    toolHoverBorder: 'hover:border-cyan-500/50',
-    toolHoverBg: 'hover:bg-cyan-900/40',
-    gradientFrom: 'from-cyan-900/20',
-    particle: '#22d3ee',
-    shadow: 'rgba(34, 211, 238, 0.25)',
-  },
-  blue: {
-    text: 'text-blue-400',
-    textSoft: 'text-blue-300',
-    border: 'border-blue-500',
-    borderSoft: 'border-blue-500/30',
-    ringBorder: 'border-blue-500/50',
-    ringBg: 'bg-blue-500/10',
-    hoverBorder: 'hover:border-blue-500/50',
-    hoverBg: 'hover:bg-blue-900/40',
-    hoverText: 'group-hover:text-blue-400',
-    toolHoverText: 'group-hover/tool:text-blue-400',
-    toolHoverBorder: 'hover:border-blue-500/50',
-    toolHoverBg: 'hover:bg-blue-900/40',
-    gradientFrom: 'from-blue-900/20',
-    particle: '#ffffff',
-    shadow: 'rgba(96, 165, 250, 0.25)',
-  },
-  indigo: {
-    text: 'text-indigo-400',
-    textSoft: 'text-indigo-300',
-    border: 'border-indigo-500',
-    borderSoft: 'border-indigo-500/30',
-    ringBorder: 'border-indigo-500/50',
-    ringBg: 'bg-indigo-500/10',
-    hoverBorder: 'hover:border-indigo-500/50',
-    hoverBg: 'hover:bg-indigo-900/40',
-    hoverText: 'group-hover:text-indigo-400',
-    toolHoverText: 'group-hover/tool:text-indigo-400',
-    toolHoverBorder: 'hover:border-indigo-500/50',
-    toolHoverBg: 'hover:bg-indigo-900/40',
-    gradientFrom: 'from-indigo-900/20',
-    particle: '#ffffff',
-    shadow: 'rgba(129, 140, 248, 0.25)',
-  },
   violet: {
     text: 'text-violet-400',
-    textSoft: 'text-violet-300',
+    textSoft: 'text-amber-300',
     border: 'border-violet-500',
     borderSoft: 'border-violet-500/30',
     ringBorder: 'border-violet-500/50',
     ringBg: 'bg-violet-500/10',
-    hoverBorder: 'hover:border-violet-500/50',
+    hoverBorder: 'hover:border-amber-400/50',
     hoverBg: 'hover:bg-violet-900/40',
-    hoverText: 'group-hover:text-violet-400',
-    toolHoverText: 'group-hover/tool:text-violet-400',
-    toolHoverBorder: 'hover:border-violet-500/50',
-    toolHoverBg: 'hover:bg-violet-900/40',
-    gradientFrom: 'from-violet-900/20',
-    particle: '#ffffff',
-    shadow: 'rgba(167, 139, 250, 0.25)',
-  },
-  fuchsia: {
-    text: 'text-fuchsia-400',
-    textSoft: 'text-fuchsia-300',
-    border: 'border-fuchsia-500',
-    borderSoft: 'border-fuchsia-500/30',
-    ringBorder: 'border-fuchsia-500/50',
-    ringBg: 'bg-fuchsia-500/10',
-    hoverBorder: 'hover:border-fuchsia-500/50',
-    hoverBg: 'hover:bg-fuchsia-900/40',
-    hoverText: 'group-hover:text-fuchsia-400',
-    toolHoverText: 'group-hover/tool:text-fuchsia-400',
-    toolHoverBorder: 'hover:border-fuchsia-500/50',
-    toolHoverBg: 'hover:bg-fuchsia-900/40',
-    gradientFrom: 'from-fuchsia-900/20',
-    particle: '#e879f9',
-    shadow: 'rgba(232, 121, 249, 0.25)',
+    hoverText: 'group-hover:text-amber-300',
+    toolHoverText: 'group-hover/tool:text-amber-300',
+    toolHoverBorder: 'hover:border-amber-400/50',
+    toolHoverBg: 'hover:bg-amber-500/10',
+    gradientFrom: 'from-violet-900/25',
+    particle: '#fbbf24',
+    shadow: 'rgba(167, 139, 250, 0.3)',
   },
 };
 
@@ -176,6 +108,7 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
   const activePanelRef = useRef<HTMLButtonElement | null>(null);
   const t = useTranslations('PipelineInteractiveDiagram');
   const title = t('title');
+  const titlePlain = title.replace(/<[^>]+>/g, "");
 
   const steps = useMemo<PipelineStep[]>(
     () => [
@@ -191,7 +124,7 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
         ],
         proTip: t('steps.0.tip'),
         icon: PresentationChartLineIcon,
-        color: 'cyan',
+        color: 'violet',
         bgImage: '/analysis.webp',
       },
       {
@@ -206,7 +139,7 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
         ],
         proTip: t('steps.1.tip'),
         icon: WrenchScrewdriverIcon,
-        color: 'blue',
+        color: 'violet',
         bgImage: '/correction.webp',
       },
       {
@@ -221,7 +154,7 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
         ],
         proTip: t('steps.2.tip'),
         icon: ArrowsPointingInIcon,
-        color: 'indigo',
+        color: 'violet',
         bgImage: '/dynamics.webp',
       },
       {
@@ -251,7 +184,7 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
         ],
         proTip: t('steps.4.tip'),
         icon: CheckBadgeIcon,
-        color: 'fuchsia',
+        color: 'violet',
         bgImage: '/mastering.webp',
       },
     ],
@@ -284,7 +217,7 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
 
   return (
     <section
-      className={`relative min-h-[400px] flex flex-col items-center justify-center px-2 lg:px-4 py-10 md:py-14 lg:py-16 2xl:py-20 selection:bg-cyan-500 selection:text-white overflow-hidden ${className || 'bg-[#050508]'}`}
+      className={`relative min-h-[400px] flex flex-col items-center justify-center px-2 lg:px-4 py-10 md:py-14 lg:py-16 2xl:py-20 selection:bg-violet-500 selection:text-white overflow-hidden ${className || 'bg-[#050508]'}`}
     >
       <div className="absolute inset-0 pointer-events-none z-0">
         <div className="absolute inset-0 pipeline-wallpaper" />
@@ -295,14 +228,16 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
         <ScrollReveal delay={0.05}>
           <header className="text-left mb-6 lg:mb-8 relative z-10 max-w-3xl">
             <h2
-              className="text-3xl md:text-5xl font-black font-['Orbitron'] tracking-wide mb-4 bg-clip-text text-transparent bg-gradient-to-r from-violet-300 via-violet-400 to-violet-600 glow-violet metallic-sheen"
-              data-text={title}
+              className="text-3xl md:text-5xl font-black font-['Orbitron'] tracking-wide mb-4 text-white glow-violet metallic-sheen"
+              data-text={titlePlain}
             >
-              {title}
+              {t.rich('title', {
+                violet: (chunks) => <span className="text-violet-400">{chunks}</span>,
+              })}
             </h2>
             <p className="text-slate-400 text-sm sm:text-base font-light leading-relaxed">
               {t.rich('description', {
-                highlight: (chunks) => <span className="text-violet-400 font-bold">{chunks}</span>,
+                highlight: (chunks) => <span className="text-amber-400 font-bold">{chunks}</span>,
               })}
             </p>
           </header>
@@ -358,12 +293,12 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
 
                   <div className="relative p-2 lg:p-3 flex flex-col gap-[1cm] z-10">
                     {!isActive ? (
-                      <div className="h-full flex flex-col items-center pt-3">
-                        <step.icon className={`w-6 h-6 lg:w-8 lg:h-8 ${colors.text} group-hover:scale-125 transition-transform duration-300 drop-shadow-lg`} />
-                        <div className="flex-1 flex items-center justify-center">
-                          <h3 className="vertical-text text-[10px] lg:text-sm font-bold tracking-widest text-slate-400 group-hover:text-white transition-colors font-['Orbitron'] uppercase">
-                            {step.title}
-                          </h3>
+                    <div className="h-full flex flex-col items-center pt-4">
+                      <step.icon className={`w-6 h-6 lg:w-8 lg:h-8 ${colors.text} group-hover:scale-125 transition-transform duration-300 drop-shadow-lg mb-4`} />
+                      <div className="flex-1 flex items-center justify-center">
+                        <h3 className="vertical-text text-[10px] lg:text-sm font-bold tracking-widest text-slate-400 group-hover:text-white transition-colors font-['Orbitron'] uppercase">
+                          {step.title}
+                        </h3>
                         </div>
                       </div>
                     ) : (

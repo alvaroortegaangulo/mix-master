@@ -38,9 +38,9 @@ const drawEqualizerBars = (
     const barHeight = Math.max(minHeight, minHeight + mix * maxHeight);
     const x = i * (barWidth + gap);
     const y = baseY - barHeight;
-    const hue = 190 + (i / (barCount - 1)) * 70;
-    const saturation = 70;
-    const lightness = 60;
+  const hue = 345 + (i / (barCount - 1)) * 12;
+  const saturation = 68;
+  const lightness = 56;
     const alpha = modeAlpha * (0.6 + 0.4 * Math.sin(t + i * 0.2));
 
     ctx.shadowColor = `hsla(${hue}, ${saturation}%, ${lightness}%, ${modeAlpha})`;
@@ -84,18 +84,18 @@ const drawSpectrumFlow = (
     const heightFactor = Math.min(1, Math.max(0.05, (0.12 + envelope * 0.95) * mix * pulse));
     const barHeight = minHeight + heightFactor * maxHeight;
     const x = i * (barWidth + gap);
-    const hue = 300 + (i / (barCount - 1)) * 40;
+  const hue = 150 + (i / (barCount - 1)) * 20;
     const gradient = ctx.createLinearGradient(0, baseY - barHeight, 0, baseY);
-    gradient.addColorStop(0, `hsla(${hue + 12}, 88%, 74%, 0.95)`);
-    gradient.addColorStop(0.55, `hsla(${hue - 4}, 85%, 58%, 0.6)`);
-    gradient.addColorStop(1, `hsla(${hue - 18}, 90%, 42%, 0.2)`);
+    gradient.addColorStop(0, `hsla(${hue + 10}, 82%, 70%, 0.95)`);
+    gradient.addColorStop(0.55, `hsla(${hue - 6}, 78%, 52%, 0.65)`);
+    gradient.addColorStop(1, `hsla(${hue - 18}, 82%, 38%, 0.2)`);
 
-    ctx.shadowColor = `hsla(${hue}, 92%, 62%, 0.6)`;
+    ctx.shadowColor = `hsla(${hue}, 82%, 55%, 0.6)`;
     ctx.fillStyle = gradient;
     ctx.fillRect(x, baseY - barHeight, barWidth, barHeight);
 
     const highlightHeight = Math.max(1, barHeight * 0.08);
-    ctx.fillStyle = `hsla(${hue + 16}, 92%, 80%, 0.75)`;
+    ctx.fillStyle = `hsla(${hue + 16}, 85%, 78%, 0.75)`;
     ctx.fillRect(x, baseY - barHeight, barWidth, highlightHeight);
   }
 
@@ -110,6 +110,7 @@ type BenefitsSectionProps = {
 export function BenefitsSection({ className }: BenefitsSectionProps) {
   const t = useTranslations('BenefitsSection');
   const headerTitle = t('headerTitle');
+  const headerTitlePlain = headerTitle.replace(/<[^>]+>/g, "");
   const [isManual, setIsManual] = useState(true);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const requestRef = useRef<number>(0);
@@ -162,10 +163,16 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
             {/* Header */}
             <ScrollReveal className="text-right" delay={0.05}>
                 <h2
-                    className="text-3xl md:text-5xl font-bold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-rose-300 via-rose-400 to-rose-600 mb-4 font-['Orbitron'] glow-burgundy metallic-sheen"
-                    data-text={headerTitle}
+                    className="text-3xl md:text-5xl font-bold tracking-tight text-white mb-4 font-['Orbitron'] metallic-sheen"
+                    data-text={headerTitlePlain}
                 >
-                    {headerTitle}
+                    {t.rich('headerTitle', {
+                      burgundy: (chunks) => (
+                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-rose-400 via-rose-500 to-rose-600 font-bold glow-burgundy">
+                          {chunks}
+                        </span>
+                      ),
+                    })}
                 </h2>
                 <p className="text-slate-400 text-sm sm:text-base max-w-2xl ml-auto font-light">
                     {t.rich('headerDesc', {
@@ -194,10 +201,10 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
                                 onClick={toggleAI}
                                 className="flex items-center space-x-2 bg-slate-900/50 hover:bg-slate-800 border border-slate-700 rounded-full p-1 pl-3 transition-all duration-300 cursor-pointer"
                             >
-                                <span className={`text-[11px] font-semibold uppercase tracking-wider transition-colors duration-300 ${isManual ? 'text-slate-400' : 'text-cyan-400'}`}>
+                                <span className={`text-[11px] font-semibold uppercase tracking-wider transition-colors duration-300 ${isManual ? 'text-slate-400' : 'text-emerald-400'}`}>
                                     {isManual ? t('manual') : 'AUTO'}
                                 </span>
-                                <div className={`w-9 h-5 rounded-full relative transition-colors duration-300 ${isManual ? 'bg-slate-700' : 'bg-cyan-500'}`}>
+                                <div className={`w-9 h-5 rounded-full relative transition-colors duration-300 ${isManual ? 'bg-slate-700' : 'bg-emerald-500'}`}>
                                     <div className={`absolute top-0.5 w-3.5 h-3.5 bg-white rounded-full shadow-lg transform transition-transform duration-300 ${isManual ? 'left-1' : 'translate-x-4 left-0'}`}></div>
                                 </div>
                             </button>
@@ -217,7 +224,7 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
                                   </span>
                                 ),
                                 highlight: (chunks) => (
-                                  <span className={`text-transparent bg-clip-text bg-gradient-to-r from-violet-400 to-cyan-400 transition-all duration-500 ${!isManual ? 'opacity-100 blur-0' : 'opacity-50 blur-[1px]'}`}>
+                                  <span className={`text-transparent bg-clip-text bg-gradient-to-r from-rose-400 via-rose-500 to-emerald-400 transition-all duration-500 ${!isManual ? 'opacity-100 blur-0' : 'opacity-50 blur-[1px]'}`}>
                                     {chunks}
                                   </span>
                                 ),
@@ -252,7 +259,7 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
                     <div className="absolute inset-0 bg-slate-950/30 group-hover:bg-slate-950/80 transition-colors duration-500 z-10"></div>
 
                     {/* Scan Animation Line */}
-                    <div className="absolute top-0 left-0 w-full h-[2px] bg-cyan-500 shadow-[0_0_15px_#06b6d4] z-20 animate-[scan_3s_ease-in-out_infinite] opacity-0 group-hover:opacity-100"></div>
+                    <div className="absolute top-0 left-0 w-full h-[2px] bg-emerald-400 shadow-[0_0_15px_rgba(52,211,153,0.75)] z-20 animate-[scan_3s_ease-in-out_infinite] opacity-0 group-hover:opacity-100"></div>
                     <style jsx>{`
                         @keyframes scan {
                             0% { top: 0%; opacity: 0; }
@@ -265,9 +272,9 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
                     <div className="absolute bottom-0 left-0 p-6 z-30 translate-y-3 group-hover:translate-y-0 transition-transform duration-500">
                         <h3 className="text-xl md:text-2xl font-bold text-white mb-2 font-['Orbitron']">{t('deepAnalysisTitle')}</h3>
                         <ul className="space-y-1.5 text-xs md:text-sm text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity duration-500 delay-100">
-                            <li className="flex items-center"><CheckCircleIcon className="w-4 h-4 text-cyan-400 mr-2" /> {t('deepAnalysisPoints.0')}</li>
-                            <li className="flex items-center"><CheckCircleIcon className="w-4 h-4 text-cyan-400 mr-2" /> {t('deepAnalysisPoints.1')}</li>
-                            <li className="flex items-center"><CheckCircleIcon className="w-4 h-4 text-cyan-400 mr-2" /> {t('deepAnalysisPoints.2')}</li>
+                            <li className="flex items-center"><CheckCircleIcon className="w-4 h-4 text-emerald-400 mr-2" /> {t('deepAnalysisPoints.0')}</li>
+                            <li className="flex items-center"><CheckCircleIcon className="w-4 h-4 text-emerald-400 mr-2" /> {t('deepAnalysisPoints.1')}</li>
+                            <li className="flex items-center"><CheckCircleIcon className="w-4 h-4 text-emerald-400 mr-2" /> {t('deepAnalysisPoints.2')}</li>
                         </ul>
                     </div>
                 </ScrollReveal>
@@ -284,7 +291,7 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent z-10"></div>
                     <div className="relative z-20">
-                        <div className="inline-flex items-center px-2 py-0.5 rounded bg-amber-500/20 border border-amber-500/30 text-amber-500 text-[10px] font-bold uppercase tracking-wider mb-1.5">
+                        <div className="inline-flex items-center px-2 py-0.5 rounded bg-rose-500/20 border border-rose-500/30 text-rose-300 text-[10px] font-bold uppercase tracking-wider mb-1.5">
                             {t('qualityBadge')}
                         </div>
                         <h3 className="text-lg font-bold text-white font-['Orbitron']">{t('qualityTitle')}</h3>
@@ -298,27 +305,27 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
                     delay={0.25}
                 >
                     <h3 className="text-base font-bold text-white mb-2 flex items-center font-['Orbitron']">
-                        <AdjustmentsVerticalIcon className="w-3.5 h-3.5 mr-2 text-violet-400" />
+                        <AdjustmentsVerticalIcon className="w-3.5 h-3.5 mr-2 text-emerald-400" />
                         {t('toolkitTitle')}
                     </h3>
                     <div className="space-y-1 custom-scrollbar overflow-y-hidden max-h-[120px] pr-1">
                         {/* Feature Item */}
                         <div className="group flex items-center gap-2 p-1 rounded-lg hover:bg-white/5 transition-colors cursor-default">
-                            <div className="w-6 h-6 rounded-full bg-violet-500/20 flex items-center justify-center shrink-0 group-hover:bg-violet-500 group-hover:text-white transition-colors text-violet-400">
+                            <div className="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0 group-hover:bg-emerald-500 group-hover:text-white transition-colors text-emerald-400">
                                 <ArrowsRightLeftIcon className="w-3 h-3" />
                             </div>
                             <h4 className="text-xs font-semibold text-slate-200">{t('toolkitItems.0.title')}</h4>
                         </div>
                         {/* Feature Item */}
                         <div className="group flex items-center gap-2 p-1 rounded-lg hover:bg-white/5 transition-colors cursor-default">
-                            <div className="w-6 h-6 rounded-full bg-violet-500/20 flex items-center justify-center shrink-0 group-hover:bg-violet-500 group-hover:text-white transition-colors text-violet-400">
+                            <div className="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0 group-hover:bg-emerald-500 group-hover:text-white transition-colors text-emerald-400">
                                 <AdjustmentsVerticalIcon className="w-3 h-3" />
                             </div>
                             <h4 className="text-xs font-semibold text-slate-200">{t('toolkitItems.1.title')}</h4>
                         </div>
                         {/* Feature Item */}
                         <div className="group flex items-center gap-2 p-1 rounded-lg hover:bg-white/5 transition-colors cursor-default">
-                            <div className="w-6 h-6 rounded-full bg-violet-500/20 flex items-center justify-center shrink-0 group-hover:bg-violet-500 group-hover:text-white transition-colors text-violet-400">
+                            <div className="w-6 h-6 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0 group-hover:bg-emerald-500 group-hover:text-white transition-colors text-emerald-400">
                                 <SpeakerWaveIcon className="w-3 h-3" />
                             </div>
                             <h4 className="text-xs font-semibold text-slate-200">{t('toolkitItems.2.title')}</h4>
@@ -332,7 +339,7 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
                     delay={0.3}
                 >
                     {/* Abstract BG */}
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-violet-500/10 rounded-full blur-3xl -mr-10 -mt-10"></div>
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-rose-500/10 rounded-full blur-3xl -mr-10 -mt-10"></div>
 
                     <h3 className="text-base font-bold text-white mb-1.5 relative z-10 font-['Orbitron']">{t('readyForWorldTitle')}</h3>
                     <p className="text-xs text-slate-400 mb-3 relative z-10">{t('readyForWorldDesc')}</p>
