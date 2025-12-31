@@ -293,14 +293,12 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
 
                   <div className="relative p-2 lg:p-3 flex flex-col gap-[1cm] z-10">
                     {!isActive ? (
-                    <div className="h-full flex flex-col items-center pt-4">
-                      <step.icon className={`w-6 h-6 lg:w-8 lg:h-8 ${colors.text} group-hover:scale-125 transition-transform duration-300 drop-shadow-lg mb-4`} />
-                      <div className="flex-1 flex items-center justify-center">
-                        <h3 className="vertical-text text-[10px] lg:text-sm font-bold tracking-widest text-slate-400 group-hover:text-white transition-colors font-['Orbitron'] uppercase">
-                          {step.title}
-                        </h3>
-                        </div>
-                      </div>
+                    <div className="h-full grid grid-rows-[auto,1fr] place-items-center pt-4 pb-4">
+                      <step.icon className={`w-6 h-6 lg:w-8 lg:h-8 ${colors.text} group-hover:scale-125 transition-transform duration-300 drop-shadow-lg`} />
+                      <h3 className="vertical-text text-[10px] lg:text-sm font-bold tracking-widest text-slate-400 group-hover:text-white transition-colors font-['Orbitron'] uppercase">
+                        {step.title}
+                      </h3>
+                    </div>
                     ) : (
                       <>
                         <div className="flex items-center justify-start gap-2 text-left animate-fade-in">
