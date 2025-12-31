@@ -149,13 +149,15 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
     <section id="benefits" className={`py-10 md:py-14 lg:py-16 2xl:py-20 relative overflow-hidden ${className || 'bg-slate-950'}`}>
         {/* Background Elements */}
         <div className="absolute inset-0 pointer-events-none z-0">
-            <div className="absolute inset-0 benefits-burgundy-base" />
-            <div className="absolute inset-0 benefits-burgundy-grid" />
-            <div className="absolute inset-0 benefits-burgundy-pipes" />
-            <div className="absolute inset-0 benefits-burgundy-lines" />
-            <div className="absolute inset-0 benefits-burgundy-vignette" />
-            <div className="absolute -top-[20%] right-[-15%] h-[48%] w-[48%] rounded-full benefits-burgundy-glow" />
-            <div className="absolute bottom-[-25%] left-[-10%] h-[55%] w-[55%] rounded-full benefits-burgundy-glow-soft" />
+            <div className="absolute -inset-6 blur-[6px] scale-[1.02]">
+              <div className="absolute inset-0 benefits-burgundy-base" />
+              <div className="absolute inset-0 benefits-burgundy-grid" />
+              <div className="absolute inset-0 benefits-burgundy-pipes" />
+              <div className="absolute inset-0 benefits-burgundy-lines" />
+              <div className="absolute inset-0 benefits-burgundy-vignette" />
+              <div className="absolute -top-[20%] right-[-15%] h-[48%] w-[48%] rounded-full benefits-burgundy-glow" />
+              <div className="absolute bottom-[-25%] left-[-10%] h-[55%] w-[55%] rounded-full benefits-burgundy-glow-soft" />
+            </div>
         </div>
 
             <div className="relative z-10 max-w-7xl w-full mx-auto space-y-6 px-4 sm:px-6 lg:px-8">
@@ -163,7 +165,7 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
             {/* Header */}
             <ScrollReveal className="text-right" delay={0.05}>
                 <h2
-                    className="text-3xl md:text-5xl font-bold tracking-tight text-white mb-4 font-['Orbitron'] metallic-sheen"
+                    className="text-3xl md:text-5xl font-bold tracking-tight text-white mb-4 font-['Orbitron'] glow-burgundy metallic-sheen"
                     data-text={headerTitlePlain}
                 >
                     {t.rich('headerTitle', {

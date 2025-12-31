@@ -73,7 +73,7 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
         {/* Header */}
         <ScrollReveal className="mb-6 text-right" delay={0.05}>
           <h2
-            className="text-3xl md:text-5xl font-bold tracking-tight mb-4 font-['Orbitron'] text-white metallic-sheen"
+            className="text-3xl md:text-5xl font-bold tracking-tight mb-4 font-['Orbitron'] text-white glow-teal metallic-sheen"
             data-text={titlePlain}
           >
             {t.rich('title', {

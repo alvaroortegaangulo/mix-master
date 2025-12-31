@@ -133,7 +133,7 @@ export function FeaturesSection({ className }: { className?: string }) {
         {/* Header */}
         <ScrollReveal className="text-left mb-8 max-w-3xl" delay={0.05}>
           <h2
-            className="text-3xl md:text-5xl font-black font-['Orbitron'] tracking-wide mb-4 metallic-sheen"
+            className="text-3xl md:text-5xl font-black font-['Orbitron'] tracking-wide mb-4 glow-amber metallic-sheen"
             data-text={titlePlain}
           >
             {t.rich("title", {
