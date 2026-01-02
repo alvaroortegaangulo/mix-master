@@ -51,7 +51,7 @@ from jose import JWTError, jwt
 from tasks import run_full_pipeline_task
 from src.database import engine, Base, SessionLocal
 from src.routers import auth
-from src.routers.auth import get_current_user, get_current_user_optional
+from src.routers.auth import get_current_user_optional
 from src.models.user import User
 from src.utils.job_store import (
     PROGRESS_REDIS_URL,
@@ -1595,7 +1595,7 @@ def get_job_stems(
 async def download_stems_zip(
     job_id: str,
     _: None = Depends(_guard_heavy_endpoint),
-    current_user: User = Depends(get_current_user),
+    current_user: Optional[User] = Depends(get_current_user_optional),
 ):
     """
     Zips current stems and returns file.
@@ -1645,7 +1645,7 @@ async def download_stems_zip(
 async def download_mixdown_endpoint(
     job_id: str,
     _: None = Depends(_guard_heavy_endpoint),
-    current_user: User = Depends(get_current_user),
+    current_user: Optional[User] = Depends(get_current_user_optional),
 ):
     """
     Runs mixdown_stems and downloads the result.
@@ -1721,7 +1721,7 @@ async def post_job_correction(
     job_id: str,
     payload: Dict[str, Any],
     _: None = Depends(_guard_heavy_endpoint),
-    current_user: User = Depends(get_current_user),
+    current_user: Optional[User] = Depends(get_current_user_optional),
 ):
     """
     Recibe parametros de correccion manual y los guarda en work/manual_corrections.json
@@ -1917,7 +1917,7 @@ def get_job_status(
     request: Request,
     response: Response,
     _: None = Depends(_guard_heavy_endpoint),
-    current_user: User = Depends(get_current_user),
+    current_user: Optional[User] = Depends(get_current_user_optional),
 ) -> Dict[str, Any]:
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
     data = _assert_job_owner(job_id, current_user)
@@ -2111,7 +2111,7 @@ async def sign_job_file_generic(
 async def create_share_link(
     job_id: str,
     _: None = Depends(_guard_heavy_endpoint),
-    current_user: User = Depends(get_current_user),
+    current_user: Optional[User] = Depends(get_current_user_optional),
 ):
     """
     Generates a unique share token for the job.
