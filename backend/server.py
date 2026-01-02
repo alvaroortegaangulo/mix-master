@@ -51,7 +51,7 @@ from jose import JWTError, jwt
 from tasks import run_full_pipeline_task
 from src.database import engine, Base, SessionLocal
 from src.routers import auth
-from src.routers.auth import get_current_user
+from src.routers.auth import get_current_user, get_current_user_optional
 from src.models.user import User
 from src.utils.job_store import (
     PROGRESS_REDIS_URL,
@@ -360,9 +360,9 @@ def _load_job_status_from_fs(job_id: str) -> Optional[Dict[str, Any]]:
         return None
 
 
-def _assert_job_owner(job_id: str, current_user: User) -> Dict[str, Any]:
+def _assert_job_owner(job_id: str, current_user: Optional[User]) -> Dict[str, Any]:
     """
-    Valida que el job pertenezca al usuario actual. Si no hay owner, lo asigna.
+    Valida que el job pertenezca al usuario actual. Si no hay owner y hay usuario, lo asigna.
     """
     data = _load_job_status_from_fs(job_id)
     job_root = JOBS_ROOT / job_id
@@ -372,7 +372,7 @@ def _assert_job_owner(job_id: str, current_user: User) -> Dict[str, Any]:
         status = {
             "jobId": job_id,
             "job_id": job_id,
-            "owner_email": current_user.email,
+            "owner_email": current_user.email if current_user else None,
             "status": "pending",
             "stage_index": 0,
             "total_stages": 0,
@@ -385,10 +385,12 @@ def _assert_job_owner(job_id: str, current_user: User) -> Dict[str, Any]:
         return status
 
     owner = data.get("owner_email")
-    if owner and owner != current_user.email:
-        raise HTTPException(status_code=403, detail="Job does not belong to current user")
+    if owner:
+        if not current_user or owner != current_user.email:
+            raise HTTPException(status_code=403, detail="Job does not belong to current user")
+        return data
 
-    if not owner:
+    if current_user:
         # Asignar propietario y persistir
         data["owner_email"] = current_user.email
         try:
@@ -678,7 +680,9 @@ def _build_signed_url(request: Request, job_id: str, relative_path: str, expires
 
 
 async def _guard_heavy_endpoint(
-    request: Request, api_key: Optional[str] = Header(None, alias="X-API-Key")
+    request: Request,
+    api_key: Optional[str] = Header(None, alias="X-API-Key"),
+    current_user: Optional[User] = Depends(get_current_user_optional),
 ) -> None:
     # Si llega un Bearer token, asumimos que el endpoint validar‡ JWT v’a get_current_user;
     # en ese caso no exigimos API key aqu’ para no bloquear tras login.
@@ -686,7 +690,7 @@ async def _guard_heavy_endpoint(
     is_bearer = auth_header.lower().startswith("bearer ")
 
     key = _extract_api_key(request, api_key)
-    if not is_bearer:
+    if not current_user:
         _require_api_key(key)
 
     # No apliques rate limit al polling de estado (GET /jobs/{job_id})
@@ -968,7 +972,7 @@ async def mix_tracks(
     space_depth_bus_styles_json: Optional[str] = Form(None),
     upload_mode: str = Form("song"),
     _: None = Depends(_guard_heavy_endpoint),
-    current_user: User = Depends(get_current_user),
+    current_user: Optional[User] = Depends(get_current_user_optional),
 ):
     """
     Endpoint clásico: un solo POST con todos los WAV.
@@ -992,7 +996,11 @@ async def mix_tracks(
         temp_root,
     )
 
-    _write_initial_job_status(job_id, temp_root, owner_email=current_user.email)
+    _write_initial_job_status(
+        job_id,
+        temp_root,
+        owner_email=current_user.email if current_user else None,
+    )
 
     job_root = temp_root
     work_dir = job_root / "work"
@@ -1171,7 +1179,7 @@ async def init_mix_job(
     space_depth_bus_styles_json: Optional[str] = Form(None),
     upload_mode: str = Form("song"),
     _: None = Depends(_guard_heavy_endpoint),
-    current_user: User = Depends(get_current_user),
+    current_user: Optional[User] = Depends(get_current_user_optional),
 ):
     """
     Inicializa un job SIN subir todavía los WAV.
@@ -1196,7 +1204,11 @@ async def init_mix_job(
         temp_root,
     )
 
-    _write_initial_job_status(job_id, temp_root, owner_email=current_user.email)
+    _write_initial_job_status(
+        job_id,
+        temp_root,
+        owner_email=current_user.email if current_user else None,
+    )
 
     job_root = temp_root
     work_dir = job_root / "work"
@@ -1312,7 +1324,7 @@ async def upload_file_for_job(
     job_id: str,
     file: UploadFile = File(...),
     _: None = Depends(_guard_heavy_endpoint),
-    current_user: User = Depends(get_current_user),
+    current_user: Optional[User] = Depends(get_current_user_optional),
 ):
     """
     Recibe un archivo para un job existente.
@@ -1348,7 +1360,7 @@ async def start_mix_job_endpoint(
     job_id: str,
     payload: Optional[Dict[str, Any]] = Body(None),
     _: None = Depends(_guard_heavy_endpoint),
-    current_user: User = Depends(get_current_user),
+    current_user: Optional[User] = Depends(get_current_user_optional),
 ):
     """
     Lanza la tarea Celery para un job ya inicializado y con WAVs subidos.
@@ -1500,7 +1512,7 @@ def get_job_stems(
     job_id: str,
     request: Request,
     _: None = Depends(_guard_heavy_endpoint),
-    current_user: User = Depends(get_current_user),
+    current_user: Optional[User] = Depends(get_current_user_optional),
 ) -> Dict[str, Any]:
     """
     Devuelve stems con URL firmada + preview + peaks, priorizando S6_MANUAL_CORRECTION.
