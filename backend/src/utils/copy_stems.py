@@ -52,13 +52,22 @@ def process(context: PipelineContext, *args) -> bool:
     audio_exts = {".wav", ".aif", ".aiff", ".flac", ".mp3", ".m4a", ".ogg", ".aac"}
     count = 0
     for audio_path in src_dir.glob("*"):
+        if not audio_path.is_file():
+            continue
         if audio_path.suffix.lower() not in audio_exts:
             continue
-        # No copiar el mixdown
+        # No copiar el mixdown dentro del loop de stems (se copia aparte)
         if audio_path.name.lower() == "full_song.wav":
             continue
         shutil.copy2(audio_path, dst_dir / audio_path.name)
         count += 1
+
+    full_song_src = src_dir / "full_song.wav"
+    if full_song_src.exists():
+        shutil.copy2(full_song_src, dst_dir / full_song_src.name)
+        logger.logger.info(
+            f"[copy_stems] Copiado full_song.wav de {src_stage_id} a {dst_stage_id}"
+        )
 
     # Copiar session_config.json si existe
     config_src = src_dir / "session_config.json"

@@ -296,9 +296,7 @@ def run_stage(stage_id: str, context: Optional[PipelineContext] = None) -> None:
     logger.print_header(f"Running stage: {stage_id}", color="\033[34m")
     stage_start = time.perf_counter()
 
-    # Pre-Mixdown (Legacy args: stage_id)
-    if stage_id in MIXDOWN_STAGES:
-        _run_script(mixdown_script, context, stage_id)
+    # Mixbus/master stages expect full_song.wav to be chained from the previous stage.
 
     # 1) Análisis previo (Legacy args: stage_id)
     _run_script(analysis_script, context, stage_id)

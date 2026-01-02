@@ -315,10 +315,6 @@
         "title": "Accordage vocal",
         "description": "Accorde la voix principale tout en respectant la tonalité détectée."
       },
-      "S1_MIXBUS_HEADROOM": {
-        "title": "Headroom du Mixbus",
-        "description": "Ajuste le headroom global pour laisser de la place au traitement."
-      },
       "S2_GROUP_PHASE_DRUMS": {
         "title": "Alignement de phase (batterie)",
         "description": "Aligne la phase/polarité à travers la batterie et les percussions."
@@ -1192,10 +1188,6 @@
       "S1_VOX_TUNING": {
         "title": "Accordage Vocal",
         "description": "Correction de hauteur appliquée aux voix pour correspondre à la tonalité détectée de {key}."
-      },
-      "S1_MIXBUS_HEADROOM": {
-        "title": "Marge du Mixbus",
-        "description": "Marge du mixbus ajustée à {headroom_db}dB pour préparer le traitement."
       },
       "S1_STEM_WORKING_LOUDNESS": {
         "title": "Intensité de Travail",

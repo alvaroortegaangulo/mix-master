@@ -326,10 +326,6 @@
         "title": "Afinación vocal",
         "description": "Afina la voz principal respetando la tonalidad detectada."
       },
-      "S1_MIXBUS_HEADROOM": {
-        "title": "Headroom del Mixbus",
-        "description": "Ajusta el headroom global para dejar espacio para el procesamiento."
-      },
       "S2_GROUP_PHASE_DRUMS": {
         "title": "Alineación de fase (batería)",
         "description": "Alinea fase/polaridad a través de la batería y percusión."
@@ -1205,10 +1201,6 @@
       "S1_VOX_TUNING": {
         "title": "Afinación Vocal",
         "description": "Se aplicó corrección de tono a las voces para coincidir con el tono detectado de {key}."
-      },
-      "S1_MIXBUS_HEADROOM": {
-        "title": "Headroom del Mixbus",
-        "description": "Headroom del mixbus ajustado a {headroom_db}dB para preparar el procesamiento."
       },
       "S1_STEM_WORKING_LOUDNESS": {
         "title": "Sonoridad de Trabajo",

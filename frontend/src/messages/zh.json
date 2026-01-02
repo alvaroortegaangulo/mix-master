@@ -317,10 +317,6 @@
         "title": "Vocal tuning",
         "description": "Tunes the lead vocal while respecting the detected key."
       },
-      "S1_MIXBUS_HEADROOM": {
-        "title": "Mixbus headroom",
-        "description": "Adjusts global headroom to leave space for processing."
-      },
       "S2_GROUP_PHASE_DRUMS": {
         "title": "Phase alignment (drums)",
         "description": "Aligns phase/polarity across drums and percussion."
@@ -1216,10 +1212,6 @@
       "S1_VOX_TUNING": {
         "title": "Vocal Tuning",
         "description": "Transparent pitch correction applied to vocals to match the detected key of <green>{key}</green>, maintaining natural performance while ensuring perfect tuning."
-      },
-      "S1_MIXBUS_HEADROOM": {
-        "title": "Mixbus Headroom",
-        "description": "Initial mixbus gain structure adjusted to establish <green>{headroom_db}</green>dB safety headroom, providing dynamic space for subsequent processing."
       },
       "S1_STEM_WORKING_LOUDNESS": {
         "title": "Working Loudness",

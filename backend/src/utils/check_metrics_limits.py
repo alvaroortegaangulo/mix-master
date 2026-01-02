@@ -148,43 +148,65 @@ def _check_S1_STEM_DC_OFFSET(analysis: Dict[str, Any]) -> bool:
 
 
 
+from typing import Dict, Any
+from utils.logger import logger
+from utils.profiles_utils import get_instrument_profile
+
+
 def _check_S1_STEM_WORKING_LOUDNESS(analysis: Dict[str, Any]) -> bool:
     """
-    Valida S1_STEM_WORKING_LOUDNESS:
+    Valida S1_STEM_WORKING_LOUDNESS (versión robusta a silencios):
 
-    - Por stem: se comprueba que NO estén por encima del rango de trabajo
-      de su instrument_profile_resolved (con tolerancia).
-      Si están por debajo, solo se registra un aviso.
+    - Por stem:
+        * Se usa active_lufs (fallback integrated_lufs).
+        * Si active_ratio es muy bajo, se omite check de loudness (evita falsos positivos).
+        * Si LUFS > max + tol -> FAIL
+        * Si LUFS < min - tol -> WARN (solo aviso)
+      True-peak: se loguea como WARN si excede target (info).
 
-    - A nivel de mix: de momento solo se loguea el mixbus_peak como info,
-      la validación dura de headroom se delegará a otra etapa.
+    - A nivel de mix:
+        * mixbus_peak se loguea como WARN (info), la validación dura de headroom va en otra etapa.
     """
-    session = analysis.get("session", {})
-    stems = analysis.get("stems", [])
+    session = analysis.get("session", {}) or {}
+    stems = analysis.get("stems", []) or []
 
-    # Targets de sesión definidos en el análisis (se usan como referencia, no hard gate)
-    true_peak_target = session.get("true_peak_per_stem_target_max_dbtp", -3.0)
-    mixbus_peak_target = session.get("mixbus_peak_target_max_dbfs", -6.0)
-    mixbus_peak_measured = session.get("mixbus_peak_dbfs_measured")
+    true_peak_target = float(session.get("true_peak_per_stem_target_max_dbtp", -3.0))
+    mixbus_peak_target = float(session.get("mixbus_peak_target_max_dbfs", -6.0))
+    mixbus_peak_measured = session.get("mixbus_peak_dbfs_measured", None)
 
     ok = True
     lufs_tolerance_db = 1.0
     peak_tolerance_db = 0.1
+    min_active_ratio_to_check = 0.05
 
-    # 1) Validación por stem (solo para evitar que se pasen de rosca)
     for stem in stems:
-        inst_profile_id = stem.get("instrument_profile_resolved") or stem.get("instrument_profile_requested") or "Other"
+        inst_profile_id = (
+            stem.get("instrument_profile_resolved")
+            or stem.get("instrument_profile_requested")
+            or "Other"
+        )
         profile = get_instrument_profile(inst_profile_id)
         lufs_range = profile.get("work_loudness_lufs_range")
 
-        integrated_lufs = stem.get("integrated_lufs")
-        stem_peak = stem.get("true_peak_dbfs")
-        stem_name = stem.get("file_name")
+        # Preferimos active_lufs
+        integrated_lufs = stem.get("active_lufs", None)
+        if integrated_lufs is None or integrated_lufs == float("-inf"):
+            integrated_lufs = stem.get("integrated_lufs", None)
 
-        # 1.a) Loudness de trabajo:
-        #     - si está por encima del máximo + margen, FAIL
-        #     - si está por debajo del mínimo - margen, solo aviso
-        if isinstance(lufs_range, list) and len(lufs_range) == 2 and integrated_lufs is not None:
+        stem_peak = stem.get("true_peak_dbfs", None)
+        stem_name = stem.get("file_name", "unknown")
+
+        activity = stem.get("activity", {}) or {}
+        active_ratio = float(activity.get("active_ratio", 1.0))
+
+        # 1) Loudness check (solo si hay actividad razonable)
+        if (
+            active_ratio >= min_active_ratio_to_check
+            and isinstance(lufs_range, list)
+            and len(lufs_range) == 2
+            and integrated_lufs is not None
+            and integrated_lufs != float("-inf")
+        ):
             target_min, target_max = float(lufs_range[0]), float(lufs_range[1])
             lufs = float(integrated_lufs)
 
@@ -192,22 +214,56 @@ def _check_S1_STEM_WORKING_LOUDNESS(analysis: Dict[str, Any]) -> bool:
             lower_bound = target_min - lufs_tolerance_db
 
             if lufs > upper_bound:
-                logger.print_metric(f"{stem_name} LUFS", lufs, target=f"[{target_min}, {target_max}]", status="FAIL", details=f"Over max limit (+{lufs_tolerance_db} tol)")
+                logger.print_metric(
+                    f"{stem_name} LUFS",
+                    lufs,
+                    target=f"[{target_min}, {target_max}]",
+                    status="FAIL",
+                    details=f"Over max limit (+{lufs_tolerance_db} tol)",
+                )
                 ok = False
             elif lufs < lower_bound:
-                logger.print_metric(f"{stem_name} LUFS", lufs, target=f"[{target_min}, {target_max}]", status="WARN", details=f"Below min limit (-{lufs_tolerance_db} tol)")
+                logger.print_metric(
+                    f"{stem_name} LUFS",
+                    lufs,
+                    target=f"[{target_min}, {target_max}]",
+                    status="WARN",
+                    details=f"Below min limit (-{lufs_tolerance_db} tol)",
+                )
+        else:
+            # Si casi no hay actividad, no juzgamos loudness
+            if active_ratio < min_active_ratio_to_check:
+                logger.print_metric(
+                    f"{stem_name} LUFS (Info)",
+                    float(integrated_lufs) if integrated_lufs not in (None, float("-inf")) else float("nan"),
+                    target="n/a",
+                    status="INFO",
+                    details=f"Skipped loudness check due to low activity (active_ratio={active_ratio:.3f})",
+                )
 
-        # 1.b) True peak solo como info por ahora
-        if stem_peak is not None:
+        # 2) True peak como info
+        if stem_peak is not None and stem_peak != float("-inf"):
             peak = float(stem_peak)
             if peak > true_peak_target + peak_tolerance_db:
-                logger.print_metric(f"{stem_name} Peak (Info)", peak, target=true_peak_target, status="WARN", details="Above target (Info only)")
+                logger.print_metric(
+                    f"{stem_name} Peak (Info)",
+                    peak,
+                    target=true_peak_target,
+                    status="WARN",
+                    details="Above target (Info only)",
+                )
 
-    # 2) Mix preliminar (solo info, validación dura se hará en etapa de headroom/mixbus)
-    if mixbus_peak_measured is not None:
+    # 3) Mix preliminar (info)
+    if mixbus_peak_measured is not None and mixbus_peak_measured != float("-inf"):
         mix_peak = float(mixbus_peak_measured)
         if mix_peak > mixbus_peak_target + peak_tolerance_db:
-            logger.print_metric("Mixbus Peak (Info)", mix_peak, target=mixbus_peak_target, status="WARN", details="Above target (Info only)")
+            logger.print_metric(
+                "Mixbus Peak (Info)",
+                mix_peak,
+                target=mixbus_peak_target,
+                status="WARN",
+                details="Above target (Info only)",
+            )
 
     return ok
 
@@ -273,108 +329,6 @@ def _check_S1_VOX_TUNING(data: Dict[str, Any]) -> bool:
         return True
 
     return ok
-
-
-
-def _check_S1_MIXBUS_HEADROOM(analysis: Dict[str, Any]) -> bool:
-    """
-    Check de QC para S1_MIXBUS_HEADROOM.
-
-    - Falla (False) si el pico de mixbus o el LUFS integrado están por encima
-      de los máximos definidos en el contrato (con pequeña tolerancia),
-      **siempre que** el LUFS no esté ya por debajo del mínimo.
-
-    - Si el LUFS está por debajo de lufs_integrated_min, tratamos cualquier exceso
-      de pico como AVISO (no error duro), para evitar seguir hundiendo mezclas
-      que ya vienen flojas de origen y que además no pueden cumplir simultáneamente
-      peak y LUFS solo con gain lineal.
-
-    - También lanza avisos cuando está por debajo de los mínimos, pero sin
-      bloquear el pipeline.
-    """
-    session = analysis.get("session", {}) or {}
-    metrics = analysis.get("metrics_from_contract", {}) or {}
-
-    mix_peak_measured = session.get("mixbus_peak_dbfs_measured")
-    lufs_measured = session.get("mixbus_lufs_integrated_measured")
-
-    try:
-        mix_peak_measured = float(mix_peak_measured)
-    except (TypeError, ValueError):
-        mix_peak_measured = None
-
-    try:
-        lufs_measured = float(lufs_measured) if lufs_measured is not None else None
-    except (TypeError, ValueError):
-        lufs_measured = None
-
-    peak_min = float(metrics.get("peak_dbfs_min", -12.0))
-    peak_max = float(metrics.get("peak_dbfs_max", -6.0))
-    lufs_min = float(metrics.get("lufs_integrated_min", -26.0))
-    lufs_max = float(metrics.get("lufs_integrated_max", -20.0))
-
-    peak_tol = 0.2   # margen dB de pico
-    lufs_tol = 0.5   # margen dB de LUFS
-
-    ok = True
-
-    # --- Avisos por estar por debajo de mínimos ---
-    if mix_peak_measured is not None and mix_peak_measured != float("-inf"):
-        if mix_peak_measured < peak_min - peak_tol:
-            print(
-                f"[S1_MIXBUS_HEADROOM][CHECK] mixbus_peak_dbfs_measured="
-                f"{mix_peak_measured:.2f} < peak_dbfs_min={peak_min:.2f} "
-                f"(solo aviso, no se considera error duro).",
-                file=sys.stderr,
-            )
-
-    if lufs_measured is not None:
-        if lufs_measured < lufs_min - lufs_tol:
-            print(
-                f"[S1_MIXBUS_HEADROOM][CHECK] mixbus_lufs_integrated_measured="
-                f"{lufs_measured:.2f} < lufs_integrated_min={lufs_min:.2f} "
-                f"(solo aviso, mezcla ya floja de origen).",
-                file=sys.stderr,
-            )
-
-    # Flag para saber si la mezcla ya está floja de LUFS
-    lufs_demasiado_bajo = (
-        lufs_measured is not None and lufs_measured < lufs_min - lufs_tol
-    )
-
-    # --- Condiciones de error duro (solo si NO está floja de LUFS) ---
-    if mix_peak_measured is not None and mix_peak_measured != float("-inf"):
-        if mix_peak_measured > peak_max + peak_tol:
-            if lufs_demasiado_bajo:
-                # Mezcla ya floja de LUFS: tratamos exceso de pico como aviso, no error
-                print(
-                    f"[S1_MIXBUS_HEADROOM][CHECK] mixbus_peak_dbfs_measured="
-                    f"{mix_peak_measured:.2f} > peak_dbfs_max={peak_max:.2f} "
-                    f"(pero LUFS ya por debajo de mínimo; se deja para etapas posteriores).",
-                    file=sys.stderr,
-                )
-            else:
-                print(
-                    f"[S1_MIXBUS_HEADROOM][CHECK] mixbus_peak_dbfs_measured="
-                    f"{mix_peak_measured:.2f} > peak_dbfs_max={peak_max:.2f} "
-                    f"(+{peak_tol} margen)",
-                    file=sys.stderr,
-                )
-                ok = False
-
-    if lufs_measured is not None:
-        if lufs_measured > lufs_max + lufs_tol:
-            print(
-                f"[S1_MIXBUS_HEADROOM][CHECK] mixbus_lufs_integrated_measured="
-                f"{lufs_measured:.2f} > lufs_integrated_max={lufs_max:.2f} "
-                f"(+{lufs_tol} margen)",
-                file=sys.stderr,
-            )
-            ok = False
-
-    return ok
-
-
 
 
 
@@ -1947,8 +1901,6 @@ def process(context: PipelineContext, *args) -> bool:
         ok = _check_S1_STEM_WORKING_LOUDNESS(analysis)
     elif contract_id == "S1_VOX_TUNING":
         ok = _check_S1_VOX_TUNING(analysis)
-    elif contract_id == "S1_MIXBUS_HEADROOM":
-        ok = _check_S1_MIXBUS_HEADROOM(analysis)
     elif contract_id == "S2_GROUP_PHASE_DRUMS":
         ok = _check_S2_GROUP_PHASE_DRUMS(analysis)
     elif contract_id == "S3_MIXBUS_HEADROOM":
@@ -2006,7 +1958,6 @@ def main() -> None:
         elif contract_id == "S1_STEM_DC_OFFSET": ok = _check_S1_STEM_DC_OFFSET(analysis)
         elif contract_id == "S1_STEM_WORKING_LOUDNESS": ok = _check_S1_STEM_WORKING_LOUDNESS(analysis)
         elif contract_id == "S1_VOX_TUNING": ok = _check_S1_VOX_TUNING(analysis)
-        elif contract_id == "S1_MIXBUS_HEADROOM": ok = _check_S1_MIXBUS_HEADROOM(analysis)
         elif contract_id == "S2_GROUP_PHASE_DRUMS": ok = _check_S2_GROUP_PHASE_DRUMS(analysis)
         elif contract_id == "S3_MIXBUS_HEADROOM": ok = _check_S3_MIXBUS_HEADROOM(analysis)
         elif contract_id == "S3_LEADVOX_AUDIBILITY": ok = _check_S3_LEADVOX_AUDIBILITY(analysis)

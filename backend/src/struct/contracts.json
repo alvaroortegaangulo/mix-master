@@ -76,20 +76,6 @@
           "limits": {
             "max_pitch_shift_semitones": 1.0
           }
-        },
-        {
-          "id": "S1_MIXBUS_HEADROOM",
-          "stage_id": "S1_TECH_PREP",
-          "instrument_id": "*",
-          "style_id": "*",
-          "target_scope": "mixbus",
-          "metrics": {
-            "peak_dbfs_min": -12.0,
-            "peak_dbfs_max": -6.0
-          },
-          "limits": {
-            "max_gain_change_db_per_pass": 3.0
-          }
         }
       ]  
     },
