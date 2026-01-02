@@ -134,6 +134,21 @@ const STAGE_TO_GROUP: Record<string, string> = {
   S11_REPORT_GENERATION: "HIDDEN",
 };
 
+const QUICK_MODE_BASE_KEYS = [
+  "S0_SESSION_FORMAT",
+  "S1_STEM_DC_OFFSET",
+  "S1_STEM_WORKING_LOUDNESS",
+  "S3_MIXBUS_HEADROOM",
+  "S7_MIXBUS_TONAL_BALANCE",
+  "S9_MASTER_GENERIC",
+  "S10_MASTER_FINAL_LIMITS",
+];
+
+const QUICK_MODE_OPTIONAL_KEYS = {
+  drums: "S2_GROUP_PHASE_DRUMS",
+  leadVocal: "S3_LEADVOX_AUDIBILITY",
+};
+
 // Estimated processing time in minutes per stage
 const STAGE_ESTIMATES_MIN: Record<string, number> = {
   S0_SESSION_FORMAT: 0.5,
@@ -230,6 +245,7 @@ export function MixTool({ resumeJobId }: MixToolProps) {
   const [availableStages, setAvailableStages] = useState<PipelineStage[]>([]);
   const [selectedStageKeys, setSelectedStageKeys] = useState<string[]>([]);
   const [showStageSelector, setShowStageSelector] = useState(true);
+  const [isQuickMode, setIsQuickMode] = useState(false);
 
   // Group expansion state
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
@@ -268,6 +284,27 @@ export function MixTool({ resumeJobId }: MixToolProps) {
     const result = BUS_KEYS.filter((key) => selected.has(key));
     return result.length > 0 ? result : BUS_KEYS;
   }, [stemProfiles]);
+
+  const hasDrums = useMemo(
+    () => activeBusKeys.includes("drums") || activeBusKeys.includes("percussion"),
+    [activeBusKeys],
+  );
+  const hasLeadVocal = useMemo(
+    () => activeBusKeys.includes("lead_vocal"),
+    [activeBusKeys],
+  );
+
+  const quickModeStageKeys = useMemo(() => {
+    const availableKeys = new Set(availableStages.map((stage) => stage.key));
+    const keys = [...QUICK_MODE_BASE_KEYS];
+    if (hasDrums) {
+      keys.push(QUICK_MODE_OPTIONAL_KEYS.drums);
+    }
+    if (hasLeadVocal) {
+      keys.push(QUICK_MODE_OPTIONAL_KEYS.leadVocal);
+    }
+    return keys.filter((key) => availableKeys.has(key));
+  }, [availableStages, hasDrums, hasLeadVocal]);
 
   const visibleSpaceDepthBuses = activeBusKeys.length
     ? spaceDepthBuses.filter((bus) => activeBusKeys.includes(bus.key))
@@ -464,15 +501,22 @@ export function MixTool({ resumeJobId }: MixToolProps) {
   // Sync default stage selection with the current upload mode
   useEffect(() => {
     if (!availableStages.length) return;
-  
-    // Default: Select all available stages (full mix)
-    // For Song mode, filtering is applied via isSongMode logic or separate key list
-    const keys = uploadMode === "song"
-       ? songModeStageKeys
-       : availableStages.map(s => s.key);
 
-    setSelectedStageKeys(keys);
-  }, [availableStages, uploadMode, songModeStageKeys]);
+    if (isSongMode) {
+      setSelectedStageKeys(songModeStageKeys);
+      return;
+    }
+
+    if (!isQuickMode) {
+      setSelectedStageKeys(availableStages.map((stage) => stage.key));
+    }
+  }, [availableStages, isSongMode, songModeStageKeys, isQuickMode]);
+
+  useEffect(() => {
+    if (!availableStages.length) return;
+    if (!isQuickMode || isSongMode) return;
+    setSelectedStageKeys(quickModeStageKeys);
+  }, [availableStages, isQuickMode, isSongMode, quickModeStageKeys]);
 
   const toggleStage = (key: string) => {
     if (isSongMode && !songModeStageKeys.includes(key)) return; // Cannot toggle disabled in song mode
@@ -1040,9 +1084,26 @@ export function MixTool({ resumeJobId }: MixToolProps) {
                         </h3>
                         <p className="text-xs text-slate-500 mt-1">Cadena de procesamiento activa</p>
                     </div>
-                    <span className="text-[10px] font-bold tracking-wider uppercase text-teal-400 bg-teal-500/10 px-2 py-1 rounded border border-teal-500/20">
-                        AUTO-PILOT ON
-                    </span>
+                    <div className="flex items-center gap-3">
+                        <span
+                            className={`text-[10px] font-semibold tracking-wide px-2 py-1 rounded border ${
+                                isQuickMode
+                                    ? "text-amber-300 border-amber-500/40 bg-amber-500/10"
+                                    : "text-teal-300 border-teal-500/30 bg-teal-500/10"
+                            }`}
+                        >
+                            {isQuickMode ? "Modo rápido" : "Modo completo"}
+                        </span>
+                        <label className="relative inline-flex items-center cursor-pointer">
+                            <input
+                                type="checkbox"
+                                className="sr-only peer"
+                                checked={isQuickMode}
+                                onChange={() => setIsQuickMode((prev) => !prev)}
+                            />
+                            <div className="w-9 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-400 after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-500 peer-checked:after:bg-white"></div>
+                        </label>
+                    </div>
                 </div>
 
                 {/* Timeline Container */}

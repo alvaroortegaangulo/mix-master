@@ -45,6 +45,14 @@ interface FullReport {
   general_summary?: string;
   stages: StageReport[];
   final_metrics: any;
+  pipeline_durations?: {
+    total_duration_sec?: number | null;
+    stages?: Array<{
+      contract_id?: string | null;
+      duration_sec?: number | null;
+    }>;
+    generated_at_utc?: string | null;
+  };
   interactive_charts?: {
     result?: AnalysisData;
     original?: AnalysisData;
@@ -64,11 +72,14 @@ interface ReportViewerProps {
 const ReportStageCard = ({
   stage,
   jobId,
+  durationSec,
 }: {
   stage: StageReport;
   jobId: string;
+  durationSec?: number | null;
 }) => {
   const tStages = useTranslations("Report.stages"); // Access stage descriptions
+  const durationLabel = formatDuration(durationSec);
 
   const [waveformUrl, setWaveformUrl] = useState("");
   const images = stage.images || {};
@@ -124,7 +135,14 @@ const ReportStageCard = ({
   return (
     <div className="mb-4 overflow-hidden rounded-lg border border-[rgba(19,78,74,0.5)] bg-[rgba(15,23,42,0.4)] backdrop-blur-sm p-6">
       <div className="mb-4">
-        <h3 className="text-base font-bold text-teal-100 mb-3">{stageTitle}</h3>
+        <h3 className="text-base font-bold text-teal-100 mb-3">
+          {stageTitle}
+          {durationLabel && (
+            <span className="ml-2 text-[10px] font-semibold text-slate-400">
+              ({durationLabel})
+            </span>
+          )}
+        </h3>
         <p className="text-sm text-slate-300 leading-relaxed text-justify">
           {hasDescription ? tStages.rich(`${stageKey}.description` as any, {
               ...combinedParams,
@@ -173,6 +191,9 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
   const processedStages = (report.stages || []).filter(
     (s) => s.status !== "skipped" && s.status !== "pending"
   );
+  const durationByStage = buildDurationMap(report.pipeline_durations?.stages);
+  const totalDurationLabel =
+    formatDuration(report.pipeline_durations?.total_duration_sec) || "N/A";
 
   // Normalize charts data
   const charts = report.interactive_charts || {};
@@ -404,6 +425,14 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
                         {report.style_preset}
                     </p>
                     </div>
+                    <div className="rounded-lg bg-[rgba(0,0,0,0.2)] border border-[rgba(20,184,166,0.1)] p-3">
+                    <p className="text-[10px] text-[rgba(45,212,191,0.7)] uppercase tracking-widest font-bold mb-1">
+                        Tiempo total del pipeline
+                    </p>
+                    <p className="text-base font-medium text-teal-50">
+                        {totalDurationLabel}
+                    </p>
+                    </div>
                     {report.general_summary && (
                     <p className="text-sm text-slate-300 italic px-1">
                         {report.general_summary}
@@ -512,6 +541,7 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
                     key={stage.contract_id}
                     stage={stage}
                     jobId={jobId}
+                    durationSec={durationByStage[stage.contract_id] ?? null}
                     />
                 ))}
                 </div>
@@ -520,3 +550,40 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
     </div>
   );
 };
+
+function formatDuration(totalSeconds?: number | null): string | null {
+  if (typeof totalSeconds !== "number" || !Number.isFinite(totalSeconds)) {
+    return null;
+  }
+  const safeSeconds = Math.max(0, Math.round(totalSeconds));
+  const hours = Math.floor(safeSeconds / 3600);
+  const minutes = Math.floor((safeSeconds % 3600) / 60);
+  const seconds = safeSeconds % 60;
+
+  if (hours > 0) {
+    return `${hours}h ${minutes}m ${seconds}s`;
+  }
+  if (minutes > 0) {
+    return `${minutes}m ${seconds}s`;
+  }
+  return `${seconds}s`;
+}
+
+function buildDurationMap(
+  stages: Array<{ contract_id?: string | null; duration_sec?: number | null }> | undefined,
+): Record<string, number> {
+  const map: Record<string, number> = {};
+  if (!Array.isArray(stages)) {
+    return map;
+  }
+  stages.forEach((stage) => {
+    if (!stage?.contract_id) {
+      return;
+    }
+    if (typeof stage.duration_sec !== "number" || !Number.isFinite(stage.duration_sec)) {
+      return;
+    }
+    map[stage.contract_id] = stage.duration_sec;
+  });
+  return map;
+}
