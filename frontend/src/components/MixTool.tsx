@@ -103,6 +103,8 @@ type StageUiInfo = {
   description: string;
 };
 
+type UploadView = "upload" | "profiles" | "buses" | "ready" | "processing";
+
 type MixToolProps = {
   resumeJobId?: string;
 };
@@ -170,6 +172,10 @@ const STAGE_ESTIMATES_MIN: Record<string, number> = {
   S10_MASTER_FINAL_LIMITS: 0.5,
   S11_REPORT_GENERATION: 0.5,
 };
+
+const STEP_EXIT_DURATION_MS = 180;
+const STEP_ENTER_DURATION_MS = 420;
+const ANIMATED_UPLOAD_VIEWS: UploadView[] = ["upload", "profiles", "buses", "ready"];
 
 type GroupConfig = {
   id: string;
@@ -728,6 +734,17 @@ export function MixTool({ resumeJobId }: MixToolProps) {
   const isReadyForMix = uploadStep === 3 && !showBusPanel && Boolean(busConfirmationMessage);
   const readyMessageText =
     busConfirmationMessage || t("uploadSteps.messages.mixReady");
+  const uploadStepTitle =
+    uploadStep === 1
+      ? t("uploadSteps.labels.uploadTracks")
+      : uploadStep === 2
+      ? t("uploadSteps.labels.selectProfiles")
+      : uploadStep === 3 && !isReadyForMix
+      ? t("uploadSteps.labels.busSelection")
+      : "";
+  const uploadStepLabel = uploadStepTitle
+    .replace(/^\s*\d+\s*\/\s*\d+\s*/, "")
+    .trim();
 
   const estimatedMinutes = useMemo(() => {
     if (!selectedStageKeys.length) return 0;
@@ -871,6 +888,67 @@ export function MixTool({ resumeJobId }: MixToolProps) {
       }
     : undefined;
 
+  const currentView: UploadView = isProcessing
+    ? "processing"
+    : uploadStep === 1
+    ? "upload"
+    : uploadStep === 2
+    ? "profiles"
+    : isReadyForMix
+    ? "ready"
+    : "buses";
+  const [displayedView, setDisplayedView] = useState<UploadView>(currentView);
+  const [transitionPhase, setTransitionPhase] = useState<"idle" | "exiting" | "entering">("idle");
+  const transitionTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (displayedView === currentView) return;
+
+    if (transitionTimerRef.current) {
+      clearTimeout(transitionTimerRef.current);
+      transitionTimerRef.current = null;
+    }
+
+    const shouldAnimate =
+      ANIMATED_UPLOAD_VIEWS.includes(displayedView) &&
+      ANIMATED_UPLOAD_VIEWS.includes(currentView);
+
+    if (!shouldAnimate) {
+      setDisplayedView(currentView);
+      setTransitionPhase("idle");
+      return;
+    }
+
+    setTransitionPhase("exiting");
+    const exitTimer = setTimeout(() => {
+      setDisplayedView(currentView);
+      setTransitionPhase("entering");
+
+      const enterTimer = setTimeout(() => {
+        setTransitionPhase("idle");
+        transitionTimerRef.current = null;
+      }, STEP_ENTER_DURATION_MS);
+
+      transitionTimerRef.current = enterTimer;
+    }, STEP_EXIT_DURATION_MS);
+
+    transitionTimerRef.current = exitTimer;
+  }, [currentView, displayedView]);
+
+  useEffect(() => {
+    return () => {
+      if (transitionTimerRef.current) {
+        clearTimeout(transitionTimerRef.current);
+      }
+    };
+  }, []);
+
+  const transitionClassName =
+    transitionPhase === "exiting"
+      ? "step-transition-exit"
+      : transitionPhase === "entering"
+      ? "step-transition-enter"
+      : "";
 
   return (
     <div className="flex-1 flex flex-col">
@@ -883,10 +961,10 @@ export function MixTool({ resumeJobId }: MixToolProps) {
 
       <main className="flex flex-1 flex-col items-center px-4 py-8">
         <div className="text-center mb-8 max-w-2xl">
-          <h1 className="text-3xl md:text-4xl font-bold text-white mb-4">
+          <h1 className="text-3xl md:text-4xl font-bold text-white mb-4 font-['Orbitron']">
             {t("title")}
           </h1>
-          <p className="text-slate-400 text-base md:text-lg">
+          <p className="text-slate-400 text-sm md:text-base">
             {t("subtitle")}
           </p>
         </div>
@@ -931,10 +1009,17 @@ export function MixTool({ resumeJobId }: MixToolProps) {
                 <div className="relative z-10 w-full max-w-lg flex-1 flex flex-col justify-center">
                     <div className="mb-4 flex items-start justify-between gap-3">
                         <div>
-                              <h2 className="text-xl font-bold text-white leading-tight">
-                                  {uploadStep === 1 && t("uploadSteps.labels.uploadTracks")}
-                                  {uploadStep === 2 && t("uploadSteps.labels.selectProfiles")}
-                                  {uploadStep === 3 && !isReadyForMix && t("uploadSteps.labels.busSelection")}
+                              <h2 className="flex flex-wrap items-center gap-3 leading-tight">
+                                  {uploadStepTitle && (
+                                      <>
+                                          <span className="rounded-full border border-teal-500/40 bg-teal-500/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.3em] text-teal-300/90 shadow-[0_0_12px_rgba(20,184,166,0.15)]">
+                                              {uploadStep}/3
+                                          </span>
+                                          <span className="text-xl md:text-2xl font-semibold font-['Orbitron'] text-transparent bg-clip-text bg-gradient-to-r from-teal-100 via-cyan-200 to-slate-100 tracking-[0.08em] drop-shadow-[0_2px_12px_rgba(20,184,166,0.25)]">
+                                              {uploadStepLabel || uploadStepTitle}
+                                          </span>
+                                      </>
+                                  )}
                               </h2>
                               {uploadStep > 1 && !isReadyForMix && (
                                   <p className="mt-1 text-xs text-slate-400">
@@ -956,8 +1041,8 @@ export function MixTool({ resumeJobId }: MixToolProps) {
                         )}
                     </div>
 
-                    <div className="flex-1">
-                        {isProcessing && processingState ? (
+                    <div className={`flex-1 ${transitionClassName}`}>
+                        {displayedView === "processing" && processingState ? (
                             <div className="w-full min-h-[400px]">
                                 <ProcessingVisualizer
                                     stageKey={processingState.stageKey}
@@ -967,7 +1052,7 @@ export function MixTool({ resumeJobId }: MixToolProps) {
                             </div>
                         ) : (
                             <div className="space-y-4">
-                                {uploadStep === 2 && stemProfiles.length > 0 && (
+                                {displayedView === "profiles" && stemProfiles.length > 0 && (
                                     <div className="flex min-h-[400px] flex-col rounded-3xl border border-teal-500/40 bg-gradient-to-br from-teal-500/10 to-slate-900/70 p-5 shadow-lg shadow-teal-500/10">
                                         <StemsProfilePanel
                                             stems={stemProfiles}
@@ -987,7 +1072,7 @@ export function MixTool({ resumeJobId }: MixToolProps) {
                                     </div>
                                 )}
 
-                                {uploadStep === 3 && stemProfiles.length > 0 && showBusPanel && (
+                                {displayedView === "buses" && stemProfiles.length > 0 && (
                                     <div className="flex min-h-[400px] flex-col gap-4 rounded-3xl border border-slate-700 bg-slate-900/60 p-5 shadow-lg shadow-slate-900/50">
                                         <div className="flex-1">
                                             <SpaceDepthStylePanel
@@ -1009,29 +1094,29 @@ export function MixTool({ resumeJobId }: MixToolProps) {
                                     </div>
                                 )}
 
-                                {(uploadStep === 1 || isReadyForMix) && (
-                                    isReadyForMix ? (
-                                        <div className="flex min-h-[400px] flex-col items-center justify-center gap-4 rounded-3xl border-2 border-teal-500/40 bg-gradient-to-br from-slate-900/80 to-slate-950/60 px-8 py-10 text-center shadow-inner shadow-teal-500/20">
-                                            <p className="text-lg font-semibold text-white max-w-xl">
-                                                {readyMessageText}
-                                            </p>
-                                            <button
-                                                type="button"
-                                                onClick={handleGenerateMix}
-                                                disabled={!hasFiles || loading}
-                                                className="mt-2 rounded-full border border-teal-400 bg-gradient-to-r from-teal-500 to-cyan-500 px-5 py-2 text-[11px] font-bold uppercase tracking-[0.3em] text-slate-950 transition hover:brightness-110 disabled:opacity-60"
-                                            >
-                                                {t("generateMix")}
-                                            </button>
-                                        </div>
-                                    ) : (
-                                        <UploadDropzone
-                                            onFilesSelected={handleFilesSelected}
-                                            disabled={loading}
-                                            filesCount={files.length}
-                                            uploadMode={uploadMode}
-                                        />
-                                    )
+                                {displayedView === "ready" && (
+                                    <div className="flex min-h-[400px] flex-col items-center justify-center gap-4 rounded-3xl border-2 border-teal-500/40 bg-gradient-to-br from-slate-900/80 to-slate-950/60 px-8 py-10 text-center shadow-inner shadow-teal-500/20">
+                                        <p className="text-lg font-semibold text-white max-w-xl">
+                                            {readyMessageText}
+                                        </p>
+                                        <button
+                                            type="button"
+                                            onClick={handleGenerateMix}
+                                            disabled={!hasFiles || loading}
+                                            className="mt-2 rounded-full border border-teal-400 bg-gradient-to-r from-teal-500 to-cyan-500 px-5 py-2 text-[11px] font-bold uppercase tracking-[0.3em] text-slate-950 transition hover:brightness-110 disabled:opacity-60"
+                                        >
+                                            {t("generateMix")}
+                                        </button>
+                                    </div>
+                                )}
+
+                                {displayedView === "upload" && (
+                                    <UploadDropzone
+                                        onFilesSelected={handleFilesSelected}
+                                        disabled={loading}
+                                        filesCount={files.length}
+                                        uploadMode={uploadMode}
+                                    />
                                 )}
                             </div>
                         )}
@@ -1082,26 +1167,28 @@ export function MixTool({ resumeJobId }: MixToolProps) {
                         </h3>
                         <p className="text-xs text-slate-500 mt-1">Cadena de procesamiento activa</p>
                     </div>
-                    <div className="flex items-center gap-3">
-                        <span
-                            className={`text-[10px] font-semibold tracking-wide px-2 py-1 rounded border ${
-                                isQuickMode
-                                    ? "text-amber-300 border-amber-500/40 bg-amber-500/10"
-                                    : "text-teal-300 border-teal-500/30 bg-teal-500/10"
-                            }`}
-                        >
-                            {isQuickMode ? "Modo rápido" : "Modo completo"}
-                        </span>
-                        <label className="relative inline-flex items-center cursor-pointer">
-                            <input
-                                type="checkbox"
-                                className="sr-only peer"
-                                checked={isQuickMode}
-                                onChange={() => setIsQuickMode((prev) => !prev)}
-                            />
-                            <div className="w-9 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-400 after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-500 peer-checked:after:bg-white"></div>
-                        </label>
-                    </div>
+                    {!isSongMode && (
+                        <div className="flex items-center gap-3">
+                            <span
+                                className={`text-[10px] font-semibold tracking-wide px-2 py-1 rounded border ${
+                                    isQuickMode
+                                        ? "text-amber-300 border-amber-500/40 bg-amber-500/10"
+                                        : "text-teal-300 border-teal-500/30 bg-teal-500/10"
+                                }`}
+                            >
+                                {isQuickMode ? "Modo rápido" : "Modo completo"}
+                            </span>
+                            <label className="relative inline-flex items-center cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    className="sr-only peer"
+                                    checked={isQuickMode}
+                                    onChange={() => setIsQuickMode((prev) => !prev)}
+                                />
+                                <div className="w-9 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-400 after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-500 peer-checked:after:bg-white"></div>
+                            </label>
+                        </div>
+                    )}
                 </div>
 
                 {/* Timeline Container */}
@@ -1121,6 +1208,8 @@ export function MixTool({ resumeJobId }: MixToolProps) {
                             const isDisabled = relevantKeys.length === 0;
                             // Update logic: toggle is selected if ANY of the stages is selected (unless disabled)
                             const isSelected = !isDisabled && relevantKeys.some(k => selectedStageKeys.includes(k));
+                            const selectedCount = stages.filter(stage => selectedStageKeys.includes(stage.key)).length;
+                            const stepsLabel = `${selectedCount}/${stages.length} pasos`;
                             const Icon = group.icon;
                             const theme = THEME_STYLES[group.theme] || THEME_STYLES.cyan;
 
@@ -1136,14 +1225,14 @@ export function MixTool({ resumeJobId }: MixToolProps) {
                                     <div className="relative flex items-center p-3 gap-4">
                                         {/* Icon */}
                                         <div className={`
-                                            relative z-10 flex items-center justify-center w-12 h-12 rounded-xl border transition-all duration-300 shrink-0
+                                            relative z-10 flex items-center justify-center w-10 h-10 rounded-xl border transition-all duration-300 shrink-0
                                             group-hover:shadow-[0_0_15px_rgba(20,184,166,0.15)]
                                             ${isSelected
                                                 ? `bg-slate-900 ${theme.border} ${theme.shadow}`
                                                 : 'bg-slate-950 border-slate-800 shadow-none'}
                                         `}>
                                             {isSelected && <div className={`absolute inset-0 ${theme.bg}/10 rounded-xl`} />}
-                                            <Icon className={`w-6 h-6 relative z-20 ${isSelected ? theme.text : 'text-slate-600'}`} />
+                                            <Icon className={`w-5 h-5 relative z-20 ${isSelected ? theme.text : 'text-slate-600'}`} />
                                         </div>
 
                                         {/* Content */}
@@ -1154,12 +1243,6 @@ export function MixTool({ resumeJobId }: MixToolProps) {
                                                         {/* @ts-ignore */}
                                                         {t(`stageGroups.${group.labelKey}`)}
                                                     </h4>
-                                                    <p className="text-[10px] text-slate-500 mt-0.5 leading-relaxed">
-                                                        {stages.length > 0
-                                                            ? `${stages.length} pasos: ${stages.slice(0, 2).map(s => HUMAN_STAGE_TEXT[s.key]?.title).join(", ")}${stages.length > 2 ? '...' : ''}`
-                                                            : "No active stages"
-                                                        }
-                                                    </p>
                                                 </div>
 
                                                 {/* Toggle */}
@@ -1180,8 +1263,10 @@ export function MixTool({ resumeJobId }: MixToolProps) {
                                                 <button
                                                     onClick={() => toggleGroupExpand(group.id)}
                                                     className={`mt-1 text-[10px] flex items-center gap-1 transition-colors w-fit ${isSelected ? theme.text : 'text-slate-600 hover:text-white'}`}
+                                                    aria-expanded={!!expandedGroups[group.id]}
+                                                    aria-label={expandedGroups[group.id] ? "Ocultar detalles" : "Ver detalles"}
                                                 >
-                                                    {expandedGroups[group.id] ? "Ocultar detalles" : "Ver detalles"}
+                                                    {stepsLabel}
                                                     <ChevronDownIcon className={`w-3 h-3 transition-transform ${expandedGroups[group.id] ? 'rotate-180' : ''}`} />
                                                 </button>
                                             )}

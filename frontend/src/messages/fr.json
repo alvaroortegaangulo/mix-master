@@ -378,6 +378,15 @@
     },
     "stemsProfile": "Sélectionner le profil des stems",
     "stemsProfileDesc": "Étiquetez chaque stem avec sa fonction dans le mix. Plus tard, nous utiliserons ces profils pour router les bus.",
+    "stemsProfileSelector": {
+      "title": "Select instrument",
+      "subtitle": "Choose the profile that best describes the track:",
+      "searchPlaceholder": "Search instrument (e.g. kick, piano...)",
+      "categories": "Categories",
+      "all": "All",
+      "cancel": "Cancel",
+      "select": "Select"
+    },
     "spaceDepthTitle": "Espace / Profondeur par bus",
     "spaceDepthDesc": "Assignez un style de reverb/espace par famille de bus pour guider les étapes ultérieures.",
     "spaceDepthBuses": {
@@ -424,6 +433,16 @@
     },
     "auto": "Auto",
     "autoRecommended": "Auto-détecter (recommandé)",
+    "profileGroups": {
+      "drums": "Batterie",
+      "bass": "Basse",
+      "guitars": "Guitares",
+      "keys": "Claviers / Synthés",
+      "vocals": "Voix",
+      "fx": "FX",
+      "ambience": "Ambiance",
+      "other": "Autres"
+    },
     "profileOptions": {
       "Kick": "Grosse caisse (kick principal)",
       "Snare": "Caisse claire (snare principal)",

@@ -392,6 +392,15 @@
     },
     "stemsProfile": "Select stems profile",
     "stemsProfileDesc": "Label each stem with its function in the mix. Later we will use these profiles to route buses.",
+    "stemsProfileSelector": {
+      "title": "Select instrument",
+      "subtitle": "Choose the profile that best describes the track:",
+      "searchPlaceholder": "Search instrument (e.g. kick, piano...)",
+      "categories": "Categories",
+      "all": "All",
+      "cancel": "Cancel",
+      "select": "Select"
+    },
     "spaceDepthTitle": "Space / Depth by bus",
     "spaceDepthDesc": "Assign a reverb/space style per bus family to guide later stages.",
     "spaceDepthBuses": {
@@ -438,6 +447,16 @@
     },
     "auto": "Auto",
     "autoRecommended": "Auto-detect (recommended)",
+    "profileGroups": {
+      "drums": "Schlagzeug",
+      "bass": "Bass",
+      "guitars": "Gitarren",
+      "keys": "Keys / Synths",
+      "vocals": "Gesang",
+      "fx": "FX",
+      "ambience": "Ambience",
+      "other": "Sonstiges"
+    },
     "profileOptions": {
       "Kick": "Kick (main kick drum)",
       "Snare": "Snare (main snare)",

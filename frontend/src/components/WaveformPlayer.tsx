@@ -635,10 +635,10 @@ export const WaveformPlayer: React.FC<WaveformPlayerProps> = ({
       </button>
 
       {/* Waveform + tiempos */}
-      <div className="relative flex-1" onClick={handleWaveformClick}>
+      <div className="relative flex-1 self-stretch" onClick={handleWaveformClick}>
         <canvas
           ref={canvasRef}
-          className={`${canvasClassName} w-full cursor-pointer rounded-xl bg-transparent`}
+          className={`${canvasClassName} block w-full cursor-pointer rounded-xl bg-transparent`}
         />
         {/* tiempos izquierda / derecha */}
         <div className="pointer-events-none absolute inset-x-2 top-1 flex justify-between text-[10px] font-medium text-slate-100">
