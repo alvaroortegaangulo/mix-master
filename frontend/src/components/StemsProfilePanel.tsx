@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { MagnifyingGlassIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { useTranslations } from "next-intl";
 
@@ -100,6 +101,23 @@ const PROFILE_SEARCH_TERMS: Record<string, string[]> = {
   FX_EarCandy: ["fx", "effects", "ear candy"],
   Ambience_Atmos: ["ambience", "ambient", "atm", "ambiente"],
   Other: ["other", "otros", "misc"],
+};
+
+const PROFILE_IMAGES: Partial<Record<string, string>> = {
+  Kick: "/instruments/kick.png",
+  Snare: "/instruments/snare.png",
+  Percussion: "/instruments/bongos.png",
+  Bass_Electric: "/instruments/bass.png",
+  Acoustic_Guitar: "/instruments/guitar-acoustic.png",
+  Electric_Guitar_Rhythm: "/instruments/guitar-electric.png",
+  Keys_Piano: "/instruments/piano-keys.png",
+  Synth_Pads: "/instruments/synth-controller.png",
+  Lead_Vocal_Melodic: "/instruments/vocal-lead.png",
+  Lead_Vocal_Rap: "/instruments/vocal-lead.png",
+  Backing_Vocals: "/instruments/vocal-backing.png",
+  FX_EarCandy: "/instruments/cymbals.png",
+  Ambience_Atmos: "/instruments/ambience-wave.png",
+  Other: "/instruments/synth-keyboard.png",
 };
 
 const BASE_SVG_PROPS = {
@@ -262,6 +280,7 @@ export function StemsProfilePanel({ stems, onChangeProfile, accent = "amber" }: 
   const [activeStemId, setActiveStemId] = useState<string | null>(null);
   const [activeCategory, setActiveCategory] = useState<ProfileCategory>("all");
   const [searchTerm, setSearchTerm] = useState("");
+  const [isMounted, setIsMounted] = useState(false);
 
   const profileOptions = useMemo<ProfileOption[]>(
     () => [
@@ -443,6 +462,19 @@ export function StemsProfilePanel({ stems, onChangeProfile, accent = "amber" }: 
   };
 
   useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isMounted || !isSelectorOpen) return;
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, [isMounted, isSelectorOpen]);
+
+  useEffect(() => {
     if (!isSelectorOpen) return;
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
@@ -481,6 +513,167 @@ export function StemsProfilePanel({ stems, onChangeProfile, accent = "amber" }: 
     onChangeProfile(activeStem.id, value);
     closeSelector();
   };
+
+  const gridClassName =
+    "grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5";
+
+  const renderOptionCard = (option: ProfileOption) => {
+    const isSelected = option.value === activeProfileValue;
+    const imageSrc = PROFILE_IMAGES[option.value];
+    return (
+      <button
+        key={option.value}
+        type="button"
+        onClick={() => handleSelectOption(option.value)}
+        className={[
+          "group rounded-lg border p-2 text-left transition",
+          isSelected
+            ? "border-teal-400/70 bg-teal-500/10 shadow-[0_0_12px_rgba(45,212,191,0.18)]"
+            : "border-slate-800/80 bg-slate-900/40 hover:border-teal-500/40 hover:bg-slate-900/70",
+        ].join(" ")}
+        aria-pressed={isSelected}
+      >
+        <div className="relative h-16 overflow-hidden rounded-md border border-slate-800 bg-slate-950/60">
+          <div className="absolute inset-0 rounded-md bg-[radial-gradient(circle_at_50%_20%,rgba(45,212,191,0.2),transparent_60%)]" />
+          <div className="relative flex h-full items-center justify-center p-1.5">
+            {imageSrc ? (
+              <img
+                src={imageSrc}
+                alt={option.label}
+                className="h-full w-full object-contain"
+                loading="lazy"
+                draggable={false}
+              />
+            ) : (
+              <InstrumentArt variant={option.variant} />
+            )}
+          </div>
+        </div>
+        <p className="mt-1 text-[10px] font-medium leading-tight text-slate-100">
+          {option.label}
+        </p>
+      </button>
+    );
+  };
+
+  const selectorOverlay =
+    isSelectorOpen && activeStem && isMounted
+      ? createPortal(
+          <div
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+            onClick={(event) => {
+              if (event.target === event.currentTarget) {
+                closeSelector();
+              }
+            }}
+          >
+            <div
+              className="flex max-h-[90vh] w-full max-w-6xl flex-col overflow-hidden rounded-2xl border border-slate-800 bg-slate-950/95 shadow-2xl"
+              role="dialog"
+              aria-modal="true"
+            >
+              <div className="flex items-start justify-between gap-4 border-b border-slate-800 px-5 py-4">
+                <div>
+                  <h4 className="text-base font-semibold text-white">
+                    {t("stemsProfileSelector.title")}
+                  </h4>
+                  <p className="mt-1 text-[11px] text-slate-400">
+                    {t("stemsProfileSelector.subtitle")}{" "}
+                    <span className="text-teal-300">
+                      {activeStem.fileName}
+                      {activeStem.extension ? `.${activeStem.extension}` : ""}
+                    </span>
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={closeSelector}
+                  className="rounded-full border border-slate-800 bg-slate-900/70 p-2 text-slate-300 transition hover:text-white"
+                  aria-label={t("stemsProfileSelector.cancel")}
+                >
+                  <XMarkIcon className="h-4 w-4" />
+                </button>
+              </div>
+
+              <div className="grid flex-1 min-h-0 grid-cols-1 gap-4 p-5 lg:grid-cols-[200px_1fr]">
+                <aside className="max-h-full overflow-y-auto rounded-xl border border-slate-800 bg-slate-950/70 px-3 py-4">
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">
+                    {t("stemsProfileSelector.categories")}
+                  </p>
+                  <div className="mt-3 space-y-1.5">
+                    {categories.map((category) => {
+                      const isActive = activeCategory === category.key;
+                      return (
+                        <button
+                          key={category.key}
+                          type="button"
+                          onClick={() => setActiveCategory(category.key)}
+                          className={[
+                            "flex w-full items-center justify-between rounded-lg px-3 py-2 text-[11px] font-medium transition",
+                            isActive
+                              ? "bg-teal-500/15 text-teal-200 border border-teal-500/30"
+                              : "text-slate-400 hover:bg-slate-900/70 hover:text-slate-100",
+                          ].join(" ")}
+                        >
+                          <span>{category.label}</span>
+                          <span className="rounded-full border border-slate-700 px-2 py-0.5 text-[10px] text-slate-500">
+                            {category.count}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </aside>
+
+                <div className="flex min-h-0 flex-col">
+                  <div className="relative">
+                    <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
+                    <input
+                      type="text"
+                      value={searchTerm}
+                      onChange={(event) => setSearchTerm(event.target.value)}
+                      placeholder={t("stemsProfileSelector.searchPlaceholder")}
+                      className="w-full rounded-lg border border-slate-800 bg-slate-950/60 py-2 pl-9 pr-3 text-xs text-slate-200 placeholder:text-slate-600 focus:border-teal-500/60 focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="mt-3 flex-1 overflow-y-auto pr-1 custom-scrollbar">
+                    {activeCategory === "all" ? (
+                      <div className="space-y-4">
+                        {groupedOptions.map((group) => (
+                          <div key={group.key}>
+                            <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500">
+                              {group.label}
+                            </p>
+                            <div className={gridClassName}>
+                              {group.options.map(renderOptionCard)}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className={gridClassName}>
+                        {filteredOptions.map(renderOptionCard)}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end border-t border-slate-800 px-5 py-3">
+                <button
+                  type="button"
+                  onClick={closeSelector}
+                  className="rounded-lg border border-slate-700 bg-slate-900/60 px-4 py-2 text-[11px] font-semibold uppercase tracking-widest text-slate-300 transition hover:text-white"
+                >
+                  {t("stemsProfileSelector.cancel")}
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body,
+        )
+      : null;
 
   if (!stems.length) return null;
 
@@ -527,172 +720,7 @@ export function StemsProfilePanel({ stems, onChangeProfile, accent = "amber" }: 
         })}
       </div>
 
-      {isSelectorOpen && activeStem && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
-          onClick={(event) => {
-            if (event.target === event.currentTarget) {
-              closeSelector();
-            }
-          }}
-        >
-          <div
-            className="w-full max-w-6xl overflow-hidden rounded-2xl border border-slate-800 bg-slate-950/95 shadow-2xl"
-            role="dialog"
-            aria-modal="true"
-          >
-            <div className="flex items-start justify-between gap-4 border-b border-slate-800 px-6 py-4">
-              <div>
-                <h4 className="text-base font-semibold text-white">
-                  {t("stemsProfileSelector.title")}
-                </h4>
-                <p className="mt-1 text-[11px] text-slate-400">
-                  {t("stemsProfileSelector.subtitle")}{" "}
-                  <span className="text-teal-300">
-                    {activeStem.fileName}
-                    {activeStem.extension ? `.${activeStem.extension}` : ""}
-                  </span>
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={closeSelector}
-                className="rounded-full border border-slate-800 bg-slate-900/70 p-2 text-slate-300 transition hover:text-white"
-                aria-label={t("stemsProfileSelector.cancel")}
-              >
-                <XMarkIcon className="h-4 w-4" />
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 gap-5 p-6 lg:grid-cols-[220px_1fr]">
-              <aside className="rounded-xl border border-slate-800 bg-slate-950/70 px-3 py-4">
-                <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-500">
-                  {t("stemsProfileSelector.categories")}
-                </p>
-                <div className="mt-3 space-y-1.5">
-                  {categories.map((category) => {
-                    const isActive = activeCategory === category.key;
-                    return (
-                      <button
-                        key={category.key}
-                        type="button"
-                        onClick={() => setActiveCategory(category.key)}
-                        className={[
-                          "flex w-full items-center justify-between rounded-lg px-3 py-2 text-[11px] font-medium transition",
-                          isActive
-                            ? "bg-teal-500/15 text-teal-200 border border-teal-500/30"
-                            : "text-slate-400 hover:bg-slate-900/70 hover:text-slate-100",
-                        ].join(" ")}
-                      >
-                        <span>{category.label}</span>
-                        <span className="rounded-full border border-slate-700 px-2 py-0.5 text-[10px] text-slate-500">
-                          {category.count}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </aside>
-
-              <div className="flex min-h-[420px] flex-col">
-                <div className="relative">
-                  <MagnifyingGlassIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
-                  <input
-                    type="text"
-                    value={searchTerm}
-                    onChange={(event) => setSearchTerm(event.target.value)}
-                    placeholder={t("stemsProfileSelector.searchPlaceholder")}
-                    className="w-full rounded-lg border border-slate-800 bg-slate-950/60 py-2 pl-9 pr-3 text-xs text-slate-200 placeholder:text-slate-600 focus:border-teal-500/60 focus:outline-none"
-                  />
-                </div>
-
-                <div className="mt-4 flex-1 overflow-y-auto pr-1 custom-scrollbar">
-                  {activeCategory === "all" ? (
-                    <div className="space-y-6">
-                      {groupedOptions.map((group) => (
-                        <div key={group.key}>
-                          <p className="mb-3 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
-                            {group.label}
-                          </p>
-                          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
-                            {group.options.map((option) => {
-                              const isSelected = option.value === activeProfileValue;
-                              return (
-                                <button
-                                  key={option.value}
-                                  type="button"
-                                  onClick={() => handleSelectOption(option.value)}
-                                  className={[
-                                    "group rounded-xl border p-3 text-left transition",
-                                    isSelected
-                                      ? "border-teal-400/70 bg-teal-500/10 shadow-[0_0_18px_rgba(45,212,191,0.18)]"
-                                      : "border-slate-800/80 bg-slate-900/40 hover:border-teal-500/40 hover:bg-slate-900/70",
-                                  ].join(" ")}
-                                  aria-pressed={isSelected}
-                                >
-                                  <div className="relative h-24 rounded-lg border border-slate-800 bg-slate-950/60">
-                                    <div className="absolute inset-0 rounded-lg bg-[radial-gradient(circle_at_50%_20%,rgba(45,212,191,0.22),transparent_60%)]" />
-                                    <div className="relative flex h-full items-center justify-center">
-                                      <InstrumentArt variant={option.variant} />
-                                    </div>
-                                  </div>
-                                  <p className="mt-2 text-[11px] font-medium text-slate-100">
-                                    {option.label}
-                                  </p>
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
-                      {filteredOptions.map((option) => {
-                        const isSelected = option.value === activeProfileValue;
-                        return (
-                          <button
-                            key={option.value}
-                            type="button"
-                            onClick={() => handleSelectOption(option.value)}
-                            className={[
-                              "group rounded-xl border p-3 text-left transition",
-                              isSelected
-                                ? "border-teal-400/70 bg-teal-500/10 shadow-[0_0_18px_rgba(45,212,191,0.18)]"
-                                : "border-slate-800/80 bg-slate-900/40 hover:border-teal-500/40 hover:bg-slate-900/70",
-                            ].join(" ")}
-                            aria-pressed={isSelected}
-                          >
-                            <div className="relative h-24 rounded-lg border border-slate-800 bg-slate-950/60">
-                              <div className="absolute inset-0 rounded-lg bg-[radial-gradient(circle_at_50%_20%,rgba(45,212,191,0.22),transparent_60%)]" />
-                              <div className="relative flex h-full items-center justify-center">
-                                <InstrumentArt variant={option.variant} />
-                              </div>
-                            </div>
-                            <p className="mt-2 text-[11px] font-medium text-slate-100">
-                              {option.label}
-                            </p>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-end border-t border-slate-800 px-6 py-3">
-              <button
-                type="button"
-                onClick={closeSelector}
-                className="rounded-lg border border-slate-700 bg-slate-900/60 px-4 py-2 text-[11px] font-semibold uppercase tracking-widest text-slate-300 transition hover:text-white"
-              >
-                {t("stemsProfileSelector.cancel")}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {selectorOverlay}
     </aside>
   );
 }
