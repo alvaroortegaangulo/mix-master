@@ -104,20 +104,20 @@ const PROFILE_SEARCH_TERMS: Record<string, string[]> = {
 };
 
 const PROFILE_IMAGES: Partial<Record<string, string>> = {
-  Kick: "/instruments/kick.png",
-  Snare: "/instruments/snare.png",
-  Percussion: "/instruments/bongos.png",
-  Bass_Electric: "/instruments/bass.png",
-  Acoustic_Guitar: "/instruments/guitar-acoustic.png",
-  Electric_Guitar_Rhythm: "/instruments/guitar-electric.png",
-  Keys_Piano: "/instruments/piano-keys.png",
-  Synth_Pads: "/instruments/synth-controller.png",
-  Lead_Vocal_Melodic: "/instruments/vocal-lead.png",
-  Lead_Vocal_Rap: "/instruments/vocal-lead.png",
-  Backing_Vocals: "/instruments/vocal-backing.png",
-  FX_EarCandy: "/instruments/cymbals.png",
-  Ambience_Atmos: "/instruments/ambience-wave.png",
-  Other: "/instruments/synth-keyboard.png",
+  Kick: "/instruments/kick.webp",
+  Snare: "/instruments/snare.webp",
+  Percussion: "/instruments/bongos.webp",
+  Bass_Electric: "/instruments/bass.webp",
+  Acoustic_Guitar: "/instruments/guitar-acoustic.webp",
+  Electric_Guitar_Rhythm: "/instruments/guitar-electric.webp",
+  Keys_Piano: "/instruments/piano-keys.webp",
+  Synth_Pads: "/instruments/synth-controller.webp",
+  Lead_Vocal_Melodic: "/instruments/vocal-lead.webp",
+  Lead_Vocal_Rap: "/instruments/vocal-lead.webp",
+  Backing_Vocals: "/instruments/vocal-backing.webp",
+  FX_EarCandy: "/instruments/cymbals.webp",
+  Ambience_Atmos: "/instruments/ambience-wave.webp",
+  Other: "/instruments/synth-keyboard.webp",
 };
 
 const BASE_SVG_PROPS = {
@@ -515,31 +515,47 @@ export function StemsProfilePanel({ stems, onChangeProfile, accent = "amber" }: 
   };
 
   const gridClassName =
-    "grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5";
+    "grid grid-cols-[repeat(auto-fill,minmax(120px,140px))] gap-3";
+  const groupGridClassName =
+    "grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-4 items-start";
+
+  const getCardLabel = (option: ProfileOption) => {
+    const imageSrc = PROFILE_IMAGES[option.value];
+    if (!imageSrc) return option.label;
+    const fileName = imageSrc.split("/").pop() ?? "";
+    const baseName = fileName.replace(/\.(png|webp)$/i, "");
+    if (!baseName) return option.label;
+    const imageLabel = baseName
+      .split("-")
+      .map((word) => (word ? `${word[0].toUpperCase()}${word.slice(1)}` : ""))
+      .join(" ");
+    return imageLabel;
+  };
 
   const renderOptionCard = (option: ProfileOption) => {
     const isSelected = option.value === activeProfileValue;
     const imageSrc = PROFILE_IMAGES[option.value];
+    const cardLabel = getCardLabel(option);
     return (
       <button
         key={option.value}
         type="button"
         onClick={() => handleSelectOption(option.value)}
         className={[
-          "group rounded-lg border p-2 text-left transition",
+          "group rounded-xl border p-2 text-left transition",
           isSelected
-            ? "border-teal-400/70 bg-teal-500/10 shadow-[0_0_12px_rgba(45,212,191,0.18)]"
+            ? "border-teal-400/70 bg-teal-500/10 shadow-[0_0_14px_rgba(45,212,191,0.2)]"
             : "border-slate-800/80 bg-slate-900/40 hover:border-teal-500/40 hover:bg-slate-900/70",
         ].join(" ")}
         aria-pressed={isSelected}
       >
-        <div className="relative h-16 overflow-hidden rounded-md border border-slate-800 bg-slate-950/60">
-          <div className="absolute inset-0 rounded-md bg-[radial-gradient(circle_at_50%_20%,rgba(45,212,191,0.2),transparent_60%)]" />
-          <div className="relative flex h-full items-center justify-center p-1.5">
+        <div className="relative h-[120px] overflow-hidden rounded-lg border border-slate-800 bg-slate-950/60">
+          <div className="absolute inset-0 rounded-lg bg-[radial-gradient(circle_at_50%_20%,rgba(45,212,191,0.2),transparent_65%)]" />
+          <div className="relative flex h-full items-center justify-center p-2">
             {imageSrc ? (
               <img
                 src={imageSrc}
-                alt={option.label}
+                alt={cardLabel}
                 className="h-full w-full object-contain"
                 loading="lazy"
                 draggable={false}
@@ -549,8 +565,8 @@ export function StemsProfilePanel({ stems, onChangeProfile, accent = "amber" }: 
             )}
           </div>
         </div>
-        <p className="mt-1 text-[10px] font-medium leading-tight text-slate-100">
-          {option.label}
+        <p className="mt-2 min-h-[30px] text-[11px] font-medium leading-snug text-slate-100 break-words">
+          {cardLabel}
         </p>
       </button>
     );
@@ -639,10 +655,13 @@ export function StemsProfilePanel({ stems, onChangeProfile, accent = "amber" }: 
 
                   <div className="mt-3 flex-1 overflow-y-auto pr-1 custom-scrollbar">
                     {activeCategory === "all" ? (
-                      <div className="space-y-4">
+                      <div className={groupGridClassName}>
                         {groupedOptions.map((group) => (
-                          <div key={group.key}>
-                            <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500">
+                          <div
+                            key={group.key}
+                            className="rounded-xl border border-slate-900/70 bg-slate-950/40 p-3"
+                          >
+                            <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500">
                               {group.label}
                             </p>
                             <div className={gridClassName}>
@@ -679,12 +698,7 @@ export function StemsProfilePanel({ stems, onChangeProfile, accent = "amber" }: 
 
   return (
     <aside className={`rounded-2xl border ${theme.wrapper} p-4 text-xs`}>
-      <h3 className={`text-sm font-semibold uppercase tracking-wide ${theme.title}`}>
-        {t("stemsProfile")}
-      </h3>
-      <p className={`mt-1 text-[11px] ${theme.description}`}>{t("stemsProfileDesc")}</p>
-
-      <div className="mt-3 space-y-2">
+      <div className="space-y-2">
         {stems.map((stem) => {
           const currentLabel = profileLabelByValue[stem.profile] || t("auto");
           const extension = stem.extension ? `.${stem.extension}` : "";
@@ -698,23 +712,21 @@ export function StemsProfilePanel({ stems, onChangeProfile, accent = "amber" }: 
                   {stem.fileName}
                   {extension && <span className={theme.muted}>{extension}</span>}
                 </p>
-                <div className="mt-1 flex items-center gap-2">
-                  <span
-                    className={`rounded-full border ${theme.selectBorder} bg-slate-950/70 px-2 py-0.5 text-[10px] ${theme.text}`}
-                  >
-                    {currentLabel}
-                  </span>
-                </div>
               </div>
-              <button
-                type="button"
-                onClick={() => openSelector(stem.id)}
-                className={`shrink-0 rounded-lg border ${theme.selectBorder} bg-slate-950/80 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-widest ${theme.text} transition hover:bg-slate-900/80`}
-                aria-haspopup="dialog"
-                aria-expanded={isSelectorOpen && activeStemId === stem.id}
-              >
-                {t("stemsProfileSelector.select")}
-              </button>
+              <div className="flex items-center gap-2 shrink-0">
+                <span className="max-w-[150px] truncate rounded-full border border-amber-400/60 bg-amber-500/15 px-2 py-0.5 text-[10px] font-semibold text-amber-200">
+                  {currentLabel}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => openSelector(stem.id)}
+                  className={`shrink-0 rounded-lg border ${theme.selectBorder} bg-slate-950/80 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-widest ${theme.text} transition hover:bg-slate-900/80`}
+                  aria-haspopup="dialog"
+                  aria-expanded={isSelectorOpen && activeStemId === stem.id}
+                >
+                  {t("stemsProfileSelector.select")}
+                </button>
+              </div>
             </div>
           );
         })}

@@ -388,7 +388,7 @@
       }
     },
     "stemsProfile": "Seleccionar perfil de pistas",
-    "stemsProfileDesc": "Etiqueta cada pista con su función en la mezcla. Luego usaremos estos perfiles para enrutar buses.",
+    "stemsProfileDesc": "Etiqueta cada pista con su función en la mezcla.",
     "stemsProfileSelector": {
       "title": "Seleccionar instrumento",
       "subtitle": "Elige el perfil que mejor describa la pista:",
