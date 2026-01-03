@@ -5,8 +5,7 @@ from utils.logger import logger
 
 import sys
 from pathlib import Path
-from typing import Dict, Any, List
-import os
+from typing import Dict, Any, List, Tuple
 
 # --- hack para importar utils cuando se ejecuta como script suelto ---
 THIS_DIR = Path(__file__).resolve().parent
@@ -16,7 +15,6 @@ if str(SRC_DIR) not in sys.path:
 
 import json  # noqa: E402
 import numpy as np  # noqa: E402
-import soundfile as sf  # noqa: E402
 
 from utils.analysis_utils import (  # noqa: E402
     load_contract,
@@ -30,59 +28,90 @@ from utils.loudness_utils import (  # noqa: E402
 )
 
 
-def _load_stem_mono(stem_path: Path) -> tuple[np.ndarray, int]:
+def _load_stem_audio(stem_path: Path) -> Tuple[np.ndarray, int]:
     """
-
-    Lee un stem, lo pasa a mono (float32) y devuelve (y_mono, sr).
+    Lee un stem y lo devuelve como float32, siempre 2D: (N, C).
     """
-    y, sr = sf_read_limited(stem_path, always_2d=False)
-    if isinstance(y, np.ndarray) and y.ndim > 1:
-        y_mono = np.mean(y, axis=1).astype(np.float32)
-    else:
-        y_mono = np.asarray(y, dtype=np.float32)
-    return y_mono, sr
+    y, sr = sf_read_limited(stem_path, always_2d=True)
+    y = np.asarray(y, dtype=np.float32)
+    if y.ndim == 1:
+        y = y[:, None]
+    return y, int(sr)
 
 
-def _mix_stems_to_mono(stem_files: List[Path]) -> tuple[np.ndarray, int]:
+def _mix_stems_sum(stem_files: List[Path]) -> Tuple[np.ndarray, int]:
     """
-    Mezcla sencilla de todos los stems a mono para medir peak/LUFS del MixBus.
+    Suma UNITY de todos los stems (sin normalizar) para medir headroom real.
 
-    - Asume que todos los stems tienen el mismo samplerate (garantizado por S0).
-    - Normaliza la mezcla para evitar saturación durante la suma.
+    Devuelve (mix, sr) con mix como (N, C).
     """
     if not stem_files:
-        return np.zeros(1, dtype=np.float32), 44100
-
-    # Cargar y pasar a mono en paralelo
-    max_workers = min(4, os.cpu_count() or 1)
-    results = list(map(_load_stem_mono, stem_files))
+        return np.zeros((1, 1), dtype=np.float32), 44100
 
     data_list: List[np.ndarray] = []
     sr_ref: int | None = None
+    ch_ref: int | None = None
 
-    for y_mono, sr in results:
-        if y_mono.size == 0:
+    for p in stem_files:
+        y, sr = _load_stem_audio(p)
+        if y.size == 0:
             continue
         if sr_ref is None:
             sr_ref = sr
-        data_list.append(y_mono)
+        if ch_ref is None:
+            ch_ref = y.shape[1]
+
+        # Si algún stem viene mono y otros stereo, lo adaptamos (no debería pasar si S0 hizo su trabajo)
+        if y.shape[1] != ch_ref:
+            if y.shape[1] == 1 and ch_ref == 2:
+                y = np.repeat(y, 2, axis=1)
+            elif y.shape[1] == 2 and ch_ref == 1:
+                y = np.mean(y, axis=1, keepdims=True)
+            else:
+                # Caso raro: forzamos a mínimo común (fallback seguro)
+                min_ch = min(int(y.shape[1]), int(ch_ref))
+                y = y[:, :min_ch]
+                ch_ref = min_ch
+
+        data_list.append(y)
 
     if not data_list:
-        return np.zeros(1, dtype=np.float32), (sr_ref or 44100)
+        return np.zeros((1, 1), dtype=np.float32), (sr_ref or 44100)
 
-    max_len = max(len(y) for y in data_list)
-    mix = np.zeros(max_len, dtype=np.float32)
+    max_len = max(d.shape[0] for d in data_list)
+    mix = np.zeros((max_len, int(ch_ref)), dtype=np.float32)
 
-    for y in data_list:
-        n = len(y)
-        mix[:n] += y
-
-    # Normalizar para evitar saturación extrema (solo afecta a la medición, no al audio real)
-    peak = float(np.max(np.abs(mix))) if mix.size > 0 else 0.0
-    if peak > 1.0:
-        mix /= peak
+    for d in data_list:
+        n = d.shape[0]
+        mix[:n, :] += d
 
     return mix, (sr_ref or 44100)
+
+
+def _true_peak_dbfs_multichannel(mix: np.ndarray, sr: int) -> float:
+    """
+    True peak como máximo entre canales, usando tu util measure_true_peak_dbfs (1D).
+    """
+    x = np.asarray(mix, dtype=np.float32)
+    if x.ndim == 1:
+        return float(measure_true_peak_dbfs(x, sr))
+    if x.ndim == 2 and x.shape[1] >= 1:
+        peaks = [float(measure_true_peak_dbfs(x[:, ch], sr)) for ch in range(x.shape[1])]
+        return float(max(peaks)) if peaks else float("-inf")
+    return float("-inf")
+
+
+def _sample_peak_dbfs_multichannel(mix: np.ndarray) -> float:
+    """
+    Peak de sample (no true peak) para diagnóstico rápido.
+    """
+    x = np.asarray(mix, dtype=np.float32)
+    if x.size == 0:
+        return float("-inf")
+    peak = float(np.max(np.abs(x)))
+    if peak <= 0.0:
+        return float("-inf")
+    return float(20.0 * np.log10(peak))
 
 
 def main() -> None:
@@ -96,7 +125,7 @@ def main() -> None:
         logger.logger.info("Uso: python S3_MIXBUS_HEADROOM.py <CONTRACT_ID>")
         sys.exit(1)
 
-    contract_id = sys.argv[1]  # "S3_MIXBUS_HEADROOM"
+    contract_id = sys.argv[1]
 
     # 1) Cargar contrato
     contract = load_contract(contract_id)
@@ -122,17 +151,22 @@ def main() -> None:
         if p.name.lower() != "full_song.wav"
     )
 
-    # 4) Mezcla a mono para medir headroom del MixBus (con carga de stems en paralelo)
-    mix_mono, sr = _mix_stems_to_mono(stem_files)
+    # 4) Mezcla UNITY (sin normalizar) para medir headroom real
+    mix, sr = _mix_stems_sum(stem_files)
 
-    if mix_mono.size == 0:
+    if mix.size == 0:
         mix_peak_dbfs = float("-inf")
         mix_lufs_integrated = float("-inf")
+        mix_sample_peak_dbfs = float("-inf")
     else:
-        mix_peak_dbfs = measure_true_peak_dbfs(mix_mono, sr)
-        mix_lufs_integrated = measure_integrated_lufs(mix_mono, sr)
+        mix_peak_dbfs = _true_peak_dbfs_multichannel(mix, sr)
+        mix_sample_peak_dbfs = _sample_peak_dbfs_multichannel(mix)
 
-    # 5) Montar estructura de análisis
+        # Para LUFS: downmix a mono (media) para estabilidad
+        mix_mono = np.mean(mix, axis=1).astype(np.float32) if mix.ndim == 2 else mix.astype(np.float32)
+        mix_lufs_integrated = float(measure_integrated_lufs(mix_mono, sr))
+
+    # 5) Estructura de stems
     stems_info: List[Dict[str, Any]] = []
     for p in stem_files:
         fname = p.name
@@ -145,22 +179,26 @@ def main() -> None:
             }
         )
 
+    # 6) JSON análisis
     session_state: Dict[str, Any] = {
         "contract_id": contract_id,
-            "stage_id": stage_id,
-            "style_preset": style_preset,
-            "metrics_from_contract": metrics,
-            "limits_from_contract": limits,
-            "session": {
-                "peak_dbfs_min_target": peak_dbfs_min,
-                "peak_dbfs_max_target": peak_dbfs_max,
-                "lufs_integrated_min_target": lufs_min,
-                "lufs_integrated_max_target": lufs_max,
-                "mix_peak_dbfs_measured": mix_peak_dbfs,
-                "mix_lufs_integrated_measured": mix_lufs_integrated,
-            },
-            "stems": stems_info,
-        }
+        "stage_id": stage_id,
+        "style_preset": style_preset,
+        "metrics_from_contract": metrics,
+        "limits_from_contract": limits,
+        "session": {
+            "peak_dbfs_min_target": peak_dbfs_min,
+            "peak_dbfs_max_target": peak_dbfs_max,
+            "lufs_integrated_min_target": lufs_min,
+            "lufs_integrated_max_target": lufs_max,
+            "mix_peak_dbfs_measured": mix_peak_dbfs,
+            "mix_sample_peak_dbfs_measured": mix_sample_peak_dbfs,
+            "mix_lufs_integrated_measured": mix_lufs_integrated,
+            "num_stems": len(stem_files),
+            "samplerate_hz": sr,
+        },
+        "stems": stems_info,
+    }
 
     output_path = temp_dir / f"analysis_{contract_id}.json"
     with output_path.open("w", encoding="utf-8") as f:
@@ -168,8 +206,8 @@ def main() -> None:
 
     logger.logger.info(
         f"[S3_MIXBUS_HEADROOM] Análisis completado. "
-        f"peak={mix_peak_dbfs:.2f} dBFS, LUFS={mix_lufs_integrated:.2f}. "
-        f"JSON: {output_path}"
+        f"true_peak={mix_peak_dbfs:.2f} dBFS, sample_peak={mix_sample_peak_dbfs:.2f} dBFS, "
+        f"LUFS={mix_lufs_integrated:.2f}. JSON: {output_path}"
     )
 
 

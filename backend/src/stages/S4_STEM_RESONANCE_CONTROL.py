@@ -19,346 +19,458 @@ import soundfile as sf  # noqa: E402
 
 from pedalboard import Pedalboard, PeakFilter  # noqa: E402
 
-from utils.analysis_utils import get_temp_dir  # noqa: E402
+from utils.analysis_utils import get_temp_dir, sf_read_limited  # noqa: E402
+from utils.resonance_utils import compute_magnitude_spectrum  # noqa: E402
 
+
+# -------------------------------------------------------------------
+# Load analysis
+# -------------------------------------------------------------------
 
 def load_analysis(contract_id: str) -> Dict[str, Any]:
-    """
-    Carga el JSON de análisis generado por analysis\\S4_STEM_RESONANCE_CONTROL.py.
-    """
     temp_dir = get_temp_dir(contract_id, create=False)
     analysis_path = temp_dir / f"analysis_{contract_id}.json"
-
     if not analysis_path.exists():
         raise FileNotFoundError(f"No se encuentra el análisis en {analysis_path}")
-
     with analysis_path.open("r", encoding="utf-8") as f:
-        data = json.load(f)
-
-    return data
+        return json.load(f)
 
 
 # -------------------------------------------------------------------
-# Heurísticas de diseño de filtros
+# Detector consistente con análisis (para métricas pre/post)
 # -------------------------------------------------------------------
 
+def _moving_median(x: np.ndarray, win: int) -> np.ndarray:
+    x = np.asarray(x, dtype=np.float32)
+    if win < 3:
+        return x.copy()
+    if win % 2 == 0:
+        win += 1
+    pad = win // 2
+    xpad = np.pad(x, (pad, pad), mode="reflect")
+    try:
+        from numpy.lib.stride_tricks import sliding_window_view  # type: ignore
+        w = sliding_window_view(xpad, win)
+        return np.median(w, axis=-1).astype(np.float32)
+    except Exception:
+        k = np.ones(win, dtype=np.float32) / float(win)
+        return np.convolve(xpad, k, mode="valid").astype(np.float32)
 
-def _estimate_q(freq_hz: float, instrument_profile: str | None) -> float:
+
+def _detect_resonances_local(
+    y_mono: np.ndarray,
+    sr: int,
+    fmin: float,
+    fmax: float,
+    local_window_hz: float,
+    threshold_db: float,
+    max_resonances: int,
+) -> List[Dict[str, Any]]:
+    freqs, mag_lin = compute_magnitude_spectrum(np.asarray(y_mono, dtype=np.float32), int(sr))
+    freqs = np.asarray(freqs, dtype=np.float32)
+    mag_lin = np.asarray(mag_lin, dtype=np.float32)
+    if freqs.size == 0 or mag_lin.size == 0:
+        return []
+
+    mask = (freqs >= float(fmin)) & (freqs <= float(fmax))
+    if not np.any(mask):
+        return []
+
+    fb = freqs[mask]
+    mb = mag_lin[mask]
+
+    eps = 1e-12
+    mag_db = 20.0 * np.log10(np.maximum(mb, eps))
+
+    df = float(np.median(np.diff(fb))) if fb.size > 2 else 1.0
+    df = max(df, 1e-6)
+    win_bins = int(round(float(local_window_hz) / df))
+    win_bins = max(11, win_bins)
+    if win_bins % 2 == 0:
+        win_bins += 1
+
+    baseline_db = _moving_median(mag_db, win_bins)
+    residual_db = mag_db - baseline_db
+
+    edge_guard_hz = 0.5 * float(local_window_hz)
+    valid_edge = (fb >= (float(fmin) + edge_guard_hz)) & (fb <= (float(fmax) - edge_guard_hz))
+
+    r = residual_db
+    cand = np.zeros_like(r, dtype=bool)
+    if r.size >= 3:
+        cand[1:-1] = (r[1:-1] > r[:-2]) & (r[1:-1] >= r[2:]) & (r[1:-1] >= float(threshold_db))
+    cand &= valid_edge
+
+    idxs = np.where(cand)[0]
+    if idxs.size == 0:
+        return []
+
+    min_ratio = 2.0 ** (1.0 / 6.0)
+    min_spacing_hz = max(30.0, 0.25 * float(local_window_hz))
+
+    idxs = sorted(idxs.tolist(), key=lambda i: float(r[i]), reverse=True)
+
+    sel: List[int] = []
+    sel_f: List[float] = []
+
+    for i in idxs:
+        if len(sel) >= int(max_resonances):
+            break
+        fi = float(fb[i])
+        if any(abs(fi - f0) < min_spacing_hz for f0 in sel_f):
+            continue
+        if any((max(fi, f0) / max(min(fi, f0), 1e-6)) < min_ratio for f0 in sel_f):
+            continue
+        sel.append(i)
+        sel_f.append(fi)
+
+    out: List[Dict[str, Any]] = []
+    for i in sel:
+        fi = float(fb[i])
+        prom = float(r[i])
+        peak_db = float(mag_db[i])
+        base_db = float(baseline_db[i])
+
+        target = prom - 3.0
+        left = i
+        while left > 0 and float(r[left]) > target:
+            left -= 1
+        right = i
+        while right < (r.size - 1) and float(r[right]) > target:
+            right += 1
+
+        bw = float(fb[right] - fb[left]) if right > left else float(df * 2.0)
+        bw = max(bw, float(df * 2.0))
+        q = float(np.clip(fi / bw if bw > 0 else 8.0, 2.0, 14.0))
+
+        out.append(
+            {
+                "freq_hz": fi,
+                "gain_above_local_db": prom,
+                "peak_db": peak_db,
+                "baseline_db": base_db,
+                "bandwidth_hz": bw,
+                "q_suggested": q,
+            }
+        )
+
+    out.sort(key=lambda d: float(d.get("freq_hz", 0.0)))
+    return out
+
+
+def _to_mono(x: np.ndarray) -> np.ndarray:
+    x = np.asarray(x, dtype=np.float32)
+    if x.ndim == 2 and x.shape[1] >= 1:
+        return np.mean(x, axis=1).astype(np.float32)
+    return x.astype(np.float32)
+
+
+# -------------------------------------------------------------------
+# Filter design heuristics
+# -------------------------------------------------------------------
+
+def _is_low_end_instrument(inst: str | None) -> bool:
+    s = (inst or "").lower()
+    return any(k in s for k in ("kick", "bass", "sub", "808", "lowtom", "floor tom"))
+
+
+def _cut_depth_db(excess_db: float, max_cuts_db: float, freq_hz: float, inst: str | None) -> float:
     """
-    Estima un Q razonable según instrumento y frecuencia.
-    - Voces: algo más ancho en low-mids, más estrecho en agudos.
-    - Kick/Bajo: notches algo más anchos para resonancias “boomy”.
-    - Guitarras: notches relativamente estrechos para preservar carácter.
-    - Otros: heurística genérica.
+    Evitar '8 dB always'. Curva suave:
+      cut ~= 0.6*excess + 0.5, cap a max_cuts_db
+    Protección low-mids: 200–350 Hz cap 4 dB salvo low-end.
     """
-    inst = (instrument_profile or "").lower()
+    excess_db = float(max(0.0, excess_db))
+    if excess_db <= 0.0:
+        return 0.0
+
+    cut = 0.6 * excess_db + 0.5
+    cut = float(min(cut, float(max_cuts_db)))
+
     f = float(freq_hz)
+    if 200.0 <= f <= 350.0 and not _is_low_end_instrument(inst):
+        cut = min(cut, 4.0)
 
-    # Voces lead / backing
-    if "vocal" in inst or "voice" in inst:
-        if f < 300.0:
-            return 4.0
-        elif f < 3000.0:
-            return 6.0
-        else:
-            return 8.0
+    # micro-cuts no
+    if cut < 0.4:
+        return 0.0
 
-    # Bajo
-    if "bass" in inst:
-        if f < 150.0:
-            return 3.5
-        elif f < 400.0:
-            return 5.0
-        else:
-            return 6.5
-
-    # Batería / percusión
-    if any(k in inst for k in ("kick", "snare", "tom", "perc", "drum")):
-        if f < 250.0:
-            return 4.0
-        elif f < 1000.0:
-            return 5.5
-        else:
-            return 7.0
-
-    # Guitarras
-    if "guitar" in inst:
-        if f < 400.0:
-            return 5.5
-        elif f < 3000.0:
-            return 7.0
-        else:
-            return 8.5
-
-    # Resto de instrumentos
-    if f < 400.0:
-        return 5.0
-    elif f < 4000.0:
-        return 7.0
-    else:
-        return 9.0
+    return float(cut)
 
 
-def _build_notches_for_stem(
-    stem: Dict[str, Any],
-    max_res_peak_db: float,
+def _q_for_resonance(res: Dict[str, Any], inst: str | None) -> float:
+    """
+    Usar q_suggested si existe; si no, fallback razonable.
+    """
+    try:
+        q = float(res.get("q_suggested", 0.0))
+        if 1.0 <= q <= 20.0:
+            return float(np.clip(q, 2.0, 14.0))
+    except Exception:
+        pass
+
+    f = float(res.get("freq_hz", 0.0) or 0.0)
+    s = (inst or "").lower()
+
+    if _is_low_end_instrument(s):
+        return 3.5 if f < 250.0 else 5.0
+    if "vocal" in s or "voice" in s:
+        return 4.5 if f < 300.0 else 7.0
+    if "guitar" in s:
+        return 6.0 if f < 400.0 else 8.0
+    return 6.0
+
+
+def _build_notches(
+    resonances: List[Dict[str, Any]],
+    threshold_db: float,
     max_cuts_db: float,
-    max_filters_per_band: int,
+    max_filters: int,
+    inst: str | None,
 ) -> List[Dict[str, float]]:
     """
-    A partir de la info de resonancias de un stem, construye la lista de notches
-    (freq_hz, cut_db, q, gain_above_local_db_original) ya filtrada y limitada.
-
-    Mejores decisiones:
-      - Priorizamos las resonancias más severas.
-      - Impedimos poner varios notches casi en la misma frecuencia (min_spacing).
-      - Q dinámico según instrumento y frecuencia.
+    Construye notches priorizando prominencia.
+    Espaciado: 1/6 octava para evitar machacar low-mids.
     """
-    resonances = stem.get("resonances", []) or []
     if not resonances:
         return []
 
-    inst_profile = stem.get("instrument_profile") or ""
+    thr = float(threshold_db)
 
-    # Ordenar resonancias por severidad (gain_above_local_db descendente)
-    try:
-        resonances_sorted = sorted(
-            resonances,
-            key=lambda r: float(r.get("gain_above_local_db", 0.0)),
-            reverse=True,
-        )
-    except Exception:
-        resonances_sorted = resonances
+    # ordenar por prominencia desc
+    rs = sorted(resonances, key=lambda r: float(r.get("gain_above_local_db", 0.0)), reverse=True)
 
-    notches: List[Dict[str, float]] = []
-    used_freqs: List[float] = []
+    min_ratio = 2.0 ** (1.0 / 6.0)
+    used: List[float] = []
+    out: List[Dict[str, float]] = []
 
-    for res in resonances_sorted:
-        if len(notches) >= max_filters_per_band:
+    for r in rs:
+        if len(out) >= int(max_filters):
             break
 
         try:
-            gain_above = float(res.get("gain_above_local_db", 0.0))
-            freq_hz = float(res.get("freq_hz", 0.0))
-        except (TypeError, ValueError):
+            f = float(r.get("freq_hz", 0.0))
+            prom = float(r.get("gain_above_local_db", 0.0))
+        except Exception:
             continue
 
-        if freq_hz <= 0.0:
+        if f <= 0.0:
             continue
 
-        # Exceso sobre el umbral permitido
-        excess_db = gain_above - max_res_peak_db
-        if excess_db <= 0.0:
-            # Ya está por debajo del objetivo contractual
+        excess = prom - thr
+        cut = _cut_depth_db(excess, max_cuts_db, f, inst)
+        if cut <= 0.0:
             continue
 
-        # Espaciado mínimo entre notches para no machacar la misma zona
-        # Escalamos con la frecuencia para ser algo más laxos arriba
-        min_spacing_hz = max(30.0, freq_hz * 0.08)  # ~8% de f, mínimo 30 Hz
-        if any(abs(freq_hz - f0) < min_spacing_hz for f0 in used_freqs):
-            # Ya hemos colocado un notch muy cerca de esta frecuencia
+        # spacing 1/6 octave
+        if any((max(f, f0) / max(min(f, f0), 1e-6)) < min_ratio for f0 in used):
             continue
 
-        # Profundidad de corte limitada por el contrato
-        cut_db = min(excess_db, max_cuts_db)
-        if cut_db <= 0.0:
-            continue
+        q = _q_for_resonance(r, inst)
 
-        q = _estimate_q(freq_hz, inst_profile)
-
-        notches.append(
+        out.append(
             {
-                "freq_hz": freq_hz,
-                "cut_db": cut_db,  # positiva = cantidad de corte
-                "q": q,
-                "gain_above_local_db": gain_above,
+                "freq_hz": float(f),
+                "cut_db": float(cut),
+                "q": float(q),
+                "prominence_db": float(prom),
             }
         )
-        used_freqs.append(freq_hz)
+        used.append(float(f))
 
-    return notches
-
-
-# --------------------------------------------------------------------
-# --------------------------------------------------------------------
+    # ordenar por frecuencia para logging
+    out.sort(key=lambda d: float(d["freq_hz"]))
+    return out
 
 
-def _process_stem_worker(
-    args: Tuple[str, str, List[Dict[str, float]]]
-) -> Tuple[str, int]:
-    """
-    Aplica los cortes de resonancia a un stem concreto usando Pedalboard.
+# -------------------------------------------------------------------
+# Stem processing
+# -------------------------------------------------------------------
 
-    args:
-      - temp_dir_str: carpeta temporal del contrato
-      - file_name: nombre del stem
-      - notches: lista de dicts con al menos:
-          {"freq_hz": float, "cut_db": float, "q": float?, "gain_above_local_db": float?}
-
-    Devuelve:
-      (file_name, num_notches_aplicadas)
-    """
-    temp_dir_str, fname, notches = args
-
-    if not fname or not notches:
-        return fname or "", 0
-
-    temp_dir = Path(temp_dir_str)
-    path = temp_dir / fname
-    if not path.exists():
-        return fname, 0
-
+def _apply_notches_to_file(path: Path, notches: List[Dict[str, float]]) -> bool:
+    if not notches:
+        return False
     try:
-        # Leer audio con soundfile (forma estable en tu pipeline)
-        audio, sr = sf.read(path, always_2d=True)  # (N, C)
-        audio = np.asarray(audio, dtype=np.float32)
-
-        if audio.size == 0:
-            return fname, 0
+        audio, sr = sf.read(path, always_2d=True)
+        x = np.asarray(audio, dtype=np.float32)
+        if x.size == 0:
+            return False
 
         plugins = []
-        log_parts: List[str] = []
-
         for n in notches:
-            try:
-                freq_hz = float(n["freq_hz"])
-                cut_db = float(n["cut_db"])  # cantidad de corte (positiva)
-            except (KeyError, TypeError, ValueError):
+            f = float(n["freq_hz"])
+            cut = float(n["cut_db"])
+            q = float(n["q"])
+            if f <= 0.0 or cut <= 0.0:
                 continue
-
-            if freq_hz <= 0.0 or cut_db <= 0.0:
-                continue
-
-            q = float(n.get("q", 10.0))
-
-            # Para logging aproximado del “antes/después”
-            gain_above = n.get("gain_above_local_db")
-            if isinstance(gain_above, (int, float)):
-                try:
-                    gain_above = float(gain_above)
-                except (TypeError, ValueError):
-                    gain_above = None
-            else:
-                gain_above = None
-
-            if gain_above is not None:
-                residual_est = gain_above - cut_db
-                log_parts.append(
-                    f"{freq_hz:.0f}Hz/{cut_db:.1f}dB(Q={q:.1f}, "
-                    f"{gain_above:.1f}→~{residual_est:.1f}dB)"
-                )
-            else:
-                log_parts.append(f"{freq_hz:.0f}Hz/{cut_db:.1f}dB(Q={q:.1f})")
-
-            plugins.append(
-                PeakFilter(
-                    cutoff_frequency_hz=freq_hz,
-                    gain_db=-cut_db,   # negativo = corte
-                    q=q,
-                )
-            )
+            plugins.append(PeakFilter(cutoff_frequency_hz=f, gain_db=-cut, q=q))
 
         if not plugins:
-            return fname, 0
+            return False
 
         board = Pedalboard(plugins)
+        y = board(x, int(sr))
+        y = np.asarray(y, dtype=np.float32)
+        y = np.clip(y, -1.5, 1.5)
 
-        # Procesar audio
-        audio_filt = board(audio, sr)
-
-        # Clamp suave por seguridad
-        audio_filt = np.clip(audio_filt, -1.5, 1.5).astype(np.float32)
-
-        # Escribir de vuelta al mismo archivo
-        sf.write(path, audio_filt, sr)
-
-        notch_str = ", ".join(log_parts)
-        logger.logger.info(
-            f"[S4_STEM_RESONANCE_CONTROL] {fname}: aplicadas {len(plugins)} notches "
-            f"({notch_str})."
-        )
-
-        return fname, len(plugins)
-
+        sf.write(path, y, int(sr), subtype="FLOAT")
+        return True
     except Exception as e:
-        logger.logger.info(f"[S4_STEM_RESONANCE_CONTROL] Error procesando {fname}: {e}")
-        return fname, 0
+        logger.logger.info(f"[S4_STEM_RESONANCE_CONTROL] Error procesando {path.name}: {e}")
+        return False
+
+
+def _worst_prominence(res: List[Dict[str, Any]]) -> float:
+    w = 0.0
+    for r in (res or []):
+        try:
+            w = max(w, float(r.get("gain_above_local_db", 0.0)))
+        except Exception:
+            pass
+    return float(w)
+
+
+def _save_metrics(
+    temp_dir: Path,
+    contract_id: str,
+    metrics: Dict[str, Any],
+    limits: Dict[str, Any],
+    per_stem: List[Dict[str, Any]],
+) -> None:
+    out = temp_dir / "resonance_metrics_S4_STEM_RESONANCE_CONTROL.json"
+    payload = {
+        "contract_id": contract_id,
+        "metrics_from_contract": metrics,
+        "limits_from_contract": limits,
+        "stems": per_stem,
+    }
+    with out.open("w", encoding="utf-8") as f:
+        json.dump(payload, f, indent=2, ensure_ascii=False)
+    logger.logger.info(f"[S4_STEM_RESONANCE_CONTROL] Métricas guardadas en: {out}")
 
 
 def main() -> None:
     """
     Stage S4_STEM_RESONANCE_CONTROL:
-
       - Lee analysis_S4_STEM_RESONANCE_CONTROL.json.
-      - Para cada stem, construye notches "musicales" (freq, Q, cut) a partir
-        de las resonancias detectadas.
-      - Aplica esos notches usando PeakFilter de Pedalboard.
-      - Respeta:
-          * max_resonance_peak_db_above_local (umbral de "aceptable").
-          * max_resonant_cuts_db (corte máx. por resonancia).
-          * max_resonant_filters_per_band (máx. resonancias aplicadas por stem).
+      - Para cada stem: analiza pre -> diseña notches -> aplica -> analiza post.
+      - Guarda resonance_metrics_S4_STEM_RESONANCE_CONTROL.json (pre/post real).
     """
     if len(sys.argv) < 2:
         logger.logger.info("Uso: python S4_STEM_RESONANCE_CONTROL.py <CONTRACT_ID>")
         sys.exit(1)
 
-    contract_id = sys.argv[1]  # "S4_STEM_RESONANCE_CONTROL"
+    contract_id = sys.argv[1]
 
     analysis = load_analysis(contract_id)
-
     metrics: Dict[str, Any] = analysis.get("metrics_from_contract", {}) or {}
     limits: Dict[str, Any] = analysis.get("limits_from_contract", {}) or {}
     stems: List[Dict[str, Any]] = analysis.get("stems", []) or []
+    session: Dict[str, Any] = analysis.get("session", {}) or {}
 
-    max_res_peak_db = float(metrics.get("max_resonance_peak_db_above_local", 12.0))
-    max_cuts_db = float(limits.get("max_resonant_cuts_db", 8.0))
-    max_filters_per_band = int(limits.get("max_resonant_filters_per_band", 3))
+    threshold_db = float(metrics.get("max_resonance_peak_db_above_local", session.get("max_resonance_peak_db_above_local", 12.0)))
+    max_cuts_db = float(limits.get("max_resonant_cuts_db", session.get("max_resonant_cuts_db", 8.0)))
+    max_filters = int(limits.get("max_resonant_filters_per_band", session.get("max_resonant_filters_per_band", 3)))
+
+    fmin = float(session.get("band_fmin_hz", metrics.get("band_fmin_hz", 80.0)))
+    fmax = float(session.get("band_fmax_hz", metrics.get("band_fmax_hz", 12000.0)))
+    local_window_hz = float(session.get("local_window_hz", metrics.get("local_window_hz", 220.0)))
 
     temp_dir = get_temp_dir(contract_id, create=False)
-    temp_dir_str = str(temp_dir)
 
-    # Preparar tareas solo para stems que tengan notches efectivos
-    tasks: List[Tuple[str, str, List[Dict[str, float]]]] = []
-
-    for stem in stems:
-        fname = stem.get("file_name")
-        if not fname:
-            continue
-
-        resonances = stem.get("resonances", []) or []
-        if not resonances:
-            continue
-
-        notches = _build_notches_for_stem(
-            stem=stem,
-            max_res_peak_db=max_res_peak_db,
-            max_cuts_db=max_cuts_db,
-            max_filters_per_band=max_filters_per_band,
-        )
-        if not notches:
-            continue
-
-        tasks.append((temp_dir_str, fname, notches))
-
-    if not tasks:
-        logger.logger.info(
-            "[S4_STEM_RESONANCE_CONTROL] No hay stems con resonancias a procesar. "
-            "Stage completado sin cambios."
-        )
-        return
+    per_stem_metrics: List[Dict[str, Any]] = []
 
     stems_touched = 0
-    total_notches_applied = 0
+    total_notches = 0
 
-    # Procesado en serie para evitar problemas de estabilidad con pedalboard
-    for fname, num_notches in map(_process_stem_worker, tasks):
-        if num_notches > 0:
+    for st in stems:
+        fname = st.get("file_name")
+        fpath = st.get("file_path")
+        inst = st.get("instrument_profile") or "Other"
+
+        if not fname or not fpath:
+            continue
+
+        path = Path(fpath)
+        if not path.exists():
+            continue
+        if path.name.lower() == "full_song.wav":
+            continue
+
+        # Pre analysis (authoritative)
+        y_pre, sr = sf_read_limited(path, always_2d=True)
+        y_pre_mono = _to_mono(y_pre)
+        res_pre = _detect_resonances_local(
+            y_mono=y_pre_mono,
+            sr=int(sr),
+            fmin=fmin,
+            fmax=fmax,
+            local_window_hz=local_window_hz,
+            threshold_db=threshold_db,
+            max_resonances=max_filters,
+        )
+        worst_pre = _worst_prominence(res_pre)
+
+        # Notch plan
+        notches = _build_notches(
+            resonances=res_pre,
+            threshold_db=threshold_db,
+            max_cuts_db=max_cuts_db,
+            max_filters=max_filters,
+            inst=inst,
+        )
+
+        applied = _apply_notches_to_file(path, notches)
+        if applied:
             stems_touched += 1
-            total_notches_applied += num_notches
+            total_notches += len(notches)
+
+        # Post analysis
+        y_post, sr2 = sf_read_limited(path, always_2d=True)
+        y_post_mono = _to_mono(y_post)
+        res_post = _detect_resonances_local(
+            y_mono=y_post_mono,
+            sr=int(sr2),
+            fmin=fmin,
+            fmax=fmax,
+            local_window_hz=local_window_hz,
+            threshold_db=threshold_db,
+            max_resonances=max_filters,
+        )
+        worst_post = _worst_prominence(res_post)
+
+        if notches:
+            notch_str = ", ".join([f"{n['freq_hz']:.0f}Hz/-{n['cut_db']:.1f}dB(Q={n['q']:.1f})" for n in notches])
+        else:
+            notch_str = "none"
+
+        logger.logger.info(
+            f"[S4_STEM_RESONANCE_CONTROL] {fname}: worst_pre={worst_pre:.2f} dB, "
+            f"worst_post={worst_post:.2f} dB | notches={notch_str}"
+        )
+
+        per_stem_metrics.append(
+            {
+                "file_name": fname,
+                "instrument_profile": inst,
+                "samplerate_hz": int(sr2),
+                "pre": {
+                    "worst_gain_above_local_db": float(worst_pre),
+                    "resonances": res_pre,
+                },
+                "post": {
+                    "worst_gain_above_local_db": float(worst_post),
+                    "resonances": res_post,
+                },
+                "applied_notches": notches,
+            }
+        )
+
+    _save_metrics(temp_dir, contract_id, metrics, limits, per_stem_metrics)
 
     logger.logger.info(
-        f"[S4_STEM_RESONANCE_CONTROL] Stage completado. "
-        f"stems procesados={stems_touched}, notches totales={total_notches_applied}."
+        f"[S4_STEM_RESONANCE_CONTROL] Stage completado. stems procesados={stems_touched}, "
+        f"notches totales={total_notches}."
     )
 
 

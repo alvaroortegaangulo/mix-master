@@ -5,8 +5,7 @@ from utils.logger import logger
 
 import sys
 from pathlib import Path
-from typing import Dict, Any
-import os
+from typing import Dict, Any, Tuple
 
 # --- hack para importar utils ---
 THIS_DIR = Path(__file__).resolve().parent
@@ -15,7 +14,6 @@ if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
 import json  # noqa: E402
-import soundfile as sf  # noqa: E402
 
 from utils.analysis_utils import (  # noqa: E402
     load_contract,
@@ -27,46 +25,114 @@ from utils.tonal_balance_utils import (  # noqa: E402
     get_freq_bands,
     compute_band_energies,
     get_style_tonal_profile,
-    compute_tonal_error,
 )
+
 try:
     from context import PipelineContext
 except ImportError:
-    PipelineContext = None # type: ignore
+    PipelineContext = None  # type: ignore
+
+
+def _finite_values(d: Dict[str, float]) -> list[float]:
+    vals: list[float] = []
+    for v in d.values():
+        try:
+            fv = float(v)
+        except (TypeError, ValueError):
+            continue
+        if fv == float("-inf"):
+            continue
+        vals.append(fv)
+    return vals
+
+
+def normalize_bands_db(
+    band_db_abs: Dict[str, float],
+) -> Tuple[Dict[str, float], float]:
+    """
+    Convierte energías absolutas por banda a energías relativas (forma espectral),
+    restando la media de las bandas finitas.
+
+    Devuelve:
+      - band_db_rel: dict band_id -> (abs - mean_abs)
+      - mean_abs_db: media usada (para diagnosticar offsets globales)
+    """
+    vals = _finite_values(band_db_abs)
+    if not vals:
+        return {k: float("-inf") for k in band_db_abs.keys()}, 0.0
+
+    mean_abs = sum(vals) / float(len(vals))
+    rel: Dict[str, float] = {}
+    for k, v in band_db_abs.items():
+        try:
+            fv = float(v)
+        except (TypeError, ValueError):
+            rel[k] = float("-inf")
+            continue
+        if fv == float("-inf"):
+            rel[k] = float("-inf")
+        else:
+            rel[k] = float(fv - mean_abs)
+    return rel, float(mean_abs)
+
+
+def compute_error_by_band_rel(
+    current_rel: Dict[str, float],
+    target_rel: Dict[str, float],
+) -> Tuple[Dict[str, float], float]:
+    """
+    Error con signo definido:
+      error = current_rel - target_rel
+
+    RMS sobre bandas finitas comunes.
+    """
+    err: Dict[str, float] = {}
+    sq: list[float] = []
+
+    keys = set(current_rel.keys()) | set(target_rel.keys())
+    for k in keys:
+        c = current_rel.get(k, float("-inf"))
+        t = target_rel.get(k, float("-inf"))
+        try:
+            cf = float(c)
+            tf = float(t)
+        except (TypeError, ValueError):
+            continue
+        if cf == float("-inf") or tf == float("-inf"):
+            continue
+        e = float(cf - tf)
+        err[k] = e
+        sq.append(e * e)
+
+    rms = (sum(sq) / float(len(sq))) ** 0.5 if sq else 0.0
+    return err, float(rms)
+
 
 def _analyze_mixbus(full_song_path: Path) -> Dict[str, Any]:
     """
-
-    Lee full_song.wav y calcula las energías por banda.
-    Devuelve:
-      - band_current_db: dict band_id -> nivel dB
-      - sr_mix: samplerate
-      - error: mensaje de error o None
+    Lee full_song.wav y calcula energías por banda (ABS).
     """
     try:
         y, sr = sf_read_limited(full_song_path, always_2d=False)
     except Exception as e:
         return {
-            "band_current_db": None,
+            "band_current_db_abs": None,
             "sr_mix": None,
             "error": f"[S7_MIXBUS_TONAL_BALANCE] Aviso: no se puede leer full_song.wav: {e}.",
         }
 
-    band_current_db = compute_band_energies(y, sr)
+    band_current_db_abs = compute_band_energies(y, sr)
     return {
-        "band_current_db": band_current_db,
+        "band_current_db_abs": band_current_db_abs,
         "sr_mix": sr,
         "error": None,
     }
 
 
 def process(context: PipelineContext, *args) -> bool:
-    """
-    Entry point optimizado.
-    """
     contract_id = args[0] if args else context.stage_id
 
-    # 1) Cargar contrato
+    # 1) Contrato
     contract = load_contract(contract_id)
     metrics: Dict[str, Any] = contract.get("metrics", {})
     limits: Dict[str, Any] = contract.get("limits", {})
@@ -75,60 +141,62 @@ def process(context: PipelineContext, *args) -> bool:
     max_tonal_error_db = float(metrics.get("max_tonal_balance_error_db", 3.0))
     max_eq_change_db = float(limits.get("max_eq_change_db_per_band_per_pass", 1.5))
 
-    # 2) temp/<contract_id> y session_config
-    # Usar context.get_stage_dir(contract_id)
+    # 2) Stage dir + session_config
     temp_dir = context.get_stage_dir(contract_id)
-    if not temp_dir.exists():
-        temp_dir.mkdir(parents=True, exist_ok=True)
+    temp_dir.mkdir(parents=True, exist_ok=True)
 
-    # Note: load_session_config uses get_temp_dir internally (legacy).
-    # We should probably pass temp_dir to it, but it expects contract_id.
-    # It reads session_config.json from temp_dir.
-    # Since we set environment vars in stage.py legacy, load_session_config should work
-    # if it relies on get_temp_dir.
-    # Wait, load_session_config(contract_id) -> path = get_temp_dir(contract_id) / ...
     cfg = load_session_config(contract_id)
     style_preset = cfg["style_preset"]
 
-    # 3) Leer mixbus (full_song.wav)
+    # 3) Targets y bandas
+    freq_bands = get_freq_bands()
+
+    # Perfil de estilo (ABS, tal y como venga definido)
+    band_target_db_abs: Dict[str, float] = get_style_tonal_profile(style_preset) or {}
+
+    # 4) Medición
     full_song_path = temp_dir / "full_song.wav"
-    band_current_db: Dict[str, float] = {}
-    band_target_db: Dict[str, float] = {}
+
+    band_current_db_abs: Dict[str, float] = {}
+    band_current_db_rel: Dict[str, float] = {}
+    band_target_db_rel: Dict[str, float] = {}
     band_error_db: Dict[str, float] = {}
     error_rms_db: float = 0.0
     sr_mix: int | None = None
-
-    freq_bands = get_freq_bands()
-    style_profile = get_style_tonal_profile(style_preset)
+    current_mean_abs_db: float = 0.0
+    target_mean_abs_db: float = 0.0
 
     if full_song_path.exists():
         result = _analyze_mixbus(full_song_path)
-
         if result["error"] is not None:
-            # Error al leer o procesar el mixbus
             logger.logger.info(result["error"])
-            band_current_db = {b["id"]: float("-inf") for b in freq_bands}
-            band_target_db = style_profile
-            band_error_db = {}
-            error_rms_db = 0.0
+            band_current_db_abs = {b["id"]: float("-inf") for b in freq_bands}
         else:
-            sr_mix = result["sr_mix"]
-            band_current_db = result["band_current_db"]
-            band_target_db = style_profile
-            band_error_db, error_rms_db = compute_tonal_error(
-                band_current_db, band_target_db
-            )
-            logger.logger.info(
-                f"[S7_MIXBUS_TONAL_BALANCE] full_song.wav analizado (sr={sr_mix}). "
-                f"error_RMS={error_rms_db:.2f} dB."
-            )
+            sr_mix = int(result["sr_mix"])
+            band_current_db_abs = result["band_current_db_abs"] or {}
+
+        # Normalización a REL (forma espectral)
+        band_current_db_rel, current_mean_abs_db = normalize_bands_db(band_current_db_abs)
+        band_target_db_rel, target_mean_abs_db = normalize_bands_db(band_target_db_abs)
+
+        # Error REL (con signo definido)
+        band_error_db, error_rms_db = compute_error_by_band_rel(
+            band_current_db_rel, band_target_db_rel
+        )
+
+        logger.logger.info(
+            f"[S7_MIXBUS_TONAL_BALANCE] full_song.wav analizado (sr={sr_mix}). "
+            f"error_RMS_REL={error_rms_db:.2f} dB. "
+            f"global_offset_abs={current_mean_abs_db - target_mean_abs_db:+.2f} dB."
+        )
     else:
         logger.logger.info(
             f"[S7_MIXBUS_TONAL_BALANCE] Aviso: no existe {full_song_path}, "
             "no se puede medir el tonal balance del mixbus."
         )
-        band_current_db = {b["id"]: float("-inf") for b in freq_bands}
-        band_target_db = style_profile
+        band_current_db_abs = {b["id"]: float("-inf") for b in freq_bands}
+        band_current_db_rel = {b["id"]: float("-inf") for b in freq_bands}
+        band_target_db_rel, target_mean_abs_db = normalize_bands_db(band_target_db_abs)
         band_error_db = {}
         error_rms_db = 0.0
 
@@ -144,10 +212,19 @@ def process(context: PipelineContext, *args) -> bool:
             "max_eq_change_db_per_band_per_pass": max_eq_change_db,
             "tonal_bands": {
                 "bands": freq_bands,
-                "current_band_db": band_current_db,
-                "target_band_db": band_target_db,
+
+                # REL (lo que debe usar el stage para “balance tonal”)
+                "current_band_db": band_current_db_rel,
+                "target_band_db": band_target_db_rel,
                 "error_by_band_db": band_error_db,
                 "error_rms_db": error_rms_db,
+
+                # ABS (diagnóstico)
+                "current_band_db_abs": band_current_db_abs,
+                "target_band_db_abs": band_target_db_abs,
+                "current_mean_abs_db": current_mean_abs_db,
+                "target_mean_abs_db": target_mean_abs_db,
+                "global_offset_abs_db": float(current_mean_abs_db - target_mean_abs_db),
             },
         },
     }
@@ -157,7 +234,7 @@ def process(context: PipelineContext, *args) -> bool:
         json.dump(session_state, f, indent=2, ensure_ascii=False)
 
     logger.logger.info(
-        f"[S7_MIXBUS_TONAL_BALANCE] Análisis completado. error_RMS={error_rms_db:.2f} dB. "
+        f"[S7_MIXBUS_TONAL_BALANCE] Análisis completado. error_RMS_REL={error_rms_db:.2f} dB. "
         f"JSON: {output_path}"
     )
     return True
@@ -165,7 +242,7 @@ def process(context: PipelineContext, *args) -> bool:
 
 def main() -> None:
     """
-    Legacy entry point.
+    Legacy entry point (sin PipelineContext).
     """
     if len(sys.argv) < 2:
         logger.logger.info("Uso: python S7_MIXBUS_TONAL_BALANCE.py <CONTRACT_ID>")
@@ -173,19 +250,17 @@ def main() -> None:
 
     contract_id = sys.argv[1]
 
-    # Construct legacy context
     temp_dir = get_temp_dir(contract_id, create=False)
     temp_root = temp_dir.parent
     job_id = temp_root.name
 
-    if 'PipelineContext' in globals() and PipelineContext:
+    if PipelineContext:
         ctx = PipelineContext(stage_id=contract_id, job_id=job_id, temp_root=temp_root)
         process(ctx, contract_id)
     else:
-        # Fallback to logic inside process but manually (or duplicate it)
-        # To save space, I will just call process assuming context creation succeeded
-        # If not, this script will fail in standalone without context module.
-        pass
+        logger.logger.info("[S7_MIXBUS_TONAL_BALANCE] PipelineContext no disponible en modo legacy.")
+        sys.exit(1)
+
 
 if __name__ == "__main__":
     main()
