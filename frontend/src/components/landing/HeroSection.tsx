@@ -189,6 +189,11 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
             animation: hero-faq-pop 0.75s cubic-bezier(0.22, 1.2, 0.32, 1) 0.2s both;
           }
 
+          .hero-faq-float {
+            animation: hero-faq-float 4.2s ease-in-out 1.2s infinite;
+            will-change: transform;
+          }
+
           @keyframes hero-faq-pop {
             0% {
               transform: scale(0);
@@ -201,11 +206,21 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
             85% {
               transform: scale(0.98);
             }
-            100% {
-              transform: scale(1);
-            }
+          100% {
+            transform: scale(1);
           }
-        `}</style>
+        }
+
+        @keyframes hero-faq-float {
+          0%,
+          100% {
+            transform: translateY(0);
+          }
+          50% {
+            transform: translateY(-6px);
+          }
+        }
+      `}</style>
 
         {/* Rating Section */}
         <ScrollReveal
@@ -229,11 +244,11 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
         />
       </div>
 
-      <div className="absolute bottom-4 right-4 sm:bottom-6 sm:right-6 z-30">
+      <div className="absolute bottom-8 right-4 sm:bottom-10 sm:right-6 z-30">
         <div className="hero-faq-pop group w-[min(90vw,340px)] origin-bottom-right">
-          <div className="relative rounded-2xl border border-slate-800 bg-slate-950/90 p-4 text-left shadow-2xl shadow-black/40 backdrop-blur">
+          <div className="hero-faq-float relative rounded-2xl border border-slate-800 bg-slate-950/90 p-4 text-left shadow-2xl shadow-black/40 backdrop-blur">
             <div className="flex items-start gap-2">
-              <span className="mt-0.5 inline-flex h-5 w-5 items-center justify-center rounded-full border border-emerald-400/70 bg-emerald-500/15 text-[11px] font-bold text-emerald-200">
+              <span className="mt-0.5 inline-flex h-5 w-5 items-center justify-center rounded-full border border-amber-400/70 bg-amber-500/15 text-[11px] font-bold text-amber-200">
                 i
               </span>
               <p className="text-sm font-semibold text-white">
@@ -246,7 +261,7 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
               </p>
               <Link
                 href="/faq"
-                className="mt-3 inline-flex items-center justify-center rounded-full border border-emerald-400/40 bg-emerald-500/10 px-3 py-1.5 text-[11px] font-semibold text-emerald-200 transition hover:bg-emerald-500/20"
+                className="mt-3 inline-flex items-center justify-center rounded-full border border-amber-400/40 bg-amber-500/10 px-3 py-1.5 text-[11px] font-semibold text-amber-200 transition hover:bg-amber-500/20"
               >
                 Ir a FAQ
               </Link>

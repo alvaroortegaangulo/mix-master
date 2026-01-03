@@ -371,6 +371,7 @@ body {
 
 .grid-landing-vignette {
   background:
+    linear-gradient(180deg, rgba(5, 5, 8, 0.85) 0%, rgba(5, 5, 8, 0.25) 35%, rgba(5, 5, 8, 0.7) 72%, rgba(5, 5, 8, 0.95) 100%),
     radial-gradient(circle at 50% 18%, rgba(255, 195, 120, 0.12), transparent 45%),
     radial-gradient(circle at 50% 60%, rgba(5, 5, 8, 0), rgba(5, 5, 8, 0.7) 55%, rgba(5, 5, 8, 0.95) 100%);
 }
@@ -411,6 +412,7 @@ body {
 
 .benefits-burgundy-vignette {
   background:
+    linear-gradient(180deg, rgba(5, 2, 4, 0.9) 0%, rgba(5, 2, 4, 0.3) 32%, rgba(5, 2, 4, 0.7) 72%, rgba(5, 2, 4, 0.95) 100%),
     radial-gradient(circle at 50% 40%, rgba(0, 0, 0, 0) 0%, rgba(5, 2, 4, 0.7) 60%, rgba(5, 2, 4, 0.95) 100%);
 }
 
@@ -437,7 +439,7 @@ body {
   background:
     radial-gradient(circle at 20% 30%, rgba(35, 120, 255, 0.18), transparent 45%),
     radial-gradient(circle at 60% 85%, rgba(18, 60, 160, 0.2), transparent 55%),
-    linear-gradient(180deg, rgba(4, 6, 12, 0.2) 0%, rgba(4, 6, 12, 0.65) 70%, rgba(3, 5, 10, 0.9) 100%);
+    linear-gradient(180deg, rgba(3, 5, 10, 0.85) 0%, rgba(4, 6, 12, 0.3) 30%, rgba(4, 6, 12, 0.65) 70%, rgba(3, 5, 10, 0.9) 100%);
 }
 
 .pipeline-wallpaper {
@@ -451,7 +453,7 @@ body {
   background:
     radial-gradient(circle at 20% 20%, rgba(12, 20, 30, 0.35), transparent 45%),
     radial-gradient(circle at 80% 60%, rgba(6, 10, 18, 0.6), transparent 55%),
-    linear-gradient(180deg, rgba(3, 5, 9, 0.2) 0%, rgba(3, 5, 9, 0.7) 70%, rgba(2, 3, 6, 0.95) 100%);
+    linear-gradient(180deg, rgba(2, 3, 6, 0.9) 0%, rgba(3, 5, 9, 0.35) 32%, rgba(3, 5, 9, 0.7) 70%, rgba(2, 3, 6, 0.95) 100%);
 }
 
 @keyframes features-fade-in {
