@@ -224,7 +224,7 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
         <div className="absolute inset-0 pipeline-wallpaper-overlay" />
       </div>
 
-      <div className="relative z-10 w-full max-w-7xl">
+      <div className="relative z-10 w-full max-w-7xl 2xl:max-w-5xl">
         <ScrollReveal delay={0.05}>
           <header className="text-left mb-6 lg:mb-8 relative z-10 max-w-3xl">
             <h2
@@ -245,7 +245,7 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
 
         <ScrollReveal delay={0.1}>
           <main
-            className="w-full max-w-7xl flex flex-col md:flex-row gap-2 md:gap-4 relative z-10 md:items-stretch"
+            className="w-full max-w-7xl 2xl:max-w-5xl flex flex-col md:flex-row gap-2 md:gap-4 relative z-10 md:items-stretch"
             style={panelHeightStyle}
           >
             {steps.map((step, index) => {

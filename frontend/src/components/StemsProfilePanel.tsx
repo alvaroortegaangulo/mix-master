@@ -514,10 +514,8 @@ export function StemsProfilePanel({ stems, onChangeProfile, accent = "amber" }: 
     closeSelector();
   };
 
-  const gridClassName =
-    "grid grid-cols-[repeat(auto-fill,minmax(120px,140px))] gap-3";
-  const groupGridClassName =
-    "grid grid-cols-[repeat(auto-fit,minmax(240px,1fr))] gap-4 items-start";
+  const gridClassName = "flex flex-wrap gap-2";
+  const groupGridClassName = "flex flex-wrap items-start gap-4";
 
   const getCardLabel = (option: ProfileOption) => {
     const imageSrc = PROFILE_IMAGES[option.value];
@@ -542,16 +540,16 @@ export function StemsProfilePanel({ stems, onChangeProfile, accent = "amber" }: 
         type="button"
         onClick={() => handleSelectOption(option.value)}
         className={[
-          "group rounded-xl border p-2 text-left transition",
+          "group w-[120px] shrink-0 rounded-xl border p-1.5 text-left transition",
           isSelected
             ? "border-teal-400/70 bg-teal-500/10 shadow-[0_0_14px_rgba(45,212,191,0.2)]"
             : "border-slate-800/80 bg-slate-900/40 hover:border-teal-500/40 hover:bg-slate-900/70",
         ].join(" ")}
         aria-pressed={isSelected}
       >
-        <div className="relative h-[120px] overflow-hidden rounded-lg border border-slate-800 bg-slate-950/60">
+        <div className="relative h-[96px] overflow-hidden rounded-lg border border-slate-800 bg-slate-950/60">
           <div className="absolute inset-0 rounded-lg bg-[radial-gradient(circle_at_50%_20%,rgba(45,212,191,0.2),transparent_65%)]" />
-          <div className="relative flex h-full items-center justify-center p-2">
+          <div className="relative flex h-full items-center justify-center p-1.5">
             {imageSrc ? (
               <img
                 src={imageSrc}
@@ -565,7 +563,7 @@ export function StemsProfilePanel({ stems, onChangeProfile, accent = "amber" }: 
             )}
           </div>
         </div>
-        <p className="mt-2 min-h-[30px] text-[11px] font-medium leading-snug text-slate-100 break-words">
+        <p className="mt-1 min-h-[28px] text-[10px] font-medium leading-snug text-slate-100 break-words">
           {cardLabel}
         </p>
       </button>
@@ -659,9 +657,9 @@ export function StemsProfilePanel({ stems, onChangeProfile, accent = "amber" }: 
                         {groupedOptions.map((group) => (
                           <div
                             key={group.key}
-                            className="rounded-xl border border-slate-900/70 bg-slate-950/40 p-3"
+                            className="w-fit max-w-full rounded-xl border border-slate-900/70 bg-slate-950/40 p-2.5"
                           >
-                            <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500">
+                            <p className="mb-2 text-[9px] font-semibold uppercase tracking-[0.22em] text-slate-500">
                               {group.label}
                             </p>
                             <div className={gridClassName}>

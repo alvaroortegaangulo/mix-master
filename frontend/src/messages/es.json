@@ -277,7 +277,8 @@
         "back": "Atrás"
       },
       "messages": {
-        "mixReady": "Pistas preparadas para mezcla, pulsa Generar Mezcla IA para comenzar mezcla y masterización."
+        "mixReady": "Pistas preparadas para mezcla, pulsa Generar Mezcla IA para comenzar mezcla y masterización.",
+        "songReady": "Canción preparada para masterización, pulsa Generar Masterización IA para comenzar."
       }
     },
     "songMode": "Canción (Masterización)",
@@ -290,12 +291,13 @@
     "all": "Todos",
     "none": "Ninguno",
     "generateMix": "Generar Mezcla IA",
+    "generateMaster": "Generar Masterización IA",
     "processing": "Procesando...",
     "waitingQueue": "Esperando en cola…",
     "runningStage": "Ejecutando etapa",
     "stageGroups": {
       "technicalPreparation": "Preparación Técnica",
-      "technicalCalibrationEq": "Calibración Técnica y EQ",
+      "technicalCalibrationEq": "Mezcla estática",
       "phaseAlignment": "Fase y Alineación",
       "mixBusPrep": "Preparación del MixBus",
       "spectralCleanup": "Limpieza Espectral",

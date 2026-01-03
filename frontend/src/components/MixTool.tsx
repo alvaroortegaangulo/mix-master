@@ -150,28 +150,31 @@ const QUICK_MODE_OPTIONAL_KEYS = {
   leadVocal: "S3_LEADVOX_AUDIBILITY",
 };
 
-// Estimated processing time in minutes per stage
-const STAGE_ESTIMATES_MIN: Record<string, number> = {
-  S0_SESSION_FORMAT: 0.5,
-  S1_STEM_DC_OFFSET: 0.5,
-  S1_STEM_WORKING_LOUDNESS: 0.5,
-  S1_KEY_DETECTION: 0.2,
-  S1_VOX_TUNING: 1.0,
-  S2_GROUP_PHASE_DRUMS: 0.8,
-  S3_MIXBUS_HEADROOM: 0.2,
-  S3_LEADVOX_AUDIBILITY: 0.5,
-  S4_STEM_HPF_LPF: 0.8,
-  S4_STEM_RESONANCE_CONTROL: 1.2,
-  S5_STEM_DYNAMICS_GENERIC: 1.0,
-  S5_LEADVOX_DYNAMICS: 0.8,
-  S5_BUS_DYNAMICS_DRUMS: 0.8,
-  S6_MANUAL_CORRECTION: 0, // Manual step
-  S7_MIXBUS_TONAL_BALANCE: 1.0,
-  S8_MIXBUS_COLOR_GENERIC: 0.8,
-  S9_MASTER_GENERIC: 0.8,
-  S10_MASTER_FINAL_LIMITS: 0.5,
-  S11_REPORT_GENERATION: 0.5,
+const STAGE_ESTIMATES_SEC: Record<string, number> = {
+  S0_SESSION_FORMAT: 9,
+  S1_STEM_DC_OFFSET: 3,
+  S1_STEM_WORKING_LOUDNESS: 16,
+  S1_KEY_DETECTION: 9,
+  S1_VOX_TUNING: 18,
+  S2_GROUP_PHASE_DRUMS: 9,
+  S3_MIXBUS_HEADROOM: 20,
+  S3_LEADVOX_AUDIBILITY: 10,
+  S4_STEM_HPF_LPF: 21,
+  S4_STEM_RESONANCE_CONTROL: 69,
+  S5_STEM_DYNAMICS_GENERIC: 33,
+  S5_LEADVOX_DYNAMICS: 4,
+  S6_MANUAL_CORRECTION: 7,
+  S7_MIXBUS_TONAL_BALANCE: 17,
+  S8_MIXBUS_COLOR_GENERIC: 25,
+  S9_MASTER_GENERIC: 28,
+  S10_MASTER_FINAL_LIMITS: 20,
 };
+
+// Scale these stages by stem count to better reflect per-track processing time.
+const PER_STEM_STAGE_KEYS = new Set<string>([
+  "S1_STEM_DC_OFFSET",
+  "S4_STEM_RESONANCE_CONTROL",
+]);
 
 const STEP_EXIT_DURATION_MS = 180;
 const STEP_ENTER_DURATION_MS = 420;
@@ -731,38 +734,52 @@ export function MixTool({ resumeJobId }: MixToolProps) {
   };
 
   const hasFiles = files.length > 0;
-  const isReadyForMix = uploadStep === 3 && !showBusPanel && Boolean(busConfirmationMessage);
-  const readyMessageText =
-    busConfirmationMessage || t("uploadSteps.messages.mixReady");
-  const uploadStepTitle =
-    uploadStep === 1
-      ? t("uploadSteps.labels.uploadTracks")
-      : uploadStep === 2
-      ? t("uploadSteps.labels.selectProfiles")
-      : uploadStep === 3 && !isReadyForMix
-      ? t("uploadSteps.labels.busSelection")
-      : "";
+  const estimatedSeconds = useMemo(() => {
+    if (!files.length) return 0;
+
+    const hiddenStages = availableStages
+      .filter((stage) => STAGE_TO_GROUP[stage.key] === "HIDDEN")
+      .map((stage) => stage.key);
+    const stageKeys = Array.from(new Set([...selectedStageKeys, ...hiddenStages]));
+    const trackCount = isSongMode
+      ? 1
+      : Math.max(stemProfiles.length, files.length, 1);
+
+    return stageKeys.reduce((total, key) => {
+      const seconds = STAGE_ESTIMATES_SEC[key];
+      if (seconds === undefined) return total;
+      const multiplier = PER_STEM_STAGE_KEYS.has(key) ? trackCount : 1;
+      return total + seconds * multiplier;
+    }, 0);
+  }, [
+    availableStages,
+    selectedStageKeys,
+    stemProfiles.length,
+    files.length,
+    isSongMode,
+  ]);
+  const estimatedMinutes = useMemo(() => {
+    if (!estimatedSeconds) return 0;
+    return Math.max(1, Math.ceil(estimatedSeconds / 60));
+  }, [estimatedSeconds]);
+  const isSongReady = isSongMode && hasFiles;
+  const isReadyForMix =
+    isSongReady || (uploadStep === 3 && !showBusPanel && Boolean(busConfirmationMessage));
+  const readyMessageText = isSongMode
+    ? t("uploadSteps.messages.songReady")
+    : busConfirmationMessage || t("uploadSteps.messages.mixReady");
+  const uploadStepTitle = isSongReady
+    ? ""
+    : uploadStep === 1
+    ? t("uploadSteps.labels.uploadTracks")
+    : uploadStep === 2
+    ? t("uploadSteps.labels.selectProfiles")
+    : uploadStep === 3 && !isReadyForMix
+    ? t("uploadSteps.labels.busSelection")
+    : "";
   const uploadStepLabel = uploadStepTitle
     .replace(/^\s*\d+\s*\/\s*\d+\s*/, "")
     .trim();
-
-  const estimatedMinutes = useMemo(() => {
-    if (!selectedStageKeys.length) return 0;
-
-    let total = 0;
-    // Always include hidden mandatory stages in calculation if they will run
-    // Assuming S0 and S11 run if we submit
-    total += STAGE_ESTIMATES_MIN["S0_SESSION_FORMAT"] || 0;
-    total += STAGE_ESTIMATES_MIN["S11_REPORT_GENERATION"] || 0;
-
-    selectedStageKeys.forEach(key => {
-        if (STAGE_TO_GROUP[key] !== "HIDDEN") {
-           total += STAGE_ESTIMATES_MIN[key] || 0.5;
-        }
-    });
-
-    return Math.ceil(total);
-  }, [selectedStageKeys]);
 
   const handleGenerateMix = async () => {
     if (!files.length) return;
@@ -890,6 +907,8 @@ export function MixTool({ resumeJobId }: MixToolProps) {
 
   const currentView: UploadView = isProcessing
     ? "processing"
+    : isSongReady
+    ? "ready"
     : uploadStep === 1
     ? "upload"
     : uploadStep === 2
@@ -959,12 +978,12 @@ export function MixTool({ resumeJobId }: MixToolProps) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(serviceJsonLd) }}
       />
 
-      <main className="flex flex-1 flex-col items-center px-4 py-8">
+      <main className="flex flex-1 flex-col items-center px-4 py-8 lg:pt-[1cm]">
         <div className="text-center mb-8 max-w-2xl">
           <h1 className="text-3xl md:text-4xl font-bold text-white mb-4 font-['Orbitron']">
             {t("title")}
           </h1>
-          <p className="text-slate-400 text-sm md:text-base">
+          <p className="text-slate-400 text-xs md:text-sm">
             {t("subtitle")}
           </p>
         </div>
@@ -978,32 +997,34 @@ export function MixTool({ resumeJobId }: MixToolProps) {
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full max-w-[500px] max-h-[500px] bg-teal-500/5 blur-[120px] rounded-full pointer-events-none" />
 
                 {/* Top: Mode Switcher */}
-                <div className="relative z-10 w-full flex justify-center mb-8">
-                    <div className="inline-flex rounded-lg bg-slate-950 p-1 border border-slate-800 shadow-inner">
-                        <button
-                            type="button"
-                            onClick={() => handleModeChange("song")}
-                            className={`rounded-md px-8 py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-200 ${
-                                uploadMode === "song"
-                                ? "bg-teal-500 text-slate-950 shadow-sm ring-1 ring-teal-500"
-                                : "text-slate-500 hover:text-slate-300"
-                            }`}
-                        >
-                            {t('songMode')}
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => handleModeChange("stems")}
-                            className={`rounded-md px-8 py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-200 ${
-                                uploadMode === "stems"
-                                ? "bg-teal-500 text-slate-950 shadow-sm ring-1 ring-teal-500"
-                                : "text-slate-500 hover:text-slate-300"
-                            }`}
-                        >
-                            {t('stemsMode')}
-                        </button>
+                {uploadStep === 1 && !isProcessing && !isSongReady && (
+                    <div className="relative z-10 w-full flex justify-center mb-8">
+                        <div className="inline-flex rounded-lg bg-slate-950 p-1 border border-slate-800 shadow-inner">
+                            <button
+                                type="button"
+                                onClick={() => handleModeChange("song")}
+                                className={`rounded-md px-8 py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-200 ${
+                                    uploadMode === "song"
+                                    ? "bg-teal-500 text-slate-950 shadow-sm ring-1 ring-teal-500"
+                                    : "text-slate-500 hover:text-slate-300"
+                                }`}
+                            >
+                                {t('songMode')}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => handleModeChange("stems")}
+                                className={`rounded-md px-8 py-2.5 text-xs font-bold uppercase tracking-wider transition-all duration-200 ${
+                                    uploadMode === "stems"
+                                    ? "bg-teal-500 text-slate-950 shadow-sm ring-1 ring-teal-500"
+                                    : "text-slate-500 hover:text-slate-300"
+                                }`}
+                            >
+                                {t('stemsMode')}
+                            </button>
+                        </div>
                     </div>
-                </div>
+                )}
 
                 {/* Center: Upload */}
                 <div className="relative z-10 w-full max-w-lg flex-1 flex flex-col justify-center">
@@ -1053,7 +1074,7 @@ export function MixTool({ resumeJobId }: MixToolProps) {
                         ) : (
                             <div className="space-y-4">
                                 {displayedView === "profiles" && stemProfiles.length > 0 && (
-                                    <div className="flex min-h-[400px] flex-col rounded-3xl border border-teal-500/40 bg-gradient-to-br from-teal-500/10 to-slate-900/70 p-5 shadow-lg shadow-teal-500/10">
+                                    <div className="flex min-h-[400px] flex-col">
                                         <StemsProfilePanel
                                             stems={stemProfiles}
                                             onChangeProfile={handleStemProfileChange}
@@ -1073,7 +1094,7 @@ export function MixTool({ resumeJobId }: MixToolProps) {
                                 )}
 
                                 {displayedView === "buses" && stemProfiles.length > 0 && (
-                                    <div className="flex min-h-[400px] flex-col gap-4 rounded-3xl border border-slate-700 bg-slate-900/60 p-5 shadow-lg shadow-slate-900/50">
+                                    <div className="flex min-h-[400px] flex-col gap-4">
                                         <div className="flex-1">
                                             <SpaceDepthStylePanel
                                                 buses={visibleSpaceDepthBuses}
@@ -1103,9 +1124,27 @@ export function MixTool({ resumeJobId }: MixToolProps) {
                                             type="button"
                                             onClick={handleGenerateMix}
                                             disabled={!hasFiles || loading}
-                                            className="mt-2 rounded-full border border-teal-400 bg-gradient-to-r from-teal-500 to-cyan-500 px-5 py-2 text-[11px] font-bold uppercase tracking-[0.3em] text-slate-950 transition hover:brightness-110 disabled:opacity-60"
+                                            className={[
+                                                "w-full max-w-sm rounded-xl px-6 py-4 text-base font-bold tracking-wide uppercase",
+                                                "bg-gradient-to-r from-teal-400 to-cyan-500 text-slate-950 shadow-lg shadow-teal-500/20",
+                                                "transition-all duration-200 hover:shadow-teal-500/40 hover:brightness-110 disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none",
+                                                "flex items-center justify-center gap-3"
+                                            ].join(" ")}
                                         >
-                                            {t("generateMix")}
+                                            {loading ? (
+                                                <>
+                                                    <svg className="animate-spin h-5 w-5 text-slate-950" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                                    </svg>
+                                                    {t('processing')}
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <div className="w-4 h-4 rounded-full border-2 border-slate-950/60" />
+                                                    {isSongMode ? t("generateMaster") : t("generateMix")}
+                                                </>
+                                            )}
                                         </button>
                                     </div>
                                 )}
@@ -1279,12 +1318,29 @@ export function MixTool({ resumeJobId }: MixToolProps) {
                                             {stages.map(stage => {
                                                const isStageSelected = selectedStageKeys.includes(stage.key);
                                                const isStageDisabled = isSongMode && !songModeStageKeys.includes(stage.key);
+                                               const stageTitle = HUMAN_STAGE_TEXT[stage.key]?.title || stage.label;
+                                               const stageDescription = HUMAN_STAGE_TEXT[stage.key]?.description || "";
 
                                                return (
                                                    <div key={stage.key} className="flex items-center justify-between text-xs group/stage">
-                                                       <span className={`${isStageSelected ? 'text-slate-300' : 'text-slate-600'}`}>
-                                                           {HUMAN_STAGE_TEXT[stage.key]?.title || stage.label}
-                                                       </span>
+                                                       <div className="flex items-center gap-2 min-w-0">
+                                                           <span className={`${isStageSelected ? 'text-slate-300' : 'text-slate-600'}`}>
+                                                               {stageTitle}
+                                                           </span>
+                                                           <div className="relative group">
+                                                               <span className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-amber-400/70 bg-amber-500/15 text-[10px] font-semibold text-amber-200">
+                                                                   i
+                                                               </span>
+                                                               <div className="pointer-events-none absolute left-0 top-full z-30 mt-2 w-56 rounded-lg border border-amber-400/30 bg-slate-950/95 px-3 py-2 text-[10px] text-amber-100 opacity-0 shadow-lg shadow-amber-500/10 transition group-hover:opacity-100">
+                                                                   <p className="font-semibold text-amber-200">{stageTitle}</p>
+                                                                   {stageDescription && (
+                                                                       <p className="mt-1 text-amber-100/80">
+                                                                           {stageDescription}
+                                                                       </p>
+                                                                   )}
+                                                               </div>
+                                                           </div>
+                                                       </div>
                                                         <input
                                                             type="checkbox"
                                                             className={`rounded border-slate-700 bg-slate-800 ${theme.text} focus:ring-opacity-50 h-3 w-3`}
@@ -1303,40 +1359,13 @@ export function MixTool({ resumeJobId }: MixToolProps) {
                     </div>
                 </div>
 
-                {/* Footer Action */}
-                <div className="mt-6 pt-6 border-t border-slate-800">
-                    <button
-                        type="button"
-                        onClick={handleGenerateMix}
-                        disabled={!hasFiles || loading}
-                        className={[
-                            "w-full rounded-xl px-6 py-4 text-base font-bold tracking-wide uppercase",
-                            "bg-gradient-to-r from-teal-400 to-cyan-500 text-slate-950 shadow-lg shadow-teal-500/20",
-                            "transition-all duration-200 hover:shadow-teal-500/40 hover:brightness-110 disabled:opacity-60 disabled:cursor-not-allowed disabled:shadow-none",
-                            "flex items-center justify-center gap-3"
-                        ].join(" ")}
-                    >
-                        {loading ? (
-                            <>
-                                <svg className="animate-spin h-5 w-5 text-slate-950" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                </svg>
-                                {t('processing')}
-                            </>
-                        ) : (
-                            <>
-                                <div className="w-4 h-4 rounded-full border-2 border-slate-950/60" />
-                                {t('generateMix')}
-                            </>
-                        )}
-                    </button>
-                    {!loading && hasFiles && (
-                         <p className="text-center text-[10px] text-slate-500 font-medium mt-3 uppercase tracking-wide">
-                            Estimado: ~{estimatedMinutes} min de procesamiento • 1 Crédito
-                         </p>
-                    )}
-                </div>
+                {hasFiles && estimatedMinutes > 0 && (
+                    <div className="mt-6 border-t border-slate-800 pt-4 text-center">
+                        <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">
+                            Duración estimada: {estimatedMinutes} min de procesamiento
+                        </p>
+                    </div>
+                )}
             </div>
         </div>
 

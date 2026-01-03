@@ -69,7 +69,7 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
             <div className="absolute inset-0 analysis-wallpaper-overlay" />
         </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+      <div className="max-w-7xl 2xl:max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 2xl:px-4 relative z-10">
         {/* Header */}
         <ScrollReveal className="mb-6 text-right" delay={0.05}>
           <h2

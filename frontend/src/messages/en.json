@@ -280,7 +280,8 @@
         "back": "Back"
       },
       "messages": {
-        "mixReady": "Tracks prepared for mixing; press Generate Mix IA to start mixing and mastering."
+        "mixReady": "Tracks prepared for mixing; press Generate Mix IA to start mixing and mastering.",
+        "songReady": "Song ready for mastering; press Generate AI Mastering to begin."
       }
     },
     "songMode": "Song (Mastering)",
@@ -293,6 +294,7 @@
     "all": "All",
     "none": "None",
     "generateMix": "Generate AI Mix",
+    "generateMaster": "Generate AI Mastering",
     "processing": "Processing...",
     "waitingQueue": "Waiting in queue…",
     "runningStage": "Running stage",

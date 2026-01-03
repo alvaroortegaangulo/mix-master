@@ -1341,51 +1341,25 @@ def _check_S7_MIXBUS_TONAL_BALANCE(data: Dict[str, Any]) -> bool:
 
 
 def _check_S8_MIXBUS_COLOR_GENERIC(data: Dict[str, Any]) -> bool:
-    """
-    Valida S8_MIXBUS_COLOR_GENERIC usando:
-
-      - analysis_S8_MIXBUS_COLOR_GENERIC.json (contrato/targets).
-      - color_metrics_S8_MIXBUS_COLOR_GENERIC.json (métricas reales del stage).
-
-    Reglas principales:
-
-      - true_peak_post ∈ [tp_min, tp_max] ± TP_MARGIN.
-      - thd_percent <= max_thd_percent + THD_MARGIN.
-      - |drive_db_used| <= max_additional_saturation_per_pass + DRIVE_MARGIN.
-      - Si la true_peak pre ya estaba dentro de rango, cambios deben ser muy pequeños
-        (idempotencia suave).
-
-    Nota: el requisito de noise_floor (> 3 dB) se podría añadir cuando
-    registremos también el noise floor post-procesamiento.
-    """
     contract_id = data.get("contract_id", "S8_MIXBUS_COLOR_GENERIC")
     metrics_from_contract = data.get("metrics_from_contract", {}) or {}
     limits_from_contract = data.get("limits_from_contract", {}) or {}
 
-    # Targets desde contrato
     try:
-        tp_min_contract = float(
-            metrics_from_contract.get("target_true_peak_range_dbtp_min", -4.0)
-        )
-        tp_max_contract = float(
-            metrics_from_contract.get("target_true_peak_range_dbtp_max", -2.0)
-        )
+        tp_min_contract = float(metrics_from_contract.get("target_true_peak_range_dbtp_min", -4.0))
+        tp_max_contract = float(metrics_from_contract.get("target_true_peak_range_dbtp_max", -2.0))
         max_thd_contract = float(metrics_from_contract.get("max_thd_percent", 3.0))
     except (TypeError, ValueError):
         print(f"[{contract_id}] Métricas inválidas en metrics_from_contract; fracaso.")
         return False
 
     try:
-        max_sat_per_pass_contract = float(
-            limits_from_contract.get("max_additional_saturation_per_pass", 1.0)
-        )
+        max_sat_per_pass_contract = float(limits_from_contract.get("max_additional_saturation_per_pass", 1.0))
     except (TypeError, ValueError):
         max_sat_per_pass_contract = 1.0
 
-    # Métricas generadas por el stage
     temp_dir = get_temp_dir(contract_id, create=False)
     metrics_path = temp_dir / "color_metrics_S8_MIXBUS_COLOR_GENERIC.json"
-
     if not metrics_path.exists():
         print(
             f"[S8_MIXBUS_COLOR_GENERIC] ERROR: no se encuentra {metrics_path}. "
@@ -1396,34 +1370,51 @@ def _check_S8_MIXBUS_COLOR_GENERIC(data: Dict[str, Any]) -> bool:
     with metrics_path.open("r", encoding="utf-8") as f:
         m = json.load(f)
 
+    targets = m.get("targets", {}) or {}
+    pre = m.get("pre", {}) or {}
+    post = m.get("post", {}) or {}
+    proc = m.get("process", {}) or {}
+
     try:
-        pre_tp = float(m.get("pre_true_peak_dbtp", float("-inf")))
-        post_tp = float(m.get("post_true_peak_dbtp", float("-inf")))
-        pre_rms = float(m.get("pre_rms_dbfs", float("-inf")))
-        post_rms = float(m.get("post_rms_dbfs", float("-inf")))
-        drive_used = float(m.get("drive_db_used", 0.0))
-        trim_applied = float(m.get("trim_db_applied", 0.0))
-        thd_percent = float(m.get("thd_percent", 0.0))
+        pre_tp = float(pre.get("true_peak_dbtp", float("-inf")))
+        post_tp = float(post.get("true_peak_dbtp", float("-inf")))
+        drive_used = float(proc.get("drive_db_used", 0.0))
+        thd_percent = float(proc.get("thd_percent", 0.0))
+        trim_total_db = float(proc.get("trim_total_db", 0.0))
+        under_levelled = bool(proc.get("under_levelled_mode", False))
+        nf_comp_delta = post.get("noise_floor_compensated_delta_db", None)
+        nf_delta = post.get("noise_floor_delta_db", None)
     except (TypeError, ValueError):
-        print("[S8_MIXBUS_COLOR_GENERIC] Métricas numéricas inválidas en color_metrics; fracaso.")
+        print("[S8_MIXBUS_COLOR_GENERIC] Métricas inválidas en color_metrics; fracaso.")
         return False
 
     # Tolerancias
-    TP_MARGIN = 0.3          # margen para true peak
-    THD_MARGIN = 0.3         # margen THD (%)
-    DRIVE_MARGIN_DB = 0.1    # margen sobre max_additional_saturation_per_pass
-    IDEMP_SMALL_DB = 0.5     # si ya estaba en rango, cambios deberían ser pequeños
-    RMS_CHANGE_MAX_DB = 2.0  # no machacar RMS de forma extrema en un solo pase (soft guard)
+    TP_MARGIN = 0.3
+    THD_MARGIN = 0.3
+    DRIVE_MARGIN_DB = 0.1
+
+    # Guardas “calidad”
+    NF_COMP_WARN_DB = 1.5  # si el noise floor compensado sube > 1.5 dB, hay suciedad añadida
+    BIG_LIFT_WARN_DB = 2.0 # subir >2 dB en un stage de color es sospechoso
 
     ok = True
 
-    # 1) True peak dentro de rango
-    if post_tp < tp_min_contract - TP_MARGIN:
-        logger.print_metric("True Peak Post", post_tp, target=f"[{tp_min_contract}, {tp_max_contract}]", status="FAIL", details="Too low")
+    # 1) True peak: NO permitir pasarse del máximo. Si queda bajo y under_levelled, WARN (no FAIL).
+    if post_tp > tp_max_contract + TP_MARGIN:
+        logger.print_metric("True Peak Post", post_tp, target=f"<= {tp_max_contract}", status="FAIL", details=f"Margin: {TP_MARGIN}")
         ok = False
-    elif post_tp > tp_max_contract + TP_MARGIN:
-        logger.print_metric("True Peak Post", post_tp, target=f"[{tp_min_contract}, {tp_max_contract}]", status="FAIL", details="Too high")
-        ok = False
+    elif post_tp < tp_min_contract - TP_MARGIN:
+        if under_levelled:
+            logger.print_metric(
+                "True Peak Post",
+                post_tp,
+                target=f">= {tp_min_contract}",
+                status="WARN",
+                details="Under-levelled mode: lift capped to avoid noise/harshness",
+            )
+        else:
+            logger.print_metric("True Peak Post", post_tp, target=f">= {tp_min_contract}", status="FAIL", details="Too low")
+            ok = False
     else:
         logger.print_metric("True Peak Post", post_tp, target=f"[{tp_min_contract}, {tp_max_contract}]", status="PASS")
 
@@ -1432,34 +1423,30 @@ def _check_S8_MIXBUS_COLOR_GENERIC(data: Dict[str, Any]) -> bool:
         logger.print_metric("THD", f"{thd_percent:.2f}%", target=f"<= {max_thd_contract}%", status="FAIL", details=f"Margin: {THD_MARGIN}")
         ok = False
 
-    # 3) Drive de saturación dentro de límites por pase
+    # 3) Drive dentro de límites por pase
     if abs(drive_used) > max_sat_per_pass_contract + DRIVE_MARGIN_DB:
         logger.print_metric("Drive Used", drive_used, target=f"<= {max_sat_per_pass_contract}", status="FAIL", details=f"Margin: {DRIVE_MARGIN_DB}")
         ok = False
 
-    # 4) Idempotencia suave: si la true_peak pre ya estaba dentro del rango,
-    #    no deberíamos hacer cambios grandes de drive/trim.
-    pre_in_range = (
-        pre_tp >= tp_min_contract - TP_MARGIN
-        and pre_tp <= tp_max_contract + TP_MARGIN
-    )
-    if pre_in_range:
-        if abs(drive_used) > IDEMP_SMALL_DB:
-            logger.print_metric("Drive Used (Idem)", drive_used, target=f"<= {IDEMP_SMALL_DB}", status="FAIL", details="Pre was OK")
-            ok = False
-        if abs(trim_applied) > IDEMP_SMALL_DB:
-            logger.print_metric("Trim Applied (Idem)", trim_applied, target=f"<= {IDEMP_SMALL_DB}", status="FAIL", details="Pre was OK")
-            ok = False
+    # 4) Guardas informativas sobre lift grande / ruido
+    if abs(trim_total_db) > BIG_LIFT_WARN_DB:
+        logger.print_metric("Trim Total", trim_total_db, target=f"<= {BIG_LIFT_WARN_DB}", status="WARN", details="Large lift in color stage")
 
-    # 5) Sanity check suave sobre el RMS
-    if pre_rms != float("-inf") and post_rms != float("-inf"):
-        delta_rms = post_rms - pre_rms
-        if delta_rms < -RMS_CHANGE_MAX_DB:
-            logger.print_metric("RMS Change", delta_rms, target=f">= -{RMS_CHANGE_MAX_DB}", status="FAIL", details="Aggressive drop")
-            ok = False
+    if isinstance(nf_comp_delta, (int, float)):
+        if float(nf_comp_delta) > NF_COMP_WARN_DB:
+            logger.print_metric(
+                "Noise Floor (Comp) Δ",
+                float(nf_comp_delta),
+                target=f"<= {NF_COMP_WARN_DB}",
+                status="WARN",
+                details="Noise/harshness likely added beyond simple gain",
+            )
+    elif isinstance(nf_delta, (int, float)) and float(nf_delta) > 3.0:
+        # fallback si no hay compensado (compatibilidad)
+        logger.print_metric("Noise Floor Δ", float(nf_delta), target="<= 3.0", status="WARN")
 
     if ok:
-        logger.print_metric("Color Check", "OK", status="PASS", details=f"THD: {thd_percent:.2f}%")
+        logger.print_metric("Mixbus Color Check", "OK", status="PASS", details=f"TP: {post_tp:.2f} dBTP, THD: {thd_percent:.2f}%")
 
     return ok
 

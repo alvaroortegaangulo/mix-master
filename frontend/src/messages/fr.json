@@ -278,7 +278,8 @@
         "back": "Retour"
       },
       "messages": {
-        "mixReady": "Pistes prêtes pour le mixage, appuyez sur Générer Mix IA pour lancer le mixage et le mastering."
+        "mixReady": "Pistes prêtes pour le mixage, appuyez sur Générer Mix IA pour lancer le mixage et le mastering.",
+        "songReady": "Chanson prête pour le mastering, appuyez sur Générer Mastering IA pour commencer."
       }
     },
     "songMode": "Chanson (Mastering)",
@@ -291,6 +292,7 @@
     "all": "Tous",
     "none": "Aucun",
     "generateMix": "Générer Mix IA",
+    "generateMaster": "Générer Mastering IA",
     "processing": "Traitement...",
     "waitingQueue": "En attente dans la file…",
     "runningStage": "Exécution de l'étape",

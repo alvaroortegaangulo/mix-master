@@ -160,7 +160,7 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
             </div>
         </div>
 
-            <div className="relative z-10 max-w-7xl w-full mx-auto space-y-6 px-4 sm:px-6 lg:px-8">
+            <div className="relative z-10 max-w-7xl 2xl:max-w-5xl w-full mx-auto space-y-6 px-4 sm:px-6 lg:px-8 2xl:px-4">
 
             {/* Header */}
             <ScrollReveal className="text-right" delay={0.05}>
