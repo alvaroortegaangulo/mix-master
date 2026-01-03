@@ -72,6 +72,7 @@ const formatDuration = (totalSeconds?: number | null) => {
 export function MixResultPageContent({ jobId }: Props) {
   const router = useRouter();
   const t = useTranslations('MixTool.result');
+  const tStudio = useTranslations('Studio');
   const tPhases = useTranslations("PipelinePhases");
   const tPanel = useTranslations("MixPipelinePanel");
   const finalizingRetriesRef = useRef(0);
@@ -83,6 +84,7 @@ export function MixResultPageContent({ jobId }: Props) {
   const [isReportOpen, setIsReportOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   // Player State
   const [showOriginal, setShowOriginal] = useState(false);
@@ -403,22 +405,30 @@ export function MixResultPageContent({ jobId }: Props) {
     }
   };
 
-  const handleDownload = useCallback(async () => {
-    const url = showOriginal ? signedOriginalUrl : signedFullUrl;
-    if (!url) return;
-
-    const getFileName = (rawUrl: string) => {
-      try {
-        const parsed = new URL(rawUrl, window.location.href);
-        const fileName = parsed.pathname.split("/").pop();
-        return fileName || "mixdown.wav";
-      } catch {
-        return "mixdown.wav";
+  const buildAuthHeaders = useCallback((): HeadersInit => {
+    const headers: Record<string, string> = {};
+    const apiKey = process.env.NEXT_PUBLIC_MIXMASTER_API_KEY;
+    if (apiKey) {
+      headers["X-API-Key"] = apiKey;
+    }
+    if (typeof window !== "undefined") {
+      const token = localStorage.getItem("access_token");
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
       }
-    };
+    }
+    return headers;
+  }, []);
 
+  const handleDownload = useCallback(async () => {
+    if (isDownloading) return;
+    setIsDownloading(true);
     try {
-      const response = await fetch(url);
+      const baseUrl = getBackendBaseUrl();
+      const url = showOriginal
+        ? `${baseUrl}/jobs/${jobId}/download-original`
+        : `${baseUrl}/jobs/${jobId}/download-mixdown`;
+      const response = await fetch(url, { headers: buildAuthHeaders() });
       if (!response.ok) {
         throw new Error(`Download failed: ${response.status}`);
       }
@@ -426,15 +436,17 @@ export function MixResultPageContent({ jobId }: Props) {
       const objectUrl = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = objectUrl;
-      link.download = getFileName(url);
+      link.download = showOriginal ? `${jobId}_original.wav` : `${jobId}_mixdown.wav`;
       document.body.appendChild(link);
       link.click();
       link.remove();
       URL.revokeObjectURL(objectUrl);
     } catch (err) {
       console.error("Download failed", err);
+    } finally {
+      setIsDownloading(false);
     }
-  }, [showOriginal, signedFullUrl, signedOriginalUrl]);
+  }, [buildAuthHeaders, isDownloading, jobId, showOriginal]);
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(shareLink);
@@ -629,10 +641,11 @@ export function MixResultPageContent({ jobId }: Props) {
                         <button
                             type="button"
                             onClick={handleDownload}
-                            className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-emerald-600 text-white text-sm font-bold hover:bg-emerald-500 transition shadow-lg shadow-emerald-900/40"
+                            disabled={isDownloading}
+                            className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-emerald-600 text-white text-sm font-bold hover:bg-emerald-500 transition shadow-lg shadow-emerald-900/40 disabled:opacity-60"
                         >
                             <ArrowDownTrayIcon className="w-4 h-4" />
-                            Descargar Master
+                            {isDownloading ? tStudio('downloading') : "Descargar Master"}
                         </button>
                     </div>
                 </div>
