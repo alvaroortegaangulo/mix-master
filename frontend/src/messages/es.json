@@ -264,6 +264,7 @@
       "stepCounter": "Paso {current}/3",
       "labels": {
         "uploadTracks": "1/3 Importa tus pistas",
+        "uploadSong": "Importa tu canción",
         "selectProfiles": "2/3 Perfilado de stems",
         "busSelection": "3/3 Ruteo de buses"
       },
@@ -274,11 +275,13 @@
       "buttons": {
         "confirmProfiles": "Confirmar perfiles",
         "confirmBuses": "Confirmar selección de bus",
-        "back": "Atrás"
+        "back": "Atrás",
+        "stop": "Detener"
       },
       "messages": {
         "mixReady": "Pistas preparadas para mezcla, pulsa Generar Mezcla IA para comenzar mezcla y masterización.",
-        "songReady": "Canción preparada para masterización, pulsa Generar Masterización IA para comenzar."
+        "songReady": "Canción preparada para masterización, pulsa Generar Masterización IA para comenzar.",
+        "loadingTracks": "Cargando pistas..."
       }
     },
     "songMode": "Canción (Masterización)",

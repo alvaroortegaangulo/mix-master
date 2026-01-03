@@ -150,31 +150,7 @@ const QUICK_MODE_OPTIONAL_KEYS = {
   leadVocal: "S3_LEADVOX_AUDIBILITY",
 };
 
-const STAGE_ESTIMATES_SEC: Record<string, number> = {
-  S0_SESSION_FORMAT: 9,
-  S1_STEM_DC_OFFSET: 3,
-  S1_STEM_WORKING_LOUDNESS: 16,
-  S1_KEY_DETECTION: 9,
-  S1_VOX_TUNING: 18,
-  S2_GROUP_PHASE_DRUMS: 9,
-  S3_MIXBUS_HEADROOM: 20,
-  S3_LEADVOX_AUDIBILITY: 10,
-  S4_STEM_HPF_LPF: 21,
-  S4_STEM_RESONANCE_CONTROL: 69,
-  S5_STEM_DYNAMICS_GENERIC: 33,
-  S5_LEADVOX_DYNAMICS: 4,
-  S6_MANUAL_CORRECTION: 7,
-  S7_MIXBUS_TONAL_BALANCE: 17,
-  S8_MIXBUS_COLOR_GENERIC: 25,
-  S9_MASTER_GENERIC: 28,
-  S10_MASTER_FINAL_LIMITS: 20,
-};
-
-// Scale these stages by stem count to better reflect per-track processing time.
-const PER_STEM_STAGE_KEYS = new Set<string>([
-  "S1_STEM_DC_OFFSET",
-  "S4_STEM_RESONANCE_CONTROL",
-]);
+const STAGE_ESTIMATE_SECONDS = 15;
 
 const STEP_EXIT_DURATION_MS = 180;
 const STEP_ENTER_DURATION_MS = 420;
@@ -713,6 +689,28 @@ export function MixTool({ resumeJobId }: MixToolProps) {
     setBusConfirmationMessage("");
   };
 
+  const resetUploadState = () => {
+    setFiles([]);
+    setJobStatus(null);
+    setActiveJobId(null);
+    setLoading(false);
+    setError(null);
+    setSelectionWarning(null);
+    setShowStageSelector(true);
+    setShowBusPanel(true);
+    setBusConfirmationMessage("");
+    setStemProfiles([]);
+    setUploadStep(1);
+  };
+
+  const handleSongReadyBack = () => {
+    resetUploadState();
+  };
+
+  const handleStopProcessing = () => {
+    resetUploadState();
+  };
+
   const handleConfirmProfiles = () => {
     setUploadStep(3);
     setShowBusPanel(true);
@@ -741,22 +739,11 @@ export function MixTool({ resumeJobId }: MixToolProps) {
       .filter((stage) => STAGE_TO_GROUP[stage.key] === "HIDDEN")
       .map((stage) => stage.key);
     const stageKeys = Array.from(new Set([...selectedStageKeys, ...hiddenStages]));
-    const trackCount = isSongMode
-      ? 1
-      : Math.max(stemProfiles.length, files.length, 1);
-
-    return stageKeys.reduce((total, key) => {
-      const seconds = STAGE_ESTIMATES_SEC[key];
-      if (seconds === undefined) return total;
-      const multiplier = PER_STEM_STAGE_KEYS.has(key) ? trackCount : 1;
-      return total + seconds * multiplier;
-    }, 0);
+    return stageKeys.length * STAGE_ESTIMATE_SECONDS;
   }, [
     availableStages,
     selectedStageKeys,
-    stemProfiles.length,
     files.length,
-    isSongMode,
   ]);
   const estimatedMinutes = useMemo(() => {
     if (!estimatedSeconds) return 0;
@@ -768,10 +755,10 @@ export function MixTool({ resumeJobId }: MixToolProps) {
   const readyMessageText = isSongMode
     ? t("uploadSteps.messages.songReady")
     : busConfirmationMessage || t("uploadSteps.messages.mixReady");
-  const uploadStepTitle = isSongReady
+  const uploadStepTitle = isSongReady || isProcessing
     ? ""
     : uploadStep === 1
-    ? t("uploadSteps.labels.uploadTracks")
+    ? (isSongMode ? t("uploadSteps.labels.uploadSong") : t("uploadSteps.labels.uploadTracks"))
     : uploadStep === 2
     ? t("uploadSteps.labels.selectProfiles")
     : uploadStep === 3 && !isReadyForMix
@@ -882,6 +869,7 @@ export function MixTool({ resumeJobId }: MixToolProps) {
     loading ||
     (jobStatus &&
       (jobStatus.status === "queued" || jobStatus.status === "running"));
+  const isLoadingTracks = isProcessing && (!jobStatus || jobStatus.status === "queued");
 
   useEffect(() => {
     if (!files.length) {
@@ -1033,16 +1021,18 @@ export function MixTool({ resumeJobId }: MixToolProps) {
                               <h2 className="flex flex-wrap items-center gap-3 leading-tight">
                                   {uploadStepTitle && (
                                       <>
-                                          <span className="rounded-full border border-teal-500/40 bg-teal-500/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.3em] text-teal-300/90 shadow-[0_0_12px_rgba(20,184,166,0.15)]">
-                                              {uploadStep}/3
-                                          </span>
+                                          {!isSongMode && (
+                                              <span className="rounded-full border border-teal-500/40 bg-teal-500/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.3em] text-teal-300/90 shadow-[0_0_12px_rgba(20,184,166,0.15)]">
+                                                  {uploadStep}/3
+                                              </span>
+                                          )}
                                           <span className="text-xl md:text-2xl font-semibold font-['Orbitron'] text-transparent bg-clip-text bg-gradient-to-r from-teal-100 via-cyan-200 to-slate-100 tracking-[0.08em] drop-shadow-[0_2px_12px_rgba(20,184,166,0.25)]">
                                               {uploadStepLabel || uploadStepTitle}
                                           </span>
                                       </>
                                   )}
                               </h2>
-                              {uploadStep > 1 && !isReadyForMix && (
+                              {uploadStep > 1 && !isReadyForMix && !isProcessing && (
                                   <p className="mt-1 text-xs text-slate-400">
                                       {uploadStep === 2
                                           ? t("uploadSteps.notes.profiles")
@@ -1050,27 +1040,47 @@ export function MixTool({ resumeJobId }: MixToolProps) {
                                   </p>
                             )}
                         </div>
-                        {uploadStep > 1 && (
+                        {isProcessing ? (
                             <button
                                 type="button"
-                                onClick={handleStepBack}
-                                className="flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-900/60 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-slate-400 transition hover:border-slate-500 hover:text-slate-200"
+                                onClick={handleStopProcessing}
+                                className="flex items-center gap-2 rounded-lg border border-red-500/50 bg-red-500/15 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-red-200 transition hover:border-red-400 hover:text-red-100"
                             >
-                                <ArrowLeftIcon className="w-3 h-3" />
-                                {t("uploadSteps.buttons.back")}
+                                <span className="h-2.5 w-2.5 rounded-[2px] bg-red-200" />
+                                {t("uploadSteps.buttons.stop")}
                             </button>
+                        ) : (
+                            (uploadStep > 1 || isSongReady) && (
+                                <button
+                                    type="button"
+                                    onClick={isSongReady ? handleSongReadyBack : handleStepBack}
+                                    className="flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-900/60 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-slate-400 transition hover:border-slate-500 hover:text-slate-200"
+                                >
+                                    <ArrowLeftIcon className="w-3 h-3" />
+                                    {t("uploadSteps.buttons.back")}
+                                </button>
+                            )
                         )}
                     </div>
 
                     <div className={`flex-1 ${transitionClassName}`}>
-                        {displayedView === "processing" && processingState ? (
-                            <div className="w-full min-h-[400px]">
-                                <ProcessingVisualizer
-                                    stageKey={processingState.stageKey}
-                                    progress={processingState.progress}
-                                    description={processingState.description}
-                                />
-                            </div>
+                        {displayedView === "processing" ? (
+                            isLoadingTracks ? (
+                                <div className="w-full min-h-[400px] flex flex-col items-center justify-center gap-3 rounded-2xl border border-slate-800 bg-slate-950/50">
+                                    <p className="text-sm font-semibold text-teal-200">
+                                        {t("uploadSteps.messages.loadingTracks")}
+                                    </p>
+                                    <div className="h-8 w-8 animate-spin rounded-full border-2 border-teal-500/30 border-t-teal-400 shadow-[0_0_12px_rgba(45,212,191,0.4)]" />
+                                </div>
+                            ) : processingState ? (
+                                <div className="w-full min-h-[400px]">
+                                    <ProcessingVisualizer
+                                        stageKey={processingState.stageKey}
+                                        progress={processingState.progress}
+                                        description={processingState.description}
+                                    />
+                                </div>
+                            ) : null
                         ) : (
                             <div className="space-y-4">
                                 {displayedView === "profiles" && stemProfiles.length > 0 && (
@@ -1107,7 +1117,7 @@ export function MixTool({ resumeJobId }: MixToolProps) {
                                                 type="button"
                                                 disabled={loading}
                                                 onClick={handleConfirmBuses}
-                                                className="rounded-full bg-slate-200/90 px-5 py-2.5 text-xs font-bold uppercase tracking-widest text-slate-950 transition hover:bg-slate-100 disabled:opacity-60"
+                                                className="rounded-full bg-teal-500 px-5 py-2.5 text-xs font-bold uppercase tracking-widest text-slate-950 transition hover:bg-teal-400 disabled:opacity-60"
                                             >
                                                 {t("uploadSteps.buttons.confirmBuses")}
                                             </button>
@@ -1327,11 +1337,11 @@ export function MixTool({ resumeJobId }: MixToolProps) {
                                                            <span className={`${isStageSelected ? 'text-slate-300' : 'text-slate-600'}`}>
                                                                {stageTitle}
                                                            </span>
-                                                           <div className="relative group">
+                                                           <div className="relative group/info">
                                                                <span className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-amber-400/70 bg-amber-500/15 text-[10px] font-semibold text-amber-200">
                                                                    i
                                                                </span>
-                                                               <div className="pointer-events-none absolute left-0 top-full z-30 mt-2 w-56 rounded-lg border border-amber-400/30 bg-slate-950/95 px-3 py-2 text-[10px] text-amber-100 opacity-0 shadow-lg shadow-amber-500/10 transition group-hover:opacity-100">
+                                                               <div className="pointer-events-none absolute left-0 top-full z-30 mt-2 w-56 rounded-lg border border-amber-400/30 bg-slate-950/95 px-3 py-2 text-[10px] text-amber-100 opacity-0 shadow-lg shadow-amber-500/10 transition group-hover/info:opacity-100">
                                                                    <p className="font-semibold text-amber-200">{stageTitle}</p>
                                                                    {stageDescription && (
                                                                        <p className="mt-1 text-amber-100/80">

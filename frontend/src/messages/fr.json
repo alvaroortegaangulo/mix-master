@@ -265,6 +265,7 @@
       "stepCounter": "Étape {current}/3",
       "labels": {
         "uploadTracks": "1/3 Téléchargez vos pistes audio",
+        "uploadSong": "Téléchargez votre chanson",
         "selectProfiles": "2/3 Sélectionnez le profil des stems",
         "busSelection": "3/3 Sélection des bus"
       },
@@ -275,11 +276,13 @@
       "buttons": {
         "confirmProfiles": "Confirmer les profils",
         "confirmBuses": "Confirmer la sélection des bus",
-        "back": "Retour"
+        "back": "Retour",
+        "stop": "Arrêter"
       },
       "messages": {
         "mixReady": "Pistes prêtes pour le mixage, appuyez sur Générer Mix IA pour lancer le mixage et le mastering.",
-        "songReady": "Chanson prête pour le mastering, appuyez sur Générer Mastering IA pour commencer."
+        "songReady": "Chanson prête pour le mastering, appuyez sur Générer Mastering IA pour commencer.",
+        "loadingTracks": "Chargement des pistes..."
       }
     },
     "songMode": "Chanson (Mastering)",

@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import { useTranslations } from "next-intl";
 
 export type SpaceBus = {
@@ -37,7 +36,6 @@ const STYLE_DOCS: Record<string, StyleDoc> = {
 };
 
 export function SpaceDepthStylePanel({ buses, value, onChange }: Props) {
-  const [showDocs, setShowDocs] = useState(false);
   const t = useTranslations('MixTool');
 
   // Move STYLE_OPTIONS inside component to use translations
@@ -54,25 +52,7 @@ export function SpaceDepthStylePanel({ buses, value, onChange }: Props) {
 
   return (
     <aside className="rounded-2xl border border-teal-500/40 bg-teal-500/10 p-4 text-xs shadow-lg shadow-teal-500/20 text-teal-50">
-      <div className="flex items-start justify-between gap-2">
-        <div>
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-teal-100">
-            {t('spaceDepthTitle')}
-          </h3>
-          <p className="mt-1 text-[11px] text-teal-200">
-            {t('spaceDepthDesc')}
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={() => setShowDocs((v) => !v)}
-          className="ml-2 inline-flex h-7 w-7 items-center justify-center rounded-full border border-teal-500/60 text-[11px] text-teal-100 hover:border-teal-300 hover:text-teal-50"
-        >
-          ?
-        </button>
-      </div>
-
-      <div className="mt-3 space-y-2">
+      <div className="space-y-2">
         {buses.map((bus) => (
           <div
             key={bus.key}
@@ -105,17 +85,6 @@ export function SpaceDepthStylePanel({ buses, value, onChange }: Props) {
           </div>
         ))}
       </div>
-
-      {showDocs && (
-        <div className="mt-3 rounded-xl border border-teal-500/40 bg-teal-500/10 p-3 text-[11px] text-teal-100">
-          <p className="font-semibold uppercase tracking-wide text-teal-200">
-            Quick references
-          </p>
-          <p className="mt-1 text-teal-50/90">
-            In Auto mode we apply short rooms/plates with moderate sends and strong low filtering to avoid masking. Choose a style to force a specific space per bus.
-          </p>
-        </div>
-      )}
     </aside>
   );
 }

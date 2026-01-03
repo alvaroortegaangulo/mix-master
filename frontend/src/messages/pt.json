@@ -267,6 +267,7 @@
       "stepCounter": "Step {current}/3",
       "labels": {
         "uploadTracks": "1/3 Upload your audio tracks",
+        "uploadSong": "Upload your song",
         "selectProfiles": "2/3 Select stems profile",
         "busSelection": "3/3 Bus selection"
       },
@@ -277,11 +278,13 @@
       "buttons": {
         "confirmProfiles": "Confirm profiles",
         "confirmBuses": "Confirm bus selection",
-        "back": "Back"
+        "back": "Back",
+        "stop": "Parar"
       },
       "messages": {
         "mixReady": "Tracks prepared for mixing; press Generate Mix IA to start mixing and mastering.",
-        "songReady": "Song ready for mastering; press Generate AI Mastering to begin."
+        "songReady": "Song ready for mastering; press Generate AI Mastering to begin.",
+        "loadingTracks": "Loading tracks..."
       }
     },
     "songMode": "Song (Mastering)",
