@@ -158,18 +158,18 @@
     }
   },
   "PipelineInteractiveDiagram": {
-    "label": "Flujo de Trabajo de Ingenier\u00eda de Audio",
+    "label": "Flujo de Trabajo de Ingeniería de Audio",
     "title": "Pipeline de <violet>Audio</violet>",
-    "description": "Explora interactivamente cada etapa del proceso de producci\u00f3n, desde el <highlight>An\u00e1lisis</highlight> hasta la <highlight>Masterizaci\u00f3n</highlight>.",
+    "description": "Explora interactivamente cada etapa del proceso de producción, desde el <highlight>Análisis</highlight> hasta la <highlight>Masterización</highlight>.",
     "keyTools": "Herramientas Clave",
     "proTip": "Consejo Pro",
     "verified": "Datos verificados",
     "steps": {
       "0": {
-        "title": "An\u00e1lisis",
-        "shortDesc": "Diagn\u00f3stico Espectral",
-        "desc": "Antes de procesar, entender el material fuente es crucial. Usamos herramientas de medici\u00f3n para identificar problemas resonantes, desequilibrios tonales y correlaci\u00f3n de fase.",
-        "tip": "Siempre escucha en mono inicialmente. Si un instrumento desaparece o suena d\u00e9bil al cambiar a mono, tienes problemas de cancelaci\u00f3n de fase que debes corregir antes de mezclar.",
+        "title": "Análisis",
+        "shortDesc": "Diagnóstico Espectral",
+        "desc": "Antes de procesar, entender el material fuente es crucial. Usamos herramientas de medición para identificar problemas resonantes, desequilibrios tonales y correlación de fase.",
+        "tip": "Siempre escucha en mono inicialmente. Si un instrumento desaparece o suena débil al cambiar a mono, tienes problemas de cancelación de fase que debes corregir antes de mezclar.",
         "tools": [
           "Analizador de Espectro",
           "Goniometro",
@@ -177,32 +177,32 @@
         ]
       },
       "1": {
-        "title": "Correcci\u00f3n",
-        "shortDesc": "Ecualizaci\u00f3n Sustractiva",
-        "desc": "Limpieza quir\u00fargica. Eliminamos frecuencias no deseadas, resonancias molestas y \"barro\" (mud) para dar claridad a cada instrumento antes de realzarlo.",
-        "tip": "Corta estrecho, realza ancho. Usa un factor Q alto (estrecho) para eliminar resonancias quir\u00fargicamente, y un Q bajo (ancho) para dar color musicalmente.",
+        "title": "Corrección",
+        "shortDesc": "Ecualización Sustractiva",
+        "desc": "Limpieza quirúrgica. Eliminamos frecuencias no deseadas, resonancias molestas y \"barro\" (mud) para dar claridad a cada instrumento antes de realzarlo.",
+        "tip": "Corta estrecho, realza ancho. Usa un factor Q alto (estrecho) para eliminar resonancias quirúrgicamente, y un Q bajo (ancho) para dar color musicalmente.",
         "tools": [
-          "EQ Param\u00e9trico",
+          "EQ Paramétrico",
           "Filtro Pasa Altos",
-          "EQ Din\u00e1mico"
+          "EQ Dinámico"
         ]
       },
       "2": {
-        "title": "Din\u00e1mica",
+        "title": "Dinámica",
         "shortDesc": "Control y Pegada",
-        "desc": "Controlamos el rango din\u00e1mico para mantener la consistencia. Usamos compresores para dar \"pegada\" (punch) a la bater\u00eda o suavizar voces, y saturaci\u00f3n para arm\u00f3nicos.",
-        "tip": "Usa compresi\u00f3n en serie. En lugar de un compresor reduciendo 10dB, usa dos compresores seguidos reduciendo 3-5dB cada uno para un sonido mucho m\u00e1s natural y transparente.",
+        "desc": "Controlamos el rango dinámico para mantener la consistencia. Usamos compresores para dar \"pegada\" (punch) a la batería o suavizar voces, y saturación para armónicos.",
+        "tip": "Usa compresión en serie. En lugar de un compresor reduciendo 10dB, usa dos compresores seguidos reduciendo 3-5dB cada uno para un sonido mucho más natural y transparente.",
         "tools": [
           "Compresor FET/VCA",
           "Compresor Multibanda",
-          "Saturaci\u00f3n"
+          "Saturación"
         ]
       },
       "3": {
         "title": "Espacial",
-        "shortDesc": "Profundidad y Est\u00e9reo",
-        "desc": "Creamos un mundo tridimensional. Ubicamos sonidos en el campo est\u00e9reo (pan) y a\u00f1adimos profundidad con reverberaciones y delays para situar elementos al frente o atr\u00e1s.",
-        "tip": "Mant\u00e9n los graves en mono. Generalmente, todo lo que est\u00e9 por debajo de 120Hz debe estar centrado para mantener la energ\u00eda y evitar problemas de fase en sistemas grandes.",
+        "shortDesc": "Profundidad y Estéreo",
+        "desc": "Creamos un mundo tridimensional. Ubicamos sonidos en el campo estéreo (pan) y añadimos profundidad con reverberaciones y delays para situar elementos al frente o atrás.",
+        "tip": "Mantén los graves en mono. Generalmente, todo lo que esté por debajo de 120Hz debe estar centrado para mantener la energía y evitar problemas de fase en sistemas grandes.",
         "tools": [
           "Reverb (Plate/Hall)",
           "Delay / Echo",
@@ -213,7 +213,7 @@
         "title": "Mastering",
         "shortDesc": "Pulido Final y Loudness",
         "desc": "El paso final. Aseguramos que la mezcla se traduzca bien en todos los sistemas (coche, celular, club) y alcanzamos el nivel de volumen comercial competitivo.",
-        "tip": "No sacrifiques din\u00e1mica por volumen. Apunta a -14 LUFS para streaming, pero prioriza que la canci\u00f3n \"respire\". Un master sobre-comprimido fatiga el o\u00eddo r\u00e1pidamente.",
+        "tip": "No sacrifiques dinámica por volumen. Apunta a -14 LUFS para streaming, pero prioriza que la canción \"respire\". Un master sobre-comprimido fatiga el oído rápidamente.",
         "tools": [
           "Limitador (Limiter)",
           "Compresor de Bus",
@@ -1174,7 +1174,7 @@
   "Report": {
     "title": "Informe de Masterización",
     "downloadPdf": "Descargar PDF",
-    "downloadLogs": "Descargar Logs",
+    "downloadLogs": "Descargar procesamiento",
     "generatingPdf": "Generando PDF...",
     "mixSummary": "Resumen de Mezcla",
     "interactiveAnalysis": "Análisis Interactivo",
@@ -1290,6 +1290,9 @@
         "title": "Corrección Manual",
         "description": "Se aplicaron ajustes manuales basados en comentarios del usuario en Piroola Studio."
       }
-    }
+    },
+    "viewProcessing": "Ver Procesamiento",
+    "viewReport": "Ver Informe",
+    "processingLogs": "Logs de procesamiento"
   }
 }

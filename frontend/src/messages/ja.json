@@ -1185,7 +1185,7 @@
   "Report": {
     "title": "Mastering Report",
     "downloadPdf": "Download PDF",
-    "downloadLogs": "Download Logs",
+    "downloadLogs": "Download processing",
     "generatingPdf": "Generating PDF...",
     "mixSummary": "Mix Summary",
     "interactiveAnalysis": "Interactive Analysis",
@@ -1301,6 +1301,9 @@
         "title": "Manual Correction",
         "description": "Manual adjustments applied based on user feedback in Piroola Studio."
       }
-    }
+    },
+    "viewProcessing": "View processing",
+    "viewReport": "View report",
+    "processingLogs": "Processing logs"
   }
 }

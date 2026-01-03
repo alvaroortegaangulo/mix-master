@@ -27,6 +27,8 @@ import {
 } from "@heroicons/react/24/solid";
 import { ReportViewer } from "./ReportViewer";
 import { useTranslations } from "next-intl";
+import { useAuth } from "@/context/AuthContext";
+import { useModal } from "@/context/ModalContext";
 
 type Props = {
   jobId: string;
@@ -75,6 +77,9 @@ export function MixResultPageContent({ jobId }: Props) {
   const tStudio = useTranslations('Studio');
   const tPhases = useTranslations("PipelinePhases");
   const tPanel = useTranslations("MixPipelinePanel");
+  const tStages = useTranslations("MixTool.stage");
+  const { user } = useAuth();
+  const { openAuthModal } = useModal();
   const finalizingRetriesRef = useRef(0);
 
   // State
@@ -92,6 +97,8 @@ export function MixResultPageContent({ jobId }: Props) {
   const [signedOriginalUrl, setSignedOriginalUrl] = useState("");
   const [stagePreviewUrl, setStagePreviewUrl] = useState("");
   const [stagePreviewLoading, setStagePreviewLoading] = useState(false);
+  const [isStageDownloading, setIsStageDownloading] = useState(false);
+  const [isStageSharing, setIsStageSharing] = useState(false);
 
   // Pipeline State
   const [stages, setStages] = useState<PipelineStage[]>([]);
@@ -338,6 +345,12 @@ export function MixResultPageContent({ jobId }: Props) {
       };
   }, [activeStageKey, stages, tPhases]);
 
+  const activeStageTitle = useMemo(() => {
+      if (!activeStageInfo?.id) return null;
+      const key = `${activeStageInfo.id}.title` as any;
+      return tStages.has(key) ? tStages(key) : activeStageInfo.id;
+  }, [activeStageInfo?.id, tStages]);
+
   // --- Active Stage Preview Audio ---
   useEffect(() => {
     let cancelled = false;
@@ -421,14 +434,21 @@ export function MixResultPageContent({ jobId }: Props) {
   }, []);
 
   const handleDownload = useCallback(async () => {
+    if (!user) {
+      openAuthModal();
+      return;
+    }
     if (isDownloading) return;
+    const activeUrl = showOriginal
+      ? (signedOriginalUrl || jobStatus?.result?.originalFullSongUrl || "")
+      : (signedFullUrl || jobStatus?.result?.fullSongUrl || "");
+    if (!activeUrl) return;
     setIsDownloading(true);
     try {
-      const baseUrl = getBackendBaseUrl();
-      const url = showOriginal
-        ? `${baseUrl}/jobs/${jobId}/download-original`
-        : `${baseUrl}/jobs/${jobId}/download-mixdown`;
-      const response = await fetch(url, { headers: buildAuthHeaders() });
+      let response = await fetch(activeUrl);
+      if (!response.ok) {
+        response = await fetch(activeUrl, { headers: buildAuthHeaders() });
+      }
       if (!response.ok) {
         throw new Error(`Download failed: ${response.status}`);
       }
@@ -446,11 +466,62 @@ export function MixResultPageContent({ jobId }: Props) {
     } finally {
       setIsDownloading(false);
     }
-  }, [buildAuthHeaders, isDownloading, jobId, showOriginal]);
+  }, [
+    buildAuthHeaders,
+    isDownloading,
+    jobId,
+    jobStatus?.result?.fullSongUrl,
+    jobStatus?.result?.originalFullSongUrl,
+    openAuthModal,
+    showOriginal,
+    signedFullUrl,
+    signedOriginalUrl,
+    user,
+  ]);
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(shareLink);
   };
+
+  const handleStageDownload = useCallback(async () => {
+    if (!user) {
+      openAuthModal();
+      return;
+    }
+    if (!stagePreviewUrl || !activeStageKey || isStageDownloading) return;
+    setIsStageDownloading(true);
+    try {
+      const response = await fetch(stagePreviewUrl);
+      if (!response.ok) {
+        throw new Error(`Download failed: ${response.status}`);
+      }
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = `${jobId}_${activeStageKey}_preview.wav`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(objectUrl);
+    } catch (err) {
+      console.error("Stage download failed", err);
+    } finally {
+      setIsStageDownloading(false);
+    }
+  }, [activeStageKey, isStageDownloading, jobId, openAuthModal, stagePreviewUrl, user]);
+
+  const handleStageShare = useCallback(async () => {
+    if (!stagePreviewUrl || !activeStageKey || isStageSharing) return;
+    setIsStageSharing(true);
+    try {
+      await navigator.clipboard.writeText(stagePreviewUrl);
+    } catch (err) {
+      console.error("Stage share failed", err);
+    } finally {
+      setIsStageSharing(false);
+    }
+  }, [activeStageKey, isStageSharing, stagePreviewUrl]);
 
   if (loading) {
       return (
@@ -532,12 +603,12 @@ export function MixResultPageContent({ jobId }: Props) {
                 >
                     Historial
                 </button>
-                <button
-                    onClick={() => router.push('/mix')}
-                    className="px-4 py-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-300 text-sm font-medium hover:bg-slate-700 transition"
-                >
-                    Nueva Carga
-                </button>
+                  <button
+                      onClick={() => router.push('/mix')}
+                      className="px-4 py-2 rounded-lg bg-teal-600 border border-teal-500/40 text-white text-sm font-medium hover:bg-teal-500 transition"
+                  >
+                      Nueva Carga
+                  </button>
             </div>
         </div>
 
@@ -624,7 +695,7 @@ export function MixResultPageContent({ jobId }: Props) {
                         <button
                             type="button"
                             onClick={handleOpenReport}
-                            className="flex w-full md:w-auto items-center justify-center gap-2 rounded-xl border border-slate-800 bg-slate-900 px-6 py-3 text-sm font-bold text-white transition hover:bg-slate-800 shadow-lg shadow-black/20"
+                            className="flex w-full md:w-auto items-center justify-center gap-2 rounded-xl border border-teal-500/40 bg-teal-500/10 px-6 py-3 text-sm font-bold text-teal-100 transition hover:bg-teal-500/20"
                         >
                             {t('viewReport')}
                         </button>
@@ -633,16 +704,16 @@ export function MixResultPageContent({ jobId }: Props) {
                     <div className="flex items-center gap-4 w-full md:w-auto">
                         <button
                             onClick={handleShare}
-                            className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-slate-900 border border-slate-800 text-white text-sm font-bold hover:bg-slate-800 transition shadow-lg shadow-black/20"
+                            className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-xl border border-emerald-500/40 bg-emerald-500/10 text-emerald-100 text-sm font-bold hover:bg-emerald-500/20 transition"
                         >
-                            <ShareIcon className="w-4 h-4 text-slate-400" />
+                            <ShareIcon className="w-4 h-4 text-emerald-200" />
                             Compartir
                         </button>
                         <button
                             type="button"
                             onClick={handleDownload}
                             disabled={isDownloading}
-                            className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-emerald-600 text-white text-sm font-bold hover:bg-emerald-500 transition shadow-lg shadow-emerald-900/40 disabled:opacity-60"
+                            className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-amber-500 text-slate-950 text-sm font-bold hover:bg-amber-400 transition shadow-[0_0_18px_rgba(251,191,36,0.45)] disabled:opacity-60"
                         >
                             <ArrowDownTrayIcon className="w-4 h-4" />
                             {isDownloading ? tStudio('downloading') : "Descargar Master"}
@@ -688,11 +759,16 @@ export function MixResultPageContent({ jobId }: Props) {
                                                  value={activeStageKey ?? ""}
                                                  onChange={(event) => setActiveStageKey(event.target.value)}
                                              >
-                                                 {stageSelectOptions.map((stage) => (
-                                                     <option key={stage.key} value={stage.key}>
-                                                         #{String(stage.index).padStart(2, "0")} {stage.key}
-                                                     </option>
-                                                 ))}
+                                                 {stageSelectOptions.map((stage) => {
+                                                     const stageTitle = tStages.has(`${stage.key}.title` as any)
+                                                       ? tStages(`${stage.key}.title` as any)
+                                                       : stage.label || stage.key;
+                                                     return (
+                                                       <option key={stage.key} value={stage.key}>
+                                                         #{String(stage.index).padStart(2, "0")} {stageTitle}
+                                                       </option>
+                                                     );
+                                                 })}
                                              </select>
                                          </div>
                                          <p className="text-slate-300 text-sm leading-relaxed mb-6">
@@ -710,7 +786,9 @@ export function MixResultPageContent({ jobId }: Props) {
                                     <div className="bg-slate-950/40 rounded-2xl border border-slate-800 p-4">
                                         <div className="flex items-center justify-between mb-3">
                                             <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Preview de etapa</p>
-                                            <span className="text-[10px] text-slate-600">#{activeStageInfo.index} {activeStageInfo.id}</span>
+                                            <span className="text-[10px] text-slate-600">
+                                              #{activeStageInfo.index} {activeStageTitle || activeStageInfo.id}
+                                            </span>
                                         </div>
 
                                         {stagePreviewLoading && (
@@ -718,13 +796,35 @@ export function MixResultPageContent({ jobId }: Props) {
                                         )}
 
                                         {!stagePreviewLoading && stagePreviewUrl && (
-                                            <WaveformPlayer
-                                                src={stagePreviewUrl}
-                                                accentColor="#10b981"
-                                                className="bg-slate-950/60 border border-slate-800/80 shadow-none p-2 !gap-2 rounded-2xl"
-                                                canvasClassName="h-12"
-                                                hideDownload={true}
-                                            />
+                                            <>
+                                                <WaveformPlayer
+                                                    src={stagePreviewUrl}
+                                                    accentColor="#10b981"
+                                                    className="bg-slate-950/60 border border-slate-800/80 shadow-none p-2 !gap-2 rounded-2xl"
+                                                    canvasClassName="h-12"
+                                                    hideDownload={true}
+                                                />
+                                                <div className="mt-3 flex flex-wrap gap-2">
+                                                    <button
+                                                        type="button"
+                                                        onClick={handleStageShare}
+                                                        disabled={isStageSharing}
+                                                        className="flex-1 min-w-[120px] inline-flex items-center justify-center gap-2 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-2 text-[11px] font-semibold text-emerald-100 transition hover:bg-emerald-500/20 disabled:opacity-60"
+                                                    >
+                                                        <ShareIcon className="w-4 h-4" />
+                                                        {isStageSharing ? tStudio('downloading') : "Compartir"}
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={handleStageDownload}
+                                                        disabled={isStageDownloading}
+                                                        className="flex-1 min-w-[120px] inline-flex items-center justify-center gap-2 rounded-lg bg-amber-500 px-3 py-2 text-[11px] font-semibold text-slate-950 transition hover:bg-amber-400 shadow-[0_0_16px_rgba(251,191,36,0.45)] disabled:opacity-60"
+                                                    >
+                                                        <ArrowDownTrayIcon className="w-4 h-4" />
+                                                        {isStageDownloading ? tStudio('downloading') : "Descargar"}
+                                                    </button>
+                                                </div>
+                                            </>
                                         )}
 
                                         {!stagePreviewLoading && !stagePreviewUrl && (
@@ -744,28 +844,52 @@ export function MixResultPageContent({ jobId }: Props) {
         {/* Share Modal */}
         {isShareModalOpen && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-                <div className="w-full max-w-md rounded-2xl border border-amber-500/30 bg-slate-950 p-6 shadow-2xl">
-                    <h3 className="text-xl font-bold text-amber-100 mb-2">Compartir Mezcla</h3>
-                    <p className="text-sm text-amber-200/60 mb-4">Comparte este enlace único. El enlace expirará en 7 días.</p>
+                <div className="w-full max-w-md rounded-2xl border border-emerald-500/30 bg-slate-950 p-6 shadow-2xl">
+                    <h3 className="text-xl font-bold text-emerald-100 mb-2">Compartir Mezcla</h3>
+                    <p className="text-sm text-emerald-200/60 mb-4">
+                        {"Comparte este enlace \u00fanico. El enlace expirar\u00e1 en 7 d\u00edas."}
+                    </p>
 
                     <div className="mb-4 flex gap-2">
                         <input
                             type="text"
                             value={shareLink}
                             readOnly
-                            className="flex-1 rounded-lg border border-amber-500/20 bg-slate-900 px-3 py-2 text-sm text-amber-100 focus:outline-none"
+                            className="flex-1 rounded-lg border border-emerald-500/20 bg-slate-900 px-3 py-2 text-sm text-emerald-100 focus:outline-none"
                         />
                         <button
                             onClick={copyToClipboard}
-                            className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-500"
+                            className="rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-500"
                         >
                             Copiar
                         </button>
                     </div>
 
                     <div className="flex gap-4 justify-center py-2">
-                        <a href={`https://wa.me/?text=${encodeURIComponent(shareLink)}`} target="_blank" rel="noopener noreferrer" className="text-amber-400 hover:text-amber-300">WhatsApp</a>
-                        <a href={`mailto:?body=${encodeURIComponent(shareLink)}`} className="text-amber-400 hover:text-amber-300">Email</a>
+                        <a
+                          href={`https://wa.me/?text=${encodeURIComponent(shareLink)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          aria-label="WhatsApp"
+                          title="WhatsApp"
+                          className="flex h-10 w-10 items-center justify-center rounded-full border border-emerald-500/40 bg-emerald-500/10 text-emerald-200 transition hover:bg-emerald-500/20 hover:text-emerald-100"
+                        >
+                          <svg viewBox="0 0 24 24" className="h-5 w-5 fill-current" aria-hidden="true">
+                            <path d="M20.52 3.48A11.94 11.94 0 0 0 12.05 0C5.39 0 .01 5.38 0 12.02c0 2.12.56 4.19 1.62 6.02L0 24l6.14-1.61a12 12 0 0 0 5.91 1.51h.01c6.64 0 12.03-5.38 12.03-12.02 0-3.21-1.25-6.23-3.57-8.4ZM12.06 22a9.93 9.93 0 0 1-5.07-1.39l-.36-.21-3.64.96.97-3.55-.23-.36a9.96 9.96 0 1 1 8.33 4.55Zm5.53-7.46c-.3-.15-1.77-.87-2.05-.97-.28-.1-.48-.15-.68.15-.2.3-.78.97-.96 1.17-.18.2-.36.22-.66.07-.3-.15-1.27-.47-2.41-1.5-.89-.8-1.49-1.78-1.66-2.08-.17-.3-.02-.46.13-.61.13-.13.3-.36.45-.54.15-.18.2-.3.3-.5.1-.2.05-.38-.03-.53-.08-.15-.68-1.64-.93-2.25-.24-.58-.49-.5-.68-.51h-.58c-.2 0-.53.07-.8.38-.27.3-1.05 1.03-1.05 2.5 0 1.47 1.08 2.9 1.23 3.1.15.2 2.12 3.24 5.14 4.54.72.31 1.29.5 1.73.64.73.23 1.39.2 1.91.12.58-.09 1.77-.72 2.02-1.42.25-.7.25-1.3.17-1.42-.08-.12-.28-.2-.58-.35Z" />
+                          </svg>
+                        </a>
+                        <a
+                          href={`https://mail.google.com/mail/?view=cm&fs=1&su=${encodeURIComponent("Mezcla Piroola")}&body=${encodeURIComponent(shareLink)}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          aria-label="Gmail"
+                          title="Gmail"
+                          className="flex h-10 w-10 items-center justify-center rounded-full border border-emerald-500/40 bg-emerald-500/10 text-emerald-200 transition hover:bg-emerald-500/20 hover:text-emerald-100"
+                        >
+                          <svg viewBox="0 0 24 24" className="h-5 w-5 fill-current" aria-hidden="true">
+                            <path d="M20.5 4h-17A2.5 2.5 0 0 0 1 6.5v11A2.5 2.5 0 0 0 3.5 20h17a2.5 2.5 0 0 0 2.5-2.5v-11A2.5 2.5 0 0 0 20.5 4Zm-1.4 2L12 10.95 4.9 6h14.2ZM3.5 18.5a.5.5 0 0 1-.5-.5V7.55l8.4 5.85a1 1 0 0 0 1.2 0L21 7.55V18a.5.5 0 0 1-.5.5h-17Z" />
+                          </svg>
+                        </a>
                     </div>
 
                     <div className="mt-4 flex justify-end">

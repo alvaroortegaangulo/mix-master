@@ -182,6 +182,10 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
 }) => {
   const t = useTranslations("Report");
   const [isDownloading, setIsDownloading] = useState(false);
+  const [showLogs, setShowLogs] = useState(false);
+  const [logsContent, setLogsContent] = useState("");
+  const [logsLoading, setLogsLoading] = useState(false);
+  const [logsError, setLogsError] = useState<string | null>(null);
   const reportRef = useRef<HTMLDivElement>(null);
   const { user } = useAuth();
   const { openAuthModal } = useModal();
@@ -262,6 +266,37 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
     }
   };
 
+  const fetchLogsText = async () => {
+    const url = await signFileUrl(jobId, "pipeline.log");
+    const response = await fetch(url);
+    if (!response.ok) throw new Error("Failed to fetch logs");
+    return response.text();
+  };
+
+  const handleToggleLogs = async () => {
+    if (showLogs) {
+      setShowLogs(false);
+      return;
+    }
+    if (!user) {
+      openAuthModal();
+      return;
+    }
+    setShowLogs(true);
+    if (logsContent || logsLoading) return;
+    setLogsLoading(true);
+    setLogsError(null);
+    try {
+      const text = await fetchLogsText();
+      setLogsContent(text);
+    } catch (err) {
+      console.error("Failed to load logs:", err);
+      setLogsError("No se pudieron cargar los logs.");
+    } finally {
+      setLogsLoading(false);
+    }
+  };
+
   const handleDownloadLogs = async () => {
     if (!user) {
       openAuthModal();
@@ -271,10 +306,7 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
       // 1. Fetch the log file (via signed URL)
       // Since we don't have a direct "get log text" method in mixApi usually,
       // we'll use the file signing mechanism to get a URL, then fetch the text.
-      const url = await signFileUrl(jobId, "pipeline.log");
-      const response = await fetch(url);
-      if (!response.ok) throw new Error("Failed to fetch logs");
-      const text = await response.text();
+      const text = await fetchLogsText();
 
       // 2. Generate PDF with jsPDF
       const doc = new jsPDF();
@@ -411,6 +443,13 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
                   "linear-gradient(to bottom right, rgba(19, 78, 74, 0.2), rgba(15, 23, 42, 0.4))",
               }}
             >
+                <button
+                  type="button"
+                  onClick={handleToggleLogs}
+                  className="mb-3 inline-flex items-center justify-center rounded-lg border border-amber-400/50 bg-amber-500 px-3 py-1.5 text-[11px] font-bold text-slate-950 transition hover:bg-amber-400"
+                >
+                  {showLogs ? t("viewReport") : t("viewProcessing")}
+                </button>
                 <h2 className="mb-4 text-lg font-bold text-teal-100 tracking-tight">
                 {t("mixSummary")}
                 </h2>
@@ -509,43 +548,66 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
                 </div>
             </section>
 
-            {/* Advanced Interactive Charts Section */}
-            {displayResult && (
-                <section className="rounded-xl border border-[rgba(20,184,166,0.2)] bg-[rgba(15,23,42,0.4)] p-5">
-                <h2 className="mb-4 text-sm font-bold uppercase tracking-widest text-[rgba(20,184,166,0.8)]">
-                    {t("interactiveAnalysis")}
+            {showLogs && (
+              <section className="rounded-xl border border-amber-500/20 bg-[rgba(15,23,42,0.35)] p-5">
+                <h2 className="mb-4 text-sm font-bold uppercase tracking-widest text-amber-200/80">
+                  {t("processingLogs")}
                 </h2>
-
-                <AdvancedInteractiveCharts
-                    result={displayResult}
-                    original={displayOriginal}
-                />
-
-                </section>
+                {logsLoading && (
+                  <div className="text-xs text-slate-400">Cargando logs...</div>
+                )}
+                {!logsLoading && logsError && (
+                  <div className="text-xs text-amber-200">{logsError}</div>
+                )}
+                {!logsLoading && !logsError && (
+                  <pre className="max-h-[60vh] overflow-y-auto whitespace-pre-wrap break-words rounded-lg border border-slate-800 bg-slate-950/80 p-4 text-[11px] text-slate-200">
+                    {logsContent || "Sin logs disponibles."}
+                  </pre>
+                )}
+              </section>
             )}
 
-            {/* Detailed Stage Report */}
-            <section>
-                <div className="mb-3 flex items-center justify-between px-1">
-                <h2 className="text-sm font-bold uppercase tracking-widest text-[rgba(20,184,166,0.8)]">
-                    {t("detailedStageReport")}
-                </h2>
-                <span className="text-[10px] text-slate-500">
-                    {processedStages.length} stages processed
-                </span>
-                </div>
+            {!showLogs && (
+              <>
+                {/* Advanced Interactive Charts Section */}
+                {displayResult && (
+                    <section className="rounded-xl border border-[rgba(20,184,166,0.2)] bg-[rgba(15,23,42,0.4)] p-5">
+                    <h2 className="mb-4 text-sm font-bold uppercase tracking-widest text-[rgba(20,184,166,0.8)]">
+                        {t("interactiveAnalysis")}
+                    </h2>
 
-                <div className="space-y-4">
-                {processedStages.map((stage) => (
-                    <ReportStageCard
-                    key={stage.contract_id}
-                    stage={stage}
-                    jobId={jobId}
-                    durationSec={durationByStage[stage.contract_id] ?? null}
+                    <AdvancedInteractiveCharts
+                        result={displayResult}
+                        original={displayOriginal}
                     />
-                ))}
-                </div>
-            </section>
+
+                    </section>
+                )}
+
+                {/* Detailed Stage Report */}
+                <section>
+                    <div className="mb-3 flex items-center justify-between px-1">
+                    <h2 className="text-sm font-bold uppercase tracking-widest text-[rgba(20,184,166,0.8)]">
+                        {t("detailedStageReport")}
+                    </h2>
+                    <span className="text-[10px] text-slate-500">
+                        {processedStages.length} stages processed
+                    </span>
+                    </div>
+
+                    <div className="space-y-4">
+                    {processedStages.map((stage) => (
+                        <ReportStageCard
+                        key={stage.contract_id}
+                        stage={stage}
+                        jobId={jobId}
+                        durationSec={durationByStage[stage.contract_id] ?? null}
+                        />
+                    ))}
+                    </div>
+                </section>
+              </>
+            )}
         </div>
     </div>
   );

@@ -1277,6 +1277,10 @@
         "title": "Correction Manuelle",
         "description": "Ajustements manuels appliqués basés sur les retours utilisateur dans Piroola Studio."
       }
-    }
+    },
+    "downloadLogs": "Download processing",
+    "viewProcessing": "View processing",
+    "viewReport": "View report",
+    "processingLogs": "Processing logs"
   }
 }
