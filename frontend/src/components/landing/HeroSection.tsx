@@ -86,7 +86,7 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
   }, []);
 
   return (
-    <section className="relative flex min-h-[70vh] lg:min-h-[75vh] 2xl:min-h-[85vh] flex-col items-center justify-center overflow-hidden bg-slate-950 px-4 text-center py-8 md:py-10 2xl:py-14">
+    <section className="relative flex min-h-[70vh] lg:min-h-[75vh] 2xl:min-h-[85vh] flex-col items-center justify-center overflow-hidden bg-slate-950 px-4 text-center py-8 md:py-10 lg:py-16 2xl:py-20">
       {/* Background gradients/blobs */}
       <div className="absolute top-0 left-0 h-full w-full overflow-hidden pointer-events-none z-0">
         <div className="absolute -top-[20%] -left-[10%] h-[50%] w-[50%] rounded-full bg-teal-500/10 blur-[120px]" />
@@ -184,6 +184,27 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
               box-shadow: 0 0 20px rgba(45, 212, 191, 0.7), 0 0 40px rgba(45, 212, 191, 0.4);
             }
           }
+
+          .hero-faq-pop {
+            animation: hero-faq-pop 0.75s cubic-bezier(0.22, 1.2, 0.32, 1) 0.2s both;
+          }
+
+          @keyframes hero-faq-pop {
+            0% {
+              transform: scale(0);
+              opacity: 0;
+            }
+            65% {
+              transform: scale(1.06);
+              opacity: 1;
+            }
+            85% {
+              transform: scale(0.98);
+            }
+            100% {
+              transform: scale(1);
+            }
+          }
         `}</style>
 
         {/* Rating Section */}
@@ -206,6 +227,33 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
           className="h-full w-full"
           aria-hidden="true"
         />
+      </div>
+
+      <div className="absolute bottom-4 right-4 sm:bottom-6 sm:right-6 z-30">
+        <div className="hero-faq-pop group w-[min(90vw,340px)] origin-bottom-right">
+          <div className="relative rounded-2xl border border-slate-800 bg-slate-950/90 p-4 text-left shadow-2xl shadow-black/40 backdrop-blur">
+            <div className="flex items-start gap-2">
+              <span className="mt-0.5 inline-flex h-5 w-5 items-center justify-center rounded-full border border-emerald-400/70 bg-emerald-500/15 text-[11px] font-bold text-emerald-200">
+                i
+              </span>
+              <p className="text-sm font-semibold text-white">
+                ¿Cuál es la diferencia entre Mezcla y Masterización?
+              </p>
+            </div>
+            <div className="overflow-hidden opacity-0 max-h-0 mt-0 transition-all duration-300 group-hover:opacity-100 group-hover:max-h-64 group-hover:mt-3">
+              <p className="text-[11px] text-slate-300 leading-relaxed">
+                La mezcla implica equilibrar pistas individuales (stems) para formar una canción, incluyendo ajustar niveles, paneo y añadir efectos. La masterización es el paso final que pule la canción mezclada, asegurando que suene consistente y lo suficientemente fuerte para el lanzamiento comercial.
+              </p>
+              <Link
+                href="/faq"
+                className="mt-3 inline-flex items-center justify-center rounded-full border border-emerald-400/40 bg-emerald-500/10 px-3 py-1.5 text-[11px] font-semibold text-emerald-200 transition hover:bg-emerald-500/20"
+              >
+                Ir a FAQ
+              </Link>
+            </div>
+            <div className="absolute left-1/2 -bottom-2 h-0 w-0 -translate-x-1/2 border-l-[7px] border-r-[7px] border-t-[9px] border-l-transparent border-r-transparent border-t-slate-950/90 pointer-events-none" />
+          </div>
+        </div>
       </div>
     </section>
   );

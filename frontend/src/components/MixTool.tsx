@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import {
   startMixJob,
   fetchJobStatus,
@@ -213,6 +214,87 @@ const THEME_STYLES: Record<string, any> = {
     cardBorder: "group-hover:border-amber-500/30"
   }
 };
+
+type StageInfoTooltipProps = {
+  title: string;
+  description?: string;
+};
+
+function StageInfoTooltip({ title, description }: StageInfoTooltipProps) {
+  const [isMounted, setIsMounted] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
+  const [position, setPosition] = useState<{ left: number; top: number } | null>(null);
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  const updatePosition = useCallback(() => {
+    const trigger = triggerRef.current;
+    if (!trigger) return;
+    const rect = trigger.getBoundingClientRect();
+    const offset = 8;
+    setPosition({
+      left: rect.right + offset,
+      top: rect.top - offset,
+    });
+  }, []);
+
+  const handleShow = () => {
+    updatePosition();
+    setIsVisible(true);
+  };
+
+  const handleHide = () => {
+    setIsVisible(false);
+  };
+
+  useEffect(() => {
+    if (!isVisible) return;
+    const handleUpdate = () => updatePosition();
+    window.addEventListener("scroll", handleUpdate, true);
+    window.addEventListener("resize", handleUpdate);
+    return () => {
+      window.removeEventListener("scroll", handleUpdate, true);
+      window.removeEventListener("resize", handleUpdate);
+    };
+  }, [isVisible, updatePosition]);
+
+  return (
+    <>
+      <button
+        type="button"
+        ref={triggerRef}
+        onMouseEnter={handleShow}
+        onMouseLeave={handleHide}
+        onFocus={handleShow}
+        onBlur={handleHide}
+        className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-amber-400/70 bg-amber-500/15 text-[10px] font-semibold text-amber-200 shrink-0"
+        aria-label={title}
+      >
+        i
+      </button>
+      {isMounted && isVisible && position
+        ? createPortal(
+            <div
+              className="fixed z-[60] w-56 rounded-lg border border-amber-400/30 bg-slate-950/95 px-3 py-2 text-[10px] text-amber-100 shadow-lg shadow-amber-500/10 pointer-events-none transform -translate-y-full"
+              style={{ left: position.left, top: position.top }}
+              role="tooltip"
+            >
+              <p className="font-semibold text-amber-200">{title}</p>
+              {description && (
+                <p className="mt-1 text-amber-100/80">
+                  {description}
+                </p>
+              )}
+            </div>,
+            document.body
+          )
+        : null}
+    </>
+  );
+}
 
 export function MixTool({ resumeJobId }: MixToolProps) {
   const [uploadMode, setUploadMode] = useState<"song" | "stems">("stems");
@@ -1240,7 +1322,7 @@ export function MixTool({ resumeJobId }: MixToolProps) {
                 </div>
 
                 {/* Timeline Container */}
-                <div className="flex-1 relative overflow-y-auto pr-2 -mr-2 custom-scrollbar">
+                <div className="flex-1 relative overflow-y-auto overflow-x-hidden pr-2 -mr-2 custom-scrollbar">
                     {/* Vertical Line */}
                     <div className="absolute left-[1.65rem] top-4 bottom-4 w-px bg-slate-800" />
 
@@ -1254,6 +1336,8 @@ export function MixTool({ resumeJobId }: MixToolProps) {
                                : stages.map(s => s.key);
 
                             const isDisabled = relevantKeys.length === 0;
+                            const isLocked = isProcessing;
+                            const isGroupDisabled = isDisabled || isLocked;
                             // Update logic: toggle is selected if ANY of the stages is selected (unless disabled)
                             const isSelected = !isDisabled && relevantKeys.some(k => selectedStageKeys.includes(k));
                             const selectedCount = stages.filter(stage => selectedStageKeys.includes(stage.key)).length;
@@ -1268,7 +1352,7 @@ export function MixTool({ resumeJobId }: MixToolProps) {
                                         isSelected
                                         ? 'bg-slate-900/40 border-slate-700/50'
                                         : 'bg-transparent border-transparent'
-                                    } ${isDisabled ? 'opacity-30 grayscale' : 'opacity-100'} ${theme.cardBorder || ''}`}
+                                    } ${isDisabled ? 'opacity-30 grayscale' : isLocked ? 'opacity-60 grayscale' : 'opacity-100'} ${theme.cardBorder || ''}`}
                                 >
                                     <div className="relative flex items-center p-3 gap-4">
                                         {/* Icon */}
@@ -1294,13 +1378,13 @@ export function MixTool({ resumeJobId }: MixToolProps) {
                                                 </div>
 
                                                 {/* Toggle */}
-                                                <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                                                <label className={`relative inline-flex items-center shrink-0 ${isGroupDisabled ? "cursor-not-allowed opacity-60" : "cursor-pointer"}`}>
                                                     <input
                                                         type="checkbox"
                                                         className="sr-only peer"
                                                         checked={isSelected}
                                                         onChange={() => toggleGroup(group.id)}
-                                                        disabled={isDisabled}
+                                                        disabled={isGroupDisabled}
                                                     />
                                                     <div className={`w-9 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-400 after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all ${theme.toggle} peer-checked:after:bg-white`}></div>
                                                 </label>
@@ -1327,35 +1411,27 @@ export function MixTool({ resumeJobId }: MixToolProps) {
                                             {stages.map(stage => {
                                                const isStageSelected = selectedStageKeys.includes(stage.key);
                                                const isStageDisabled = isSongMode && !songModeStageKeys.includes(stage.key);
+                                               const isStageLocked = isProcessing;
                                                const stageTitle = HUMAN_STAGE_TEXT[stage.key]?.title || stage.label;
                                                const stageDescription = HUMAN_STAGE_TEXT[stage.key]?.description || "";
 
                                                return (
-                                                   <div key={stage.key} className="flex items-center justify-between text-xs group/stage">
-                                                       <div className="flex items-center gap-2 min-w-0">
-                                                           <span className={`${isStageSelected ? 'text-slate-300' : 'text-slate-600'}`}>
+                                                   <div key={stage.key} className={`flex items-center justify-between text-xs group/stage ${isStageLocked ? "opacity-60" : ""}`}>
+                                                       <div className="flex items-center gap-2 min-w-0 flex-1">
+                                                           <span className={`${isStageSelected ? 'text-slate-300' : 'text-slate-600'} flex-1 min-w-0 break-words`}>
                                                                {stageTitle}
                                                            </span>
-                                                           <div className="relative group/info">
-                                                               <span className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-amber-400/70 bg-amber-500/15 text-[10px] font-semibold text-amber-200">
-                                                                   i
-                                                               </span>
-                                                               <div className="pointer-events-none absolute left-0 top-full z-30 mt-2 w-56 rounded-lg border border-amber-400/30 bg-slate-950/95 px-3 py-2 text-[10px] text-amber-100 opacity-0 shadow-lg shadow-amber-500/10 transition group-hover/info:opacity-100">
-                                                                   <p className="font-semibold text-amber-200">{stageTitle}</p>
-                                                                   {stageDescription && (
-                                                                       <p className="mt-1 text-amber-100/80">
-                                                                           {stageDescription}
-                                                                       </p>
-                                                                   )}
-                                                               </div>
-                                                           </div>
+                                                           <StageInfoTooltip
+                                                             title={stageTitle}
+                                                             description={stageDescription}
+                                                           />
                                                        </div>
                                                         <input
                                                             type="checkbox"
-                                                            className={`rounded border-slate-700 bg-slate-800 ${theme.text} focus:ring-opacity-50 h-3 w-3`}
+                                                            className={`rounded border-slate-700 bg-slate-800 ${theme.text} focus:ring-opacity-50 h-3 w-3 disabled:cursor-not-allowed disabled:opacity-50`}
                                                             checked={isStageSelected}
                                                             onChange={() => toggleStage(stage.key)}
-                                                            disabled={isStageDisabled}
+                                                            disabled={isStageDisabled || isStageLocked}
                                                         />
                                                    </div>
                                                );

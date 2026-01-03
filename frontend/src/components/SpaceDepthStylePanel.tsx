@@ -62,11 +62,6 @@ export function SpaceDepthStylePanel({ buses, value, onChange }: Props) {
               <p className="text-[11px] font-medium text-teal-50">
                 {bus.label}
               </p>
-              {bus.description && (
-                <p className="mt-0.5 text-[10px] text-teal-200/80">
-                  {bus.description}
-                </p>
-              )}
             </div>
             <div className="flex items-center gap-1">
               <select

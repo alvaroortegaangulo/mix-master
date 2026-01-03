@@ -51,6 +51,24 @@ const PHASE_KEY_MAP: Record<string, string> = {
 const STATUS_POLL_INTERVAL_MS = 2000;
 const MAX_FINALIZING_RETRIES = 15;
 
+const formatDuration = (totalSeconds?: number | null) => {
+  if (typeof totalSeconds !== "number" || !Number.isFinite(totalSeconds)) {
+    return null;
+  }
+  const safeSeconds = Math.max(0, Math.round(totalSeconds));
+  const hours = Math.floor(safeSeconds / 3600);
+  const minutes = Math.floor((safeSeconds % 3600) / 60);
+  const seconds = safeSeconds % 60;
+
+  if (hours > 0) {
+    return `${hours}h ${minutes}m ${seconds}s`;
+  }
+  if (minutes > 0) {
+    return `${minutes}m ${seconds}s`;
+  }
+  return `${seconds}s`;
+};
+
 export function MixResultPageContent({ jobId }: Props) {
   const router = useRouter();
   const t = useTranslations('MixTool.result');
@@ -256,44 +274,52 @@ export function MixResultPageContent({ jobId }: Props) {
 
   // --- Computed Metrics ---
   const metrics = useMemo(() => {
-      // Default / Fallback
       const m = {
-          lufs: "-14.0", // Ideal target
-          lufsStatus: "OK",
-          tp: "-1.0",
-          dr: "8.0",
-          format: "WAV 24/48" // This might need to be dynamic
+          pipelineTime: "N/A",
+          lufs: "N/A",
+          tp: "N/A",
+          lra: "N/A",
       };
 
       if (report) {
-         // Try to extract from report structure
-         // Hypothetical structure based on typical Essentia/Librosa analysis in report
-         const mixMetrics = report?.interactive_charts?.loudness?.metrics || report?.metrics || {};
+         const durationLabel = formatDuration(report.pipeline_durations?.total_duration_sec);
+         if (durationLabel) m.pipelineTime = durationLabel;
 
-         if (mixMetrics.integrated !== undefined) m.lufs = Number(mixMetrics.integrated).toFixed(1);
-         if (mixMetrics.true_peak !== undefined) m.tp = Number(mixMetrics.true_peak).toFixed(1);
-         if (mixMetrics.dynamic_range !== undefined) m.dr = Number(mixMetrics.dynamic_range).toFixed(1);
-
-         // If simpler structure
-         if (mixMetrics.final_rms_dbfs !== undefined) m.lufs = Number(mixMetrics.final_rms_dbfs).toFixed(1); // Approximate fallback
-         if (mixMetrics.final_peak_dbfs !== undefined) m.tp = Number(mixMetrics.final_peak_dbfs).toFixed(1);
-
-         // Format
-         const fmt = report?.input_format || {};
-         if (fmt.sample_rate && fmt.bit_depth) {
-             m.format = `WAV ${fmt.bit_depth}/${(fmt.sample_rate/1000).toFixed(0)}`;
+         const finalMetrics = report.final_metrics || {};
+         if (typeof finalMetrics.lufs_integrated === "number") {
+           m.lufs = finalMetrics.lufs_integrated.toFixed(2);
          }
-      } else if (jobStatus?.result?.metrics) {
-          // Fallback to basic metrics
-          const basic = jobStatus.result.metrics;
-          m.tp = basic.final_peak_dbfs.toFixed(1);
-          // m.lufs = basic.final_rms_dbfs.toFixed(1); // RMS != LUFS but close-ish
+         if (typeof finalMetrics.true_peak_dbtp === "number") {
+           m.tp = finalMetrics.true_peak_dbtp.toFixed(2);
+         }
+         if (typeof finalMetrics.lra === "number") {
+           m.lra = finalMetrics.lra.toFixed(2);
+         }
       }
 
       return m;
-  }, [report, jobStatus]);
+  }, [report]);
 
   // --- Active Stage Details ---
+  const processedStages = useMemo(() => {
+      if (!stages.length || !processedStageKeys.length) return [];
+      const stageByKey = new Map(stages.map((stage) => [stage.key, stage]));
+      const ordered = processedStageKeys
+        .map((key) => stageByKey.get(key))
+        .filter((stage): stage is PipelineStage => Boolean(stage));
+      if (ordered.length) return ordered;
+      return stages.filter((stage) => processedStageKeys.includes(stage.key));
+  }, [stages, processedStageKeys]);
+
+  const stageSelectOptions = useMemo(() => {
+      if (processedStages.length) return processedStages;
+      if (activeStageKey) {
+        const stage = stages.find((s) => s.key === activeStageKey);
+        return stage ? [stage] : [];
+      }
+      return [];
+  }, [processedStages, activeStageKey, stages]);
+
   const activeStageInfo = useMemo(() => {
       if (!activeStageKey || !stages.length) return null;
       const stage = stages.find(s => s.key === activeStageKey);
@@ -376,6 +402,39 @@ export function MixResultPageContent({ jobId }: Props) {
        setLoadingShare(false);
     }
   };
+
+  const handleDownload = useCallback(async () => {
+    const url = showOriginal ? signedOriginalUrl : signedFullUrl;
+    if (!url) return;
+
+    const getFileName = (rawUrl: string) => {
+      try {
+        const parsed = new URL(rawUrl, window.location.href);
+        const fileName = parsed.pathname.split("/").pop();
+        return fileName || "mixdown.wav";
+      } catch {
+        return "mixdown.wav";
+      }
+    };
+
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`Download failed: ${response.status}`);
+      }
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = objectUrl;
+      link.download = getFileName(url);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(objectUrl);
+    } catch (err) {
+      console.error("Download failed", err);
+    }
+  }, [showOriginal, signedFullUrl, signedOriginalUrl]);
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(shareLink);
@@ -474,9 +533,16 @@ export function MixResultPageContent({ jobId }: Props) {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
             <div className="bg-slate-900/50 rounded-2xl p-4 border border-slate-800 text-center relative overflow-hidden group">
                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-amber-500/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <p className="text-[10px] uppercase tracking-wider text-slate-500 mb-1">TIEMPO PIPELINE</p>
+                <div className="text-xl font-bold text-white">
+                    {metrics.pipelineTime}
+                </div>
+            </div>
+            <div className="bg-slate-900/50 rounded-2xl p-4 border border-slate-800 text-center relative overflow-hidden group">
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-amber-500/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
                 <p className="text-[10px] uppercase tracking-wider text-slate-500 mb-1">LUFS INTEGRADO</p>
-                <div className="text-xl font-bold text-white flex items-center justify-center gap-2">
-                    {metrics.lufs} <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded">{metrics.lufsStatus}</span>
+                <div className="text-xl font-bold text-white">
+                    {metrics.lufs} <span className="text-xs text-slate-500 font-normal">LUFS</span>
                 </div>
             </div>
             <div className="bg-slate-900/50 rounded-2xl p-4 border border-slate-800 text-center relative overflow-hidden group">
@@ -488,16 +554,9 @@ export function MixResultPageContent({ jobId }: Props) {
             </div>
             <div className="bg-slate-900/50 rounded-2xl p-4 border border-slate-800 text-center relative overflow-hidden group">
                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-amber-500/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                <p className="text-[10px] uppercase tracking-wider text-slate-500 mb-1">RANGO DINÁMICO</p>
+                <p className="text-[10px] uppercase tracking-wider text-slate-500 mb-1">LRA</p>
                 <div className="text-xl font-bold text-white">
-                    {metrics.dr} <span className="text-xs text-slate-500 font-normal">DR</span>
-                </div>
-            </div>
-            <div className="bg-slate-900/50 rounded-2xl p-4 border border-slate-800 text-center relative overflow-hidden group">
-                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-amber-500/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                <p className="text-[10px] uppercase tracking-wider text-slate-500 mb-1">FORMATO</p>
-                <div className="text-xl font-bold text-white">
-                    {metrics.format.split(' ')[0]} <span className="text-xs text-slate-500 font-normal">{metrics.format.split(' ').slice(1).join(' ')}</span>
+                    {metrics.lra} <span className="text-xs text-slate-500 font-normal">LU</span>
                 </div>
             </div>
         </div>
@@ -567,14 +626,14 @@ export function MixResultPageContent({ jobId }: Props) {
                             <ShareIcon className="w-4 h-4 text-slate-400" />
                             Compartir
                         </button>
-                        <a
-                            href={showOriginal ? signedOriginalUrl : signedFullUrl}
-                            download
+                        <button
+                            type="button"
+                            onClick={handleDownload}
                             className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-emerald-600 text-white text-sm font-bold hover:bg-emerald-500 transition shadow-lg shadow-emerald-900/40"
                         >
                             <ArrowDownTrayIcon className="w-4 h-4" />
                             Descargar Master
-                        </a>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -598,20 +657,30 @@ export function MixResultPageContent({ jobId }: Props) {
                 </button>
 
                 {isPipelineExpanded && (
-                    <div className="grid grid-cols-1 md:grid-cols-[1fr_1.2fr] gap-0 border-t border-slate-900">
-                        {/* Left: Selected Step Details */}
-                        <div className="p-8 border-b md:border-b-0 md:border-r border-slate-900 bg-slate-950/30">
+                    <div className="border-t border-slate-900">
+                        <div className="p-8 bg-slate-950/30">
                             <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-6">Paso Seleccionado</p>
 
                             {activeStageInfo ? (
-                                <div>
+                                <div className="grid grid-cols-1 lg:grid-cols-[1fr_360px] gap-6">
                                     <div className="bg-slate-900 rounded-2xl p-6 border border-slate-800 relative overflow-hidden">
                                          {/* Decorative bg number */}
                                          <span className="absolute top-2 right-4 text-6xl font-black text-slate-800/30 pointer-events-none opacity-20">{activeStageInfo.index}</span>
 
-                                         <div className="flex items-center gap-3 mb-4">
-                                             <span className="text-emerald-500 font-mono text-sm">#{activeStageInfo.index}</span>
-                                             <h4 className="text-white font-bold text-lg">{activeStageInfo.id}</h4>
+                                         <div className="flex flex-wrap items-center gap-3 mb-4">
+                                             <label className="sr-only" htmlFor="pipeline-stage-select">Stage</label>
+                                             <select
+                                                 id="pipeline-stage-select"
+                                                 className="w-full sm:w-auto rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-sm font-semibold text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/40"
+                                                 value={activeStageKey ?? ""}
+                                                 onChange={(event) => setActiveStageKey(event.target.value)}
+                                             >
+                                                 {stageSelectOptions.map((stage) => (
+                                                     <option key={stage.key} value={stage.key}>
+                                                         #{String(stage.index).padStart(2, "0")} {stage.key}
+                                                     </option>
+                                                 ))}
+                                             </select>
                                          </div>
                                          <p className="text-slate-300 text-sm leading-relaxed mb-6">
                                              {activeStageInfo.description}
@@ -625,7 +694,7 @@ export function MixResultPageContent({ jobId }: Props) {
                                          </div>
                                     </div>
 
-                                    <div className="mt-6">
+                                    <div className="bg-slate-950/40 rounded-2xl border border-slate-800 p-4">
                                         <div className="flex items-center justify-between mb-3">
                                             <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Preview de etapa</p>
                                             <span className="text-[10px] text-slate-600">#{activeStageInfo.index} {activeStageInfo.id}</span>
@@ -653,31 +722,6 @@ export function MixResultPageContent({ jobId }: Props) {
                             ) : (
                                 <div className="text-slate-500 text-sm">Selecciona un paso para ver detalles.</div>
                             )}
-                        </div>
-
-                        {/* Right: Chain List */}
-                        <div className="p-8 bg-slate-950/10">
-                            <p className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-6">Cadena de Audio</p>
-                            <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-                                {stages
-                                    .filter(s => processedStageKeys.includes(s.key))
-                                    .map((stage) => {
-                                    const isActive = activeStageKey === stage.key;
-                                    return (
-                                        <button
-                                            key={stage.key}
-                                            onClick={() => setActiveStageKey(stage.key)}
-                                            className={`w-full flex items-center gap-4 p-3 rounded-lg text-left transition-all group ${isActive ? 'bg-emerald-500/10 border border-emerald-500/50' : 'hover:bg-slate-900 border border-transparent'}`}
-                                        >
-                                            <div className={`w-2 h-2 rounded-full ${isActive ? 'bg-emerald-500' : 'bg-slate-700 group-hover:bg-slate-600'}`}></div>
-                                            <span className={`text-xs font-mono opacity-50 ${isActive ? 'text-emerald-400' : 'text-slate-500'}`}>{String(stage.index).padStart(2, '0')}.</span>
-                                            <span className={`text-sm font-medium ${isActive ? 'text-emerald-100' : 'text-slate-400 group-hover:text-slate-200'}`}>
-                                                {stage.key}
-                                            </span>
-                                        </button>
-                                    );
-                                })}
-                            </div>
                         </div>
                     </div>
                 )}
