@@ -755,19 +755,6 @@ export function MixTool({ resumeJobId }: MixToolProps) {
   const readyMessageText = isSongMode
     ? t("uploadSteps.messages.songReady")
     : busConfirmationMessage || t("uploadSteps.messages.mixReady");
-  const uploadStepTitle = isSongReady || isProcessing
-    ? ""
-    : uploadStep === 1
-    ? (isSongMode ? t("uploadSteps.labels.uploadSong") : t("uploadSteps.labels.uploadTracks"))
-    : uploadStep === 2
-    ? t("uploadSteps.labels.selectProfiles")
-    : uploadStep === 3 && !isReadyForMix
-    ? t("uploadSteps.labels.busSelection")
-    : "";
-  const uploadStepLabel = uploadStepTitle
-    .replace(/^\s*\d+\s*\/\s*\d+\s*/, "")
-    .trim();
-
   const handleGenerateMix = async () => {
     if (!files.length) return;
     setLoading(true);
@@ -870,6 +857,18 @@ export function MixTool({ resumeJobId }: MixToolProps) {
     (jobStatus &&
       (jobStatus.status === "queued" || jobStatus.status === "running"));
   const isLoadingTracks = isProcessing && (!jobStatus || jobStatus.status === "queued");
+  const uploadStepTitle = isSongReady || isProcessing
+    ? ""
+    : uploadStep === 1
+    ? (isSongMode ? t("uploadSteps.labels.uploadSong") : t("uploadSteps.labels.uploadTracks"))
+    : uploadStep === 2
+    ? t("uploadSteps.labels.selectProfiles")
+    : uploadStep === 3 && !isReadyForMix
+    ? t("uploadSteps.labels.busSelection")
+    : "";
+  const uploadStepLabel = uploadStepTitle
+    .replace(/^\s*\d+\s*\/\s*\d+\s*/, "")
+    .trim();
 
   useEffect(() => {
     if (!files.length) {
