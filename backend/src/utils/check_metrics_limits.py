@@ -158,126 +158,68 @@ from utils.logger import logger
 from utils.profiles_utils import get_instrument_profile
 
 
-def _check_S1_STEM_WORKING_LOUDNESS(analysis: Dict[str, Any]) -> bool:
-    session = analysis.get("session", {}) or {}
-    stems = analysis.get("stems", []) or []
+def _check_S1_STEM_WORKING_LOUDNESS(data: Dict[str, Any]) -> bool:
+    """
+    Valida S1_STEM_WORKING_LOUDNESS usando:
+      - analysis_S1_STEM_WORKING_LOUDNESS.json
+      - working_loudness_metrics_S1_STEM_WORKING_LOUDNESS.json (aplicaciones reales)
+    """
+    contract_id = data.get("contract_id", "S1_STEM_WORKING_LOUDNESS")
+    metrics = data.get("metrics_from_contract", {}) or {}
+    limits = data.get("limits_from_contract", {}) or {}
+    session = data.get("session", {}) or {}
 
-    true_peak_target = float(session.get("true_peak_per_stem_target_max_dbtp", -3.0))
-    mixbus_peak_target = float(session.get("mixbus_peak_target_max_dbfs", -6.0))
+    mix_target = float(session.get("mixbus_peak_target_max_dbfs", metrics.get("mixbus_peak_target_max_dbfs", -6.0)))
+    stem_peak_target = float(session.get("true_peak_per_stem_target_max_dbfs", metrics.get("true_peak_per_stem_target_max_dbfs", -6.0)))
 
-    mixbus_peak_measured = session.get("mixbus_peak_dbfs_measured", None)
-    mixbus_true_peak_est = session.get("mixbus_true_peak_dbtp_est", None)
+    # Leer métricas del stage
+    temp_dir = get_temp_dir(contract_id, create=False)
+    metrics_path = temp_dir / "working_loudness_metrics_S1_STEM_WORKING_LOUDNESS.json"
+    if not metrics_path.exists():
+        print(f"[{contract_id}] ERROR: no existe {metrics_path}.")
+        return False
+
+    with metrics_path.open("r", encoding="utf-8") as f:
+        m = json.load(f)
 
     ok = True
-    lufs_tolerance_db = 1.0
-    peak_warn_tol = 0.10
-    peak_fail_tol = 1.00  # si un stem se pasa >1 dB por encima, ya es un problema serio aquí
-    min_active_ratio_to_check = 0.05
+    MARGIN_DB = 0.5
 
-    for stem in stems:
-        inst_profile_id = (
-            stem.get("instrument_profile_resolved")
-            or stem.get("instrument_profile_requested")
-            or "Other"
-        )
-        profile = get_instrument_profile(inst_profile_id)
-        lufs_range = profile.get("work_loudness_lufs_range")
+    predicted_mix_peak = float(m.get("predicted_mixbus_peak_dbfs", float("-inf")))
+    global_gain = float(m.get("global_gain_db", 0.0))
 
-        lufs = stem.get("active_lufs", None)
-        if lufs is None or lufs == float("-inf"):
-            lufs = stem.get("integrated_lufs", None)
+    lim = m.get("limits", {}) or {}
+    max_global_step_db = float(lim.get("max_global_step_db", limits.get("max_gain_change_db_per_pass", 6.0)))
+    max_cut_per_stem_db = float(lim.get("max_cut_per_stem_db", limits.get("max_gain_change_db_per_pass", 6.0)))
 
-        stem_peak = stem.get("true_peak_dbfs", None)
-        stem_name = stem.get("file_name", "unknown")
+    # 1) Cap global
+    if abs(global_gain) > abs(max_global_step_db) + 0.1:
+        logger.print_metric("Global Gain", global_gain, target=f"<= {max_global_step_db}", status="FAIL", details="Exceeded cap")
+        ok = False
 
-        activity = stem.get("activity", {}) or {}
-        active_ratio = float(activity.get("active_ratio", 1.0))
-
-        # Loudness (igual que antes; "por debajo" warning, "por encima" fail)
-        if (
-            active_ratio >= min_active_ratio_to_check
-            and isinstance(lufs_range, list)
-            and len(lufs_range) == 2
-            and lufs is not None
-            and lufs != float("-inf")
-        ):
-            target_min, target_max = float(lufs_range[0]), float(lufs_range[1])
-            lufs_f = float(lufs)
-
-            upper_bound = target_max + lufs_tolerance_db
-            lower_bound = target_min - lufs_tolerance_db
-
-            if lufs_f > upper_bound:
-                logger.print_metric(
-                    f"{stem_name} LUFS",
-                    lufs_f,
-                    target=f"[{target_min}, {target_max}]",
-                    status="FAIL",
-                    details=f"Over max limit (+{lufs_tolerance_db} tol)",
-                )
-                ok = False
-            elif lufs_f < lower_bound:
-                logger.print_metric(
-                    f"{stem_name} LUFS",
-                    lufs_f,
-                    target=f"[{target_min}, {target_max}]",
-                    status="WARN",
-                    details=f"Below min limit (-{lufs_tolerance_db} tol)",
-                )
-
-        # Peak: ya no es "info only"
-        if stem_peak is not None and stem_peak != float("-inf"):
-            peak = float(stem_peak)
-            if peak > true_peak_target + peak_fail_tol:
-                logger.print_metric(
-                    f"{stem_name} Peak",
-                    peak,
-                    target=true_peak_target,
-                    status="FAIL",
-                    details=f"Exceeds target by > {peak_fail_tol:.2f} dB",
-                )
-                ok = False
-            elif peak > true_peak_target + peak_warn_tol:
-                logger.print_metric(
-                    f"{stem_name} Peak",
-                    peak,
-                    target=true_peak_target,
-                    status="WARN",
-                    details="Above target",
-                )
-
-    # Mixbus peak (aquí sí interesa que ya no esté en +6 dBFS)
-    if mixbus_peak_measured is not None and mixbus_peak_measured != float("-inf"):
-        mix_peak = float(mixbus_peak_measured)
-        if mix_peak > mixbus_peak_target + 6.0:
-            logger.print_metric(
-                "Mixbus Peak",
-                mix_peak,
-                target=mixbus_peak_target,
-                status="FAIL",
-                details="Way above target (expected pre-headroom here)",
-            )
+    # 2) Cap por stem: evitar recortes agresivos disparejos
+    per_stem = m.get("per_stem", []) or []
+    for r in per_stem:
+        try:
+            g_total = float(r.get("gain_total_db", 0.0))
+            fname = str(r.get("file", "<unnamed>"))
+        except Exception:
+            continue
+        if g_total < -abs(max_cut_per_stem_db) - 0.1:
+            logger.print_metric(f"{fname} Gain", g_total, target=f">= {-abs(max_cut_per_stem_db)}", status="FAIL", details="Too aggressive")
             ok = False
-        elif mix_peak > mixbus_peak_target + 0.10:
-            logger.print_metric(
-                "Mixbus Peak",
-                mix_peak,
-                target=mixbus_peak_target,
-                status="WARN",
-                details="Above target",
-            )
 
-    # True-peak estimado del mix (solo informativo por ahora)
-    if mixbus_true_peak_est is not None and mixbus_true_peak_est != float("-inf"):
-        logger.print_metric(
-            "Mixbus True Peak (Est)",
-            float(mixbus_true_peak_est),
-            target="n/a",
-            status="INFO",
-            details="Estimated (linear interp oversampling)",
-        )
+    # 3) Mixbus: informativo (WARN si no llega)
+    if predicted_mix_peak != float("-inf") and predicted_mix_peak > mix_target + MARGIN_DB:
+        logger.print_metric("Mixbus Peak (Pred)", predicted_mix_peak, target=f"<= {mix_target}", status="WARN", details="Will be handled by later headroom stage if needed")
+    else:
+        logger.print_metric("Mixbus Peak (Pred)", predicted_mix_peak, target=f"<= {mix_target}", status="PASS")
+
+    if ok:
+        logger.print_metric("Stem Working Loudness Check", "OK", status="PASS", details="Caps respected; mixbus logged")
 
     return ok
+
 
 
 
@@ -480,27 +422,16 @@ def _check_S2_GROUP_PHASE_DRUMS(data: Dict[str, Any]) -> bool:
 
 def _check_S3_MIXBUS_HEADROOM(data: Dict[str, Any]) -> bool:
     """
-    Valida S3_MIXBUS_HEADROOM.
-
-    Prioridad:
-      1) headroom_metrics_S3_MIXBUS_HEADROOM.json (pre/post real tras aplicar gain)
-      2) analysis_S3_MIXBUS_HEADROOM.json (fallback)
-
-    Reglas:
-      - HARD:
-          * peak <= peak_dbfs_max (+ margen)
-          * LUFS <= lufs_integrated_max (+ margen)
-      - SOFT:
-          * LUFS >= lufs_integrated_min (- margen)
-        Si LUFS está por debajo pero peak ya está en el límite superior,
-        se acepta como válido.
+    QC corregido para S3_MIXBUS_HEADROOM:
+      - Fuente de verdad: headroom_metrics_S3_MIXBUS_HEADROOM.json (pre/post reales).
+      - HARD: peak_post <= peak_dbfs_max (+ margen).
+      - SOFT: LUFS_post dentro de [min,max] con WARN si cae por debajo, porque este stage
+              ya no persigue LUFS, solo headroom.
     """
     contract_id = data.get("contract_id", "S3_MIXBUS_HEADROOM")
-    session = data.get("session", {}) or {}
     metrics = data.get("metrics_from_contract", {}) or {}
 
     try:
-        peak_min = float(metrics.get("peak_dbfs_min", -12.0))
         peak_max = float(metrics.get("peak_dbfs_max", -6.0))
         lufs_min = float(metrics.get("lufs_integrated_min", -28.0))
         lufs_max = float(metrics.get("lufs_integrated_max", -20.0))
@@ -508,77 +439,80 @@ def _check_S3_MIXBUS_HEADROOM(data: Dict[str, Any]) -> bool:
         print(f"[{contract_id}] Métricas inválidas; fracaso.")
         return False
 
-    # Intentar leer métricas del stage (preferido)
     temp_dir = get_temp_dir(contract_id, create=False)
-    metrics_path = temp_dir / "headroom_metrics_S3_MIXBUS_HEADROOM.json"
-
-    if metrics_path.exists():
-        with metrics_path.open("r", encoding="utf-8") as f:
-            m = json.load(f)
-        post = (m.get("post", {}) or {})
-        peak_meas = post.get("mix_peak_dbfs")
-        lufs_meas = post.get("mix_lufs_integrated")
-    else:
-        # Fallback al análisis
-        peak_meas = session.get("mix_peak_dbfs_measured")
-        lufs_meas = session.get("mix_lufs_integrated_measured")
-
-    if peak_meas is None or lufs_meas is None:
-        print(f"[{contract_id}] Falta peak o LUFS medidos; fracaso.")
+    mpath = temp_dir / "headroom_metrics_S3_MIXBUS_HEADROOM.json"
+    if not mpath.exists():
+        print(f"[{contract_id}] ERROR: no existe {mpath}.")
         return False
 
+    with mpath.open("r", encoding="utf-8") as f:
+        m = json.load(f)
+
+    post = m.get("post", {}) or {}
+    pre = m.get("pre", {}) or {}
+
     try:
-        peak_meas = float(peak_meas)
-        lufs_meas = float(lufs_meas)
+        peak_post = float(post.get("peak_dbfs", float("-inf")))
+        lufs_post = float(post.get("lufs", float("-inf")))
+        peak_pre = float(pre.get("peak_dbfs", float("-inf")))
     except (TypeError, ValueError):
-        print(f"[{contract_id}] Valores medidos inválidos: peak={peak_meas!r}, LUFS={lufs_meas!r}.")
+        print(f"[{contract_id}] Métricas numéricas inválidas en {mpath}.")
         return False
 
     MARGIN_DB = 0.5
     ok = True
 
-    # 1) HARD peak
-    if peak_meas > peak_max + MARGIN_DB:
-        logger.print_metric("Mix Peak Check", peak_meas, target=f"<= {peak_max}", status="FAIL", details=f"Margin: {MARGIN_DB}")
+    # HARD: peak
+    if peak_post > peak_max + MARGIN_DB:
+        logger.print_metric("Mix Peak Post", peak_post, target=f"<= {peak_max}", status="FAIL", details=f"Margin: {MARGIN_DB}")
         ok = False
     else:
-        logger.print_metric("Mix Peak Check", peak_meas, target=f"<= {peak_max}", status="PASS")
+        logger.print_metric("Mix Peak Post", peak_post, target=f"<= {peak_max}", status="PASS")
 
-    # 2) HARD LUFS max
-    if lufs_meas > lufs_max + MARGIN_DB:
-        logger.print_metric("Mix LUFS Max Check", lufs_meas, target=f"<= {lufs_max}", status="FAIL", details=f"Margin: {MARGIN_DB}")
-        ok = False
+    # SOFT: LUFS
+    if lufs_post == float("-inf"):
+        logger.print_metric("Mix LUFS Post", "N/A", status="WARN", details="No LUFS meter available")
     else:
-        logger.print_metric("Mix LUFS Max Check", lufs_meas, target=f"<= {lufs_max}", status="PASS")
-
-    # 3) SOFT LUFS min
-    if lufs_meas < lufs_min - MARGIN_DB:
-        # Si hay headroom (peak claramente por debajo del max), podría haberse subido, pero este stage es headroom-first.
-        # Solo fallamos si realmente hay mucho margen de peak y está exageradamente bajo.
-        if peak_meas < peak_max - (2.0 * MARGIN_DB):
-            logger.print_metric("Mix LUFS Min Check", lufs_meas, target=f">= {lufs_min}", status="WARN", details="Below min with noticeable headroom; consider later makeup gain")
+        if lufs_post > lufs_max + MARGIN_DB:
+            logger.print_metric("Mix LUFS Post", lufs_post, target=f"<= {lufs_max}", status="WARN", details="Above max (handled later)")
+        elif lufs_post < lufs_min - MARGIN_DB:
+            # aquí tu caso: puede quedar bajo si el material es muy dinámico,
+            # pero S3 no debe perseguir LUFS.
+            logger.print_metric("Mix LUFS Post", lufs_post, target=f">= {lufs_min}", status="WARN", details="Below min (expected if peak-constrained)")
         else:
-            logger.print_metric("Mix LUFS Min Check", lufs_meas, target=f">= {lufs_min}", status="WARN", details="Below min but peak-limited (OK)")
-    else:
-        logger.print_metric("Mix LUFS Min Check", lufs_meas, target=f">= {lufs_min}", status="PASS")
+            logger.print_metric("Mix LUFS Post", lufs_post, target=f"[{lufs_min}, {lufs_max}]", status="PASS")
+
+    if ok:
+        logger.print_metric("Mixbus Headroom Check", "OK", status="PASS", details=f"Peak pre={peak_pre:.2f} -> post={peak_post:.2f}")
 
     return ok
 
 
 
+
 def _check_S3_LEADVOX_AUDIBILITY(data: Dict[str, Any]) -> bool:
     """
-    Valida S3_LEADVOX_AUDIBILITY a partir de analysis_S3_LEADVOX_AUDIBILITY.json.
+    Valida S3_LEADVOX_AUDIBILITY usando:
 
-    offset = LUFS_lead_short_term - LUFS_mix_short_term (media global).
+      - analysis_S3_LEADVOX_AUDIBILITY.json (pre-offset vs BED).
+      - leadvox_metrics_S3_LEADVOX_AUDIBILITY.json (decisión real del stage).
 
-    Condición:
-      offset_min <= offset_mean <= offset_max (± margen).
+    Reglas:
+      - Si no hay datos (no ventanas con voz), PASS suave.
+      - Validamos el POST predicho:
+          offset_post_pred = offset_pre + gain_db_applied
+          debe caer en [offset_min, offset_max] (± margen).
+      - Validamos cap de true-peak:
+          lead_pred_post_tp_max_dbtp <= lead_tp_target + margen.
+      - Idempotencia: si pre ya estaba en rango (± margen),
+          gain_db_applied debe ser pequeño.
     """
     contract_id = data.get("contract_id", "S3_LEADVOX_AUDIBILITY")
     session = data.get("session", {}) or {}
     metrics = data.get("metrics_from_contract", {}) or {}
+    limits = data.get("limits_from_contract", {}) or {}
 
+    # Banda objetivo desde contrato
     try:
         offset_min = float(metrics.get("short_term_lufs_offset_vs_mixbus_min_db", -3.0))
         offset_max = float(metrics.get("short_term_lufs_offset_vs_mixbus_max_db", 3.0))
@@ -586,30 +520,113 @@ def _check_S3_LEADVOX_AUDIBILITY(data: Dict[str, Any]) -> bool:
         print(f"[{contract_id}] Métricas inválidas en metrics_from_contract; fracaso.")
         return False
 
-    offset_mean = session.get("global_short_term_offset_mean_db")
-    num_lead = session.get("global_num_lead_stems_with_data", 0)
+    offset_pre = session.get("global_short_term_offset_mean_db")
+    num_lead = int(session.get("global_num_lead_stems_with_data", 0) or 0)
 
-    if offset_mean is None or num_lead == 0:
-        print(
-            f"[S3_LEADVOX_AUDIBILITY] Sin datos de offset (no se detectaron ventanas con voz); "
-            f"se considera éxito suave."
-        )
+    if offset_pre is None or num_lead == 0:
+        logger.print_metric("Lead Vox Audibility", "No data", status="PASS", details="No vocal windows detected")
         return True
 
     try:
-        offset_mean = float(offset_mean)
+        offset_pre = float(offset_pre)
     except (TypeError, ValueError):
-        print(f"[S3_LEADVOX_AUDIBILITY] offset_mean inválido={offset_mean!r}; fracaso.")
+        print(f"[S3_LEADVOX_AUDIBILITY] offset_pre inválido={offset_pre!r}; fracaso.")
         return False
 
+    # Leer métricas del stage
+    temp_dir = get_temp_dir(contract_id, create=False)
+    metrics_path = temp_dir / "leadvox_metrics_S3_LEADVOX_AUDIBILITY.json"
+
+    if not metrics_path.exists():
+        logger.print_metric("Lead Vox Metrics", "Missing", status="FAIL", details="leadvox_metrics_S3_LEADVOX_AUDIBILITY.json not found")
+        return False
+
+    with metrics_path.open("r", encoding="utf-8") as f:
+        m = json.load(f)
+
+    gain_db = float(m.get("decision", {}).get("gain_db_applied", 0.0) or 0.0)
+    tp = m.get("true_peak", {}) or {}
+    lead_tp_target = float(tp.get("lead_true_peak_target_max_dbtp", -3.0))
+    lead_pred_post_tp_max = tp.get("lead_pred_post_tp_max_dbtp", None)
+
+    # Tolerancias
     MARGIN_DB = 0.5
+    TP_MARGIN_DB = 0.2
+    IDEM_GAIN_MAX_DB = 0.5
+
     ok = True
 
-    if not (offset_min - MARGIN_DB <= offset_mean <= offset_max + MARGIN_DB):
-        logger.print_metric("Lead Vox Offset", offset_mean, target=f"[{offset_min}, {offset_max}]", status="FAIL", details=f"Margin: {MARGIN_DB}")
+    # 1) Validar offset post (predicho)
+    offset_post_pred = float(offset_pre) + float(gain_db)
+
+    if not (offset_min - MARGIN_DB <= offset_post_pred <= offset_max + MARGIN_DB):
+        logger.print_metric(
+            "Lead Vox Offset (Post Pred)",
+            offset_post_pred,
+            target=f"[{offset_min}, {offset_max}]",
+            status="FAIL",
+            details=f"Pre={offset_pre:.2f}, gain={gain_db:+.2f}, margin={MARGIN_DB}",
+        )
         ok = False
     else:
-        logger.print_metric("Lead Vox Offset", offset_mean, target=f"[{offset_min}, {offset_max}]", status="PASS")
+        logger.print_metric(
+            "Lead Vox Offset (Post Pred)",
+            offset_post_pred,
+            target=f"[{offset_min}, {offset_max}]",
+            status="PASS",
+            details=f"Pre={offset_pre:.2f}, gain={gain_db:+.2f}",
+        )
+
+    # 2) Validar true-peak post (predicho)
+    if lead_pred_post_tp_max is not None:
+        try:
+            lead_pred_post_tp_max = float(lead_pred_post_tp_max)
+            if lead_pred_post_tp_max > lead_tp_target + TP_MARGIN_DB:
+                logger.print_metric(
+                    "Lead Vox TP (Post Pred)",
+                    lead_pred_post_tp_max,
+                    target=f"<= {lead_tp_target}",
+                    status="FAIL",
+                    details=f"Margin={TP_MARGIN_DB}",
+                )
+                ok = False
+            else:
+                logger.print_metric(
+                    "Lead Vox TP (Post Pred)",
+                    lead_pred_post_tp_max,
+                    target=f"<= {lead_tp_target}",
+                    status="PASS",
+                )
+        except (TypeError, ValueError):
+            # si está corrupto, fallo duro
+            logger.print_metric("Lead Vox TP (Post Pred)", "Invalid", status="FAIL")
+            ok = False
+
+    # 3) Idempotencia: si ya estaba en rango, no debería aplicar gran gain
+    pre_in_range = (offset_min - MARGIN_DB <= offset_pre <= offset_max + MARGIN_DB)
+    if pre_in_range and abs(gain_db) > IDEM_GAIN_MAX_DB:
+        logger.print_metric(
+            "Lead Vox Gain (Idem)",
+            gain_db,
+            target=f"<= {IDEM_GAIN_MAX_DB}",
+            status="FAIL",
+            details="Pre already in range",
+        )
+        ok = False
+
+    # 4) Límite formal por pasos (si existe)
+    max_gain_step = float(limits.get("max_gain_change_db_per_pass", 2.0))
+    max_steps = int(limits.get("max_steps_per_pass", 2))
+    max_total = max_gain_step * max_steps
+    if abs(gain_db) > max_total + 0.1:
+        logger.print_metric(
+            "Lead Vox Gain (Limit)",
+            gain_db,
+            target=f"<= {max_total}",
+            status="FAIL",
+            details="Exceeded max_total_gain",
+        )
+        ok = False
 
     return ok
 
@@ -703,124 +720,111 @@ def _check_S4_STEM_HPF_LPF(data: Dict[str, Any]) -> bool:
 
 def _check_S4_STEM_RESONANCE_CONTROL(data: Dict[str, Any]) -> bool:
     """
-    Validación para S4_STEM_RESONANCE_CONTROL.
+    Validación basada en métricas reales POST del stage:
 
-    Preferencia:
-      1) resonance_metrics_S4_STEM_RESONANCE_CONTROL.json (pre/post real)
-      2) analysis_S4_STEM_RESONANCE_CONTROL.json (fallback)
-
-    Reglas:
-      - Hard fail solo para extremos absurdos (posible bug).
-      - Si pre estaba claramente fuera (pre_worst > threshold + margin):
-          exigir mejora mínima en worst (>= 2.0 dB) salvo que no haya aplicado notches.
-      - Protección low-mids:
-          si se aplican cortes > 4 dB en 200–350 Hz en instrumentos no low-end -> WARN.
+      - Lee resonance_metrics_S4_STEM_RESONANCE_CONTROL.json.
+      - PASS/WARN si aún hay resonancias (puede ser normal por límites).
+      - FAIL si hay patrón dañino: mucho corte y poca mejora.
     """
     contract_id = data.get("contract_id", "S4_STEM_RESONANCE_CONTROL")
-    metrics = data.get("metrics_from_contract", {}) or {}
-    session = data.get("session", {}) or {}
+    metrics_from_contract = data.get("metrics_from_contract", {}) or {}
+    limits_from_contract = data.get("limits_from_contract", {}) or {}
 
     try:
-        threshold_db = float(metrics.get("max_resonance_peak_db_above_local", session.get("max_resonance_peak_db_above_local", 12.0)))
+        thr_db = float(metrics_from_contract.get("max_resonance_peak_db_above_local", 12.0))
     except (TypeError, ValueError):
-        print(f"[{contract_id}] threshold inválido; fracaso.")
-        return False
+        thr_db = 12.0
+
+    try:
+        max_cuts_db = float(limits_from_contract.get("max_resonant_cuts_db", 8.0))
+    except (TypeError, ValueError):
+        max_cuts_db = 8.0
+
+    try:
+        max_filters = int(limits_from_contract.get("max_resonant_filters_per_band", 3))
+    except (TypeError, ValueError):
+        max_filters = 3
 
     temp_dir = get_temp_dir(contract_id, create=False)
     metrics_path = temp_dir / "resonance_metrics_S4_STEM_RESONANCE_CONTROL.json"
 
-    HARD_FAIL_DB = 80.0
-    MARGIN_DB = 1.0
+    if not metrics_path.exists():
+        logger.print_metric("Resonance Metrics", "Missing", status="FAIL", details=str(metrics_path))
+        return False
+
+    with metrics_path.open("r", encoding="utf-8") as f:
+        m = json.load(f)
+
+    stems: List[Dict[str, Any]] = m.get("stems", []) or []
+    summary = m.get("summary", {}) or {}
+
+    worst_pre = float(summary.get("worst_pre_db", 0.0) or 0.0)
+    worst_post = float(summary.get("worst_post_db", 0.0) or 0.0)
+    improve = float(summary.get("improvement_db", worst_pre - worst_post) or (worst_pre - worst_post))
+
+    # Tolerancias / reglas
+    # - No forzamos bajar por debajo del umbral en 1 pasada.
+    # - Sí exigimos que si cortas fuerte, mejores algo.
     MIN_IMPROVE_DB = 2.0
+    OVERCUT_SUM_DB = 10.0     # suma de cuts por stem que ya es “mucha cirugía”
+    OVERCUT_NO_IMPROVE_DB = 1.0
 
     ok = True
 
-    if metrics_path.exists():
-        with metrics_path.open("r", encoding="utf-8") as f:
-            m = json.load(f)
+    # 1) límites formales por notch
+    for s in stems:
+        notches = s.get("applied_notches", []) or []
+        if len(notches) > max_filters:
+            logger.print_metric(f"{s.get('file_name','?')} Notches", len(notches), target=f"<= {max_filters}", status="FAIL")
+            ok = False
 
-        stems = m.get("stems", []) or []
-
-        worst_pre_all = 0.0
-        worst_post_all = 0.0
-
-        for st in stems:
-            name = st.get("file_name", "<unnamed>")
-            inst = (st.get("instrument_profile") or "Other")
-            pre = (st.get("pre", {}) or {})
-            post = (st.get("post", {}) or {})
-            notches = st.get("applied_notches", []) or []
-
+        for n in notches:
             try:
-                pre_w = float(pre.get("worst_gain_above_local_db", 0.0))
-                post_w = float(post.get("worst_gain_above_local_db", 0.0))
+                cut = float(n.get("cut_db", 0.0))
+                q = float(n.get("q", 0.0))
             except (TypeError, ValueError):
                 continue
 
-            worst_pre_all = max(worst_pre_all, pre_w)
-            worst_post_all = max(worst_post_all, post_w)
+            if cut > max_cuts_db + 0.1:
+                logger.print_metric(f"{s.get('file_name','?')} Cut", cut, target=f"<= {max_cuts_db}", status="FAIL")
+                ok = False
 
-            if post_w > HARD_FAIL_DB:
-                logger.print_metric(f"{name} Worst Resonance", post_w, target=f"<= {HARD_FAIL_DB}", status="FAIL", details="Extreme resonance (bug?)")
-                return False
+            if q > 10.0 + 0.1:
+                logger.print_metric(f"{s.get('file_name','?')} Q", q, target="<= 10.0", status="FAIL", details="Q too high (ringing risk)")
+                ok = False
 
-            # Si estaba mal y hemos aplicado algo, exigir mejora mínima
-            if pre_w > (threshold_db + MARGIN_DB) and len(notches) > 0:
-                if post_w > (pre_w - MIN_IMPROVE_DB):
-                    logger.print_metric(
-                        f"{name} Resonance Improvement",
-                        post_w,
-                        target=f"<= {pre_w - MIN_IMPROVE_DB:.2f}",
-                        status="WARN",
-                        details="Not improved enough in one pass (soft)",
-                    )
-
-            # Protección low-mids
-            inst_l = inst.lower()
-            low_end = any(k in inst_l for k in ("kick", "bass", "sub", "808", "lowtom", "floor tom"))
-            for n in notches:
-                try:
-                    f0 = float(n.get("freq_hz", 0.0))
-                    cut = float(n.get("cut_db", 0.0))
-                except (TypeError, ValueError):
-                    continue
-                if 200.0 <= f0 <= 350.0 and (cut > 4.1) and not low_end:
-                    logger.print_metric(
-                        f"{name} Low-mid Notch",
-                        -cut,
-                        target=">= -4.0 dB",
-                        status="WARN",
-                        details="Potential thinning risk (low-mids)",
-                    )
-
-        # Report global
-        if worst_post_all <= threshold_db + MARGIN_DB:
-            logger.print_metric("Worst Resonance", worst_post_all, target=f"<= {threshold_db + MARGIN_DB:.2f}", status="PASS")
+    # 2) mejora global (si estabas muy por encima, al menos mejora algo)
+    if worst_pre > thr_db + 6.0:
+        if improve < MIN_IMPROVE_DB:
+            logger.print_metric("Worst Resonance Improvement", improve, target=f">= {MIN_IMPROVE_DB}", status="FAIL", details=f"pre={worst_pre:.2f}, post={worst_post:.2f}")
+            ok = False
         else:
-            logger.print_metric("Worst Resonance", worst_post_all, target=f"<= {threshold_db + MARGIN_DB:.2f}", status="WARN", details=f"Pre worst: {worst_pre_all:.2f}")
-
-        return ok
-
-    # Fallback: análisis únicamente (soft)
-    stems = data.get("stems", []) or []
-    worst = 0.0
-    for st in stems:
-        for r in (st.get("resonances", []) or []):
-            try:
-                worst = max(worst, float(r.get("gain_above_local_db", 0.0)))
-            except Exception:
-                pass
-
-    if worst > HARD_FAIL_DB:
-        logger.print_metric("Worst Resonance", worst, target=f"<= {HARD_FAIL_DB}", status="FAIL", details="Extreme resonance (bug?)")
-        return False
-
-    if worst <= threshold_db + MARGIN_DB:
-        logger.print_metric("Worst Resonance", worst, target=f"<= {threshold_db + MARGIN_DB:.2f}", status="PASS")
+            logger.print_metric("Worst Resonance Improvement", improve, status="PASS", details=f"pre={worst_pre:.2f}, post={worst_post:.2f}")
     else:
-        logger.print_metric("Worst Resonance", worst, target=f"<= {threshold_db + MARGIN_DB:.2f}", status="WARN", details="Fallback to analysis-only")
+        # si no era grave, no exigimos gran mejora
+        logger.print_metric("Worst Resonance Post", worst_post, status="PASS", details=f"pre={worst_pre:.2f}")
 
-    return True
+    # 3) patrón dañino: mucho corte por stem y poca mejora
+    for s in stems:
+        total_cut = float(s.get("total_cut_db_sum", 0.0) or 0.0)
+        pre_w = float(s.get("pre", {}).get("worst_resonance_db", 0.0) or 0.0)
+        post_w = float(s.get("post", {}).get("worst_resonance_db", 0.0) or 0.0)
+        imp = pre_w - post_w
+
+        if total_cut >= OVERCUT_SUM_DB and imp <= OVERCUT_NO_IMPROVE_DB:
+            logger.print_metric(
+                f"{s.get('file_name','?')} Over-EQ",
+                imp,
+                target=f"> {OVERCUT_NO_IMPROVE_DB}",
+                status="FAIL",
+                details=f"total_cut={total_cut:.1f} dB, pre={pre_w:.2f}, post={post_w:.2f}",
+            )
+            ok = False
+
+    if ok:
+        logger.print_metric("Resonance Control Check", "OK", status="PASS", details=f"worst_post={worst_post:.2f} dB")
+
+    return ok
 
 
 

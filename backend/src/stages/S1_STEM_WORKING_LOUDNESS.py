@@ -1,11 +1,10 @@
-# C:\mix-master\backend\src\stages\S1_STEM_WORKING_LOUDNESS.py
-
 from __future__ import annotations
 from utils.logger import logger
 
 import sys
 from pathlib import Path
-from typing import Dict, Any, List, Tuple, Optional
+from typing import Dict, Any, List, Tuple
+import os
 
 # --- hack sys.path para ejecutar como script suelto desde stage.py ---
 THIS_DIR = Path(__file__).resolve().parent
@@ -14,13 +13,17 @@ if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
 import json  # noqa: E402
-import os  # noqa: E402
 import numpy as np  # noqa: E402
 import soundfile as sf  # noqa: E402
-from concurrent.futures import ThreadPoolExecutor, as_completed  # noqa: E402
 
 from utils.analysis_utils import get_temp_dir  # noqa: E402
 from utils.profiles_utils import get_instrument_profile  # noqa: E402
+
+try:
+    from utils.loudness_utils import measure_integrated_lufs, measure_true_peak_dbfs  # type: ignore  # noqa: E402
+except Exception:  # pragma: no cover
+    measure_integrated_lufs = None  # type: ignore
+    measure_true_peak_dbfs = None  # type: ignore
 
 
 def load_analysis(contract_id: str) -> Dict[str, Any]:
@@ -32,240 +35,73 @@ def load_analysis(contract_id: str) -> Dict[str, Any]:
         return json.load(f)
 
 
-def _dbfs_from_amp(amp: float, eps: float = 1e-12) -> float:
-    if amp <= 0.0:
+def _dbfs_from_peak(peak_lin: float) -> float:
+    if peak_lin <= 0.0:
         return float("-inf")
-    return float(20.0 * np.log10(amp + eps))
+    return float(20.0 * np.log10(float(peak_lin)))
 
 
-def _amp_from_dbfs(dbfs: float) -> float:
-    return float(10.0 ** (float(dbfs) / 20.0))
-
-
-def _peak_dbfs_from_audio(x: np.ndarray, eps: float = 1e-12) -> float:
-    x = np.asarray(x, dtype=np.float32)
-    if x.size == 0:
-        return float("-inf")
-    peak = float(np.max(np.abs(x)))
-    return _dbfs_from_amp(peak, eps=eps)
-
-
-def apply_gain_to_stem(file_path: Path, gain_db: float) -> Tuple[float, float]:
-    data, sr = sf.read(file_path, always_2d=False)
-    data = np.asarray(data, dtype=np.float32)
-    if data.size == 0 or gain_db == 0.0:
-        peak = _peak_dbfs_from_audio(data)
-        return peak, peak
-
-    peak_pre = _peak_dbfs_from_audio(data)
-
-    scale = float(10.0 ** (gain_db / 20.0))
-    data_out = data * scale
-
-    peak_post = _peak_dbfs_from_audio(data_out)
-
-    sf.write(file_path, data_out, sr, subtype="FLOAT")
-    return peak_pre, peak_post
-
-
-def compute_gain_db_for_stem(
-    stem_info: Dict[str, Any],
-    true_peak_target_dbtp: float,
-    max_gain_change_db_per_pass: Optional[float],
-    lufs_tolerance_db: float,
-    max_cut_db_per_pass: float,
-    min_active_ratio_to_adjust: float,
-    peak_margin_db: float,
-) -> Tuple[float, str]:
-    """
-    Ganancia por stem con 2 objetivos:
-      A) Loudness por rango (si se sale)
-      B) Peak guard (si supera target, aunque esté "in_range")
-    """
-    file_name = stem_info.get("file_name", "unknown")
-    inst_profile_id = stem_info.get("instrument_profile_resolved", "Other")
-    profile = get_instrument_profile(inst_profile_id)
-    lufs_range = profile.get("work_loudness_lufs_range")
-
-    # Loudness preferido: active_lufs
-    lufs = stem_info.get("active_lufs", None)
-    if lufs is None or lufs == float("-inf"):
-        lufs = stem_info.get("integrated_lufs", None)
-
-    measured_peak_dbfs = stem_info.get("true_peak_dbfs", None)
-    if measured_peak_dbfs is None or measured_peak_dbfs == float("-inf"):
-        measured_peak_dbfs = -120.0
-    measured_peak_dbfs = float(measured_peak_dbfs)
-
-    # Actividad (para evitar decisiones malas en stems muy "huecos")
-    activity = stem_info.get("activity", {}) or {}
-    active_ratio = float(activity.get("active_ratio", 1.0))
-    if active_ratio < float(min_active_ratio_to_adjust):
-        return 0.0, f"{file_name}: skip_low_activity(active_ratio={active_ratio:.3f})"
-
-    # 1) Ganancia por loudness (por rango)
-    loud_gain = 0.0
-    loud_reason = "no_loud_adjust"
-    if isinstance(lufs_range, list) and len(lufs_range) == 2 and lufs is not None and lufs != float("-inf"):
-        target_min, target_max = float(lufs_range[0]), float(lufs_range[1])
-        lufs_f = float(lufs)
-
-        upper = target_max + float(lufs_tolerance_db)
-        lower = target_min - float(lufs_tolerance_db)
-
-        if lufs_f > upper:
-            loud_gain = target_max - lufs_f  # negativo
-            loud_reason = f"too_loud(lufs={lufs_f:.2f} > {upper:.2f})"
-        elif lufs_f < lower:
-            loud_gain = target_min - lufs_f  # positivo
-            loud_reason = f"too_quiet(lufs={lufs_f:.2f} < {lower:.2f})"
-        else:
-            loud_gain = 0.0
-            loud_reason = f"in_range(lufs={lufs_f:.2f})"
-
-    # 2) Peak guard: si pico > target+margin => recorte obligatorio
-    peak_required_gain = 0.0
-    if measured_peak_dbfs > (float(true_peak_target_dbtp) + float(peak_margin_db)):
-        peak_required_gain = (float(true_peak_target_dbtp) - float(peak_margin_db)) - measured_peak_dbfs  # negativo
-        # Ej: pico=-0.02, target=-3 => gain=-2.98 (aprox)
-        peak_required_gain = min(0.0, peak_required_gain)
-
-    # Combinar: si peak exige recorte, manda (aunque loud_gain diga 0 o positivo)
-    gain_db = float(loud_gain)
-    reason_parts = [loud_reason]
-
-    if peak_required_gain < gain_db:
-        # más negativo => más recorte
-        gain_db = float(peak_required_gain)
-        reason_parts.append(f"peak_guard(peak={measured_peak_dbfs:.2f} > {true_peak_target_dbtp:.2f})")
-
-    # Clamp boost por pico (si loudness pide subir)
-    if gain_db > 0.0:
-        allowed_boost = (float(true_peak_target_dbtp) - float(peak_margin_db)) - measured_peak_dbfs
-        if gain_db > allowed_boost:
-            gain_db = max(0.0, float(allowed_boost))
-            reason_parts.append(f"boost_clamped_by_peak(allowed={allowed_boost:.2f})")
-
-    # Límite por contrato
-    if max_gain_change_db_per_pass is not None:
-        mg = float(max_gain_change_db_per_pass)
-        gain_db = max(-mg, min(mg, gain_db))
-
-    # Safety cap de recorte por pasada (pero ojo: si el pico está en 0, necesitas ~-3 sí o sí)
-    if gain_db < -float(max_cut_db_per_pass):
-        gain_db = -float(max_cut_db_per_pass)
-        reason_parts.append(f"cap_cut({max_cut_db_per_pass:.2f}dB)")
-
-    # Ignorar microcambios
-    if abs(gain_db) < 0.10:
-        return 0.0, " | ".join(reason_parts)
-
-    return float(gain_db), " | ".join(reason_parts)
-
-
-def _process_one_stem(
-    stem_info: Dict[str, Any],
-    true_peak_target_dbtp: float,
-    max_gain_change_db_per_pass: Optional[float],
-    lufs_tolerance_db: float,
-    max_cut_db_per_pass: float,
-    min_active_ratio_to_adjust: float,
-    peak_margin_db: float,
-) -> Tuple[str, float, str]:
-    file_path = Path(stem_info["file_path"])
-    stem_name = stem_info.get("file_name", file_path.name)
-
-    gain_db, reason = compute_gain_db_for_stem(
-        stem_info=stem_info,
-        true_peak_target_dbtp=true_peak_target_dbtp,
-        max_gain_change_db_per_pass=max_gain_change_db_per_pass,
-        lufs_tolerance_db=lufs_tolerance_db,
-        max_cut_db_per_pass=max_cut_db_per_pass,
-        min_active_ratio_to_adjust=min_active_ratio_to_adjust,
-        peak_margin_db=peak_margin_db,
-    )
-
-    if gain_db != 0.0:
-        peak_pre, peak_post = apply_gain_to_stem(file_path, gain_db)
-        logger.logger.info(
-            f"[S1_STEM_WORKING_LOUDNESS] {stem_name}: gain={gain_db:+.2f} dB | "
-            f"peak_pre={peak_pre:.2f} dBFS -> peak_post={peak_post:.2f} dBFS | {reason}"
-        )
-    else:
-        logger.logger.info(f"[S1_STEM_WORKING_LOUDNESS] {stem_name}: gain=+0.00 dB | {reason}")
-
-    return stem_name, float(gain_db), reason
-
-
-def compute_mixbus_peak_details_streaming(
+def _mixbus_peak_stream_with_gains(
     stem_paths: List[Path],
-    block_frames: int = 262144,
-) -> Dict[str, Any]:
+    gains_db_by_name: Dict[str, float],
+    block_size: int = 65536,
+) -> float:
     """
-    Encuentra el pico del mix (suma unity) en streaming:
-      - peak_dbfs (sample-peak)
-      - peak_frame, peak_channel, peak_sample_value (signed)
+    Peak sample-peak del sumatorio aplicando gains virtualmente (sin escribir).
     """
     if not stem_paths:
-        return {
-            "peak_dbfs": float("-inf"),
-            "peak_linear": 0.0,
-            "peak_frame": None,
-            "peak_channel": None,
-            "peak_sample_value": 0.0,
-        }
+        return float("-inf")
 
-    files: List[sf.SoundFile] = [sf.SoundFile(str(p), mode="r") for p in stem_paths]
+    files: List[sf.SoundFile] = []
     try:
-        sr_ref = files[0].samplerate
-        ch_ref = files[0].channels
-        for f in files[1:]:
-            if f.samplerate != sr_ref or f.channels != ch_ref:
-                raise ValueError("Samplerate/channels mismatch en stems; S0_SESSION_FORMAT debería uniformizar.")
+        for p in stem_paths:
+            files.append(sf.SoundFile(str(p), mode="r"))
 
-        best_amp = 0.0
-        best_frame = None
-        best_ch = None
-        best_sample = 0.0
+        ch_ref = int(files[0].channels)
+        peak_lin = 0.0
+        done = [False] * len(files)
 
-        pos = 0
-        while True:
-            blocks = []
-            any_data = False
-            for f in files:
-                b = f.read(frames=block_frames, dtype="float32", always_2d=True)
-                if b.shape[0] > 0:
-                    any_data = True
-                blocks.append(b)
+        while not all(done):
+            mix_block = None
 
-            if not any_data:
+            for i, f in enumerate(files):
+                if done[i]:
+                    continue
+
+                x = f.read(block_size, dtype="float32", always_2d=True)
+                if x.size == 0:
+                    done[i] = True
+                    continue
+
+                # Alinear canales a ch_ref
+                if x.shape[1] != ch_ref:
+                    if x.shape[1] == 1 and ch_ref == 2:
+                        x = np.repeat(x, 2, axis=1)
+                    elif x.shape[1] == 2 and ch_ref == 1:
+                        x = np.mean(x, axis=1, keepdims=True)
+                    else:
+                        x = np.mean(x, axis=1, keepdims=True)
+                        if ch_ref == 2:
+                            x = np.repeat(x, 2, axis=1)
+
+                g_db = float(gains_db_by_name.get(Path(getattr(f, "name", "")).name, 0.0))
+                g_lin = float(10.0 ** (g_db / 20.0))
+                x = (x * g_lin).astype(np.float32, copy=False)
+
+                if mix_block is None:
+                    mix_block = x
+                else:
+                    n = min(mix_block.shape[0], x.shape[0])
+                    mix_block[:n, :] += x[:n, :]
+
+            if mix_block is None:
                 break
 
-            L = max((b.shape[0] for b in blocks), default=0)
-            if L <= 0:
-                pos += block_frames
-                continue
+            blk_peak = float(np.max(np.abs(mix_block))) if mix_block.size else 0.0
+            if blk_peak > peak_lin:
+                peak_lin = blk_peak
 
-            mix = np.zeros((L, ch_ref), dtype=np.float32)
-            for b in blocks:
-                if b.shape[0] == 0:
-                    continue
-                mix[: b.shape[0], :] += b
-
-            abs_mix = np.abs(mix)
-            flat_idx = int(np.argmax(abs_mix))
-            local_frame, local_ch = np.unravel_index(flat_idx, abs_mix.shape)
-            local_amp = float(abs_mix[local_frame, local_ch])
-
-            if local_amp > best_amp:
-                best_amp = local_amp
-                best_frame = pos + int(local_frame)
-                best_ch = int(local_ch)
-                best_sample = float(mix[int(local_frame), int(local_ch)])
-
-            pos += block_frames
-
-        peak_dbfs = _dbfs_from_amp(best_amp)
+        return _dbfs_from_peak(peak_lin)
 
     finally:
         for f in files:
@@ -274,232 +110,263 @@ def compute_mixbus_peak_details_streaming(
             except Exception:
                 pass
 
-    return {
-        "peak_dbfs": float(peak_dbfs),
-        "peak_linear": float(best_amp),
-        "peak_frame": best_frame,
-        "peak_channel": best_ch,
-        "peak_sample_value": float(best_sample),
+
+def _is_transient_stem(crest_db: float, threshold_db: float) -> bool:
+    # crest_db = peak - lufs. Kick/bongo suele tener crest alto.
+    if not np.isfinite(crest_db):
+        return True
+    return float(crest_db) >= float(threshold_db)
+
+
+def _compute_stem_ceiling_gain_db(
+    stem: Dict[str, Any],
+    peak_target_dbfs: float,
+    crest_threshold_db: float,
+    max_cut_db_per_stem: float,
+) -> Tuple[float, Dict[str, Any]]:
+    """
+    Devuelve el gain extra (<=0) por stem, además de un dict con razones.
+    - Siempre aplica ceiling de peak.
+    - LUFS solo si NO es transitorio (crest bajo).
+    - No boostea (S1 no debe re-balancear hacia arriba).
+    """
+    fname = stem.get("file_name", "<unnamed>")
+    prof_id = str(stem.get("instrument_profile_resolved") or stem.get("instrument_profile_requested") or "Other")
+
+    lufs = float(stem.get("integrated_lufs", float("-inf")))
+    peak = float(stem.get("true_peak_dbfs", float("-inf")))
+    crest = float(stem.get("crest_db", float("inf")))
+
+    # Peak ceiling
+    gain_peak = 0.0
+    if peak != float("-inf") and peak > peak_target_dbfs:
+        gain_peak = float(peak_target_dbfs - peak)  # negativo
+
+    # LUFS ceiling (solo si no es transitorio)
+    gain_lufs = 0.0
+    lufs_applied = False
+
+    transient = _is_transient_stem(crest, crest_threshold_db)
+
+    if not transient and lufs != float("-inf"):
+        # Obtenemos rango del perfil; si falla, no forzamos LUFS
+        try:
+            prof = get_instrument_profile(prof_id)
+            lufs_min = float(prof.get("target_lufs_min", float("-inf")))
+            lufs_max = float(prof.get("target_lufs_max", float("inf")))
+        except Exception:
+            lufs_min, lufs_max = float("-inf"), float("inf")
+
+        # Solo ceiling: si está por encima del máximo, bajamos hasta el máximo
+        if np.isfinite(lufs_max) and lufs > lufs_max:
+            gain_lufs = float(lufs_max - lufs)  # negativo
+            lufs_applied = True
+
+    # Elegimos el recorte más restrictivo (más negativo)
+    gain = min(0.0, float(gain_peak), float(gain_lufs))
+
+    # Cap duro por stem
+    if gain < -abs(max_cut_db_per_stem):
+        gain = -abs(max_cut_db_per_stem)
+
+    reasons = {
+        "file": fname,
+        "profile": prof_id,
+        "lufs": lufs,
+        "peak": peak,
+        "crest": crest,
+        "transient": transient,
+        "gain_peak_db": float(gain_peak),
+        "gain_lufs_db": float(gain_lufs),
+        "lufs_ceiling_applied": bool(lufs_applied),
+        "gain_extra_db": float(gain),
     }
+    return float(gain), reasons
 
 
-def read_stem_sample_at(
-    stem_path: Path,
-    frame_index: int,
-    channel: int,
-) -> float:
-    with sf.SoundFile(str(stem_path), mode="r") as f:
-        f.seek(int(frame_index))
-        b = f.read(frames=1, dtype="float32", always_2d=True)
-        if b.shape[0] == 0:
-            return 0.0
-        ch = min(int(channel), b.shape[1] - 1)
-        return float(b[0, ch])
+def _apply_gain_inplace(path: Path, gain_db: float) -> bool:
+    try:
+        data, sr = sf.read(path, always_2d=False)
+        x = np.asarray(data, dtype=np.float32)
+        if x.size == 0:
+            return False
+
+        g_lin = float(10.0 ** (float(gain_db) / 20.0))
+        y = (x * g_lin).astype(np.float32)
+
+        # Escribir en FLOAT para evitar clip por PCM
+        sf.write(path, y, int(sr), subtype="FLOAT")
+        return True
+    except Exception as e:
+        logger.logger.info(f"[S1_STEM_WORKING_LOUDNESS] Error aplicando gain a {path.name}: {e}")
+        return False
 
 
-def apply_mixbus_preheadroom_selective(
-    stems: List[Dict[str, Any]],
-    mixbus_target_dbfs: float,
-    max_iters: int,
-    max_cut_db_per_iter: float,
-    max_total_cut_db_per_stem: float,
-    protect_vocals: bool,
-    block_frames: int,
-    peak_margin_db: float,
-) -> None:
+def process(*args) -> bool:
     """
-    Reduce el pico del mixbus hacia target, recortando sólo stems que contribuyen al pico.
+    Stage S1_STEM_WORKING_LOUDNESS (versión robusta):
+      - Aplica primero atenuación global si el mixbus excede el techo.
+      - Aplica después ceilings por stem (peak siempre; LUFS solo no-transitorio).
+      - Caps para evitar recortes agresivos y desiguales.
+      - Guarda métricas en working_loudness_metrics_S1_STEM_WORKING_LOUDNESS.json.
     """
-    stem_paths = [Path(s["file_path"]) for s in stems]
-    stem_name_by_path = {Path(s["file_path"]): s.get("file_name", Path(s["file_path"]).name) for s in stems}
-
-    total_cut: Dict[Path, float] = {p: 0.0 for p in stem_paths}
-
-    target_amp = _amp_from_dbfs(float(mixbus_target_dbfs) - float(peak_margin_db))
-
-    for it in range(int(max_iters)):
-        peak = compute_mixbus_peak_details_streaming(stem_paths, block_frames=block_frames)
-        peak_dbfs = float(peak["peak_dbfs"])
-        frame = peak["peak_frame"]
-        ch = peak["peak_channel"]
-        mix_sample = float(peak["peak_sample_value"])
-
-        if frame is None or ch is None or peak_dbfs == float("-inf"):
-            return
-
-        if peak_dbfs <= float(mixbus_target_dbfs) + 0.10:
-            logger.logger.info(
-                f"[S1_STEM_WORKING_LOUDNESS] Mixbus pre-headroom OK: peak={peak_dbfs:.2f} dBFS <= target={mixbus_target_dbfs:.2f} dBFS (iter={it})."
-            )
-            return
-
-        # Contribuciones en el frame pico (mismo canal)
-        contrib: List[Tuple[Path, float]] = []
-        for p in stem_paths:
-            s = read_stem_sample_at(p, frame_index=int(frame), channel=int(ch))
-            contrib.append((p, float(s)))
-
-        # Sólo consideramos contribuciones con el mismo signo que el mix_sample (si no, recortar puede empeorar)
-        sign = 1.0 if mix_sample >= 0.0 else -1.0
-        aligned = [(p, s) for (p, s) in contrib if (s * sign) > 0.0 and abs(s) > 1e-9]
-
-        if not aligned:
-            logger.logger.info(
-                f"[S1_STEM_WORKING_LOUDNESS] Mixbus peak alto ({peak_dbfs:.2f} dBFS) pero no hay contribuciones alineadas; se omite corrección selectiva."
-            )
-            return
-
-        # Orden por contribución (abs)
-        aligned.sort(key=lambda t: abs(t[1]), reverse=True)
-
-        # Protección vocal (salvo que no haya alternativa)
-        def is_vocal(p: Path) -> bool:
-            return "vocal" in p.name.lower()
-
-        candidates = aligned
-        if protect_vocals:
-            non_vocal = [(p, s) for (p, s) in aligned if not is_vocal(p)]
-            if non_vocal:
-                candidates = non_vocal
-
-        # Seleccionar subset mínimo que permita bajar el pico (resolviendo g en u + g*v)
-        mix_target_sample = sign * float(target_amp)
-
-        chosen: List[Tuple[Path, float]] = []
-        g_req: Optional[float] = None
-
-        for k in range(1, len(candidates) + 1):
-            sel = candidates[:k]
-            v = float(sum(s for (_, s) in sel))
-            if abs(v) < 1e-9:
-                continue
-            u = float(mix_sample - v)
-            g = float((mix_target_sample - u) / v)
-            if 0.0 < g < 1.0:
-                chosen = sel
-                g_req = g
-                break
-
-        if not chosen or g_req is None:
-            # Si no encontramos solución "bonita", recortamos top-1 con step limitado (mejor que nada)
-            chosen = candidates[:1]
-            g_req = 10.0 ** (-(float(max_cut_db_per_iter) / 20.0))
-
-        gain_req_db = float(20.0 * np.log10(float(g_req) + 1e-12))  # negativo
-        gain_step_db = max(gain_req_db, -float(max_cut_db_per_iter))
-
-        # Respetar máximo total por stem
-        final_chosen: List[Path] = []
-        for p, _s in chosen:
-            if total_cut[p] <= -float(max_total_cut_db_per_stem) + 1e-6:
-                continue
-            final_chosen.append(p)
-
-        if not final_chosen:
-            logger.logger.info(
-                "[S1_STEM_WORKING_LOUDNESS] Mixbus pre-headroom: no hay stems disponibles (cap total alcanzado)."
-            )
-            return
-
-        # Aplicar recorte uniforme a los elegidos (step)
-        for p in final_chosen:
-            name = stem_name_by_path.get(p, p.name)
-            peak_pre, peak_post = apply_gain_to_stem(p, gain_step_db)
-            total_cut[p] += float(gain_step_db)
-            logger.logger.info(
-                f"[S1_STEM_WORKING_LOUDNESS] Mixbus pre-headroom iter={it}: {name} gain={gain_step_db:+.2f} dB | "
-                f"peak_pre={peak_pre:.2f} -> peak_post={peak_post:.2f} | mix_peak={peak_dbfs:.2f} -> target={mixbus_target_dbfs:.2f}"
-            )
-
-    # Si llegamos aquí, no hemos alcanzado el target, pero hemos reducido algo sin matar todo con un trim global
-    peak = compute_mixbus_peak_details_streaming(stem_paths, block_frames=block_frames)
-    logger.logger.info(
-        f"[S1_STEM_WORKING_LOUDNESS] Mixbus pre-headroom ended: peak={float(peak['peak_dbfs']):.2f} dBFS (target={mixbus_target_dbfs:.2f}) after max_iters={max_iters}."
-    )
-
-
-def main() -> None:
-    if len(sys.argv) < 2:
+    if len(sys.argv) < 2 and not args:
         logger.logger.info("Uso: python S1_STEM_WORKING_LOUDNESS.py <CONTRACT_ID>")
-        sys.exit(1)
+        return False
 
-    contract_id = sys.argv[1]
+    contract_id = args[0] if args else sys.argv[1]
+    temp_dir = get_temp_dir(contract_id, create=False)
+
     analysis = load_analysis(contract_id)
-
     metrics: Dict[str, Any] = analysis.get("metrics_from_contract", {}) or {}
-    session_metrics: Dict[str, Any] = analysis.get("session", {}) or {}
+    limits: Dict[str, Any] = analysis.get("limits_from_contract", {}) or {}
+    session: Dict[str, Any] = analysis.get("session", {}) or {}
     stems: List[Dict[str, Any]] = analysis.get("stems", []) or []
 
-    if not stems:
-        logger.logger.info("[S1_STEM_WORKING_LOUDNESS] No hay stems en el análisis; nothing to do.")
-        return
-
     # Targets
-    true_peak_target_dbtp = float(session_metrics.get("true_peak_per_stem_target_max_dbtp", -3.0))
-    mixbus_target_dbfs = float(session_metrics.get("mixbus_peak_target_max_dbfs", -6.0))
+    mixbus_target = float(session.get("mixbus_peak_target_max_dbfs", metrics.get("mixbus_peak_target_max_dbfs", -6.0)))
+    stem_peak_target = float(session.get("true_peak_per_stem_target_max_dbfs", metrics.get("true_peak_per_stem_target_max_dbfs", -6.0)))
 
-    # Parámetros (compatibles hacia atrás)
-    max_gain_change_db_per_pass = metrics.get("max_gain_change_db_per_pass", None)
+    # Caps / heurísticas
+    max_global_step_db = float(limits.get("max_global_gain_change_db_per_pass", limits.get("max_gain_change_db_per_pass", 6.0)))
+    max_cut_per_stem_db = float(limits.get("max_cut_db_per_stem_per_pass", limits.get("max_gain_change_db_per_pass", 6.0)))
+    crest_transient_threshold_db = float(metrics.get("crest_transient_threshold_db", 14.0))
+    min_step_db = float(metrics.get("min_gain_step_db", 0.1))
 
-    # Nuevos defaults seguros
-    lufs_tolerance_db = float(metrics.get("lufs_tolerance_db", 1.0))
-    max_cut_db_per_pass = float(metrics.get("max_cut_db_per_pass", 3.0))  # para loudness/peak-guard por stem
-    min_active_ratio_to_adjust = float(metrics.get("min_active_ratio_to_adjust", 0.05))
-    peak_margin_db = float(metrics.get("peak_margin_db", 0.05))  # margen para evitar rozar el target
+    # Medición del mixbus en analysis (sample-peak real)
+    mixbus_peak = float(session.get("mixbus_peak_dbfs_measured", float("-inf")))
 
-    # Mixbus pre-headroom selectivo
-    mixbus_preheadroom_enabled = bool(metrics.get("mixbus_preheadroom_enabled", True))
-    mixbus_max_iters = int(metrics.get("mixbus_max_iters", 3))
-    mixbus_max_cut_db_per_iter = float(metrics.get("mixbus_max_cut_db_per_iter", 4.0))
-    mixbus_max_total_cut_db_per_stem = float(metrics.get("mixbus_max_total_cut_db_per_stem", 12.0))
-    mixbus_protect_vocals = bool(metrics.get("mixbus_protect_vocals", True))
-    mixbus_block_frames = int(metrics.get("mixbus_block_frames", 262144))
+    # 1) Gain global para alcanzar el techo (sin tocar balance)
+    global_gain_db = 0.0
+    if mixbus_peak != float("-inf") and mixbus_peak > mixbus_target:
+        needed = float(mixbus_target - mixbus_peak)  # negativo
+        # cap global
+        if needed < -abs(max_global_step_db):
+            needed = -abs(max_global_step_db)
+        global_gain_db = float(needed)
 
-    # Paralelización (threads)
-    max_workers = int(metrics.get("max_workers", 4))
-    max_workers = max(1, min(max_workers, os.cpu_count() or 1))
+    if abs(global_gain_db) < min_step_db:
+        global_gain_db = 0.0
 
-    # 1) Ajuste por stem (loudness + peak guard)
-    total_changed = 0
-    with ThreadPoolExecutor(max_workers=max_workers) as ex:
-        futures = [
-            ex.submit(
-                _process_one_stem,
-                stem,
-                true_peak_target_dbtp,
-                max_gain_change_db_per_pass,
-                lufs_tolerance_db,
-                max_cut_db_per_pass,
-                min_active_ratio_to_adjust,
-                peak_margin_db,
-            )
-            for stem in stems
-        ]
-        for fut in as_completed(futures):
-            _name, gain_db, _reason = fut.result()
-            if gain_db != 0.0:
-                total_changed += 1
+    # 2) Gains extra por stem (ceiling)
+    gain_by_file: Dict[str, float] = {}
+    debug_rows: List[Dict[str, Any]] = []
 
-    logger.logger.info(
-        f"[S1_STEM_WORKING_LOUDNESS] Normalización/Peak-Guard completado. Stems={len(stems)} modificados={total_changed}."
+    for s in stems:
+        fname = s.get("file_name")
+        if not fname:
+            continue
+        if str(fname).lower() == "full_song.wav":
+            continue
+
+        extra_gain_db, reasons = _compute_stem_ceiling_gain_db(
+            stem=s,
+            peak_target_dbfs=stem_peak_target,
+            crest_threshold_db=crest_transient_threshold_db,
+            max_cut_db_per_stem=max_cut_per_stem_db,
+        )
+
+        # total = global + extra (ambos <= 0)
+        total_gain = float(global_gain_db + extra_gain_db)
+
+        # cuantización mínima
+        if abs(total_gain) < min_step_db:
+            total_gain = 0.0
+
+        gain_by_file[str(fname)] = float(total_gain)
+        reasons["gain_global_db"] = float(global_gain_db)
+        reasons["gain_total_db"] = float(total_gain)
+        debug_rows.append(reasons)
+
+    # 3) Predicción de pico de mixbus con gains propuestos (virtual)
+    stem_paths = sorted(
+        p for p in temp_dir.glob("*.wav") if p.name.lower() != "full_song.wav"
     )
+    predicted_peak = _mixbus_peak_stream_with_gains(stem_paths, gain_by_file)
 
-    # 2) Pre-headroom de mixbus (selectivo)
-    if mixbus_preheadroom_enabled:
-        apply_mixbus_preheadroom_selective(
-            stems=stems,
-            mixbus_target_dbfs=mixbus_target_dbfs,
-            max_iters=mixbus_max_iters,
-            max_cut_db_per_iter=mixbus_max_cut_db_per_iter,
-            max_total_cut_db_per_stem=mixbus_max_total_cut_db_per_stem,
-            protect_vocals=mixbus_protect_vocals,
-            block_frames=mixbus_block_frames,
-            peak_margin_db=peak_margin_db,
+    # Si aún no llegamos al techo y tenemos margen global (cap), aplicamos “extra global” uniforme
+    if predicted_peak != float("-inf") and predicted_peak > mixbus_target + 0.1:
+        remaining = -abs(max_global_step_db) - global_gain_db  # negativo o cero (ojo: global_gain_db <= 0)
+        # remaining es cuanto más podríamos bajar global en esta pasada (valor negativo)
+        needed2 = float(mixbus_target - predicted_peak)  # negativo
+        add_global = 0.0
+
+        if remaining < 0.0:
+            # podemos bajar más (en negativo), pero limitado
+            add_global = max(needed2, remaining)  # el más alto (menos negativo) entre needed2 y remaining? NO: queremos no pasarnos del límite
+            # aquí remaining es p.ej. -6 - (-3) = -3. Si needed2 = -4, max(-4, -3) = -3 (cap).
+        else:
+            add_global = 0.0
+
+        if abs(add_global) >= min_step_db:
+            # aplicar a todos
+            for k in list(gain_by_file.keys()):
+                gain_by_file[k] = float(gain_by_file[k] + add_global)
+
+            global_gain_db = float(global_gain_db + add_global)
+            predicted_peak2 = _mixbus_peak_stream_with_gains(stem_paths, gain_by_file)
+            logger.logger.info(
+                f"[S1_STEM_WORKING_LOUDNESS] Ajuste global adicional {add_global:+.2f} dB "
+                f"(global_total={global_gain_db:+.2f} dB). "
+                f"mixbus_peak_pred {predicted_peak:.2f} -> {predicted_peak2:.2f} dBFS (target<={mixbus_target:.2f})."
+            )
+            predicted_peak = predicted_peak2
+
+    # 4) Aplicar gains a stems
+    touched = 0
+    for p in stem_paths:
+        g = float(gain_by_file.get(p.name, 0.0))
+        if abs(g) < 1e-6:
+            continue
+        ok = _apply_gain_inplace(p, g)
+        if ok:
+            touched += 1
+
+    # 5) Logging claro
+    logger.logger.info(f"[S1_STEM_WORKING_LOUDNESS] Global gain aplicado: {global_gain_db:+.2f} dB.")
+    for r in debug_rows:
+        logger.logger.info(
+            f"[S1_STEM_WORKING_LOUDNESS] {r['file']}: total={r['gain_total_db']:+.2f} dB "
+            f"(global={r['gain_global_db']:+.2f}, extra={r['gain_extra_db']:+.2f}) | "
+            f"LUFS={r['lufs']:.2f}, TP={r['peak']:.2f}, crest={r['crest']:.2f}, transient={r['transient']} | "
+            f"peak_adj={r['gain_peak_db']:+.2f}, lufs_adj={r['gain_lufs_db']:+.2f}"
+        )
+
+    # 6) Guardar métricas para check/debug
+    metrics_path = temp_dir / "working_loudness_metrics_S1_STEM_WORKING_LOUDNESS.json"
+    with metrics_path.open("w", encoding="utf-8") as f:
+        json.dump(
+            {
+                "contract_id": contract_id,
+                "mixbus_target_max_dbfs": mixbus_target,
+                "stem_peak_target_max_dbfs": stem_peak_target,
+                "global_gain_db": global_gain_db,
+                "predicted_mixbus_peak_dbfs": predicted_peak,
+                "limits": {
+                    "max_global_step_db": max_global_step_db,
+                    "max_cut_per_stem_db": max_cut_per_stem_db,
+                    "crest_transient_threshold_db": crest_transient_threshold_db,
+                    "min_step_db": min_step_db,
+                },
+                "per_stem": debug_rows,
+            },
+            f,
+            indent=2,
+            ensure_ascii=False,
         )
 
     logger.logger.info(
-        f"[S1_STEM_WORKING_LOUDNESS] Stage completado para {len(stems)} stems."
+        f"[S1_STEM_WORKING_LOUDNESS] Stage completado. stems_modificados={touched}. "
+        f"mixbus_peak_pred={predicted_peak:.2f} dBFS (target<={mixbus_target:.2f}). "
+        f"Métricas: {metrics_path}"
     )
+    return True
+
+
+def main() -> None:
+    ok = process()
+    if not ok:
+        sys.exit(1)
 
 
 if __name__ == "__main__":

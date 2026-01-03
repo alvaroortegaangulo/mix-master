@@ -21,7 +21,6 @@ import soundfile as sf  # noqa: E402
 from utils.analysis_utils import (  # noqa: E402
     load_contract,
     get_temp_dir,
-    PROJECT_ROOT,
     sf_read_limited,
 )
 from utils.session_utils import load_session_config  # noqa: E402
@@ -45,70 +44,83 @@ def _is_lead_vocal_profile(inst: str | None, lead_id: str) -> bool:
     return False
 
 
-def _load_mixbus_signal(temp_dir: Path, sr_fallback: int = 48000) -> tuple[np.ndarray, int]:
+def _load_bed_and_mix_signals(
+    temp_dir: Path,
+    instrument_by_file: Dict[str, str],
+    lead_profile_id: str,
+    sr_fallback: int = 48000,
+) -> tuple[np.ndarray, np.ndarray, int]:
     """
-    Carga la señal del MixBus:
-
-      - Intenta usar temp_dir/full_song.wav.
-      - Si no existe, mezcla todos los stems a mono.
-
-    Devuelve (y_mono, sr).
+    Devuelve:
+      - mix_full_mono: suma de TODOS los stems (sin normalizar)
+      - bed_mono: suma de stems EXCLUYENDO lead vocal (sin normalizar)
+      - sr
     """
-    full_song = temp_dir / "full_song.wav"
-    if full_song.exists():
-        y, sr = sf_read_limited(full_song, always_2d=False)
-        if isinstance(y, np.ndarray) and y.ndim > 1:
-            y_mono = np.mean(y, axis=1).astype(np.float32)
-        else:
-            y_mono = np.asarray(y, dtype=np.float32)
-        return y_mono, sr
-
-    # Fallback: mezclar stems a mono
     stem_files = sorted(
         p for p in temp_dir.glob("*.wav")
         if p.name.lower() != "full_song.wav"
     )
     if not stem_files:
-        return np.zeros(1, dtype=np.float32), sr_fallback
+        z = np.zeros(1, dtype=np.float32)
+        return z, z, sr_fallback
 
-    data_list = []
-    sr_ref = None
+    mix_list: List[np.ndarray] = []
+    bed_list: List[np.ndarray] = []
+    sr_ref: int | None = None
+
     for p in stem_files:
         y, sr = sf_read_limited(p, always_2d=False)
-        if isinstance(y, np.ndarray) and y.ndim > 1:
-            y_mono = np.mean(y, axis=1).astype(np.float32)
-        else:
-            y_mono = np.asarray(y, dtype=np.float32)
-        if y_mono.size == 0:
+        arr = np.asarray(y, dtype=np.float32)
+        if arr.ndim > 1:
+            arr = np.mean(arr, axis=1).astype(np.float32)
+
+        if arr.size == 0:
             continue
+
         if sr_ref is None:
-            sr_ref = sr
-        data_list.append(y_mono)
+            sr_ref = int(sr)
 
-    if not data_list:
-        return np.zeros(1, dtype=np.float32), (sr_ref or sr_fallback)
+        mix_list.append(arr)
 
-    max_len = max(len(y) for y in data_list)
-    mix = np.zeros(max_len, dtype=np.float32)
-    for y in data_list:
-        n = len(y)
-        mix[:n] += y
+        inst = instrument_by_file.get(p.name, "Other")
+        is_lead = _is_lead_vocal_profile(inst, lead_profile_id)
+        if not is_lead:
+            bed_list.append(arr)
 
-    return mix, (sr_ref or sr_fallback)
+    if sr_ref is None:
+        sr_ref = sr_fallback
+
+    def _sum(items: List[np.ndarray]) -> np.ndarray:
+        if not items:
+            return np.zeros(1, dtype=np.float32)
+        max_len = max(len(a) for a in items)
+        s = np.zeros(max_len, dtype=np.float32)
+        for a in items:
+            s[: len(a)] += a
+        return s
+
+    mix_full = _sum(mix_list)
+    bed = _sum(bed_list)
+
+    # Si no hay bed (solo voz), caemos a mix_full por robustez
+    if bed.size == 0 or (bed.size == 1 and float(bed[0]) == 0.0):
+        bed = mix_full.copy()
+
+    return mix_full, bed, int(sr_ref)
 
 
 def _compute_short_term_offsets(
     y_lead: np.ndarray,
-    y_mix: np.ndarray,
+    y_ref: np.ndarray,
     sr: int,
     window_sec: float = 3.0,
     hop_sec: float = 1.0,
     rms_threshold_db: float = -40.0,
 ) -> Dict[str, Any]:
     """
-    Calcula offsets de LUFS short-term entre lead y mix.
+    Calcula offsets de LUFS (por ventanas) entre lead y referencia (bed).
 
-    offset_db = LUFS_lead - LUFS_mix en cada ventana donde:
+    offset_db = LUFS_lead - LUFS_ref en cada ventana donde:
       - RMS_lead > rms_threshold_db.
 
     Devuelve dict con:
@@ -117,9 +129,9 @@ def _compute_short_term_offsets(
       - offset_mean_db / median / min / max
     """
     y_lead = np.asarray(y_lead, dtype=np.float32)
-    y_mix = np.asarray(y_mix, dtype=np.float32)
+    y_ref = np.asarray(y_ref, dtype=np.float32)
 
-    n = min(y_lead.shape[0], y_mix.shape[0])
+    n = min(y_lead.shape[0], y_ref.shape[0])
     if n <= 0:
         return {
             "num_windows_total": 0,
@@ -131,7 +143,7 @@ def _compute_short_term_offsets(
         }
 
     y_lead = y_lead[:n]
-    y_mix = y_mix[:n]
+    y_ref = y_ref[:n]
 
     win_samples = int(round(window_sec * sr))
     hop_samples = int(round(hop_sec * sr))
@@ -156,21 +168,20 @@ def _compute_short_term_offsets(
         num_total += 1
 
         seg_lead = y_lead[start:end]
-        seg_mix = y_mix[start:end]
+        seg_ref = y_ref[start:end]
 
-        # Detección básica de actividad vocal: RMS > umbral
+        # Actividad vocal básica
         rms_lead = float(np.sqrt(np.mean(seg_lead**2))) if seg_lead.size > 0 else 0.0
         if rms_lead <= rms_thr_lin:
             continue
 
         lufs_lead = measure_integrated_lufs(seg_lead, sr)
-        lufs_mix = measure_integrated_lufs(seg_mix, sr)
+        lufs_ref = measure_integrated_lufs(seg_ref, sr)
 
-        if lufs_lead == float("-inf") or lufs_mix == float("-inf"):
+        if lufs_lead == float("-inf") or lufs_ref == float("-inf"):
             continue
 
-        offset = lufs_lead - lufs_mix
-        offsets.append(float(offset))
+        offsets.append(float(lufs_lead - lufs_ref))
         num_used += 1
 
     if not offsets:
@@ -208,23 +219,20 @@ def _analyze_stem(
     ]
 ) -> Dict[str, Any]:
     """
-
     Recibe:
       - stem_path: ruta al .wav
       - inst_prof: instrument_profile
       - is_lead: si el perfil se considera lead vocal
-      - mix_mono: señal del mixbus (mono)
-      - sr_mix: samplerate del mixbus
+      - ref_mono: señal de referencia (BED, sin lead)
+      - sr_ref: samplerate de la referencia
       - window_sec / hop_sec / rms_threshold_db: parámetros ST análisis
-
-    Devuelve un dict stem_entry con la misma estructura que la versión secuencial.
     """
     (
         stem_path,
         inst_prof,
         is_lead,
-        mix_mono,
-        sr_mix,
+        ref_mono,
+        sr_ref,
         window_sec,
         hop_sec,
         rms_threshold_db,
@@ -243,6 +251,7 @@ def _analyze_stem(
         "short_term_offset_max_db": None,
         "short_term_num_windows_total": 0,
         "short_term_num_windows_used": 0,
+        "reference_type": "bed_excluding_lead",
     }
 
     if not is_lead:
@@ -250,22 +259,20 @@ def _analyze_stem(
 
     # Cargar stem lead
     y, sr = sf_read_limited(stem_path, always_2d=False)
-    if isinstance(y, np.ndarray) and y.ndim > 1:
-        y_mono = np.mean(y, axis=1).astype(np.float32)
-    else:
-        y_mono = np.asarray(y, dtype=np.float32)
+    y = np.asarray(y, dtype=np.float32)
+    if y.ndim > 1:
+        y = np.mean(y, axis=1).astype(np.float32)
 
-    if sr != sr_mix:
-        # En teoría no debería ocurrir tras S0, pero por robustez cortamos al menor
+    if int(sr) != int(sr_ref):
         logger.logger.info(
             f"[S3_LEADVOX_AUDIBILITY] Advertencia: sr distinto en {fname} "
-            f"({sr} vs {sr_mix}); se usa longitud mínima común."
+            f"({sr} vs {sr_ref}); se usa longitud mínima común."
         )
 
     stats = _compute_short_term_offsets(
-        y_lead=y_mono,
-        y_mix=mix_mono,
-        sr=sr_mix,
+        y_lead=y,
+        y_ref=ref_mono,
+        sr=sr_ref,
         window_sec=window_sec,
         hop_sec=hop_sec,
         rms_threshold_db=rms_threshold_db,
@@ -300,8 +307,8 @@ def main() -> None:
 
     # 1) Cargar contrato
     contract = load_contract(contract_id)
-    metrics: Dict[str, Any] = contract.get("metrics", {})
-    limits: Dict[str, Any] = contract.get("limits", {})
+    metrics: Dict[str, Any] = contract.get("metrics", {}) or {}
+    limits: Dict[str, Any] = contract.get("limits", {}) or {}
     stage_id: str | None = contract.get("stage_id")
 
     offset_min = float(metrics.get("short_term_lufs_offset_vs_mixbus_min_db", -3.0))
@@ -321,14 +328,18 @@ def main() -> None:
         if p.name.lower() != "full_song.wav"
     )
 
-    # 4) Cargar MixBus (full_song.wav o suma de stems)
-    mix_mono, sr_mix = _load_mixbus_signal(temp_dir)
+    # 4) Construir referencia BED (mix sin lead) y mix_full (solo info)
+    mix_full_mono, bed_mono, sr_ref = _load_bed_and_mix_signals(
+        temp_dir=temp_dir,
+        instrument_by_file=instrument_by_file,
+        lead_profile_id=lead_profile_id,
+    )
 
-    WINDOW_SEC = 3.0
-    HOP_SEC = 1.0
-    RMS_THR_DB = -40.0
+    WINDOW_SEC = float(metrics.get("short_term_window_sec", 3.0))
+    HOP_SEC = float(metrics.get("short_term_hop_sec", 1.0))
+    RMS_THR_DB = float(metrics.get("rms_threshold_db", -40.0))
 
-    # Preparar tareas para el pool
+    # 5) Preparar tareas (referencia = BED)
     tasks: List[
         Tuple[
             Path,
@@ -352,28 +363,26 @@ def main() -> None:
                 p,
                 inst_prof,
                 is_lead,
-                mix_mono,
-                sr_mix,
+                bed_mono,
+                sr_ref,
                 WINDOW_SEC,
                 HOP_SEC,
                 RMS_THR_DB,
             )
         )
 
-    # --- Análisis paralelo por stem ---
+    # --- Análisis por stem ---
     stems_analysis: List[Dict[str, Any]] = []
     if tasks:
-        max_workers = min(4, os.cpu_count() or 1)
+        # mantenemos map (sin multiproceso) por estabilidad y por pasar arrays grandes
         results = list(map(_analyze_stem, tasks))
         stems_analysis = list(results)
-    else:
-        stems_analysis = []
 
-    # Agregados globales a partir de los resultados
+    # Agregados globales (solo lead stems con datos)
     all_offsets: List[float] = [
         s["short_term_offset_mean_db"]
         for s in stems_analysis
-        if s["short_term_offset_mean_db"] is not None
+        if s.get("is_lead_vocal", False) and s.get("short_term_offset_mean_db") is not None
     ]
 
     if all_offsets:
@@ -401,6 +410,8 @@ def main() -> None:
             "short_term_hop_sec": HOP_SEC,
             "rms_threshold_db": RMS_THR_DB,
             "lead_profile_id": lead_profile_id,
+            "reference_type": "bed_excluding_lead",
+            "sr_reference_hz": sr_ref,
             "global_short_term_offset_mean_db": global_mean,
             "global_short_term_offset_median_db": global_median,
             "global_short_term_offset_min_db": global_min,
@@ -415,7 +426,7 @@ def main() -> None:
         json.dump(session_state, f, indent=2, ensure_ascii=False)
 
     logger.logger.info(
-        f"[S3_LEADVOX_AUDIBILITY] Análisis completado. "
+        f"[S3_LEADVOX_AUDIBILITY] Análisis completado (ref=BED). "
         f"global_offset_mean={global_mean} dB, stems_lead_con_datos={len(all_offsets)}. "
         f"JSON: {output_path}"
     )
