@@ -16,6 +16,7 @@ type WaveformPlayerProps = {
   canvasClassName?: string;
   requireAuthForDownload?: boolean;
   hideDownload?: boolean;
+  authRedirectPath?: string;
 };
 
 type PeakArray = number[];
@@ -37,6 +38,7 @@ export const WaveformPlayer: React.FC<WaveformPlayerProps> = ({
   canvasClassName = "h-10",
   requireAuthForDownload = false,
   hideDownload = false,
+  authRedirectPath,
 }) => {
   const { user } = useAuth();
   const { openAuthModal } = useModal();
@@ -566,7 +568,7 @@ export const WaveformPlayer: React.FC<WaveformPlayerProps> = ({
   const handleDownload = async () => {
     if (!activeSrc || isDownloading) return;
     if (requireAuthForDownload && !user) {
-      openAuthModal();
+      openAuthModal(authRedirectPath);
       return;
     }
 

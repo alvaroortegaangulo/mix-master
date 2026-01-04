@@ -4,7 +4,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { MagnifyingGlassIcon, XMarkIcon } from "@heroicons/react/24/outline";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 
 type StemProfile = {
   id: string;
@@ -98,9 +98,9 @@ const PROFILE_SEARCH_TERMS: Record<string, string[]> = {
   Lead_Vocal_Melodic: ["vocal", "voz", "lead", "melodic"],
   Lead_Vocal_Rap: ["rap", "vocal", "voz"],
   Backing_Vocals: ["backing", "vocals", "coros"],
-  FX_EarCandy: ["fx", "effects", "ear candy"],
+  FX_EarCandy: ["fx", "effects", "ear candy", "cymbals", "platos"],
   Ambience_Atmos: ["ambience", "ambient", "atm", "ambiente"],
-  Other: ["other", "otros", "misc"],
+  Other: ["other", "otros", "misc", "synth", "keyboard", "teclado", "sintetizador"],
 };
 
 const PROFILE_IMAGES: Partial<Record<string, string>> = {
@@ -275,6 +275,7 @@ const InstrumentArt = ({ variant }: { variant: string }) => {
 
 export function StemsProfilePanel({ stems, onChangeProfile, accent = "amber" }: Props) {
   const t = useTranslations("MixTool");
+  const locale = useLocale();
   const theme = ACCENT_THEMES[accent];
   const [isSelectorOpen, setIsSelectorOpen] = useState(false);
   const [activeStemId, setActiveStemId] = useState<string | null>(null);
@@ -371,7 +372,7 @@ export function StemsProfilePanel({ stems, onChangeProfile, accent = "amber" }: 
       {
         value: "FX_EarCandy",
         label: t("profileOptions.FX_EarCandy"),
-        category: "fx",
+        category: "drums",
         variant: "fx",
         keywords: PROFILE_SEARCH_TERMS.FX_EarCandy,
       },
@@ -385,7 +386,7 @@ export function StemsProfilePanel({ stems, onChangeProfile, accent = "amber" }: 
       {
         value: "Other",
         label: t("profileOptions.Other"),
-        category: "other",
+        category: "keys",
         variant: "other",
         keywords: PROFILE_SEARCH_TERMS.Other,
       },
@@ -518,6 +519,9 @@ export function StemsProfilePanel({ stems, onChangeProfile, accent = "amber" }: 
   const groupGridClassName = "flex flex-wrap items-start gap-4";
 
   const getCardLabel = (option: ProfileOption) => {
+    if (locale === "es") {
+      return option.label;
+    }
     const imageSrc = PROFILE_IMAGES[option.value];
     if (!imageSrc) return option.label;
     const fileName = imageSrc.split("/").pop() ?? "";

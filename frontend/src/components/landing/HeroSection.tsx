@@ -170,21 +170,6 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
         </ScrollReveal>
 
         <style jsx>{`
-          .glow-pulse {
-            box-shadow: 0 0 16px rgba(45, 212, 191, 0.55), 0 0 32px rgba(45, 212, 191, 0.35);
-            animation: pulse-glow 2.6s ease-in-out infinite;
-          }
-
-          @keyframes pulse-glow {
-            0%,
-            100% {
-              box-shadow: 0 0 14px rgba(45, 212, 191, 0.45), 0 0 26px rgba(45, 212, 191, 0.25);
-            }
-            50% {
-              box-shadow: 0 0 20px rgba(45, 212, 191, 0.7), 0 0 40px rgba(45, 212, 191, 0.4);
-            }
-          }
-
           .hero-faq-pop {
             animation: hero-faq-pop 0.75s cubic-bezier(0.22, 1.2, 0.32, 1) 0.2s both;
           }

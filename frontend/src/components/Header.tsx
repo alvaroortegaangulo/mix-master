@@ -37,6 +37,9 @@ export function Header() {
 
   const isMixTool = pathname.endsWith("/mix");
   const isLanding = /^\/([a-z]{2})?$/.test(pathname);
+  const normalizedPath = pathname.replace(/\/$/, "");
+  const resultRedirectPathMatch = normalizedPath.match(/^(?:\/[a-z]{2})?(\/mix\/result\/[^/]+)$/);
+  const resultRedirectPath = resultRedirectPathMatch ? resultRedirectPathMatch[1] : undefined;
 
   const headerClass = (isLanding && !scrolled)
     ? "border-transparent bg-slate-950/80 backdrop-blur-md"
@@ -94,12 +97,6 @@ export function Header() {
                    </div>
                ) : (
                    <div className="flex items-center gap-4">
-                      <button
-                          onClick={openAuthModal}
-                          className="text-sm font-semibold text-slate-300 hover:text-white transition"
-                      >
-                          {tNav('logIn')}
-                      </button>
                       <div className="relative group">
                         <div className="absolute -inset-0.5 bg-gradient-to-r from-cyan-500 to-purple-600 rounded-full blur opacity-60 group-hover:opacity-100 transition duration-200"></div>
                         <button
@@ -110,6 +107,12 @@ export function Header() {
                             <ArrowRightIcon className="w-4 h-4 text-white" />
                         </button>
                       </div>
+                      <button
+                          onClick={() => openAuthModal(resultRedirectPath)}
+                          className="text-sm font-semibold text-slate-300 hover:text-white transition"
+                      >
+                          {tNav('logIn')}
+                      </button>
                    </div>
                )
            )}

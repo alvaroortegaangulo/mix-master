@@ -53,6 +53,24 @@ interface StemControl {
   status?: "idle" | "loading" | "ready" | "error";
 }
 
+const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+
+const createImpulseResponse = (ctx: AudioContext, durationSec = 1.8, decay = 2.2) => {
+  const sampleRate = ctx.sampleRate;
+  const length = Math.max(1, Math.floor(sampleRate * durationSec));
+  const impulse = ctx.createBuffer(2, length, sampleRate);
+
+  for (let channel = 0; channel < impulse.numberOfChannels; channel += 1) {
+    const data = impulse.getChannelData(channel);
+    for (let i = 0; i < length; i += 1) {
+      const t = i / length;
+      data[i] = (Math.random() * 2 - 1) * Math.pow(1 - t, decay);
+    }
+  }
+
+  return impulse;
+};
+
 function buildAuthHeaders(extra?: HeadersInit): HeadersInit {
   const headers: Record<string, string> = {};
   const apiKey = process.env.NEXT_PUBLIC_MIXMASTER_API_KEY;
@@ -97,11 +115,15 @@ export default function StudioPage() {
   const audioContextRef = useRef<AudioContext | null>(null);
   const masterGainNodeRef = useRef<GainNode | null>(null);
   const masterAnalyserNodeRef = useRef<AnalyserNode | null>(null);
+  const reverbBufferRef = useRef<AudioBuffer | null>(null);
 
   const audioElsRef = useRef<Map<string, HTMLAudioElement>>(new Map());
   const mediaNodesRef = useRef<Map<string, MediaElementAudioSourceNode>>(new Map());
   const gainNodesRef = useRef<Map<string, GainNode>>(new Map());
   const pannerNodesRef = useRef<Map<string, StereoPannerNode>>(new Map());
+  const reverbNodesRef = useRef<Map<string, ConvolverNode>>(new Map());
+  const reverbWetGainNodesRef = useRef<Map<string, GainNode>>(new Map());
+  const reverbDryGainNodesRef = useRef<Map<string, GainNode>>(new Map());
   const startTimeRef = useRef<number>(0);
   const pauseTimeRef = useRef<number>(0);
 
@@ -162,6 +184,9 @@ export default function StudioPage() {
 
         masterGainNodeRef.current = masterGain;
         masterAnalyserNodeRef.current = analyser;
+        if (!reverbBufferRef.current) {
+          reverbBufferRef.current = createImpulseResponse(ctx);
+        }
 
       } catch (e) {
         console.error("Studio: AudioContext init error", e);
@@ -253,6 +278,9 @@ export default function StudioPage() {
         mediaNodesRef.current.clear();
         gainNodesRef.current.clear();
         pannerNodesRef.current.clear();
+        reverbNodesRef.current.clear();
+        reverbWetGainNodesRef.current.clear();
+        reverbDryGainNodesRef.current.clear();
         pauseTimeRef.current = 0;
         setIsPlaying(false);
         setCurrentTime(0);
@@ -427,14 +455,40 @@ export default function StudioPage() {
                     const mediaNode = ctx.createMediaElementSource(audio);
                     const gain = ctx.createGain();
                     const panner = ctx.createStereoPanner();
+                    const dryGain = ctx.createGain();
+                    const convolver = ctx.createConvolver();
+                    const wetGain = ctx.createGain();
+
+                    const reverbBuffer = reverbBufferRef.current || createImpulseResponse(ctx);
+                    if (!reverbBufferRef.current) {
+                        reverbBufferRef.current = reverbBuffer;
+                    }
+                    convolver.buffer = reverbBuffer;
+                    convolver.normalize = true;
+
+                    const wetAmount = stem.reverb.enabled ? clamp(stem.reverb.amount / 100, 0, 1) : 0;
+                    const dryAmount = clamp(1 - wetAmount * 0.5, 0, 1);
+                    wetGain.gain.value = wetAmount;
+                    dryGain.gain.value = dryAmount;
+
+                    const vol = Math.pow(10, stem.volume / 20);
+                    gain.gain.value = stem.mute ? 0 : vol;
+                    panner.pan.value = stem.pan.enabled ? stem.pan.value : 0;
+
                     mediaNode.connect(gain);
                     gain.connect(panner);
-                    // Connect to Master Bus instead of ctx.destination
-                    panner.connect(masterGainNodeRef.current);
+                    panner.connect(dryGain);
+                    dryGain.connect(masterGainNodeRef.current);
+                    panner.connect(convolver);
+                    convolver.connect(wetGain);
+                    wetGain.connect(masterGainNodeRef.current);
 
                     mediaNodesRef.current.set(stem.fileName, mediaNode);
                     gainNodesRef.current.set(stem.fileName, gain);
                     pannerNodesRef.current.set(stem.fileName, panner);
+                    reverbNodesRef.current.set(stem.fileName, convolver);
+                    reverbWetGainNodesRef.current.set(stem.fileName, wetGain);
+                    reverbDryGainNodesRef.current.set(stem.fileName, dryGain);
                 }
 
                 const candidates: string[] = [];
@@ -619,20 +673,31 @@ export default function StudioPage() {
   }, [isPlaying, duration, stems]);
 
   useEffect(() => {
+      const ctx = audioContextRef.current;
+      if (!ctx) return;
+      const now = ctx.currentTime;
       const anySolo = stems.some(s => s.solo);
       stems.forEach(stem => {
           const gainNode = gainNodesRef.current.get(stem.fileName);
           const pannerNode = pannerNodesRef.current.get(stem.fileName);
+          const wetGainNode = reverbWetGainNodesRef.current.get(stem.fileName);
+          const dryGainNode = reverbDryGainNodesRef.current.get(stem.fileName);
 
           if (gainNode) {
               let shouldMute = stem.mute;
               if (anySolo) shouldMute = !stem.solo;
               // Volume applied here is just the stem volume, not multiplied by masterVolume
               const vol = Math.pow(10, stem.volume / 20);
-              gainNode.gain.setTargetAtTime(shouldMute ? 0 : vol, audioContextRef.current!.currentTime, 0.05);
+              gainNode.gain.setTargetAtTime(shouldMute ? 0 : vol, now, 0.05);
           }
           if (pannerNode) {
-               pannerNode.pan.setTargetAtTime(stem.pan.enabled ? stem.pan.value : 0, audioContextRef.current!.currentTime, 0.05);
+               pannerNode.pan.setTargetAtTime(stem.pan.enabled ? stem.pan.value : 0, now, 0.05);
+          }
+          if (wetGainNode && dryGainNode) {
+              const wetAmount = stem.reverb.enabled ? clamp(stem.reverb.amount / 100, 0, 1) : 0;
+              const dryAmount = clamp(1 - wetAmount * 0.5, 0, 1);
+              wetGainNode.gain.setTargetAtTime(wetAmount, now, 0.05);
+              dryGainNode.gain.setTargetAtTime(dryAmount, now, 0.05);
           }
       });
   }, [stems]); // Removed masterVolume dependency here as it's handled in its own effect on masterGain
@@ -641,15 +706,15 @@ export default function StudioPage() {
       setRendering(true);
       try {
           const corrections = stems.map(s => ({
-              name: s.name,
+              name: s.fileName,
               volume_db: s.volume,
               pan: s.pan.enabled ? s.pan.value : 0,
               eq: s.eq.enabled ? s.eq : undefined,
               compression: s.compression.enabled ? s.compression : undefined,
-          reverb: s.reverb.enabled ? s.reverb : undefined,
-          mute: s.mute,
-          solo: s.solo
-        }));
+              reverb: s.reverb.enabled ? s.reverb : undefined,
+              mute: s.mute,
+              solo: s.solo
+          }));
 
         const baseUrl = getBackendBaseUrl();
         const correctionRes = await fetch(`${baseUrl}/jobs/${jobId}/correction`, {

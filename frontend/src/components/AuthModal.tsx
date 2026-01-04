@@ -8,6 +8,7 @@ import { useGoogleLogin } from "@react-oauth/google";
 import { gaEvent } from "../lib/ga";
 import { useTranslations } from "next-intl";
 import { useRouter } from "../i18n/routing";
+import { consumeAuthRedirect } from "../lib/authRedirect";
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -55,7 +56,8 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
         login(data.access_token);
         gaEvent("login", { method: "google" });
         onClose();
-        router.push("/mix");
+        const redirectTo = consumeAuthRedirect();
+        router.push(redirectTo || "/mix");
       } catch (err: any) {
         setError(err.message || "An error occurred");
       } finally {
@@ -100,7 +102,8 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
         login(data.access_token);
         gaEvent(isLogin ? "login" : "sign_up", { method: "email" });
         onClose();
-        router.push("/mix");
+        const redirectTo = consumeAuthRedirect();
+        router.push(redirectTo || "/mix");
       } else {
         // Should not happen if backend returns token on register
         if (!isLogin) {

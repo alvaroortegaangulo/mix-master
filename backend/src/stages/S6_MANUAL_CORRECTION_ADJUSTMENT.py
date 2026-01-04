@@ -16,6 +16,7 @@ from pedalboard import (
     HighShelfFilter,
     LowShelfFilter,
     PeakingFilter,
+    Reverb,
     Gain
 )
 
@@ -34,6 +35,18 @@ except ImportError:
 
 
 STAGE_ID = "S6_MANUAL_CORRECTION_ADJUSTMENT"
+
+
+def _normalize_stem_name(value: str) -> str:
+    if not value:
+        return ""
+    name = str(value).strip().lower()
+    if not name:
+        return ""
+    stem = Path(name).stem.replace(" ", "_")
+    while "__" in stem:
+        stem = stem.replace("__", "_")
+    return stem
 
 
 def _load_corrections(stage_dir: Path) -> List[Dict[str, Any]]:
@@ -101,7 +114,11 @@ def process(context: PipelineContext, *args) -> bool:
         return False
 
     # Mapa de correcciones por nombre de stem
-    corr_map = {c["name"]: c for c in corrections}
+    corr_map = {}
+    for corr in corrections:
+        key = _normalize_stem_name(corr.get("name", ""))
+        if key:
+            corr_map[key] = corr
 
     # Check solo mode
     # Si hay algun stem en SOLO, muteamos el resto.
@@ -118,7 +135,7 @@ def process(context: PipelineContext, *args) -> bool:
             continue
 
         stem_name = stem_path.stem # 'vocals', 'drums', etc.
-        corr = corr_map.get(stem_name)
+        corr = corr_map.get(_normalize_stem_name(stem_name))
 
         # Si no hay correccion explicita, copiamos tal cual?
         # El frontend manda TODOS los stems, asi que si falta es raro.
@@ -186,7 +203,14 @@ def process(context: PipelineContext, *args) -> bool:
             if abs(high_gain) > 0.01:
                 board.append(HighShelfFilter(cutoff_frequency_hz=3200, gain_db=high_gain))
 
-            # 3. Volume
+            # 3. Reverb
+            verb_cfg = corr.get("reverb")
+            if verb_cfg and verb_cfg.get("enabled"):
+                amt = float(verb_cfg.get("amount", 0)) / 100.0
+                if amt > 0:
+                    board.append(Reverb(room_size=0.5, wet_level=amt, dry_level=1.0-amt*0.5))
+
+            # 4. Volume
             vol_db = float(corr.get("volume_db", 0))
             if abs(vol_db) > 0.01:
                 board.append(Gain(gain_db=vol_db))

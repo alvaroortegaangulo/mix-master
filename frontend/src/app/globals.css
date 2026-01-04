@@ -285,6 +285,21 @@ body {
   text-shadow: 0 0 24px rgba(190, 18, 60, 0.55);
 }
 
+.glow-pulse {
+  box-shadow: 0 0 16px rgba(45, 212, 191, 0.55), 0 0 32px rgba(45, 212, 191, 0.35);
+  animation: pulse-glow 2.6s ease-in-out infinite;
+}
+
+@keyframes pulse-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 14px rgba(45, 212, 191, 0.45), 0 0 26px rgba(45, 212, 191, 0.25);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(45, 212, 191, 0.7), 0 0 40px rgba(45, 212, 191, 0.4);
+  }
+}
+
 .metallic-sheen {
   position: relative;
   isolation: isolate;

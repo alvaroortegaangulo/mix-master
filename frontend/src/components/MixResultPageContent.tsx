@@ -435,7 +435,7 @@ export function MixResultPageContent({ jobId }: Props) {
 
   const handleDownload = useCallback(async () => {
     if (!user) {
-      openAuthModal();
+      openAuthModal(`/mix/result/${jobId}`);
       return;
     }
     if (isDownloading) return;
@@ -485,7 +485,7 @@ export function MixResultPageContent({ jobId }: Props) {
 
   const handleStageDownload = useCallback(async () => {
     if (!user) {
-      openAuthModal();
+      openAuthModal(`/mix/result/${jobId}`);
       return;
     }
     if (!stagePreviewUrl || !activeStageKey || isStageDownloading) return;
@@ -676,6 +676,7 @@ export function MixResultPageContent({ jobId }: Props) {
                     className="bg-transparent shadow-none border-none p-0 !gap-0 h-32 md:h-40 overflow-hidden"
                     canvasClassName="h-full"
                     hideDownload={true}
+                    authRedirectPath={`/mix/result/${jobId}`}
                   />
                 </div>
               </div>
@@ -803,6 +804,7 @@ export function MixResultPageContent({ jobId }: Props) {
                                                     className="bg-slate-950/60 border border-slate-800/80 shadow-none p-2 !gap-2 rounded-2xl"
                                                     canvasClassName="h-12"
                                                     hideDownload={true}
+                                                    authRedirectPath={`/mix/result/${jobId}`}
                                                 />
                                                 <div className="mt-3 flex flex-wrap gap-2">
                                                     <button
@@ -928,7 +930,7 @@ export function MixResultPageContent({ jobId }: Props) {
                         )}
 
                         {report && (
-                            <ReportViewer report={report} jobId={jobId} />
+                            <ReportViewer report={report} jobId={jobId} authRedirectPath={`/mix/result/${jobId}`} />
                         )}
 
                         {!report && !loadingReport && (

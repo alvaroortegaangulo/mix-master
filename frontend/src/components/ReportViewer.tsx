@@ -65,6 +65,7 @@ interface FullReport {
 interface ReportViewerProps {
   report: FullReport;
   jobId: string;
+  authRedirectPath?: string;
 }
 
 // --- Components ---
@@ -179,6 +180,7 @@ const ReportStageCard = ({
 export const ReportViewer: React.FC<ReportViewerProps> = ({
   report,
   jobId,
+  authRedirectPath,
 }) => {
   const t = useTranslations("Report");
   const [isDownloading, setIsDownloading] = useState(false);
@@ -215,7 +217,7 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
 
   const handleDownloadPdf = async () => {
     if (!user) {
-      openAuthModal();
+      openAuthModal(authRedirectPath);
       return;
     }
     if (!reportRef.current) return;
@@ -279,7 +281,7 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
       return;
     }
     if (!user) {
-      openAuthModal();
+      openAuthModal(authRedirectPath);
       return;
     }
     setShowLogs(true);
@@ -299,7 +301,7 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
 
   const handleDownloadLogs = async () => {
     if (!user) {
-      openAuthModal();
+      openAuthModal(authRedirectPath);
       return;
     }
     try {

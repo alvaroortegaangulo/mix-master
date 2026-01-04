@@ -448,7 +448,7 @@
       }
     },
     "auto": "Auto",
-    "autoRecommended": "Auto-detectar (recomendado)",
+    "autoRecommended": "Auto-detectar",
     "profileGroups": {
       "drums": "Batería",
       "bass": "Bajo",
@@ -462,7 +462,7 @@
     "profileOptions": {
       "Kick": "Bombo (bombo principal)",
       "Snare": "Caja (caja principal)",
-      "Percussion": "Percusión (palmas, bongos...)",
+      "Percussion": "Percusión",
       "Bass_Electric": "Bajo eléctrico / sintético",
       "Acoustic_Guitar": "Guitarra acústica",
       "Electric_Guitar_Rhythm": "Guitarra eléctrica",
@@ -471,9 +471,9 @@
       "Lead_Vocal_Melodic": "Voz principal (melódica)",
       "Lead_Vocal_Rap": "Voz principal (rap)",
       "Backing_Vocals": "Coros",
-      "FX_EarCandy": "FX / detalles sonoros",
+      "FX_EarCandy": "Platos",
       "Ambience_Atmos": "Ambiente / atmósfera",
-      "Other": "Otro"
+      "Other": "Teclado sintetizador"
     },
     "styleOptions": {
       "Flamenco_Rumba": "Flamenco / Rumba",

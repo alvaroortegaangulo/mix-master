@@ -2,13 +2,14 @@
 
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 import dynamic from 'next/dynamic';
+import { setAuthRedirect } from '../lib/authRedirect';
 
 const AuthModal = dynamic(() => import('../components/AuthModal').then((mod) => mod.AuthModal), {
   ssr: false,
 });
 
 interface ModalContextType {
-  openAuthModal: () => void;
+  openAuthModal: (redirectTo?: string) => void;
   closeAuthModal: () => void;
   isAuthModalOpen: boolean;
 }
@@ -18,7 +19,10 @@ const ModalContext = createContext<ModalContextType | undefined>(undefined);
 export function ModalProvider({ children }: { children: ReactNode }) {
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
-  const openAuthModal = () => setIsAuthModalOpen(true);
+  const openAuthModal = (redirectTo?: string) => {
+    setAuthRedirect(redirectTo);
+    setIsAuthModalOpen(true);
+  };
   const closeAuthModal = () => setIsAuthModalOpen(false);
 
   return (

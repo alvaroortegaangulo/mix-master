@@ -25,6 +25,18 @@ except ImportError:
     HAS_PEDALBOARD = False
 
 
+def _normalize_stem_name(value: str) -> str:
+    if not value:
+        return ""
+    name = str(value).strip().lower()
+    if not name:
+        return ""
+    stem = Path(name).stem.replace(" ", "_")
+    while "__" in stem:
+        stem = stem.replace("__", "_")
+    return stem
+
+
 def _detect_sample_rate(*directories: Path) -> int | None:
     """
     Try to infer the sample rate from the first available WAV file in the
@@ -84,7 +96,11 @@ def process(context: PipelineContext, *args) -> bool:
                 return False
 
     # 4. Apply corrections
-    corr_map = {c['name']: c for c in corrections}
+    corr_map = {}
+    for corr in corrections:
+        key = _normalize_stem_name(corr.get("name", ""))
+        if key:
+            corr_map[key] = corr
     any_solo = any(c.get('solo', False) for c in corrections)
 
     processed_stems = {}
@@ -99,7 +115,7 @@ def process(context: PipelineContext, *args) -> bool:
     for name, audio in stems_map.items():
         # Audio is (channels, samples) float32 numpy array
 
-        corr = corr_map.get(name)
+        corr = corr_map.get(_normalize_stem_name(name))
         if not corr:
             processed_stems[name] = audio
             continue
