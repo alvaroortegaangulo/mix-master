@@ -1173,9 +1173,9 @@
   },
   "Report": {
     "title": "Informe de Masterización",
-    "downloadPdf": "Descargar PDF",
+    "downloadPdf": "Descargar informe",
     "downloadLogs": "Descargar procesamiento",
-    "generatingPdf": "Generando PDF...",
+    "generatingPdf": "Generando informe...",
     "mixSummary": "Resumen de Mezcla",
     "interactiveAnalysis": "Análisis Interactivo",
     "detailedStageReport": "Informe Detallado de Etapas",

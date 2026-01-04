@@ -443,11 +443,16 @@ export function MixTool({ resumeJobId }: MixToolProps) {
     let stopPolling: (() => void) | null = null;
     let wsHandle: { close: () => void } | null = null;
 
+    const STATUS_TIMEOUT_MS = 12000;
+    const VISIBILITY_REFRESH_MIN_MS = 5000;
+    let lastStatusAt = Date.now();
+
     setLoading(true);
     setError(null);
 
     const applyStatus = (status: JobStatus) => {
       if (cancelled) return;
+      lastStatusAt = Date.now();
       setJobStatus(status);
       setError(null);
 
@@ -480,6 +485,28 @@ export function MixTool({ resumeJobId }: MixToolProps) {
       }
     };
 
+    const refreshStatus = async () => {
+      if (cancelled || finished) return;
+      try {
+        const status = await fetchJobStatus(activeJobId, { timeoutMs: STATUS_TIMEOUT_MS });
+        if (!cancelled) {
+          applyStatus(status);
+        }
+      } catch (err: any) {
+        if (!cancelled) {
+          setError(err.message ?? "Unknown error");
+          setLoading(true);
+        }
+      }
+    };
+
+    const handleVisibility = () => {
+      if (cancelled || finished) return;
+      if (document.visibilityState !== "visible") return;
+      if (Date.now() - lastStatusAt < VISIBILITY_REFRESH_MIN_MS) return;
+      void refreshStatus();
+    };
+
     const startPolling = () => {
       if (stopPolling) return;
       let stopped = false;
@@ -488,7 +515,7 @@ export function MixTool({ resumeJobId }: MixToolProps) {
       const pollStatus = async () => {
         while (!cancelled && !stopped && !finished) {
           try {
-            const status = await fetchJobStatus(activeJobId);
+            const status = await fetchJobStatus(activeJobId, { timeoutMs: STATUS_TIMEOUT_MS });
             if (cancelled || stopped) break;
             applyStatus(status);
             consecutiveErrors = 0;
@@ -536,6 +563,8 @@ export function MixTool({ resumeJobId }: MixToolProps) {
     });
 
     startPolling();
+    window.addEventListener("focus", handleVisibility);
+    document.addEventListener("visibilitychange", handleVisibility);
 
     return () => {
       cancelled = true;
@@ -548,7 +577,9 @@ export function MixTool({ resumeJobId }: MixToolProps) {
         wsHandle.close();
         wsHandle = null;
       }
-        };
+      window.removeEventListener("focus", handleVisibility);
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
   }, [activeJobId]);
 
   useEffect(() => {

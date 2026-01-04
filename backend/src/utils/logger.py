@@ -1,5 +1,6 @@
 import sys
 import logging
+import os
 from typing import Any, Dict, List, Optional
 import math
 
@@ -192,7 +193,8 @@ class PipelineLogger:
         self.print_header(f"Stage {stage_id} Completed: {res}", color=color)
 
     def add_file_handler(self, filepath: str) -> logging.FileHandler:
-        handler = logging.FileHandler(filepath, mode='w', encoding='utf-8')
+        mode = "a" if os.path.exists(filepath) and os.path.getsize(filepath) > 0 else "w"
+        handler = logging.FileHandler(filepath, mode=mode, encoding='utf-8')
         # We want the raw message with ANSI codes in the file for the PDF generator
         handler.setFormatter(logging.Formatter("%(message)s"))
         self.logger.addHandler(handler)

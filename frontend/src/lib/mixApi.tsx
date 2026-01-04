@@ -580,28 +580,50 @@ export async function startMixJob(
 // 2) Consultar estado del job (GET /jobs/{jobId})
 // -----------------------------------------------------------------------------
 
-export async function fetchJobStatus(jobId: string): Promise<JobStatus> {
+export async function fetchJobStatus(
+  jobId: string,
+  options?: { timeoutMs?: number },
+): Promise<JobStatus> {
   const baseUrl = getBackendBaseUrl();
-  const res = await fetch(`${baseUrl}/jobs/${encodeURIComponent(jobId)}?_t=${Date.now()}`, {
-    method: "GET",
-    // Avoid any browser/proxy cache between pipeline updates
-    cache: "no-store",
-    headers: {
-      ...authHeaders(),
-    },
-  });
+  const setTimeoutFn = typeof window === "undefined" ? setTimeout : window.setTimeout;
+  const clearTimeoutFn = typeof window === "undefined" ? clearTimeout : window.clearTimeout;
+  const controller = options?.timeoutMs ? new AbortController() : null;
+  const timeoutId = options?.timeoutMs
+    ? setTimeoutFn(() => controller?.abort(), options.timeoutMs)
+    : null;
 
-  if (!res.ok) {
-    throw new Error(
-      `Error fetching job status: ${res.status} ${res.statusText}`,
-    );
+  try {
+    const res = await fetch(`${baseUrl}/jobs/${encodeURIComponent(jobId)}?_t=${Date.now()}`, {
+      method: "GET",
+      // Avoid any browser/proxy cache between pipeline updates
+      cache: "no-store",
+      headers: {
+        ...authHeaders(),
+      },
+      signal: controller?.signal,
+    });
+
+    if (!res.ok) {
+      throw new Error(
+        `Error fetching job status: ${res.status} ${res.statusText}`,
+      );
+    }
+
+    const raw = await res.json();
+    const mapped = mapBackendStatusToJobStatus(raw, baseUrl);
+
+    const signed = await attachSignedResultUrls(jobId, mapped, baseUrl);
+    return signed;
+  } catch (err: any) {
+    if (err?.name === "AbortError") {
+      throw new Error("Job status request timed out");
+    }
+    throw err;
+  } finally {
+    if (timeoutId) {
+      clearTimeoutFn(timeoutId);
+    }
   }
-
-  const raw = await res.json();
-  const mapped = mapBackendStatusToJobStatus(raw, baseUrl);
-
-  const signed = await attachSignedResultUrls(jobId, mapped, baseUrl);
-  return signed;
 }
 
 export type JobStatusStreamHandlers = {

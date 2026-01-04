@@ -222,24 +222,47 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
     }
     if (!reportRef.current) return;
     setIsDownloading(true);
+    let restoreScroll = () => {};
 
     try {
+      const reportElement = reportRef.current;
+      const scrollParent = reportElement.parentElement as HTMLElement | null;
       const scrollY = window.scrollY;
+      const parentScrollTop = scrollParent?.scrollTop ?? 0;
+      const maxCanvasSize = 8192;
+      const reportWidth = reportElement.scrollWidth || reportElement.offsetWidth;
+      const reportHeight = reportElement.scrollHeight || reportElement.offsetHeight;
+      const maxDimension = Math.max(reportWidth, reportHeight);
+      const scale = maxDimension > 0
+        ? Math.min(2, maxCanvasSize / maxDimension)
+        : 1;
+
+      restoreScroll = () => {
+        if (scrollParent) {
+          scrollParent.scrollTop = parentScrollTop;
+        }
+        window.scrollTo(0, scrollY);
+      };
+
+      if (scrollParent) {
+        scrollParent.scrollTop = 0;
+      }
       window.scrollTo(0, 0);
 
       await new Promise((resolve) => setTimeout(resolve, 500));
 
-      const canvas = await html2canvas(reportRef.current, {
-        scale: 2,
+      const canvas = await html2canvas(reportElement, {
+        scale,
         useCORS: true,
         logging: false,
         backgroundColor: "#0f172a",
         allowTaint: false,
+        imageTimeout: 15000,
+        scrollX: -window.scrollX,
+        scrollY: -window.scrollY,
       });
 
-      window.scrollTo(0, scrollY);
-
-      const imgData = canvas.toDataURL("image/png");
+      const imgData = canvas.toDataURL("image/jpeg", 0.92);
       const pdf = new jsPDF("p", "mm", "a4");
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = pdf.internal.pageSize.getHeight();
@@ -249,21 +272,23 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
       const pdfImgHeight = imgHeight * ratio;
       let heightLeft = pdfImgHeight;
 
-      pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfImgHeight);
+      pdf.addImage(imgData, "JPEG", 0, 0, pdfWidth, pdfImgHeight);
       heightLeft -= pdfHeight;
 
       while (heightLeft > 0) {
         pdf.addPage();
         const pageIndex = Math.ceil((pdfImgHeight - heightLeft) / pdfHeight);
-        pdf.addImage(imgData, "PNG", 0, -(pageIndex * pdfHeight), pdfWidth, pdfImgHeight);
+        pdf.addImage(imgData, "JPEG", 0, -(pageIndex * pdfHeight), pdfWidth, pdfImgHeight);
         heightLeft -= pdfHeight;
       }
 
+      restoreScroll();
       pdf.save(`piroola_report_${jobId}.pdf`);
     } catch (error) {
       console.error("PDF generation failed:", error);
       alert("Failed to generate PDF.");
     } finally {
+      restoreScroll();
       setIsDownloading(false);
     }
   };
@@ -562,7 +587,7 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
                   <div className="text-xs text-amber-200">{logsError}</div>
                 )}
                 {!logsLoading && !logsError && (
-                  <pre className="max-h-[60vh] overflow-y-auto whitespace-pre-wrap break-words rounded-lg border border-slate-800 bg-slate-950/80 p-4 text-[11px] text-slate-200">
+                  <pre className="whitespace-pre-wrap break-words rounded-lg border border-slate-800 bg-slate-950/80 p-4 text-[11px] text-slate-200">
                     {logsContent || "Sin logs disponibles."}
                   </pre>
                 )}
