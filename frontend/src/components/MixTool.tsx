@@ -442,17 +442,45 @@ export function MixTool({ resumeJobId }: MixToolProps) {
     let finished = false;
     let stopPolling: (() => void) | null = null;
     let wsHandle: { close: () => void } | null = null;
+    let reportStageEnteredAt: number | null = null;
+    let lastStageKey: string | null = null;
 
     const STATUS_TIMEOUT_MS = 12000;
     const VISIBILITY_REFRESH_MIN_MS = 5000;
+    const REPORT_STAGE_KEY = "S11_REPORT_GENERATION";
+    const REPORT_STAGE_REDIRECT_MS = 20000;
     let lastStatusAt = Date.now();
 
     setLoading(true);
     setError(null);
 
+    const redirectToResults = () => {
+      if (finished) return;
+      finished = true;
+      setLoading(false);
+      wsHandle?.close();
+      router.push(`/mix/result/${activeJobId}`);
+    };
+
+    const maybeRedirectFromReportStage = () => {
+      if (!lastStageKey || lastStageKey !== REPORT_STAGE_KEY) return;
+      if (!reportStageEnteredAt) return;
+      if (Date.now() - reportStageEnteredAt < REPORT_STAGE_REDIRECT_MS) return;
+      redirectToResults();
+    };
+
     const applyStatus = (status: JobStatus) => {
       if (cancelled) return;
       lastStatusAt = Date.now();
+      lastStageKey = status.stageKey ?? null;
+
+      if (status.status === "running" && status.stageKey === REPORT_STAGE_KEY) {
+        if (!reportStageEnteredAt) {
+          reportStageEnteredAt = Date.now();
+        }
+      } else {
+        reportStageEnteredAt = null;
+      }
       setJobStatus(status);
       setError(null);
 
@@ -465,10 +493,7 @@ export function MixTool({ resumeJobId }: MixToolProps) {
       }
 
       if (status.status === "done") {
-        finished = true;
-        setLoading(false);
-        wsHandle?.close();
-        router.push(`/mix/result/${activeJobId}`);
+        redirectToResults();
         return;
       }
 
@@ -483,6 +508,8 @@ export function MixTool({ resumeJobId }: MixToolProps) {
       if (status.status === "queued" || status.status === "running") {
         setLoading(true);
       }
+
+      maybeRedirectFromReportStage();
     };
 
     const refreshStatus = async () => {
@@ -526,6 +553,8 @@ export function MixTool({ resumeJobId }: MixToolProps) {
               setLoading(true);
             }
           }
+
+          maybeRedirectFromReportStage();
 
           const delayMs =
             consecutiveErrors > 0

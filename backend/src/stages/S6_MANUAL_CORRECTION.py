@@ -37,6 +37,28 @@ def _normalize_stem_name(value: str) -> str:
     return stem
 
 
+def _apply_simple_reverb(audio: np.ndarray, sr: int, amount: float) -> np.ndarray:
+    if amount <= 0:
+        return audio
+    delays_sec = [0.03, 0.05, 0.08, 0.11]
+    gains = [0.5, 0.35, 0.25, 0.2]
+    wet = audio.copy()
+
+    for delay_sec, gain in zip(delays_sec, gains):
+        delay = int(sr * delay_sec)
+        if delay <= 0 or delay >= wet.shape[1]:
+            continue
+        wet[:, delay:] += audio[:, :-delay] * (gain * amount)
+
+    dry_gain = 1.0 - min(0.5, amount * 0.5)
+    wet_gain = amount
+    mixed = (audio * dry_gain) + (wet * wet_gain)
+    peak = float(np.max(np.abs(mixed))) if mixed.size else 0.0
+    if peak > 1.0:
+        mixed = mixed / peak
+    return mixed
+
+
 def _detect_sample_rate(*directories: Path) -> int | None:
     """
     Try to infer the sample rate from the first available WAV file in the
@@ -195,12 +217,21 @@ def process(context: PipelineContext, *args) -> bool:
             processed_stems[name] = processed
 
         else:
-            # Fallback if no pedalboard (Volume/Pan only)
-            pipeline_logger.info(f"[{stage_id}] Pedalboard not installed. Applying Volume/Pan only.")
+            # Fallback if no pedalboard (Volume/Pan/Reverb only)
+            pipeline_logger.info(f"[{stage_id}] Pedalboard not installed. Applying Volume/Pan/Reverb fallback.")
+            processed = audio
+
+            verb_cfg = corr.get('reverb')
+            if verb_cfg and verb_cfg.get('enabled'):
+                amt = verb_cfg.get('amount', 0) / 100.0
+                if amt > 0:
+                    processed = _apply_simple_reverb(processed, sr, amt)
+
             vol_db = corr.get('volume_db', 0.0)
             pan = corr.get('pan', 0.0)
 
-            processed = audio * (10 ** (vol_db / 20.0))
+            if vol_db != 0:
+                processed = processed * (10 ** (vol_db / 20.0))
             if pan != 0.0 and processed.shape[0] == 2:
                 l_gain = 1.0 if pan <= 0 else (1.0 - pan)
                 r_gain = 1.0 if pan >= 0 else (1.0 + pan)

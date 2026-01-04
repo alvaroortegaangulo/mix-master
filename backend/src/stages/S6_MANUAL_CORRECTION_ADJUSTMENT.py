@@ -10,15 +10,19 @@ from pathlib import Path
 from typing import Dict, List, Optional, Any
 
 # Pedalboard imports for effects
-from pedalboard import (
-    Pedalboard,
-    Compressor,
-    HighShelfFilter,
-    LowShelfFilter,
-    PeakingFilter,
-    Reverb,
-    Gain
-)
+try:
+    from pedalboard import (
+        Pedalboard,
+        Compressor,
+        HighShelfFilter,
+        LowShelfFilter,
+        PeakingFilter,
+        Reverb,
+        Gain
+    )
+    HAS_PEDALBOARD = True
+except ImportError:
+    HAS_PEDALBOARD = False
 
 # --- hack sys.path ---
 THIS_DIR = Path(__file__).resolve().parent
@@ -47,6 +51,28 @@ def _normalize_stem_name(value: str) -> str:
     while "__" in stem:
         stem = stem.replace("__", "_")
     return stem
+
+
+def _apply_simple_reverb(audio: np.ndarray, sr: int, amount: float) -> np.ndarray:
+    if amount <= 0:
+        return audio
+    delays_sec = [0.03, 0.05, 0.08, 0.11]
+    gains = [0.5, 0.35, 0.25, 0.2]
+    wet = audio.copy()
+
+    for delay_sec, gain in zip(delays_sec, gains):
+        delay = int(sr * delay_sec)
+        if delay <= 0 or delay >= wet.shape[0]:
+            continue
+        wet[delay:, :] += audio[:-delay, :] * (gain * amount)
+
+    dry_gain = 1.0 - min(0.5, amount * 0.5)
+    wet_gain = amount
+    mixed = (audio * dry_gain) + (wet * wet_gain)
+    peak = float(np.max(np.abs(mixed))) if mixed.size else 0.0
+    if peak > 1.0:
+        mixed = mixed / peak
+    return mixed
 
 
 def _load_corrections(stage_dir: Path) -> List[Dict[str, Any]]:
@@ -91,6 +117,8 @@ def process(context: PipelineContext, *args) -> bool:
     if not corrections:
         logger.logger.info(f"[{stage_id}] Sin correcciones definidas. Saliendo.")
         return False
+    if not HAS_PEDALBOARD:
+        logger.logger.info(f"[{stage_id}] Pedalboard not installed. Applying Volume/Pan/Reverb fallback only.")
 
     # 2. Origen: stems finales disponibles (S6 -> S11 -> S10 -> S0 fallback)
     candidate_sources = [
@@ -178,7 +206,7 @@ def process(context: PipelineContext, *args) -> bool:
         if not should_play:
             # Silencio
             audio = np.zeros_like(audio)
-        else:
+        elif HAS_PEDALBOARD:
             # Chain de efectos
             board = Pedalboard()
 
@@ -235,6 +263,25 @@ def process(context: PipelineContext, *args) -> bool:
                 # L = cos(theta), R = sin(theta)
                 # theta from 0 to pi/2. Pan -1 -> 0, Pan 1 -> pi/2
                 # map [-1, 1] -> [0, pi/2]
+                theta = (pan + 1) * (np.pi / 4)
+                gain_L = np.cos(theta)
+                gain_R = np.sin(theta)
+
+                audio[:, 0] *= gain_L
+                audio[:, 1] *= gain_R
+        else:
+            verb_cfg = corr.get("reverb")
+            if verb_cfg and verb_cfg.get("enabled"):
+                amt = float(verb_cfg.get("amount", 0)) / 100.0
+                if amt > 0:
+                    audio = _apply_simple_reverb(audio, sr, amt)
+
+            vol_db = float(corr.get("volume_db", 0))
+            if abs(vol_db) > 0.01:
+                audio = audio * (10 ** (vol_db / 20.0))
+
+            pan = float(corr.get("pan", 0))
+            if abs(pan) > 0.01 and audio.shape[1] == 2:
                 theta = (pan + 1) * (np.pi / 4)
                 gain_L = np.cos(theta)
                 gain_R = np.sin(theta)
