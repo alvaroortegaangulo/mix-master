@@ -515,7 +515,7 @@ export function MixTool({ resumeJobId }: MixToolProps) {
     const refreshStatus = async () => {
       if (cancelled || finished) return;
       try {
-        const status = await fetchJobStatus(activeJobId, { timeoutMs: STATUS_TIMEOUT_MS });
+        const status = await fetchJobStatus(activeJobId, { timeoutMs: STATUS_TIMEOUT_MS, skipSigning: true });
         if (!cancelled) {
           applyStatus(status);
         }
@@ -542,7 +542,7 @@ export function MixTool({ resumeJobId }: MixToolProps) {
       const pollStatus = async () => {
         while (!cancelled && !stopped && !finished) {
           try {
-            const status = await fetchJobStatus(activeJobId, { timeoutMs: STATUS_TIMEOUT_MS });
+            const status = await fetchJobStatus(activeJobId, { timeoutMs: STATUS_TIMEOUT_MS, skipSigning: true });
             if (cancelled || stopped) break;
             applyStatus(status);
             consecutiveErrors = 0;

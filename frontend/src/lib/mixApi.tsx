@@ -582,7 +582,7 @@ export async function startMixJob(
 
 export async function fetchJobStatus(
   jobId: string,
-  options?: { timeoutMs?: number },
+  options?: { timeoutMs?: number; skipSigning?: boolean },
 ): Promise<JobStatus> {
   const baseUrl = getBackendBaseUrl();
   const setTimeoutFn = typeof window === "undefined" ? setTimeout : window.setTimeout;
@@ -611,6 +611,10 @@ export async function fetchJobStatus(
 
     const raw = await res.json();
     const mapped = mapBackendStatusToJobStatus(raw, baseUrl);
+
+    if (options?.skipSigning) {
+      return mapped;
+    }
 
     const signed = await attachSignedResultUrls(jobId, mapped, baseUrl);
     return signed;

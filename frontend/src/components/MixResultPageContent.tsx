@@ -81,6 +81,7 @@ export function MixResultPageContent({ jobId }: Props) {
   const { user } = useAuth();
   const { openAuthModal } = useModal();
   const finalizingRetriesRef = useRef(0);
+  const hasStatusRef = useRef(false);
 
   // State
   const [jobStatus, setJobStatus] = useState<JobStatus | null>(null);
@@ -88,6 +89,7 @@ export function MixResultPageContent({ jobId }: Props) {
   const [loadingReport, setLoadingReport] = useState(false);
   const [isReportOpen, setIsReportOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [loadingMessage, setLoadingMessage] = useState("Cargando resultados...");
   const [error, setError] = useState<string | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
 
@@ -132,10 +134,18 @@ export function MixResultPageContent({ jobId }: Props) {
   useEffect(() => {
     let cancelled = false;
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
+    let finished = false;
+    let consecutiveErrors = 0;
+    const startedAt = Date.now();
+    const STATUS_TIMEOUT_MS = 12000;
+    const MAX_INITIAL_WAIT_MS = 30000;
+    const MAX_ERROR_DELAY_MS = 8000;
 
     finalizingRetriesRef.current = 0;
+    hasStatusRef.current = false;
     setError(null);
     setLoading(true);
+    setLoadingMessage("Cargando resultados...");
 
     if (!jobId) {
       setError("Job ID missing");
@@ -143,48 +153,80 @@ export function MixResultPageContent({ jobId }: Props) {
       return () => {};
     }
 
-    const pollStatus = async () => {
-      try {
-        const status = await fetchJobStatus(jobId);
-        if (cancelled) return;
-        setJobStatus(status);
+    const scheduleNext = (delayMs: number) => {
+      if (cancelled || finished) return;
+      timeoutId = setTimeout(pollStatus, delayMs);
+    };
 
-        if (status.status === "error") {
-          setError(status.error || status.message || "Error loading result");
-          setLoading(false);
-          return;
-        }
+    const applyStatus = (status: JobStatus) => {
+      hasStatusRef.current = true;
+      setJobStatus(status);
+      setError(null);
 
-        const hasResult = status.status === "done" && !!status.result;
-        if (hasResult) {
-          setLoading(false);
-          return;
-        }
-
-        if (status.status === "done" && !status.result) {
-          finalizingRetriesRef.current += 1;
-          if (finalizingRetriesRef.current >= MAX_FINALIZING_RETRIES) {
-            setError("Resultados no disponibles. Intenta nuevamente.");
-            setLoading(false);
-            return;
-          }
-        } else {
-          finalizingRetriesRef.current = 0;
-        }
-
+      if (status.status === "error") {
+        setError(status.error || status.message || "Error loading result");
         setLoading(false);
-        timeoutId = setTimeout(pollStatus, STATUS_POLL_INTERVAL_MS);
-      } catch (err: any) {
-        if (!cancelled) {
-          setError(err.message || "Error loading result");
+        finished = true;
+        return;
+      }
+
+      const hasResult = status.status === "done" && !!status.result;
+      if (hasResult) {
+        setLoading(false);
+        finished = true;
+        return;
+      }
+
+      if (status.status === "done" && !status.result) {
+        finalizingRetriesRef.current += 1;
+        if (finalizingRetriesRef.current >= MAX_FINALIZING_RETRIES) {
+          setError("Resultados no disponibles. Intenta nuevamente.");
           setLoading(false);
+          finished = true;
+          return;
         }
+      } else {
+        finalizingRetriesRef.current = 0;
+      }
+
+      setLoading(false);
+    };
+
+    const pollStatus = async () => {
+      if (cancelled || finished) return;
+      try {
+        const status = await fetchJobStatus(jobId, { timeoutMs: STATUS_TIMEOUT_MS, skipSigning: true });
+        if (cancelled || finished) return;
+        consecutiveErrors = 0;
+        applyStatus(status);
+        if (!finished) {
+          scheduleNext(STATUS_POLL_INTERVAL_MS);
+        }
+      } catch (err: any) {
+        if (cancelled || finished) return;
+        consecutiveErrors += 1;
+        const hasStatus = hasStatusRef.current;
+        const elapsedMs = Date.now() - startedAt;
+
+        if (!hasStatus && elapsedMs > MAX_INITIAL_WAIT_MS) {
+          setLoadingMessage("La conexión tarda más de lo habitual. Reintentando...");
+          setLoading(true);
+        } else if (!hasStatus) {
+          setLoading(true);
+        }
+
+        const delayMs = Math.min(
+          MAX_ERROR_DELAY_MS,
+          STATUS_POLL_INTERVAL_MS * (consecutiveErrors + 1),
+        );
+        scheduleNext(delayMs);
       }
     };
 
     pollStatus();
     return () => {
       cancelled = true;
+      finished = true;
       if (timeoutId) clearTimeout(timeoutId);
     };
   }, [jobId]);
@@ -528,7 +570,7 @@ export function MixResultPageContent({ jobId }: Props) {
           <div className="flex items-center justify-center min-h-[60vh] text-slate-400">
               <div className="flex flex-col items-center gap-4">
                   <div className="w-8 h-8 border-4 border-amber-500 border-t-transparent rounded-full animate-spin"></div>
-                  <p>Cargando resultados...</p>
+                  <p>{loadingMessage}</p>
               </div>
           </div>
       );
