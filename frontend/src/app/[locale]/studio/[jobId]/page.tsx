@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useModal } from "@/context/ModalContext";
-import { getBackendBaseUrl, getStudioToken, signFileUrl } from "@/lib/mixApi";
+import { getApiBaseUrl, getStudioToken, signFileUrl } from "@/lib/mixApi";
 import { CanvasWaveform } from "@/components/studio/CanvasWaveform";
 import { studioCache, AudioBufferData } from "@/lib/studioCache";
 import {
@@ -73,10 +73,6 @@ const createImpulseResponse = (ctx: AudioContext, durationSec = 1.8, decay = 2.2
 
 function buildAuthHeaders(extra?: HeadersInit): HeadersInit {
   const headers: Record<string, string> = {};
-  const apiKey = process.env.NEXT_PUBLIC_MIXMASTER_API_KEY;
-  if (apiKey) {
-    headers["X-API-Key"] = apiKey;
-  }
   if (typeof window !== "undefined") {
     const token = localStorage.getItem("access_token");
     if (token) {
@@ -285,7 +281,7 @@ export default function StudioPage() {
         setIsPlaying(false);
         setCurrentTime(0);
         setDuration(0);
-        const baseUrl = getBackendBaseUrl();
+        const baseUrl = getApiBaseUrl();
 
         let tokenValue: string | null = null;
         try {
@@ -716,7 +712,7 @@ export default function StudioPage() {
               solo: s.solo
           }));
 
-        const baseUrl = getBackendBaseUrl();
+        const baseUrl = getApiBaseUrl();
         const correctionRes = await fetch(`${baseUrl}/jobs/${jobId}/correction`, {
             method: 'POST',
             headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
@@ -762,7 +758,7 @@ export default function StudioPage() {
       }
       setDownloadingStems(true);
       try {
-          const baseUrl = getBackendBaseUrl();
+          const baseUrl = getApiBaseUrl();
           const url = `${baseUrl}/jobs/${jobId}/download-stems-zip`;
           const res = await fetch(url, {
               headers: buildAuthHeaders()
@@ -791,7 +787,7 @@ export default function StudioPage() {
        }
        setDownloadingMixdown(true);
        try {
-          const baseUrl = getBackendBaseUrl();
+          const baseUrl = getApiBaseUrl();
           const url = `${baseUrl}/jobs/${jobId}/download-mixdown`;
           const res = await fetch(url, {
               headers: buildAuthHeaders()

@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useState, useRef } from "react";
-import { appendApiKeyParam, getBackendBaseUrl, signFileUrl } from "../lib/mixApi";
+import { signFileUrl } from "../lib/mixApi";
 import { useTranslations } from "next-intl";
 import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
@@ -86,16 +86,35 @@ const ReportStageCard = ({
   const images = stage.images || {};
   const hasImages = Object.keys(images).length > 0;
 
-  // Prepara URLs firmadas (o con api_key) para las imágenes del reporte
+  // Prepara URLs firmadas para las imágenes del reporte
   useEffect(() => {
-    const base = getBackendBaseUrl();
-    const buildUrl = (name?: string) =>
-      name
-        ? appendApiKeyParam(
-            `${base}/files/${jobId}/S11_REPORT_GENERATION/${name}`
-          )
-        : "";
-    setWaveformUrl(buildUrl(images.waveform));
+    let cancelled = false;
+
+    async function loadWaveform() {
+      if (!images.waveform) {
+        setWaveformUrl("");
+        return;
+      }
+
+      try {
+        const signed = await signFileUrl(
+          jobId,
+          `S11_REPORT_GENERATION/${images.waveform}`,
+        );
+        if (!cancelled) {
+          setWaveformUrl(signed);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setWaveformUrl("");
+        }
+      }
+    }
+
+    void loadWaveform();
+    return () => {
+      cancelled = true;
+    };
   }, [jobId, images.waveform]);
 
   // Build params

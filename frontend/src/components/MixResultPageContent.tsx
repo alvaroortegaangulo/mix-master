@@ -462,10 +462,6 @@ export function MixResultPageContent({ jobId }: Props) {
 
   const buildAuthHeaders = useCallback((): HeadersInit => {
     const headers: Record<string, string> = {};
-    const apiKey = process.env.NEXT_PUBLIC_MIXMASTER_API_KEY;
-    if (apiKey) {
-      headers["X-API-Key"] = apiKey;
-    }
     if (typeof window !== "undefined") {
       const token = localStorage.getItem("access_token");
       if (token) {

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import type { MixResult } from "../lib/mixApi";
-import { getBackendBaseUrl } from "../lib/mixApi";
+import { fetchPipelineStages, getBackendBaseUrl, signFileUrl } from "../lib/mixApi";
 import { WaveformPlayer } from "./WaveformPlayer";
 import { useTranslations } from "next-intl";
 
@@ -58,21 +58,11 @@ export function MixPipelinePanel({
 
   // Load pipeline definition from the backend
   useEffect(() => {
-    const base = getBackendBaseUrl();
-    const url = `${base}/pipeline/stages`;
-    const controller = new AbortController();
-
     async function loadStages() {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch(url, { signal: controller.signal });
-        if (!res.ok) {
-          throw new Error(
-            `Could not fetch pipeline definition (${res.status})`,
-          );
-        }
-        const data = (await res.json()) as PipelineStage[];
+        const data = await fetchPipelineStages();
 
         // Keep backend order
         const sorted = [...data].sort((a, b) => a.index - b.index);
@@ -105,7 +95,6 @@ export function MixPipelinePanel({
     }
 
     void loadStages();
-    return () => controller.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enabledPipelineStageKeys]);
 
@@ -138,17 +127,9 @@ export function MixPipelinePanel({
     return fullSongUrl;
   }, [stages, activeStage, fullSongUrl, jobId]);
 
-  // Firmar/preparar la URL a reproducir para evitar 401 (requiere api_key)
+  // Firmar/preparar la URL a reproducir para evitar 401
   useEffect(() => {
     let cancelled = false;
-
-    const appendApiKey = (url: string): string => {
-      const key = process.env.NEXT_PUBLIC_MIXMASTER_API_KEY;
-      if (!key || !url) return url;
-      if (url.includes("api_key=")) return url;
-      const sep = url.includes("?") ? "&" : "?";
-      return `${url}${sep}api_key=${encodeURIComponent(key)}`;
-    };
 
     async function buildPlaybackUrl() {
       if (!processedUrl) {
@@ -167,17 +148,19 @@ export function MixPipelinePanel({
 
         // Si ya viene firmada (sig/exp), úsala tal cual
         const hasSig = urlObj.searchParams.has("sig") && urlObj.searchParams.has("exp");
-        const finalUrl = hasSig ? urlObj.toString() : appendApiKey(urlObj.toString());
+        const finalUrl = hasSig ? urlObj.toString() : await signFileUrl(jobId, urlObj.toString());
 
         if (!cancelled) setPlaybackUrl(finalUrl);
       } catch (err) {
         console.warn("Could not prepare stage URL", err);
         if (!cancelled) {
-          const backend = getBackendBaseUrl();
-          const normalized = processedUrl.startsWith("http")
-            ? processedUrl
-            : `${backend}${processedUrl.startsWith("/") ? "" : "/"}${processedUrl}`;
-          setPlaybackUrl(appendApiKey(normalized));
+          try {
+            const fallback = await signFileUrl(jobId, processedUrl);
+            setPlaybackUrl(fallback);
+          } catch (signErr) {
+            console.warn("Could not sign stage URL", signErr);
+            setPlaybackUrl("");
+          }
         }
       }
     }

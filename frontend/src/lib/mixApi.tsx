@@ -82,6 +82,28 @@ export function getBackendBaseUrl(): string {
   return "http://127.0.0.1:8000";
 }
 
+export function getApiBaseUrl(): string {
+  if (typeof window !== "undefined") {
+    return "/api";
+  }
+
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+  if (siteUrl) {
+    try {
+      return new URL("/api", siteUrl).toString().replace(/\/+$/, "");
+    } catch {
+      // fall through
+    }
+  }
+
+  const vercelUrl = process.env.VERCEL_URL?.trim();
+  if (vercelUrl) {
+    return `https://${vercelUrl.replace(/\/+$/, "")}/api`;
+  }
+
+  return "http://127.0.0.1:3000/api";
+}
+
 function normalizeUrl(pathOrUrl: string | undefined, baseUrl: string): string {
   if (!pathOrUrl) return "";
   if (pathOrUrl.startsWith("http://") || pathOrUrl.startsWith("https://")) {
@@ -92,12 +114,7 @@ function normalizeUrl(pathOrUrl: string | undefined, baseUrl: string): string {
 }
 
 export function appendApiKeyParam(url: string): string {
-  const key = process.env.NEXT_PUBLIC_MIXMASTER_API_KEY;
-  if (!key) return url;
-  if (!url) return url;
-  if (url.includes("api_key=")) return url;
-  const sep = url.includes("?") ? "&" : "?";
-  return `${url}${sep}api_key=${encodeURIComponent(key)}`;
+  return url;
 }
 
 function normalizeFilePath(jobId: string, filePath: string): string {
@@ -128,11 +145,7 @@ function normalizeFilePath(jobId: string, filePath: string): string {
 }
 
 function authHeaders(): HeadersInit {
-  const key = process.env.NEXT_PUBLIC_MIXMASTER_API_KEY;
   const headers: HeadersInit = {};
-  if (key) {
-    headers["X-API-Key"] = key;
-  }
   // Añadimos el JWT si existe en cliente para endpoints protegidos
   if (typeof window !== "undefined") {
     const token = localStorage.getItem("access_token");
@@ -144,7 +157,7 @@ function authHeaders(): HeadersInit {
 }
 
 export async function getStudioToken(jobId: string, ttlDays = 7): Promise<{ token: string; expires: number }> {
-  const baseUrl = getBackendBaseUrl();
+  const baseUrl = getApiBaseUrl();
   const res = await fetch(`${baseUrl}/jobs/${jobId}/studio-token`, {
     method: "POST",
     headers: {
@@ -160,19 +173,20 @@ export async function getStudioToken(jobId: string, ttlDays = 7): Promise<{ toke
 }
 
 export async function signFileUrl(jobId: string, filePath: string, token?: string): Promise<string> {
-  const baseUrl = getBackendBaseUrl();
+  const backendBaseUrl = getBackendBaseUrl();
+  const apiBaseUrl = getApiBaseUrl();
   const normalizedPath = normalizeFilePath(jobId, filePath);
 
   if (token) {
     const sep = normalizedPath ? "/" : "";
     const clean = normalizedPath.startsWith("/") ? normalizedPath.slice(1) : normalizedPath;
-    return `${baseUrl}/files/${jobId}${sep}${clean}?t=${encodeURIComponent(token)}`;
+    return `${backendBaseUrl}/files/${jobId}${sep}${clean}?t=${encodeURIComponent(token)}`;
   }
 
   // Request a longer expiration time to prevent 401 on long sessions
   const expiresIn = 3600;
 
-  const res = await fetch(`${baseUrl}/files/sign`, {
+  const res = await fetch(`${apiBaseUrl}/files/sign`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -192,7 +206,7 @@ export async function signFileUrl(jobId: string, filePath: string, token?: strin
   // [MODIFIED] Correct hostname in case backend returned internal container URL
   try {
     const signedUrlObj = new URL(data.url);
-    const currentBase = new URL(baseUrl);
+    const currentBase = new URL(backendBaseUrl);
 
     // Replace protocol/host/port if ANY differ (avoids http URLs blocked by CSP)
     if (
@@ -213,7 +227,7 @@ export async function signFileUrl(jobId: string, filePath: string, token?: strin
 }
 
 export async function createShareLink(jobId: string): Promise<string> {
-  const baseUrl = getBackendBaseUrl();
+  const baseUrl = getApiBaseUrl();
   const res = await fetch(`${baseUrl}/jobs/${jobId}/share`, {
     method: "POST",
     headers: {
@@ -231,7 +245,7 @@ export async function createShareLink(jobId: string): Promise<string> {
 }
 
 export async function getSharedJob(token: string): Promise<any> {
-  const baseUrl = getBackendBaseUrl();
+  const baseUrl = getApiBaseUrl();
   // Public endpoint
   const res = await fetch(`${baseUrl}/share/${token}`, {
     method: "GET",
@@ -393,7 +407,7 @@ async function attachSignedResultUrls(jobId: string, status: JobStatus, baseUrl:
 }
 
 export async function cleanupTemp(): Promise<void> {
-  const res = await fetch(`${getBackendBaseUrl()}/cleanup-temp`, {
+  const res = await fetch(`${getApiBaseUrl()}/cleanup-temp`, {
     method: "POST",
     headers: authHeaders(),
   });
@@ -470,7 +484,7 @@ export async function startMixJob(
   spaceDepthBusStyles?: SpaceDepthBusStylesPayload,
   uploadMode: "song" | "stems" = "song",
 ): Promise<{ jobId: string }> {
-  const baseUrl = getBackendBaseUrl();
+  const baseUrl = getApiBaseUrl();
 
   // Caso sencillo: 0 o 1 archivo -> /mix clásico
   if (files.length <= 1) {
@@ -584,7 +598,8 @@ export async function fetchJobStatus(
   jobId: string,
   options?: { timeoutMs?: number; skipSigning?: boolean },
 ): Promise<JobStatus> {
-  const baseUrl = getBackendBaseUrl();
+  const apiBaseUrl = getApiBaseUrl();
+  const backendBaseUrl = getBackendBaseUrl();
   const setTimeoutFn = typeof window === "undefined" ? setTimeout : window.setTimeout;
   const clearTimeoutFn = typeof window === "undefined" ? clearTimeout : window.clearTimeout;
   const controller = options?.timeoutMs ? new AbortController() : null;
@@ -593,7 +608,7 @@ export async function fetchJobStatus(
     : null;
 
   try {
-    const res = await fetch(`${baseUrl}/jobs/${encodeURIComponent(jobId)}?_t=${Date.now()}`, {
+    const res = await fetch(`${apiBaseUrl}/jobs/${encodeURIComponent(jobId)}?_t=${Date.now()}`, {
       method: "GET",
       // Avoid any browser/proxy cache between pipeline updates
       cache: "no-store",
@@ -610,13 +625,13 @@ export async function fetchJobStatus(
     }
 
     const raw = await res.json();
-    const mapped = mapBackendStatusToJobStatus(raw, baseUrl);
+    const mapped = mapBackendStatusToJobStatus(raw, backendBaseUrl);
 
     if (options?.skipSigning) {
       return mapped;
     }
 
-    const signed = await attachSignedResultUrls(jobId, mapped, baseUrl);
+    const signed = await attachSignedResultUrls(jobId, mapped, backendBaseUrl);
     return signed;
   } catch (err: any) {
     if (err?.name === "AbortError") {
@@ -655,8 +670,6 @@ export function openJobStatusStream(
     : baseUrl.replace(/^http/i, "ws");
 
   const params = new URLSearchParams();
-  const apiKey = process.env.NEXT_PUBLIC_MIXMASTER_API_KEY;
-  if (apiKey) params.set("api_key", apiKey);
 
   const token = localStorage.getItem("access_token");
   if (token) params.set("token", token);
@@ -721,7 +734,7 @@ export type PipelineStage = {
 };
 
 export async function fetchPipelineStages(): Promise<PipelineStage[]> {
-  const baseUrl = getBackendBaseUrl();
+  const baseUrl = getApiBaseUrl();
   const res = await fetch(`${baseUrl}/pipeline/stages`, { method: "GET" });
 
   if (!res.ok) {
@@ -735,14 +748,14 @@ export async function fetchPipelineStages(): Promise<PipelineStage[]> {
 }
 
 export async function fetchInstrumentProfiles(): Promise<InstrumentProfileDef[]> {
-  const base = getBackendBaseUrl();
+  const base = getApiBaseUrl();
   const res = await fetch(`${base}/profiles/instruments`);
   if (!res.ok) throw new Error("Error fetching instrument profiles");
   return (await res.json()) as InstrumentProfileDef[];
 }
 
 export async function fetchStyleProfiles(): Promise<StyleProfileDef[]> {
-  const base = getBackendBaseUrl();
+  const base = getApiBaseUrl();
   const res = await fetch(`${base}/profiles/styles`);
   if (!res.ok) throw new Error("Error fetching style profiles");
   return (await res.json()) as StyleProfileDef[];
@@ -750,12 +763,9 @@ export async function fetchStyleProfiles(): Promise<StyleProfileDef[]> {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function fetchJobReport(jobId: string): Promise<any> {
-  const baseUrl = getBackendBaseUrl();
-  const rel = `/files/${jobId}/S11_REPORT_GENERATION/report.json`;
-  const url = appendApiKeyParam(`${baseUrl}${rel}`);
-
-  const separator = url.includes("?") ? "&" : "?";
-  const urlWithTime = `${url}${separator}_t=${Date.now()}`;
+  const signedUrl = await signFileUrl(jobId, "S11_REPORT_GENERATION/report.json");
+  const separator = signedUrl.includes("?") ? "&" : "?";
+  const urlWithTime = `${signedUrl}${separator}_t=${Date.now()}`;
 
   const res = await fetch(urlWithTime, { cache: "no-store" });
   if (!res.ok) {
