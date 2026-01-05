@@ -14,6 +14,7 @@ export function Header() {
   const { user, loading: authLoading } = useAuth();
   const { openAuthModal } = useModal();
   const [scrolled, setScrolled] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const router = useRouter();
   const tNav = useTranslations('Navigation');
 
@@ -35,6 +36,10 @@ export function Header() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [pathname]);
+
   const isMixTool = pathname.endsWith("/mix");
   const isLanding = /^\/([a-z]{2})?$/.test(pathname);
   const normalizedPath = pathname.replace(/\/$/, "");
@@ -54,13 +59,37 @@ export function Header() {
       router.push("/mix");
   };
 
+  const toggleMobileMenu = () => {
+    setIsMobileMenuOpen((prev) => !prev);
+  };
+
+  const closeMobileMenu = () => {
+    setIsMobileMenuOpen(false);
+  };
+
   return (
     <header className={`fixed top-0 left-0 right-0 z-50 border-b transition-all duration-300 ${headerClass}`}>
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        <Link href="/" onClick={handleLogoClick} className="flex items-center gap-2 shrink-0 cursor-pointer">
-          <Image src="/logo.webp" alt="Piroola Logo" width={32} height={32} className="h-8 w-8" />
-          <span className="text-xl font-bold tracking-tight text-white hidden sm:block">Piroola</span>
-        </Link>
+        <div className="flex items-center gap-3 shrink-0">
+          <Link href="/" onClick={handleLogoClick} className="flex items-center gap-2 cursor-pointer">
+            <Image src="/logo.webp" alt="Piroola Logo" width={32} height={32} className="h-8 w-8" />
+            <span className="text-xl font-bold tracking-tight text-white hidden sm:block">Piroola</span>
+          </Link>
+          <button
+            type="button"
+            onClick={toggleMobileMenu}
+            aria-expanded={isMobileMenuOpen}
+            aria-controls="mobile-nav"
+            aria-label="Toggle navigation menu"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-800 bg-slate-950/80 text-slate-200 transition hover:bg-slate-900 md:hidden"
+          >
+            <span className="flex flex-col items-center justify-center gap-1">
+              <span className="block h-0.5 w-5 rounded-full bg-slate-200" />
+              <span className="block h-0.5 w-5 rounded-full bg-slate-200" />
+              <span className="block h-0.5 w-5 rounded-full bg-slate-200" />
+            </span>
+          </button>
+        </div>
 
         <nav className="hidden md:flex items-center gap-8">
           {NAV_LINKS.map((item) => (
@@ -118,6 +147,25 @@ export function Header() {
            )}
         </div>
       </div>
+
+      {isMobileMenuOpen && (
+        <div id="mobile-nav" className="md:hidden border-t border-slate-800 bg-slate-950/95 backdrop-blur-md">
+          <nav className="flex flex-col px-4 py-4">
+            {NAV_LINKS.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                onClick={closeMobileMenu}
+                className={`rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
+                  pathname === item.href ? "bg-slate-900 text-white" : "text-slate-300 hover:bg-slate-900/80 hover:text-white"
+                }`}
+              >
+                {item.label}
+              </Link>
+            ))}
+          </nav>
+        </div>
+      )}
     </header>
   );
 }

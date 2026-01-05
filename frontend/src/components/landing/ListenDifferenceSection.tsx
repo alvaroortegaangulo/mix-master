@@ -15,7 +15,7 @@ export function ListenDifferenceSection({ className }: { className?: string }) {
 
   return (
     <section
-      className={`relative overflow-hidden px-4 py-12 md:py-16 lg:py-20 ${className || "bg-slate-950"}`}
+      className={`relative overflow-hidden px-4 py-8 sm:py-10 md:py-16 lg:py-20 min-h-[100svh] sm:min-h-0 flex flex-col justify-center ${className || "bg-slate-950"}`}
     >
       <div className="absolute inset-0 pointer-events-none z-0">
         <div className="absolute inset-0 bg-[#050508]" />
@@ -42,7 +42,7 @@ export function ListenDifferenceSection({ className }: { className?: string }) {
         </ScrollReveal>
 
         <ScrollReveal
-          className="mt-8 md:mt-10"
+          className="mt-6 md:mt-8"
           delay={0.1}
         >
           <div className="relative rounded-[28px] border border-amber-500/20 bg-slate-900/40 p-5 sm:p-6 md:p-8 shadow-[0_30px_80px_rgba(0,0,0,0.55)] backdrop-blur">
@@ -90,7 +90,7 @@ export function ListenDifferenceSection({ className }: { className?: string }) {
           </div>
         </ScrollReveal>
 
-        <ScrollReveal className="mt-8 flex justify-center" delay={0.15}>
+        <ScrollReveal className="mt-6 flex justify-center" delay={0.15}>
           <Link
             href="/examples"
             className="inline-flex items-center justify-center rounded-full bg-amber-400 px-5 py-2 text-sm font-semibold text-slate-950 shadow-lg shadow-amber-500/20 transition hover:bg-amber-300"

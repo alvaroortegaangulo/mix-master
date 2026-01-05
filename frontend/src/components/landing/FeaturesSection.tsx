@@ -157,7 +157,7 @@ export function FeaturesSection({ className }: { className?: string }) {
         >
 
           {/* Image Display Area */}
-          <div className="relative h-[160px] md:h-[240px] lg:h-[280px] w-full overflow-hidden bg-black group">
+          <div className="relative h-[220px] sm:h-[160px] md:h-[240px] lg:h-[280px] w-full overflow-hidden bg-black group">
             <img
               key={currentFeature.imageUrl}
               src={currentFeature.imageUrl}

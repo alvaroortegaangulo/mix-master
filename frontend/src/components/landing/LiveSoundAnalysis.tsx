@@ -170,39 +170,44 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
 
              </div>
 
-             {/* Card 2: Stereo Image */}
-             <div className="bg-slate-900/50 rounded-2xl border border-slate-800 p-3 2xl:p-4 shadow-lg relative overflow-hidden">
-                 <div className="flex justify-between items-start">
-                     <div>
-                        <div className="text-[10px] uppercase tracking-wider text-slate-300 mb-1">{t('metrics.stereoImage')}</div>
-                        <div className="text-base sm:text-lg font-bold text-white mb-1">{t('metrics.wide')}</div>
-                        <div className="text-xs text-slate-300 mb-3 tabular-nums">{t('metrics.correlation')}: <span className="text-white">+{correlation.toFixed(2)}</span></div>
-                     </div>
+             <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-col">
+               {/* Card 2: Stereo Image */}
+               <div className="bg-slate-900/50 rounded-2xl border border-slate-800 p-3 2xl:p-4 shadow-lg relative overflow-hidden">
+                   <div className="flex justify-between items-start gap-2">
+                       <div className="min-w-0">
+                          <div className="text-[9px] sm:text-[10px] uppercase tracking-wider text-slate-300 mb-1">{t('metrics.stereoImage')}</div>
+                          <div className="text-sm sm:text-lg font-bold text-white mb-1 leading-tight">{t('metrics.wide')}</div>
+                          <div className="text-[10px] sm:text-xs text-slate-300 mb-2 sm:mb-3 tabular-nums">
+                            {t('metrics.correlation')}: <span className="text-white">+{correlation.toFixed(2)}</span>
+                          </div>
+                       </div>
 
-                     {/* Visual representation of Stereo Field (Circle) */}
-                     <div className="h-10 w-10 rounded-full border border-slate-700 bg-slate-950 relative flex items-center justify-center overflow-hidden stereo-icon">
-                        <div className="absolute inset-0 bg-violet-500/20 animate-pulse rounded-full transform scale-75"></div>
-                        <div className="w-7 h-3.5 border border-violet-400/50 rounded-[100%] transform -rotate-12 opacity-80 stereo-orbit"></div>
-                        <div className="w-7 h-3.5 border border-teal-400/50 rounded-[100%] absolute transform rotate-12 opacity-80 stereo-orbit-delayed"></div>
-                     </div>
-                 </div>
+                       {/* Visual representation of Stereo Field (Circle) */}
+                       <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full border border-slate-700 bg-slate-950 relative flex items-center justify-center overflow-hidden stereo-icon">
+                          <div className="absolute inset-0 bg-violet-500/20 animate-pulse rounded-full transform scale-75"></div>
+                          <div className="w-6 h-3 sm:w-7 sm:h-3.5 border border-violet-400/50 rounded-[100%] transform -rotate-12 opacity-80 stereo-orbit"></div>
+                          <div className="w-6 h-3 sm:w-7 sm:h-3.5 border border-teal-400/50 rounded-[100%] absolute transform rotate-12 opacity-80 stereo-orbit-delayed"></div>
+                       </div>
+                   </div>
+               </div>
 
-             </div>
+               {/* Card 3: Dynamic Range */}
+               <div className="bg-slate-900/50 rounded-2xl border border-slate-800 p-3 2xl:p-4 shadow-lg flex items-center justify-between gap-2">
+                   <div className="min-w-0">
+                      <div className="text-[9px] sm:text-[10px] uppercase tracking-wider text-slate-300 mb-1">{t('metrics.dynamicRange')}</div>
+                      <div className="text-base sm:text-xl font-bold text-white tabular-nums">
+                        {dynamicRange} <span className="text-[11px] sm:text-base font-normal text-slate-200">dB</span>
+                      </div>
+                   </div>
 
-             {/* Card 3: Dynamic Range */}
-             <div className="bg-slate-900/50 rounded-2xl border border-slate-800 p-3 2xl:p-4 shadow-lg flex items-center justify-between">
-                 <div>
-                    <div className="text-[10px] uppercase tracking-wider text-slate-300 mb-1">{t('metrics.dynamicRange')}</div>
-                    <div className="text-lg sm:text-xl font-bold text-white tabular-nums">{dynamicRange} <span className="text-sm sm:text-base font-normal text-slate-200">dB</span></div>
-                 </div>
-
-                 {/* Mini Histogram */}
-                 <div className="flex items-end gap-1 h-8">
-                    <div className="w-1.5 bg-violet-900/40 h-3 rounded-sm histogram-bar histogram-bar-1"></div>
-                    <div className="w-1.5 bg-violet-800/60 h-5 rounded-sm histogram-bar histogram-bar-2"></div>
-                    <div className="w-1.5 bg-violet-500 h-8 rounded-sm shadow-[0_0_10px_rgba(139,92,246,0.4)] histogram-bar histogram-bar-3"></div>
-                    <div className="w-1.5 bg-violet-800/60 h-6 rounded-sm histogram-bar histogram-bar-4"></div>
-                 </div>
+                   {/* Mini Histogram */}
+                   <div className="flex items-end gap-0.5 sm:gap-1 h-6 sm:h-8">
+                      <div className="w-1 sm:w-1.5 bg-violet-900/40 h-3 rounded-sm histogram-bar histogram-bar-1"></div>
+                      <div className="w-1 sm:w-1.5 bg-violet-800/60 h-4 sm:h-5 rounded-sm histogram-bar histogram-bar-2"></div>
+                      <div className="w-1 sm:w-1.5 bg-violet-500 h-6 sm:h-8 rounded-sm shadow-[0_0_10px_rgba(139,92,246,0.4)] histogram-bar histogram-bar-3"></div>
+                      <div className="w-1 sm:w-1.5 bg-violet-800/60 h-5 sm:h-6 rounded-sm histogram-bar histogram-bar-4"></div>
+                   </div>
+               </div>
              </div>
 
           </ScrollReveal>

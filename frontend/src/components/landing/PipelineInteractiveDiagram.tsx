@@ -293,14 +293,22 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
 
                   <div className="relative p-2 lg:p-3 flex h-full flex-col gap-[0.5cm] z-10">
                     {!isActive ? (
-                    <div className="h-full w-full flex flex-col items-center pt-4 pb-4">
-                      <step.icon className={`w-6 h-6 lg:w-8 lg:h-8 ${colors.text} group-hover:scale-125 transition-transform duration-300 drop-shadow-lg`} />
-                      <div className="flex-1 flex items-center justify-center">
-                        <h3 className="vertical-text text-[10px] lg:text-sm font-bold tracking-widest text-slate-400 group-hover:text-white transition-colors font-['Orbitron'] uppercase">
-                          {step.title}
-                        </h3>
+                      <div className="w-full">
+                        <div className="relative flex items-center py-2 md:hidden">
+                          <step.icon className={`absolute left-0 w-6 h-6 ${colors.text} group-hover:scale-110 transition-transform duration-300 drop-shadow-lg`} />
+                          <h3 className="w-full text-center text-[11px] font-bold tracking-widest text-slate-400 group-hover:text-white transition-colors font-['Orbitron'] uppercase whitespace-nowrap">
+                            {step.title}
+                          </h3>
+                        </div>
+                        <div className="hidden md:flex h-full w-full flex-col items-center pt-4 pb-4">
+                          <step.icon className={`w-6 h-6 lg:w-8 lg:h-8 ${colors.text} group-hover:scale-125 transition-transform duration-300 drop-shadow-lg`} />
+                          <div className="flex-1 flex items-center justify-center">
+                            <h3 className="vertical-text text-[10px] lg:text-sm font-bold tracking-widest text-slate-400 group-hover:text-white transition-colors font-['Orbitron'] uppercase">
+                              {step.title}
+                            </h3>
+                          </div>
+                        </div>
                       </div>
-                    </div>
                     ) : (
                       <>
                         <div className="flex items-center justify-start gap-2 text-left animate-fade-in">
