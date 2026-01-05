@@ -592,65 +592,144 @@
     }
   },
   "Pricing": {
-    "title": "Pricing",
-    "subtitle": "Pricing plans for every stage of your journey",
-    "description": "Choose the perfect plan for your audio production needs. From demos to professional releases, we have you covered.",
-    "monthlyBilling": "Monthly billing",
-    "yearlyBilling": "Yearly billing",
+    "title": "Plans & Pricing",
+    "subtitle": "Flexible Credit-Based Model",
+    "description": "Choose the plan that fits your workflow. Pay only for what you use or subscribe for the best value.",
+    "monthlyBilling": "Monthly",
+    "yearlyBilling": "Yearly",
     "save20": "Save ~20%",
-    "month": "month",
-    "billedYearly": "Billed yearly",
     "mostPopular": "Most Popular",
+    "month": "month",
+    "credits": "credits",
+    "billedYearly": "Billed yearly",
     "startForFree": "Start for Free",
-    "getPlus": "Get Plus",
-    "getPro": "Get Pro",
+    "subscribe": "Subscribe",
+    "buyPack": "Buy Pack",
+    "creditSystem": {
+      "title": "How do Credits work?",
+      "description": "Our token system allows you to use the platform your way. 1 Token ≈ 1 Master.",
+      "mastering": {
+        "title": "Mastering",
+        "cost": "1 Credit",
+        "desc": "Processing 1 stereo file (Song Mode)."
+      },
+      "mixing": {
+        "title": "Stem Mixing",
+        "cost": "5-10 Credits",
+        "desc": "Full multi-track mixing. 5 credits for < 16 stems, 10 for more."
+      },
+      "download": {
+        "title": "Stem Download",
+        "cost": "+2 Credits",
+        "desc": "Individual download of all processed stems."
+      }
+    },
+    "payAsYouGo": {
+      "title": "Pay as you go",
+      "subtitle": "No monthly subscriptions. Credits never expire.",
+      "smallPack": {
+        "name": "Small Pack",
+        "price": "$15",
+        "credits": "15 Credits",
+        "desc": "Ideal for a single release."
+      },
+      "largePack": {
+        "name": "Large Pack",
+        "price": "$40",
+        "credits": "50 Credits",
+        "desc": "Save with more volume."
+      },
+      "cta": "Buy Pack"
+    },
     "Tiers": {
       "free": {
         "name": "Free",
-        "description": "Perfect for hobbyists and trying out our AI mixing engine.",
+        "description": "Try the power of AI.",
+        "cta": "Start for Free",
         "features": {
-          "0": "2 Songs per month",
-          "1": "MP3 Output (320kbps)",
-          "2": "Standard AI Mixing",
-          "3": "Basic Support"
+          "0": "1 Credit / month",
+          "1": "Unlimited Previews",
+          "2": "Low Quality MP3",
+          "3": "Max 4 Stems in Mix"
         },
         "notIncluded": {
           "0": "WAV Output",
-          "1": "Stems Download",
-          "2": "Priority Processing",
-          "3": "Advanced Mastering Options"
-        },
-        "cta": "Start for Free"
+          "1": "Stem Downloads"
+        }
       },
-      "plus": {
-        "name": "Plus",
-        "description": "For independent artists who release music regularly.",
+      "artist": {
+        "name": "Artist",
+        "description": "For singers & mastering.",
+        "cta": "Subscribe",
         "features": {
-          "0": "10 Songs per month",
-          "1": "High-Res WAV Output (24-bit)",
-          "2": "Advanced AI Mixing & Mastering",
-          "3": "Email Support",
-          "4": "Project History (30 days)"
+          "0": "10 Credits / month",
+          "1": "Stereo Mastering",
+          "2": "Simple Mixes (Vox + Beat)",
+          "3": "High Quality MP3"
         },
         "notIncluded": {
-          "0": "Stems Download",
-          "1": "Priority Processing"
-        },
-        "cta": "Get Plus"
+          "0": "WAV Output",
+          "1": "Stem Downloads"
+        }
       },
-      "pro": {
-        "name": "Pro",
-        "description": "For professionals and studios demanding the highest quality.",
+      "producer": {
+        "name": "Producer",
+        "description": "For regular producers.",
+        "cta": "Subscribe",
         "features": {
-          "0": "Unlimited Songs",
-          "1": "High-Res WAV + Stems Download",
-          "2": "Priority Processing (Skip the queue)",
-          "3": "Premium Support",
-          "4": "Permanent Project History",
-          "5": "Commercial License"
+          "0": "50 Credits / month",
+          "1": "Full Mixes",
+          "2": "24-bit WAV Output",
+          "3": "30 days storage",
+          "4": "Priority Queue"
         },
-        "notIncluded": {},
-        "cta": "Get Pro"
+        "notIncluded": {}
+      },
+      "studio": {
+        "name": "Studio",
+        "description": "Unlimited power for studios.",
+        "cta": "Subscribe",
+        "features": {
+          "0": "150 Credits / month",
+          "1": "Unlimited Stems",
+          "2": "Permanent Storage",
+          "3": "Processed Stems Download"
+        },
+        "notIncluded": {}
+      }
+    },
+    "Comparison": {
+      "title": "Compare Plans",
+      "headers": {
+        "features": "Features",
+        "free": "Free",
+        "artist": "Artist",
+        "producer": "Producer",
+        "studio": "Studio"
+      },
+      "rows": {
+        "monthlyCredits": "Monthly Credits",
+        "previews": "Previews",
+        "maxStems": "Max Stems (Mix)",
+        "quality": "Audio Quality",
+        "storage": "Storage",
+        "stemDownload": "Stem Download",
+        "support": "Support"
+      },
+      "values": {
+        "unlimited": "Unlimited",
+        "limited4": "4 Stems",
+        "unlimitedStems": "Unlimited",
+        "mp3low": "MP3 (128kbps)",
+        "mp3high": "MP3 (320kbps)",
+        "wav": "WAV 24-bit",
+        "days7": "7 days",
+        "days30": "30 days",
+        "permanent": "Permanent",
+        "yes": "Yes",
+        "no": "No",
+        "standard": "Standard",
+        "priority": "Priority"
       }
     }
   },

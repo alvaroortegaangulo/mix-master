@@ -580,65 +580,144 @@
     }
   },
   "Pricing": {
-    "title": "Precios",
-    "subtitle": "Planes de precios para cada etapa de tu viaje",
-    "description": "Elige el plan perfecto para tus necesidades de producción de audio. Desde demos hasta lanzamientos profesionales, te tenemos cubierto.",
-    "monthlyBilling": "Facturación mensual",
-    "yearlyBilling": "Facturación anual",
+    "title": "Planes y Precios",
+    "subtitle": "Modelo Flexible basado en Créditos",
+    "description": "Elige el plan que mejor se adapte a tu flujo de trabajo. Paga solo por lo que usas o suscríbete para obtener el mejor valor.",
+    "monthlyBilling": "Mensual",
+    "yearlyBilling": "Anual",
     "save20": "Ahorra ~20%",
-    "month": "mes",
-    "billedYearly": "Facturado anualmente",
     "mostPopular": "Más Popular",
-    "startForFree": "Empieza Gratis",
-    "getPlus": "Obtener Plus",
-    "getPro": "Obtener Pro",
+    "month": "mes",
+    "credits": "créditos",
+    "billedYearly": "Facturado anualmente",
+    "startForFree": "Empezar Gratis",
+    "subscribe": "Suscribirse",
+    "buyPack": "Comprar Pack",
+    "creditSystem": {
+      "title": "¿Cómo funcionan los Créditos?",
+      "description": "Nuestro sistema de tokens te permite usar la plataforma a tu manera. 1 Token ≈ 1 Masterización.",
+      "mastering": {
+        "title": "Masterización",
+        "cost": "1 Crédito",
+        "desc": "Procesamiento de 1 archivo estéreo (Song Mode)."
+      },
+      "mixing": {
+        "title": "Mezcla por Stems",
+        "cost": "5-10 Créditos",
+        "desc": "Mezcla completa. 5 créditos para < 16 stems, 10 para más."
+      },
+      "download": {
+        "title": "Descarga de Stems",
+        "cost": "+2 Créditos",
+        "desc": "Descarga individual de todos los stems procesados."
+      }
+    },
+    "payAsYouGo": {
+      "title": "Paga lo que uses",
+      "subtitle": "Sin suscripciones mensuales. Los créditos nunca caducan.",
+      "smallPack": {
+        "name": "Pack Pequeño",
+        "price": "$15",
+        "credits": "15 Créditos",
+        "desc": "Ideal para un single."
+      },
+      "largePack": {
+        "name": "Pack Grande",
+        "price": "$40",
+        "credits": "50 Créditos",
+        "desc": "Ahorra con más volumen."
+      },
+      "cta": "Comprar Pack"
+    },
     "Tiers": {
       "free": {
         "name": "Gratis",
-        "description": "Perfecto para aficionados y para probar nuestro motor de mezcla IA.",
+        "description": "Prueba la potencia de la IA.",
+        "cta": "Empezar Gratis",
         "features": {
-          "0": "2 Canciones por mes",
-          "1": "Salida MP3 (320kbps)",
-          "2": "Mezcla IA Estándar",
-          "3": "Soporte Básico"
+          "0": "1 Crédito / mes",
+          "1": "Previsualizaciones ilimitadas",
+          "2": "MP3 Calidad Baja",
+          "3": "Máx 4 Stems en Mezcla"
         },
         "notIncluded": {
           "0": "Salida WAV",
-          "1": "Descarga de Stems",
-          "2": "Procesamiento Prioritario",
-          "3": "Opciones Avanzadas de Masterización"
-        },
-        "cta": "Empezar Gratis"
+          "1": "Descarga de Stems"
+        }
       },
-      "plus": {
-        "name": "Plus",
-        "description": "Para artistas independientes que lanzan música regularmente.",
+      "artist": {
+        "name": "Artist",
+        "description": "Para cantantes y masterización.",
+        "cta": "Suscribirse",
         "features": {
-          "0": "10 Canciones por mes",
-          "1": "Salida WAV de Alta Resolución (24-bit)",
-          "2": "Mezcla y Masterización IA Avanzada",
-          "3": "Soporte por Email",
-          "4": "Historial de Proyectos (30 días)"
+          "0": "10 Créditos / mes",
+          "1": "Masterización Estéreo",
+          "2": "Mezclas Simples (Voz + Beat)",
+          "3": "MP3 Alta Calidad"
         },
         "notIncluded": {
-          "0": "Descarga de Stems",
-          "1": "Procesamiento Prioritario"
-        },
-        "cta": "Obtener Plus"
+          "0": "Salida WAV",
+          "1": "Descarga de Stems"
+        }
       },
-      "pro": {
-        "name": "Pro",
-        "description": "Para profesionales y estudios que exigen la más alta calidad.",
+      "producer": {
+        "name": "Producer",
+        "description": "Para productores regulares.",
+        "cta": "Suscribirse",
         "features": {
-          "0": "Canciones Ilimitadas",
-          "1": "WAV de Alta Res + Descarga de Stems",
-          "2": "Procesamiento Prioritario (Salta la cola)",
-          "3": "Soporte Premium",
-          "4": "Historial de Proyectos Permanente",
-          "5": "Licencia Comercial"
+          "0": "50 Créditos / mes",
+          "1": "Mezclas Completas",
+          "2": "Salida WAV 24-bit",
+          "3": "30 días de historial",
+          "4": "Prioridad en cola"
         },
-        "notIncluded": {},
-        "cta": "Obtener Pro"
+        "notIncluded": {}
+      },
+      "studio": {
+        "name": "Studio",
+        "description": "Poder ilimitado para estudios.",
+        "cta": "Suscribirse",
+        "features": {
+          "0": "150 Créditos / mes",
+          "1": "Stems Ilimitados",
+          "2": "Historial Permanente",
+          "3": "Descarga Stems Procesados"
+        },
+        "notIncluded": {}
+      }
+    },
+    "Comparison": {
+      "title": "Comparar Planes",
+      "headers": {
+        "features": "Características",
+        "free": "Gratis",
+        "artist": "Artist",
+        "producer": "Producer",
+        "studio": "Studio"
+      },
+      "rows": {
+        "monthlyCredits": "Créditos Mensuales",
+        "previews": "Previsualizaciones",
+        "maxStems": "Máx Stems (Mezcla)",
+        "quality": "Calidad de Audio",
+        "storage": "Almacenamiento",
+        "stemDownload": "Descarga de Stems",
+        "support": "Soporte"
+      },
+      "values": {
+        "unlimited": "Ilimitadas",
+        "limited4": "4 Stems",
+        "unlimitedStems": "Ilimitados",
+        "mp3low": "MP3 (128kbps)",
+        "mp3high": "MP3 (320kbps)",
+        "wav": "WAV 24-bit",
+        "days7": "7 días",
+        "days30": "30 días",
+        "permanent": "Permanente",
+        "yes": "Sí",
+        "no": "No",
+        "standard": "Estándar",
+        "priority": "Prioritario"
       }
     }
   },
