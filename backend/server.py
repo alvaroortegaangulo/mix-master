@@ -721,12 +721,18 @@ async def _guard_heavy_endpoint(
 # Upload helpers
 # ---------------------------------------------------------
 
-ALLOWED_UPLOAD_EXTENSIONS = {".wav"}
+ALLOWED_UPLOAD_EXTENSIONS = {".wav", ".aif", ".aiff", ".mp3"}
 ALLOWED_UPLOAD_MIME_TYPES = {
     "audio/wav",
     "audio/x-wav",
     "audio/wave",
     "audio/vnd.wave",
+    "audio/aiff",
+    "audio/x-aiff",
+    "audio/aif",
+    "audio/mpeg",
+    "audio/mp3",
+    "audio/x-mp3",
 }
 MAX_UPLOAD_SIZE_BYTES = 512 * 1024 * 1024  # 512 MiB
 MAX_JOB_TOTAL_BYTES = 2 * 1024 * 1024 * 1024  # 2 GiB total por job
@@ -767,13 +773,16 @@ def _validate_upload(upload: UploadFile, safe_name: str) -> None:
     if ext not in ALLOWED_UPLOAD_EXTENSIONS:
         raise HTTPException(
             status_code=400,
-            detail="Solo se permiten archivos WAV (.wav)",
+            detail="Solo se permiten archivos WAV/AIFF/MP3 (.wav, .aif, .aiff, .mp3)",
         )
     content_type = (upload.content_type or "").lower()
     if content_type and content_type not in ALLOWED_UPLOAD_MIME_TYPES:
         raise HTTPException(
             status_code=400,
-            detail=f"Tipo MIME no permitido ({content_type}); usa audio/wav",
+            detail=(
+                f"Tipo MIME no permitido ({content_type}); "
+                "usa audio/wav, audio/aiff o audio/mpeg"
+            ),
         )
 
 
@@ -798,6 +807,22 @@ def _is_wav_magic(chunk: bytes) -> bool:
     Valida la cabecera RIFF/WAVE de un WAV. Espera al menos 12 bytes.
     """
     return len(chunk) >= 12 and chunk.startswith(b"RIFF") and chunk[8:12] == b"WAVE"
+
+def _is_aiff_magic(chunk: bytes) -> bool:
+    """
+    Valida la cabecera FORM/AIFF de un AIFF. Espera al menos 12 bytes.
+    """
+    return len(chunk) >= 12 and chunk.startswith(b"FORM") and chunk[8:12] in (b"AIFF", b"AIFC")
+
+def _is_mp3_magic(chunk: bytes) -> bool:
+    """
+    Valida cabecera ID3 o frame sync de MP3.
+    """
+    if len(chunk) < 2:
+        return False
+    if chunk.startswith(b"ID3"):
+        return True
+    return chunk[0] == 0xFF and (chunk[1] & 0xE0) == 0xE0
 
 
 def _get_media_dir_size(media_dir: Path) -> int:
@@ -832,11 +857,25 @@ async def _stream_upload_file(
                 if not chunk:
                     break
                 if first_chunk:
-                    if not _is_wav_magic(chunk):
-                        raise HTTPException(
-                            status_code=400,
-                            detail="Archivo no parece WAV (cabecera RIFF/WAVE invalida)",
-                        )
+                    ext = dest_path.suffix.lower()
+                    if ext == ".wav":
+                        if not _is_wav_magic(chunk):
+                            raise HTTPException(
+                                status_code=400,
+                                detail="Archivo no parece WAV (cabecera RIFF/WAVE invalida)",
+                            )
+                    elif ext in (".aif", ".aiff"):
+                        if not _is_aiff_magic(chunk):
+                            raise HTTPException(
+                                status_code=400,
+                                detail="Archivo no parece AIFF (cabecera FORM/AIFF invalida)",
+                            )
+                    elif ext == ".mp3":
+                        if not _is_mp3_magic(chunk):
+                            raise HTTPException(
+                                status_code=400,
+                                detail="Archivo no parece MP3 (cabecera ID3/frame invalida)",
+                            )
                     first_chunk = False
                 new_size = bytes_written + len(chunk)
                 overall_size = already_written + new_size

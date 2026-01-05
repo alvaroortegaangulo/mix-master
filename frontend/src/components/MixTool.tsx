@@ -1477,7 +1477,7 @@ export function MixTool({ resumeJobId }: MixToolProps) {
 
                                                return (
                                                    <div key={stage.key} className={`flex items-center justify-between text-xs group/stage ${isStageLocked ? "opacity-60" : ""}`}>
-                                                       <div className="flex items-center gap-2 min-w-0 flex-1">
+                                                       <div className="flex items-center gap-2 min-w-0 flex-1 pr-3">
                                                            <span className={`${isStageSelected ? 'text-slate-300' : 'text-slate-600'} flex-1 min-w-0 break-words`}>
                                                                {stageTitle}
                                                            </span>

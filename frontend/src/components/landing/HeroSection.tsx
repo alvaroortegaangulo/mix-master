@@ -86,7 +86,7 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
   }, []);
 
   return (
-    <section className="relative flex min-h-[100svh] sm:min-h-[70vh] lg:min-h-[75vh] 2xl:min-h-[85vh] flex-col items-center justify-center overflow-hidden bg-slate-950 px-4 text-center py-4 sm:py-6 md:py-10 lg:py-16 2xl:py-20">
+    <section className="relative flex min-h-[100svh] sm:min-h-[70vh] lg:min-h-[75vh] 2xl:min-h-[85vh] flex-col items-center justify-center overflow-hidden bg-slate-950 px-4 text-center pt-3 pb-4 sm:py-6 md:py-10 lg:py-16 2xl:py-20">
       {/* Background gradients/blobs */}
       <div className="absolute top-0 left-0 h-full w-full overflow-hidden pointer-events-none z-0">
         <div className="absolute -top-[20%] -left-[10%] h-[50%] w-[50%] rounded-full bg-teal-500/10 blur-[120px]" />

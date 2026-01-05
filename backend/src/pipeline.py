@@ -228,6 +228,107 @@ def _normalize_channels_to_stereo(data: np.ndarray) -> np.ndarray:
     return data
 
 
+CONVERTIBLE_INPUT_EXTS = {".aif", ".aiff", ".mp3"}
+
+
+def _load_audio_for_conversion(path: Path) -> tuple[np.ndarray, int]:
+    """
+    Read audio with soundfile; fallback to librosa for formats like MP3/AIFF.
+    Returns float32 audio with shape (samples, channels).
+    """
+    try:
+        data, sr = sf.read(path, always_2d=True)
+        return data.astype(np.float32, copy=False), int(sr)
+    except Exception:
+        try:
+            import librosa  # type: ignore
+        except Exception as exc:  # pragma: no cover - depends on runtime env
+            raise RuntimeError(
+                f"No se pudo leer {path.name}; falta backend para MP3/AIFF: {exc}"
+            ) from exc
+
+        data, sr = librosa.load(path, sr=None, mono=False)
+        if data.ndim == 1:
+            data = data.reshape(-1, 1)
+        else:
+            data = data.T
+        return data.astype(np.float32, copy=False), int(sr)
+
+
+def _unique_wav_path(path: Path) -> Path:
+    base = path.with_suffix(".wav")
+    if not base.exists():
+        return base
+    stem = path.stem
+    for i in range(1, 1000):
+        candidate = path.with_name(f"{stem}_{i}.wav")
+        if not candidate.exists():
+            return candidate
+    raise RuntimeError(f"No se pudo encontrar nombre libre para {path.name}")
+
+
+def _convert_to_wav(path: Path) -> Path:
+    data, sr = _load_audio_for_conversion(path)
+    wav_path = _unique_wav_path(path)
+    sf.write(wav_path, data, sr, subtype="FLOAT")
+    return wav_path
+
+
+def _update_session_config_paths(stage_dir: Path, converted: Dict[str, str]) -> None:
+    if not converted:
+        return
+    cfg_path = stage_dir / "session_config.json"
+    if not cfg_path.exists():
+        return
+    try:
+        cfg = json.loads(cfg_path.read_text(encoding="utf-8"))
+    except Exception:
+        return
+
+    stems = cfg.get("stems", [])
+    updated = False
+    for stem in stems:
+        if not isinstance(stem, dict):
+            continue
+        fname = stem.get("file_name")
+        if fname in converted:
+            stem["file_name"] = converted[fname]
+            updated = True
+
+    if updated:
+        cfg_path.write_text(json.dumps(cfg, indent=2, ensure_ascii=False), encoding="utf-8")
+
+
+def _convert_inputs_to_wav(stage_dir: Path) -> Dict[str, str]:
+    converted: Dict[str, str] = {}
+    if not stage_dir.exists():
+        return converted
+
+    for src in stage_dir.iterdir():
+        if not src.is_file():
+            continue
+        if src.name.lower() == "full_song.wav":
+            continue
+        if src.suffix.lower() not in CONVERTIBLE_INPUT_EXTS:
+            continue
+        try:
+            wav_path = _convert_to_wav(src)
+            converted[src.name] = wav_path.name
+            try:
+                src.unlink()
+            except Exception as exc:
+                logger.warning("[pipeline] No se pudo borrar %s: %s", src.name, exc)
+            logger.info("[pipeline] Convertido %s -> %s", src.name, wav_path.name)
+        except Exception as exc:
+            logger.error("[pipeline] Error convirtiendo %s a WAV: %s", src.name, exc)
+            raise
+
+    if converted:
+        _update_session_config_paths(stage_dir, converted)
+
+    return converted
+
+
 def _normalize_wav_channels_in_dir(stage_dir: Path) -> None:
     if not stage_dir.exists():
         return
@@ -419,11 +520,14 @@ def run_pipeline_for_job(
     if copied == 0:
         raise FileNotFoundError("No se encontraron stems en media_dir ni en carpetas previas para iniciar el pipeline.")
 
-    # Normalize channels to stereo before original mixdown.
-    _normalize_wav_channels_in_dir(s0_original_dir)
-
     # Persistir session_config con los perfiles seleccionados
     _write_session_config(s0_original_dir, profiles_by_name)
+
+    # Convertir MP3/AIFF a WAV antes del mixdown original.
+    _convert_inputs_to_wav(s0_original_dir)
+
+    # Normalize channels to stereo before original mixdown.
+    _normalize_wav_channels_in_dir(s0_original_dir)
 
     # ------------------------------------------------------------------
     # 1) Mixdown de S0_MIX_ORIGINAL (full_song.wav original)
