@@ -118,6 +118,8 @@ services:
       args:
         NEXT_PUBLIC_GA_MEASUREMENT_ID: ${NEXT_PUBLIC_GA_MEASUREMENT_ID}
     command: npm run start -- -p 3000
+    env_file:
+      - ../frontend/.env.production
     environment:
       NODE_ENV: production
     depends_on:
