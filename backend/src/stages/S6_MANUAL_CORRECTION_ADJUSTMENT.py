@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-import sys
 import json
-import shutil
-import logging
+import math
+import sys
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
 import numpy as np
 import soundfile as sf
-from pathlib import Path
-from typing import Dict, List, Optional, Any
 
 # Pedalboard imports for effects
 try:
@@ -18,10 +18,10 @@ try:
         LowShelfFilter,
         PeakingFilter,
         Reverb,
-        Gain
+        Gain,
     )
     HAS_PEDALBOARD = True
-except ImportError:
+except ImportError:  # pragma: no cover
     HAS_PEDALBOARD = False
 
 # --- hack sys.path ---
@@ -34,7 +34,7 @@ from utils.logger import logger
 
 try:
     from context import PipelineContext
-except ImportError:
+except ImportError:  # pragma: no cover
     PipelineContext = None  # type: ignore
 
 
@@ -53,80 +53,129 @@ def _normalize_stem_name(value: str) -> str:
     return stem
 
 
+def _clamp(x: float, lo: float, hi: float) -> float:
+    return float(min(hi, max(lo, x)))
+
+
+def _as_float(value: Any, default: float = 0.0) -> float:
+    try:
+        if value is None:
+            return float(default)
+        return float(value)
+    except Exception:
+        return float(default)
+
+
+def _as_bool(value: Any, default: bool = False) -> bool:
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return bool(value)
+    if isinstance(value, str):
+        v = value.strip().lower()
+        if v in {"1", "true", "yes", "y", "on"}:
+            return True
+        if v in {"0", "false", "no", "n", "off"}:
+            return False
+    return default
+
+
 def _apply_simple_reverb(audio: np.ndarray, sr: int, amount: float) -> np.ndarray:
+    """
+    Simple delay-tap reverb for fallback path (no pedalboard).
+
+    Expects audio in (samples, channels).
+    amount in [0..1].
+    """
+    amount = _clamp(amount, 0.0, 1.0)
     if amount <= 0:
         return audio
+
     delays_sec = [0.03, 0.05, 0.08, 0.11]
     gains = [0.5, 0.35, 0.25, 0.2]
     wet = audio.copy()
 
+    n_samples = wet.shape[0]
     for delay_sec, gain in zip(delays_sec, gains):
         delay = int(sr * delay_sec)
-        if delay <= 0 or delay >= wet.shape[0]:
+        if delay <= 0 or delay >= n_samples:
             continue
         wet[delay:, :] += audio[:-delay, :] * (gain * amount)
 
     dry_gain = 1.0 - min(0.5, amount * 0.5)
     wet_gain = amount
     mixed = (audio * dry_gain) + (wet * wet_gain)
+
     peak = float(np.max(np.abs(mixed))) if mixed.size else 0.0
     if peak > 1.0:
         mixed = mixed / peak
-    return mixed
+
+    return mixed.astype(np.float32, copy=False)
 
 
 def _load_corrections(stage_dir: Path) -> List[Dict[str, Any]]:
+    """
+    Reads <stage_dir>/changes.json
+
+    Accepts:
+      - [ { ... }, ... ]
+      - { "corrections": [ ... ] }
+    """
     json_path = stage_dir / "changes.json"
     if not json_path.exists():
-        logger.logger.warning(f"[{STAGE_ID}] No se encontró changes.json en {stage_dir}")
+        logger.logger.warning(f"[{STAGE_ID}] No changes.json found in {stage_dir}")
         return []
+
     try:
         with json_path.open("r", encoding="utf-8") as f:
             data = json.load(f)
-            # data deberia ser una lista de correcciones: { name, volume_db, pan, eq, compression, mute, solo }
-            # O un objeto que contiene "corrections"
             if isinstance(data, list):
-                return data
-            if isinstance(data, dict) and "corrections" in data:
-                return data["corrections"]
+                return [c for c in data if isinstance(c, dict)]
+            if isinstance(data, dict) and isinstance(data.get("corrections"), list):
+                return [c for c in data["corrections"] if isinstance(c, dict)]
             return []
     except Exception as e:
-        logger.logger.error(f"[{STAGE_ID}] Error leyendo changes.json: {e}")
+        logger.logger.error(f"[{STAGE_ID}] Error reading changes.json: {e}")
         return []
 
 
-def process(context: PipelineContext, *args) -> bool:
+def process(context: "PipelineContext", *args) -> bool:
     """
     S6_MANUAL_CORRECTION_ADJUSTMENT:
-    1. Lee changes.json del stage_dir actual.
-    2. Busca stems finales disponibles (prioriza S6_MANUAL_CORRECTION -> S11_REPORT_GENERATION).
-    3. Aplica efectos (EQ, Comp, Gain, Pan) a cada stem.
-    4. Guarda los stems procesados en stage_dir.
-    5. mixdown_stems.py se encargará (llamado externamente) de sumarlos.
-    """
-    stage_id = STAGE_ID
-    try:
-        context.stage_id = STAGE_ID
-    except Exception:
-        pass
-    stage_dir = context.get_stage_dir(stage_id)
-    temp_root = context.temp_root
+      1) Reads changes.json in this stage folder.
+      2) Finds the best available stems source (prioritize S6_MANUAL_CORRECTION -> S11 -> S10 -> S0).
+      3) Applies EQ/Comp/Reverb/Gain/Pan/Mute/Solo.
+      4) Writes processed stems into this stage folder.
 
-    # 1. Correcciones
+    This stage is not part of the default contracts sequence, but the API may
+    serve stems from it if the folder exists.
+    """
+    stage_dir = context.get_stage_dir(STAGE_ID)
+    stage_dir.mkdir(parents=True, exist_ok=True)
+
+    temp_root = getattr(context, "temp_root", None)
+    if not temp_root:
+        logger.logger.error(f"[{STAGE_ID}] temp_root missing in PipelineContext")
+        return False
+
+    # 1) Corrections
     corrections = _load_corrections(stage_dir)
     if not corrections:
-        logger.logger.info(f"[{stage_id}] Sin correcciones definidas. Saliendo.")
-        return False
-    if not HAS_PEDALBOARD:
-        logger.logger.info(f"[{stage_id}] Pedalboard not installed. Applying Volume/Pan/Reverb fallback only.")
+        logger.logger.info(f"[{STAGE_ID}] No corrections defined. No-op.")
+        return True
 
-    # 2. Origen: stems finales disponibles (S6 -> S11 -> S10 -> S0 fallback)
+    if not HAS_PEDALBOARD:
+        logger.logger.info(f"[{STAGE_ID}] Pedalboard not installed. Using fallback processing.")
+
+    # 2) Source stems
     candidate_sources = [
-        temp_root / "S6_MANUAL_CORRECTION",
-        temp_root / "S11_REPORT_GENERATION",
-        temp_root / "S10_MASTER_FINAL_LIMITS",
-        temp_root / "S0_SESSION_FORMAT",
-        temp_root / "S0_MIX_ORIGINAL",
+        Path(temp_root) / "S6_MANUAL_CORRECTION",
+        Path(temp_root) / "S11_REPORT_GENERATION",
+        Path(temp_root) / "S10_MASTER_FINAL_LIMITS",
+        Path(temp_root) / "S0_SESSION_FORMAT",
+        Path(temp_root) / "S0_MIX_ORIGINAL",
     ]
 
     source_dir: Optional[Path] = None
@@ -138,161 +187,126 @@ def process(context: PipelineContext, *args) -> bool:
                 break
 
     if source_dir is None:
-        logger.logger.error(f"[{stage_id}] No se encontraron stems fuente en {temp_root}")
+        logger.logger.error(f"[{STAGE_ID}] No source stems found in {temp_root}")
         return False
 
-    # Mapa de correcciones por nombre de stem
-    corr_map = {}
+    # Map corrections by normalized stem name
+    corr_map: Dict[str, Dict[str, Any]] = {}
     for corr in corrections:
         key = _normalize_stem_name(corr.get("name", ""))
         if key:
             corr_map[key] = corr
 
-    # Check solo mode
-    # Si hay algun stem en SOLO, muteamos el resto.
-    solo_active = any(c.get("solo", False) for c in corrections)
+    solo_active = any(_as_bool(c.get("solo", False)) for c in corrections)
 
-    logger.logger.info(f"[{stage_id}] Procesando correcciones para {len(corrections)} stems. Solo Mode: {solo_active}")
+    logger.logger.info(
+        f"[{STAGE_ID}] Source={source_dir.name}. "
+        f"Corrections={len(corrections)} mapped={len(corr_map)} solo_active={solo_active} pedalboard={HAS_PEDALBOARD}"
+    )
 
-    # Procesar cada stem
-    stems_found = list(source_dir.glob("*.wav"))
     processed_count = 0
 
-    for stem_path in stems_found:
+    for stem_path in sorted(source_dir.glob("*.wav")):
         if stem_path.name.lower() == "full_song.wav":
             continue
 
-        stem_name = stem_path.stem # 'vocals', 'drums', etc.
-        corr = corr_map.get(_normalize_stem_name(stem_name))
+        stem_name = stem_path.stem
+        corr = corr_map.get(_normalize_stem_name(stem_name), {})
 
-        # Si no hay correccion explicita, copiamos tal cual?
-        # El frontend manda TODOS los stems, asi que si falta es raro.
-        # Asumiremos defaults si falta.
-        if not corr:
-            corr = {
-                "volume_db": 0.0,
-                "pan": 0.0,
-                "mute": False,
-                "solo": False,
-                "eq": {"low": 0, "mid": 0, "high": 0},
-                "compression": {"threshold": 0, "ratio": 1}
-            }
+        is_muted = _as_bool(corr.get("mute", False))
+        is_solo = _as_bool(corr.get("solo", False))
 
-        # Determinamos si debe sonar
-        is_muted = corr.get("mute", False)
-        is_solo = corr.get("solo", False)
-
-        should_play = True
         if solo_active:
-            if not is_solo:
-                should_play = False
+            should_play = is_solo
         else:
-            if is_muted:
-                should_play = False
+            should_play = not is_muted
 
-        # Leemos audio
         try:
-            audio, sr = sf.read(str(stem_path))
+            audio, sr = sf.read(str(stem_path), dtype="float32")
         except Exception as e:
-            logger.logger.warning(f"[{stage_id}] Error leyendo stem {stem_name}: {e}")
+            logger.logger.warning(f"[{STAGE_ID}] Error reading stem {stem_name}: {e}")
             continue
 
-        # Asegurar stereo (Pedalboard trabaja mejor asi, o manejamos mono)
-        if len(audio.shape) == 1:
-            audio = np.stack([audio, audio], axis=1) # Mono to Stereo
-        elif audio.shape[1] > 2:
-            audio = audio[:, :2] # Keep first 2
+        # Ensure (samples, channels=2)
+        if audio.ndim == 1:
+            audio = np.stack([audio, audio], axis=1)
+        elif audio.ndim == 2 and audio.shape[1] == 1:
+            audio = np.repeat(audio, 2, axis=1)
+        elif audio.ndim == 2 and audio.shape[1] > 2:
+            audio = audio[:, :2]
 
         if not should_play:
-            # Silencio
             audio = np.zeros_like(audio)
-        elif HAS_PEDALBOARD:
-            # Chain de efectos
-            board = Pedalboard()
-
-            # 1. Compressor
-            comp_cfg = corr.get("compression", {})
-            thresh = float(comp_cfg.get("threshold", 0))
-            ratio = float(comp_cfg.get("ratio", 1))
-            if thresh < 0 or ratio > 1:
-                 # Pedalboard Compressor defaults: threshold_db=0, ratio=1
-                 board.append(Compressor(threshold_db=thresh, ratio=ratio))
-
-            # 2. EQ
-            eq_cfg = corr.get("eq", {})
-            low_gain = float(eq_cfg.get("low", 0))
-            mid_gain = float(eq_cfg.get("mid", 0))
-            high_gain = float(eq_cfg.get("high", 0))
-
-            if abs(low_gain) > 0.01:
-                board.append(LowShelfFilter(cutoff_frequency_hz=320, gain_db=low_gain))
-            if abs(mid_gain) > 0.01:
-                board.append(PeakingFilter(cutoff_frequency_hz=1000, gain_db=mid_gain, q=1.0))
-            if abs(high_gain) > 0.01:
-                board.append(HighShelfFilter(cutoff_frequency_hz=3200, gain_db=high_gain))
-
-            # 3. Reverb
-            verb_cfg = corr.get("reverb")
-            if verb_cfg and verb_cfg.get("enabled"):
-                amt = float(verb_cfg.get("amount", 0)) / 100.0
-                if amt > 0:
-                    board.append(Reverb(room_size=0.5, wet_level=amt, dry_level=1.0-amt*0.5))
-
-            # 4. Volume
-            vol_db = float(corr.get("volume_db", 0))
-            if abs(vol_db) > 0.01:
-                board.append(Gain(gain_db=vol_db))
-
-            # Apply Pedalboard
-            try:
-                # Pedalboard espera (channels, samples) pero soundfile devuelve (samples, channels)
-                # Ojo: Pedalboard __call__ input: (C, T) array or (T, C) if implicit?
-                # Docs: "input_audio must be either a NumPy array of shape (channels, samples)..."
-                # So transpose.
-                input_audio = audio.T
-                output_audio = board(input_audio, sr)
-                audio = output_audio.T
-            except Exception as e:
-                logger.logger.error(f"[{stage_id}] Error aplicando efectos a {stem_name}: {e}")
-
-            # 4. Pan (manual con numpy)
-            pan = float(corr.get("pan", 0))
-            if abs(pan) > 0.01:
-                # Constant power panning
-                # pan range -1 (L) to 1 (R)
-                # L = cos(theta), R = sin(theta)
-                # theta from 0 to pi/2. Pan -1 -> 0, Pan 1 -> pi/2
-                # map [-1, 1] -> [0, pi/2]
-                theta = (pan + 1) * (np.pi / 4)
-                gain_L = np.cos(theta)
-                gain_R = np.sin(theta)
-
-                audio[:, 0] *= gain_L
-                audio[:, 1] *= gain_R
         else:
-            verb_cfg = corr.get("reverb")
-            if verb_cfg and verb_cfg.get("enabled"):
-                amt = float(verb_cfg.get("amount", 0)) / 100.0
-                if amt > 0:
-                    audio = _apply_simple_reverb(audio, sr, amt)
+            if HAS_PEDALBOARD:
+                board = Pedalboard()
 
-            vol_db = float(corr.get("volume_db", 0))
-            if abs(vol_db) > 0.01:
-                audio = audio * (10 ** (vol_db / 20.0))
+                comp_cfg = corr.get("compression")
+                if isinstance(comp_cfg, dict) and _as_bool(comp_cfg.get("enabled", True), default=True):
+                    thresh = _as_float(comp_cfg.get("threshold", 0.0))
+                    ratio = max(1.0, _as_float(comp_cfg.get("ratio", 1.0)))
+                    if thresh < 0.0 and ratio > 1.0:
+                        board.append(Compressor(threshold_db=thresh, ratio=ratio))
 
-            pan = float(corr.get("pan", 0))
+                eq_cfg = corr.get("eq")
+                if isinstance(eq_cfg, dict) and _as_bool(eq_cfg.get("enabled", True), default=True):
+                    low_gain = _as_float(eq_cfg.get("low", 0.0))
+                    mid_gain = _as_float(eq_cfg.get("mid", 0.0))
+                    high_gain = _as_float(eq_cfg.get("high", 0.0))
+
+                    if abs(low_gain) > 0.01:
+                        board.append(LowShelfFilter(cutoff_frequency_hz=320, gain_db=low_gain))
+                    if abs(mid_gain) > 0.01:
+                        board.append(PeakingFilter(cutoff_frequency_hz=1000, gain_db=mid_gain, q=1.0))
+                    if abs(high_gain) > 0.01:
+                        board.append(HighShelfFilter(cutoff_frequency_hz=3200, gain_db=high_gain))
+
+                verb_cfg = corr.get("reverb")
+                if isinstance(verb_cfg, dict) and _as_bool(verb_cfg.get("enabled", True), default=True):
+                    amt_raw = _as_float(verb_cfg.get("amount", 0.0))
+                    amt = amt_raw / 100.0 if amt_raw > 1.0 else amt_raw
+                    amt = _clamp(amt, 0.0, 1.0)
+                    if amt > 0:
+                        board.append(Reverb(room_size=0.5, wet_level=amt, dry_level=1.0 - amt * 0.5))
+
+                vol_db = _clamp(_as_float(corr.get("volume_db", 0.0)), -120.0, 24.0)
+                if abs(vol_db) > 0.01:
+                    board.append(Gain(gain_db=vol_db))
+
+                try:
+                    out = board(audio.T, sr)
+                    audio = out.T
+                except Exception as e:
+                    logger.logger.error(f"[{STAGE_ID}] Error applying effects to {stem_name}: {e}")
+            else:
+                verb_cfg = corr.get("reverb")
+                if isinstance(verb_cfg, dict) and _as_bool(verb_cfg.get("enabled", False)):
+                    amt_raw = _as_float(verb_cfg.get("amount", 0.0))
+                    amt = amt_raw / 100.0 if amt_raw > 1.0 else amt_raw
+                    if amt > 0:
+                        audio = _apply_simple_reverb(audio, sr, amt)
+
+                vol_db = _clamp(_as_float(corr.get("volume_db", 0.0)), -120.0, 24.0)
+                if abs(vol_db) > 0.01:
+                    audio = audio * (10.0 ** (vol_db / 20.0))
+
+            # Pan (constant power)
+            pan = _clamp(_as_float(corr.get("pan", 0.0)), -1.0, 1.0)
             if abs(pan) > 0.01 and audio.shape[1] == 2:
-                theta = (pan + 1) * (np.pi / 4)
-                gain_L = np.cos(theta)
-                gain_R = np.sin(theta)
-
+                theta = (pan + 1.0) * (math.pi / 4.0)
+                gain_L = math.cos(theta)
+                gain_R = math.sin(theta)
+                audio = audio.copy()
                 audio[:, 0] *= gain_L
                 audio[:, 1] *= gain_R
 
-        # Guardar resultado
+        peak = float(np.max(np.abs(audio))) if audio.size else 0.0
+        if peak > 1.0:
+            audio = audio / peak
+
         out_path = stage_dir / f"{stem_name}.wav"
         sf.write(str(out_path), audio, sr)
         processed_count += 1
 
-    logger.logger.info(f"[{stage_id}] Procesados {processed_count} stems.")
+    logger.logger.info(f"[{STAGE_ID}] Processed {processed_count} stems.")
     return True

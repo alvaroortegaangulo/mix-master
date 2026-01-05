@@ -92,6 +92,26 @@ def resample_audio(
     return resampled_data, target_sr
 
 
+def normalize_channels_to_stereo(data: np.ndarray) -> np.ndarray:
+    """
+    Normalize stems to stereo so mixdown doesn't drop mono files.
+    """
+    if data.ndim == 1:
+        return np.stack((data, data), axis=1)
+
+    if data.ndim == 2:
+        channels = data.shape[1]
+        if channels == 2:
+            return data
+        if channels == 1:
+            return np.repeat(data, 2, axis=1)
+        # Fallback: downmix to mono then upmix to stereo.
+        mono = data.mean(axis=1, dtype=np.float32)
+        return np.stack((mono, mono), axis=1)
+
+    return data
+
+
 def apply_peak_normalization(
     data: np.ndarray, max_peak_dbfs: float | None
 ) -> np.ndarray:
@@ -137,6 +157,9 @@ def process_stem(stem_info: Dict[str, Any], metrics: Dict[str, Any]) -> None:
 
     # 3) Resample si es necesario
     data, sr = resample_audio(data, sr, target_sr)
+
+    # Normalizar canales a stereo (evita mismatches en mixdown)
+    data = normalize_channels_to_stereo(data)
 
     # 4) Normalización de picos según contrato
     data = apply_peak_normalization(data, max_peak_dbfs)

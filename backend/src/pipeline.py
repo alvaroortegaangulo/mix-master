@@ -6,6 +6,9 @@ import logging
 from pathlib import Path
 from typing import Callable, Dict, Any, List, Optional
 
+import numpy as np
+import soundfile as sf
+
 from .utils import mixdown_stems, copy_stems
 from .stages.stage import run_stage, set_active_contract_sequence
 from .utils.analysis_utils import get_temp_dir
@@ -209,6 +212,44 @@ def _write_session_config(stage_dir: Path, profiles_by_name: Optional[Dict[str, 
         logger.warning("[pipeline] No se pudo escribir session_config en %s: %s", stage_dir, exc)
 
 
+def _normalize_channels_to_stereo(data: np.ndarray) -> np.ndarray:
+    if data.ndim == 1:
+        return np.stack((data, data), axis=1)
+
+    if data.ndim == 2:
+        channels = data.shape[1]
+        if channels == 2:
+            return data
+        if channels == 1:
+            return np.repeat(data, 2, axis=1)
+        mono = data.mean(axis=1, dtype=np.float32)
+        return np.stack((mono, mono), axis=1)
+
+    return data
+
+
+def _normalize_wav_channels_in_dir(stage_dir: Path) -> None:
+    if not stage_dir.exists():
+        return
+
+    for wav_path in stage_dir.glob("*.wav"):
+        if wav_path.name.lower() == "full_song.wav":
+            continue
+        try:
+            info = sf.info(wav_path)
+            if info.channels == 2:
+                continue
+            data, sr = sf.read(wav_path, dtype="float32", always_2d=True)
+            normalized = _normalize_channels_to_stereo(data)
+            if normalized.shape == data.shape:
+                continue
+            subtype = info.subtype or None
+            sf.write(wav_path, normalized, sr, subtype=subtype)
+            logger.info("[pipeline] Normalized channels to stereo for %s", wav_path.name)
+        except Exception as exc:
+            logger.warning("[pipeline] No se pudo normalizar canales en %s: %s", wav_path.name, exc)
+
+
 def _run_contracts_global(enabled_stage_keys: Optional[List[str]] = None) -> None:
     """
     Versión global (sin job_id) basada en contracts.json.
@@ -377,6 +418,9 @@ def run_pipeline_for_job(
 
     if copied == 0:
         raise FileNotFoundError("No se encontraron stems en media_dir ni en carpetas previas para iniciar el pipeline.")
+
+    # Normalize channels to stereo before original mixdown.
+    _normalize_wav_channels_in_dir(s0_original_dir)
 
     # Persistir session_config con los perfiles seleccionados
     _write_session_config(s0_original_dir, profiles_by_name)
