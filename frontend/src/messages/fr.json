@@ -640,66 +640,68 @@
     "talkToSupport": "Talk to support",
     "items": {
       "pop": {
-        "title": "Modern Pop Vocal",
-        "genre": "Pop / Top 40",
-        "summary": "Bright, upfront vocals with de-essing, airy reverb, and tight low-end control for chart-ready polish.",
+        "title": "Pop Lumineuse",
+        "genre": "Pop",
+        "summary": "Voix en avant, brillance contr?l?e et bas serr?s pour un master pr?t radio.",
         "highlights": {
-          "0": "Lead vocal leveling",
-          "1": "De-essing and air EQ",
-          "2": "Stereo widener on choruses"
+          "0": "Mise en avant de la voix",
+          "1": "EQ d'air et contr?le des sifflantes",
+          "2": "Glue des refrains"
         },
         "metrics": {
-          "0": "LUFS: -8.9 → -8.0",
-          "1": "True Peak: -2.0 dB → -1.0 dB",
-          "2": "Vocal sibilance reduced ~2 dB"
+          "0": "Pr?sence vocale plus claire",
+          "1": "Graves plus fermes sans masquer",
+          "2": "Image st?r?o plus large et stable"
         }
       },
-      "hiphop": {
-        "title": "Punchy Hip-Hop",
-        "genre": "Hip-Hop / Trap",
-        "summary": "Low-end glued with parallel compression while keeping 808s clean and transients snappy on the snare.",
+      "rock": {
+        "title": "Rock Percutant",
+        "genre": "Rock",
+        "summary": "Batterie percutante et guitares denses, avec un bus qui colle sans ?craser.",
         "highlights": {
-          "0": "808 clarity and sub control",
-          "1": "Transient shaping on snare/clap",
-          "2": "Bus saturation for glue"
+          "0": "Impact kick/snare",
+          "1": "Guitares all?g?es dans le bas",
+          "2": "Glue de mixbus"
         },
         "metrics": {
-          "0": "LUFS: -10.5 → -9.2",
-          "1": "Stereo width: +12%",
-          "2": "Noise floor cleaned 3 dB"
+          "0": "Transitoires plus nettes",
+          "1": "M?diums ?quilibr?s",
+          "2": "Master plus ?nergique"
         }
       },
       "indie": {
-        "title": "Indie Band",
-        "genre": "Indie / Rock",
-        "summary": "Phase-aligned drums, guitars separated with mid/side EQ, and a cohesive master with analog-style color.",
+        "title": "Indie Organique",
+        "genre": "Indie / Alternative",
+        "summary": "Dynamique naturelle, textures ouvertes et ?quilibre chaleureux.",
         "highlights": {
-          "0": "Drum phase alignment",
-          "1": "Mid/side guitar EQ",
-          "2": "Tape-like saturation on mixbus"
+          "0": "Dynamique pr?serv?e",
+          "1": "Profondeur avec reverb subtile",
+          "2": "EQ douce des m?diums"
         },
         "metrics": {
-          "0": "LUFS: -12.0 → -10.8",
-          "1": "Crest Factor: 11 dB → 9 dB",
-          "2": "Stereo image balanced L/R <0.5 dB"
+          "0": "Image st?r?o plus propre",
+          "1": "Voix int?gr?e au groupe",
+          "2": "Moins de r?sonances agressives"
         }
       },
-      "ambient": {
-        "title": "Cinematic Ambient",
-        "genre": "Score / Ambient",
-        "summary": "Wide, enveloping space with controlled low-mid build-up, keeping pads lush without mud.",
+      "trap": {
+        "title": "Trap Nocturne",
+        "genre": "Trap",
+        "summary": "808 solides, hats nets et impact sans sursaturation.",
         "highlights": {
-          "0": "Low-mid resonance control",
-          "1": "Layered reverbs with pre-delay",
-          "2": "Gentle multiband glue"
+          "0": "Sub contr?l?",
+          "1": "Clart? des hats",
+          "2": "Voix lead a?r?e"
         },
         "metrics": {
-          "0": "LUFS: -16.0 → -14.5",
-          "1": "Reverb RT60 tamed 12%",
-          "2": "Sub rumble cut below 30 Hz"
+          "0": "Bas plus solide",
+          "1": "Percussions plus nettes",
+          "2": "Punch plus pr?sent"
         }
       }
-    }
+    },
+    "toggleOriginal": "Original",
+    "toggleMaster": "Master AI"
   },
   "Docs": {
     "title": "Documentation & Guide",

@@ -651,66 +651,68 @@
     "talkToSupport": "Hablar con soporte",
     "items": {
       "pop": {
-        "title": "Voz Pop Moderna",
-        "genre": "Pop / Top 40",
-        "summary": "Voces brillantes y al frente con de-essing, reverb aireada y control estricto de graves para un pulido listo para las listas.",
+        "title": "Pop Brillante",
+        "genre": "Pop",
+        "summary": "Voces al frente, brillo controlado y graves definidos para un master listo para radio.",
         "highlights": {
-          "0": "Nivelación de voz principal",
-          "1": "De-essing y EQ de aire",
-          "2": "Ensanchador estéreo en estribillos"
+          "0": "Enfoque en voz principal",
+          "1": "EQ de aire y control de sibilancia",
+          "2": "Cohesi?n en coros"
         },
         "metrics": {
-          "0": "LUFS: -8.9 → -8.0",
-          "1": "True Peak: -2.0 dB → -1.0 dB",
-          "2": "Sibilancia vocal reducida ~2 dB"
+          "0": "Presencia vocal m?s clara",
+          "1": "Bajos m?s firmes sin enmascarar",
+          "2": "Imagen est?reo m?s amplia y estable"
         }
       },
-      "hiphop": {
-        "title": "Hip-Hop con Pegada",
-        "genre": "Hip-Hop / Trap",
-        "summary": "Graves unidos con compresión paralela mientras se mantiene el 808 limpio y los transitorios rápidos en la caja.",
+      "rock": {
+        "title": "Rock Contundente",
+        "genre": "Rock",
+        "summary": "Bater?a con pegada y guitarras densas, con un bus que une sin aplastar.",
         "highlights": {
-          "0": "Claridad de 808 y control de sub",
-          "1": "Modelado de transitorios en caja/clap",
-          "2": "Saturación de bus para cohesión"
+          "0": "Pegada de kick/snare",
+          "1": "Guitarras recortadas en graves",
+          "2": "Glue de mixbus"
         },
         "metrics": {
-          "0": "LUFS: -10.5 → -9.2",
-          "1": "Ancho estéreo: +12%",
-          "2": "Ruido de fondo limpiado 3 dB"
+          "0": "Transitorios m?s definidos",
+          "1": "Medios equilibrados",
+          "2": "Master con mayor energ?a"
         }
       },
       "indie": {
-        "title": "Banda Indie",
-        "genre": "Indie / Rock",
-        "summary": "Baterías alineadas en fase, guitarras separadas con EQ mid/side y un master cohesivo con color estilo analógico.",
+        "title": "Indie Org?nico",
+        "genre": "Indie / Alternativo",
+        "summary": "Din?mica natural con texturas abiertas y un balance c?lido.",
         "highlights": {
-          "0": "Alineación de fase de batería",
-          "1": "EQ de guitarra mid/side",
-          "2": "Saturación tipo cinta en mixbus"
+          "0": "Din?mica preservada",
+          "1": "Profundidad con reverb sutil",
+          "2": "EQ suave en medios"
         },
         "metrics": {
-          "0": "LUFS: -12.0 → -10.8",
-          "1": "Factor de Cresta: 11 dB → 9 dB",
-          "2": "Imagen estéreo equilibrada L/R <0.5 dB"
+          "0": "Imagen est?reo m?s limpia",
+          "1": "Voces integradas en la banda",
+          "2": "Menos resonancias molestas"
         }
       },
-      "ambient": {
-        "title": "Ambient Cinemático",
-        "genre": "Score / Ambient",
-        "summary": "Espacio amplio y envolvente con acumulación controlada de medios-graves, manteniendo los pads exuberantes sin barro.",
+      "trap": {
+        "title": "Trap Nocturno",
+        "genre": "Trap",
+        "summary": "808 s?lido, hi-hats n?tidos y un master con impacto sin saturar.",
         "highlights": {
-          "0": "Control de resonancia medio-grave",
-          "1": "Reverbs en capas con pre-delay",
-          "2": "Pegamento multibanda suave"
+          "0": "Subgrave controlado",
+          "1": "Claridad en hi-hats",
+          "2": "Voz al frente con aire"
         },
         "metrics": {
-          "0": "LUFS: -16.0 → -14.5",
-          "1": "Reverb RT60 domada 12%",
-          "2": "Rumble de sub cortado por debajo de 30 Hz"
+          "0": "Low-end m?s s?lido",
+          "1": "Percusi?n m?s definida",
+          "2": "Mayor sensaci?n de punch"
         }
       }
-    }
+    },
+    "toggleOriginal": "Original",
+    "toggleMaster": "Master AI"
   },
   "Docs": {
     "title": "Documentación y Guía",

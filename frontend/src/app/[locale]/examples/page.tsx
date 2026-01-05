@@ -3,6 +3,7 @@ import { Link } from "../../../i18n/routing";
 import Script from "next/script";
 import { useTranslations } from "next-intl";
 import { getTranslations } from "next-intl/server";
+import { ExamplesGrid } from "../../../components/examples/ExamplesGrid";
 
 const fallbackSiteUrl = "https://music-mix-master.com";
 const siteUrl = (() => {
@@ -53,14 +54,17 @@ const breadcrumbsJsonLd = {
 
 export default function ExamplesPage() {
   const t = useTranslations('Examples');
-  const exampleKeys = ['pop', 'hiphop', 'indie', 'ambient'];
+  const exampleKeys = ['pop', 'rock', 'indie', 'trap'];
 
   const EXAMPLES = exampleKeys.map(key => ({
+    id: key,
     title: t(`items.${key}.title`),
     genre: t(`items.${key}.genre`),
     summary: t(`items.${key}.summary`),
     highlights: Object.values(t.raw(`items.${key}.highlights`) as Record<string, string>),
     metrics: Object.values(t.raw(`items.${key}.metrics`) as Record<string, string>),
+    originalSrc: `/examples/${key}_original.wav`,
+    masterSrc: `/examples/${key}_mixdown.wav`,
   }));
 
   return (
@@ -83,35 +87,11 @@ export default function ExamplesPage() {
             </div>
           </div>
 
-          <div className="grid gap-6 sm:grid-cols-2">
-            {EXAMPLES.map((example) => (
-              <article key={example.title} className="rounded-2xl border border-slate-800/70 bg-slate-900/40 p-6 shadow-lg shadow-slate-900/60">
-                <div className="flex items-center justify-between mb-3">
-                  <div>
-                    <p className="text-xs uppercase tracking-wide text-teal-300/80">{example.genre}</p>
-                    <h2 className="text-xl font-semibold text-slate-100">{example.title}</h2>
-                  </div>
-                  <span aria-hidden="true" className="text-slate-500 text-lg">↗</span>
-                </div>
-                <p className="text-sm text-slate-400 mb-4">{example.summary}</p>
-                <div className="flex flex-wrap gap-2 mb-4">
-                  {example.highlights.map((item) => (
-                    <span key={item} className="rounded-full border border-slate-800 bg-slate-900/70 px-3 py-1 text-xs text-slate-200">
-                      {item}
-                    </span>
-                  ))}
-                </div>
-                <div className="rounded-xl border border-slate-800/70 bg-slate-950/50 p-4">
-                  <p className="text-xs uppercase tracking-[0.12em] text-slate-400 mb-2">{t('notableChanges')}</p>
-                  <ul className="space-y-2 text-sm text-slate-300 list-disc list-inside">
-                    {example.metrics.map((metric) => (
-                      <li key={metric}>{metric}</li>
-                    ))}
-                  </ul>
-                </div>
-              </article>
-            ))}
-          </div>
+          <ExamplesGrid
+            examples={EXAMPLES}
+            toggleLabels={{ original: t("toggleOriginal"), master: t("toggleMaster") }}
+            notableChangesLabel={t("notableChanges")}
+          />
 
           <div className="mt-12 rounded-2xl border border-teal-500/40 bg-teal-500/10 p-8 text-center shadow-lg shadow-teal-500/20">
             <h3 className="text-2xl font-semibold text-teal-200 mb-3">{t('ctaTitle')}</h3>
