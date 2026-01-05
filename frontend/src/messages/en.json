@@ -389,15 +389,15 @@
       }
     },
     "stageGroups": {
-      "technicalPreparation": "Technical Preparation",
-      "technicalCalibrationEq": "Technical Calibration & EQ",
+      "technicalPreparation": "Cleanup",
+      "technicalCalibrationEq": "Clarity",
       "phaseAlignment": "Phase & Polarity Alignment",
       "mixBusPrep": "MixBus Prep",
       "spectralCleanup": "Spectral Cleanup",
-      "dynamics": "Dynamics",
+      "dynamics": "Punch",
       "space": "Space & Depth",
-      "mastering": "MASTERING",
-      "manualCorrection": "Manual Correction",
+      "mastering": "Mastering",
+      "manualCorrection": "Manual Adjustments",
       "other": "Other"
     },
     "stemsProfile": "Select stems profile",

@@ -26,7 +26,10 @@ import {
   BoltIcon,
   LockClosedIcon,
   ChevronDownIcon,
-  ArrowLeftIcon
+  ArrowLeftIcon,
+  SparklesIcon,
+  SunIcon,
+  SpeakerWaveIcon
 } from "@heroicons/react/24/outline";
 import { ProcessingVisualizer } from "./ProcessingVisualizer";
 
@@ -165,9 +168,9 @@ type GroupConfig = {
 };
 
 const GROUPS_CONFIG: GroupConfig[] = [
-  { id: "TECHNICAL_PREPARATION", labelKey: "technicalPreparation", icon: PresentationChartLineIcon, theme: "cyan" },
-  { id: "TECHNICAL_CALIBRATION_EQ", labelKey: "technicalCalibrationEq", icon: AdjustmentsVerticalIcon, theme: "purple" },
-  { id: "DYNAMICS", labelKey: "dynamics", icon: ArrowsPointingInIcon, theme: "orange" },
+  { id: "TECHNICAL_PREPARATION", labelKey: "technicalPreparation", icon: SparklesIcon, theme: "cyan" },
+  { id: "TECHNICAL_CALIBRATION_EQ", labelKey: "technicalCalibrationEq", icon: SunIcon, theme: "purple" },
+  { id: "DYNAMICS", labelKey: "dynamics", icon: SpeakerWaveIcon, theme: "orange" },
   { id: "MANUAL_CORRECTION", labelKey: "manualCorrection", icon: HandRaisedIcon, theme: "amber" },
   { id: "MASTERING", labelKey: "mastering", icon: BoltIcon, theme: "rose" },
 ];

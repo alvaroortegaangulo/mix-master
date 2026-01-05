@@ -304,15 +304,15 @@
     "waitingQueue": "Esperando en cola…",
     "runningStage": "Ejecutando etapa",
     "stageGroups": {
-      "technicalPreparation": "Preparación Técnica",
-      "technicalCalibrationEq": "Mezcla estática",
+      "technicalPreparation": "Limpieza",
+      "technicalCalibrationEq": "Claridad",
       "phaseAlignment": "Fase y Alineación",
       "mixBusPrep": "Preparación del MixBus",
       "spectralCleanup": "Limpieza Espectral",
-      "dynamics": "Dinámica",
+      "dynamics": "Pegada",
       "space": "Espacio y Profundidad",
       "mastering": "Masterización",
-      "manualCorrection": "Corrección Manual",
+      "manualCorrection": "Ajustes Manuales",
       "other": "Otros"
     },
     "stage": {
