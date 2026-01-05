@@ -48,10 +48,7 @@ export function ListenDifferenceSection({ className }: { className?: string }) {
           <div className="relative rounded-[28px] border border-amber-500/20 bg-slate-900/40 p-5 sm:p-6 md:p-8 shadow-[0_30px_80px_rgba(0,0,0,0.55)] backdrop-blur">
             <div className="absolute inset-0 rounded-[28px] ring-1 ring-amber-500/10 pointer-events-none" />
             <div className="relative flex flex-col gap-4">
-              <div className="flex flex-col items-center gap-3 sm:flex-row sm:justify-between">
-                <span className="inline-flex items-center rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-[11px] font-semibold text-amber-200">
-                  {examples("items.rock.title")}
-                </span>
+              <div className="flex justify-center">
                 <div className="inline-flex bg-slate-950/80 p-1 rounded-full border border-slate-800/80">
                   <button
                     type="button"

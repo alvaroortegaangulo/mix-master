@@ -86,7 +86,7 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
   }, []);
 
   return (
-    <section className="relative flex min-h-[70vh] lg:min-h-[75vh] 2xl:min-h-[85vh] flex-col items-center justify-center overflow-hidden bg-slate-950 px-4 text-center py-8 md:py-10 lg:py-16 2xl:py-20">
+    <section className="relative flex min-h-[100svh] sm:min-h-[70vh] lg:min-h-[75vh] 2xl:min-h-[85vh] flex-col items-center justify-center overflow-hidden bg-slate-950 px-4 text-center py-6 sm:py-8 md:py-10 lg:py-16 2xl:py-20">
       {/* Background gradients/blobs */}
       <div className="absolute top-0 left-0 h-full w-full overflow-hidden pointer-events-none z-0">
         <div className="absolute -top-[20%] -left-[10%] h-[50%] w-[50%] rounded-full bg-teal-500/10 blur-[120px]" />
@@ -135,7 +135,7 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
         </ScrollReveal>
 
         <ScrollReveal
-          className="flex flex-col items-center gap-3 sm:gap-4 sm:flex-row sm:justify-center mt-2 sm:mt-3"
+          className="flex flex-col items-center gap-3 sm:gap-4 sm:flex-row sm:justify-center mt-2 sm:mt-3 mb-4 sm:mb-0"
           delay={0.2}
         >
           {/* Button 1: Mezclar mi Track */}
@@ -229,14 +229,14 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
         />
       </div>
 
-      <div className="absolute bottom-8 right-4 sm:bottom-10 sm:right-6 z-30">
-        <div className="hero-faq-pop group w-[min(90vw,340px)] origin-bottom-right">
+      <div className="relative z-30 mt-6 flex justify-center sm:absolute sm:bottom-10 sm:right-6 sm:mt-0 sm:justify-start">
+        <div className="hero-faq-pop group w-[min(90vw,340px)] origin-bottom sm:origin-bottom-right">
           <div className="hero-faq-float relative rounded-2xl border border-slate-800 bg-slate-950/90 p-4 text-left shadow-2xl shadow-black/40 backdrop-blur">
             <div className="flex items-start gap-2">
               <span className="mt-0.5 inline-flex h-5 w-5 items-center justify-center rounded-full border border-amber-400/70 bg-amber-500/15 text-[11px] font-bold text-amber-200">
                 i
               </span>
-              <p className="text-sm font-semibold text-white">
+              <p className="text-[12px] sm:text-sm font-semibold text-white">
                 ¿Cuál es la diferencia entre Mezcla y Masterización?
               </p>
             </div>
