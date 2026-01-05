@@ -10,6 +10,10 @@ const PipelineInteractiveDiagram = dynamic(() => import("./PipelineInteractiveDi
   loading: () => <div className="h-96 bg-slate-900" />
 });
 
+const ListenDifferenceSection = dynamic(() => import("./ListenDifferenceSection").then(mod => mod.ListenDifferenceSection), {
+  loading: () => <div className="h-80 bg-slate-950" />
+});
+
 const FeaturesSection = dynamic(() => import("./FeaturesSection").then(mod => mod.FeaturesSection), {
   loading: () => <div className="h-96 bg-slate-900" />
 });
@@ -24,7 +28,7 @@ const TechSpecsSection = dynamic(() => import("./TechSpecsSection").then(mod => 
 });
 
 export function LandingPage() {
-  // Alternating pattern: Dark (Hero) -> Light -> Dark -> Light -> Dark -> Light
+  // Alternating pattern: Dark (Hero) -> Highlight -> Light -> Dark -> Light -> Dark -> Light
   // "Light" in this dark theme context = bg-slate-900
   // "Dark" = bg-slate-950
 
@@ -37,19 +41,22 @@ export function LandingPage() {
       {/* 1. Hero: Dark (bg-slate-950) - Default */}
       <HeroSection onTryIt={handleTryIt} />
 
-      {/* 2. Pipeline: Light (bg-slate-900) */}
+      {/* 2. Listen Difference: Highlight (bg-slate-950) */}
+      <ListenDifferenceSection className="bg-slate-950" />
+
+      {/* 3. Pipeline: Light (bg-slate-900) */}
       <PipelineInteractiveDiagram className="bg-slate-900" />
 
-      {/* 3. Live Analysis: Dark (bg-slate-950) */}
+      {/* 4. Live Analysis: Dark (bg-slate-950) */}
       <LiveSoundAnalysis className="bg-slate-950" />
 
-      {/* 4. Features (DAW to World): Match Pipeline background */}
+      {/* 5. Features (DAW to World): Match Pipeline background */}
       <FeaturesSection className="bg-slate-900" />
 
-      {/* 5. Tech Specs (Power & Precision): Dark (bg-slate-950) */}
+      {/* 6. Tech Specs (Power & Precision): Dark (bg-slate-950) */}
       <TechSpecsSection className="bg-slate-950" />
 
-      {/* 6. Benefits (Hours in minutes): Light (bg-slate-900) */}
+      {/* 7. Benefits (Hours in minutes): Light (bg-slate-900) */}
       <BenefitsSection className="bg-slate-900" />
 
       {/* Bottom CTA */}

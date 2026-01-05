@@ -19,6 +19,11 @@
     "readyToElevate": "Prêt à élever votre son ?",
     "startMixing": "Commencer le Mixage Gratuitement"
   },
+  "ListenDifferenceSection": {
+    "title": "Écoutez la <amber>différence</amber>",
+    "subtitle": "Notre IA analyse et masterise votre piste instantanément. Alternez entre la version originale et la version masterisée pour ressentir la puissance, la clarté et le volume professionnel.",
+    "cta": "Écouter plus d’exemples"
+  },
   "HeroSection": {
     "alertConstruction": "ACCES BETA V2.0 DISPONIBLE",
     "studioSound": "Son Studio.",
