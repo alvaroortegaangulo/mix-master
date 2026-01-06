@@ -60,6 +60,7 @@ type ProfileCategory =
   | "drums"
   | "bass"
   | "guitars"
+  | "winds"
   | "keys"
   | "vocals"
   | "fx"
@@ -78,6 +79,7 @@ const CATEGORY_ORDER: Array<Exclude<ProfileCategory, "all">> = [
   "drums",
   "bass",
   "guitars",
+  "winds",
   "keys",
   "vocals",
   "fx",
@@ -93,6 +95,8 @@ const PROFILE_SEARCH_TERMS: Record<string, string[]> = {
   Bass_Electric: ["bass", "bajo", "sub"],
   Acoustic_Guitar: ["acoustic", "guitar", "guitarra acustica"],
   Electric_Guitar_Rhythm: ["electric", "guitar", "guitarra electrica"],
+  Trumpet: ["trumpet", "trompeta", "brass", "wind", "horn"],
+  Saxophone: ["saxophone", "sax", "saxo", "saxofon"],
   Keys_Piano: ["piano", "keys", "teclas"],
   Synth_Pads: ["synth", "sinte", "pads", "pad"],
   Lead_Vocal_Melodic: ["vocal", "voz", "lead", "melodic"],
@@ -184,6 +188,25 @@ const InstrumentArt = ({ variant }: { variant: string }) => {
           <rect x="92" y="50" width="14" height="8" rx="4" />
           <rect x="100" y="36" width="40" height="8" rx="4" />
           <circle cx="72" cy="67" r="4" />
+        </svg>
+      );
+    case "trumpet":
+      return (
+        <svg {...BASE_SVG_PROPS}>
+          <rect x="30" y="54" width="52" height="12" rx="4" />
+          <path d="M82 54h26l16-10v32l-16-10H82" />
+          <circle cx="94" cy="50" r="4" />
+          <circle cx="94" cy="60" r="4" />
+          <circle cx="94" cy="70" r="4" />
+        </svg>
+      );
+    case "sax":
+      return (
+        <svg {...BASE_SVG_PROPS}>
+          <path d="M96 28c0 20-18 26-32 36-12 8-12 18-4 28" />
+          <circle cx="96" cy="32" r="6" />
+          <path d="M60 92l12-8" />
+          <circle cx="60" cy="92" r="4" />
         </svg>
       );
     case "keys":
@@ -335,6 +358,20 @@ export function StemsProfilePanel({ stems, onChangeProfile, accent = "amber" }: 
         keywords: PROFILE_SEARCH_TERMS.Electric_Guitar_Rhythm,
       },
       {
+        value: "Trumpet",
+        label: t("profileOptions.Trumpet"),
+        category: "winds",
+        variant: "trumpet",
+        keywords: PROFILE_SEARCH_TERMS.Trumpet,
+      },
+      {
+        value: "Saxophone",
+        label: t("profileOptions.Saxophone"),
+        category: "winds",
+        variant: "sax",
+        keywords: PROFILE_SEARCH_TERMS.Saxophone,
+      },
+      {
         value: "Keys_Piano",
         label: t("profileOptions.Keys_Piano"),
         category: "keys",
@@ -408,6 +445,7 @@ export function StemsProfilePanel({ stems, onChangeProfile, accent = "amber" }: 
       drums: t("profileGroups.drums"),
       bass: t("profileGroups.bass"),
       guitars: t("profileGroups.guitars"),
+      winds: t("profileGroups.winds"),
       keys: t("profileGroups.keys"),
       vocals: t("profileGroups.vocals"),
       fx: t("profileGroups.fx"),
@@ -422,6 +460,7 @@ export function StemsProfilePanel({ stems, onChangeProfile, accent = "amber" }: 
       drums: 0,
       bass: 0,
       guitars: 0,
+      winds: 0,
       keys: 0,
       vocals: 0,
       fx: 0,

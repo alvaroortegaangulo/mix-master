@@ -430,6 +430,10 @@
         "label": "Guitars bus",
         "description": "Acoustic and electric guitars."
       },
+      "winds": {
+        "label": "Bus fiati",
+        "description": "Tromba, sassofono, ecc."
+      },
       "keys_synths": {
         "label": "Keys / Synths bus",
         "description": "Pianos, Rhodes, pads, synthesizers."
@@ -461,6 +465,7 @@
       "drums": "Batteria",
       "bass": "Basso",
       "guitars": "Chitarre",
+      "winds": "Fiati",
       "keys": "Tasti / Synth",
       "vocals": "Voci",
       "fx": "FX",
@@ -474,6 +479,8 @@
       "Bass_Electric": "Electric / synth bass",
       "Acoustic_Guitar": "Acoustic guitar",
       "Electric_Guitar_Rhythm": "Electric guitar",
+      "Trumpet": "Tromba",
+      "Saxophone": "Sassofono",
       "Keys_Piano": "Piano / keys",
       "Synth_Pads": "Synth pads",
       "Lead_Vocal_Melodic": "Lead vocal (melodic)",

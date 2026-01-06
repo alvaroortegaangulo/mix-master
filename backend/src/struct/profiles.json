@@ -55,6 +55,24 @@
       "preferred_lpf_hz_range": [10000.0, 20000.0],
       "notes": "Guitarras eléctricas rítmicas."
     },
+    "Trumpet": {
+      "id": "Trumpet",
+      "family": "Winds",
+      "work_loudness_lufs_range": [-30.0, -22.0],
+      "work_peak_dbfs_max": -3.0,
+      "preferred_hpf_hz_range": [120.0, 180.0],
+      "preferred_lpf_hz_range": [12000.0, 20000.0],
+      "notes": "Trompeta principal, timbre brillante."
+    },
+    "Saxophone": {
+      "id": "Saxophone",
+      "family": "Winds",
+      "work_loudness_lufs_range": [-30.0, -22.0],
+      "work_peak_dbfs_max": -3.0,
+      "preferred_hpf_hz_range": [100.0, 160.0],
+      "preferred_lpf_hz_range": [12000.0, 20000.0],
+      "notes": "Saxofon melodico."
+    },
     "Keys_Piano": {
       "id": "Keys_Piano",
       "family": "Keys",
@@ -149,6 +167,11 @@
           "pre_delay_ms_range": [10.0, 40.0],
           "send_level_lufs_offset": -12.0
         },
+        "Bus_Winds": {
+          "rt60_range_sec": [0.6, 1.6],
+          "pre_delay_ms_range": [20.0, 60.0],
+          "send_level_lufs_offset": -12.0
+        },
         "Bus_LeadVox": {
           "rt60_range_sec": [0.5, 1.5],
           "pre_delay_ms_range": [40.0, 80.0],
@@ -190,6 +213,11 @@
           "rt60_range_sec": [0.8, 2.5],
           "pre_delay_ms_range": [15.0, 40.0],
           "send_level_lufs_offset": -12.0
+        },
+        "Bus_Winds": {
+          "rt60_range_sec": [0.5, 1.8],
+          "pre_delay_ms_range": [10.0, 35.0],
+          "send_level_lufs_offset": -13.0
         },
         "Bus_LeadVox": {
           "rt60_range_sec": [0.6, 1.8],

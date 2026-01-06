@@ -73,6 +73,8 @@ def infer_bus_target(instrument_profile: str) -> str:
         "Acoustic_Guitar": "Bus_Guitars",
         "Electric_Guitar_Rhythm": "Bus_Guitars",
         "Electric_Guitar_Lead": "Bus_Guitars",
+        "Trumpet": "Bus_Winds",
+        "Saxophone": "Bus_Winds",
         "Keys_Piano": "Bus_Keys_Synths",
         "Synth_Pads": "Bus_Keys_Synths",
         "Synth_Lead_Arp": "Bus_Keys_Synths",

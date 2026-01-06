@@ -416,6 +416,10 @@
         "label": "Bus Guitares",
         "description": "Guitares acoustiques et électriques."
       },
+      "winds": {
+        "label": "Bus vents",
+        "description": "Cuivres et bois : trompette, saxophone, etc."
+      },
       "keys_synths": {
         "label": "Bus Claviers / Synthés",
         "description": "Pianos, Rhodes, pads, synthétiseurs."
@@ -447,6 +451,7 @@
       "drums": "Batterie",
       "bass": "Basse",
       "guitars": "Guitares",
+      "winds": "Vents",
       "keys": "Claviers / Synthés",
       "vocals": "Voix",
       "fx": "FX",
@@ -460,6 +465,8 @@
       "Bass_Electric": "Basse électrique / synthé",
       "Acoustic_Guitar": "Guitare acoustique",
       "Electric_Guitar_Rhythm": "Guitare électrique",
+      "Trumpet": "Trompette",
+      "Saxophone": "Saxophone",
       "Keys_Piano": "Piano / claviers",
       "Synth_Pads": "Pads synthé",
       "Lead_Vocal_Melodic": "Voix principale (mélodique)",

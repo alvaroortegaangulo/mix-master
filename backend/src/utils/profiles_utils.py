@@ -38,7 +38,7 @@ def get_instrument_profile(instrument_id: str) -> Dict[str, Any]:
 def get_instrument_family(instrument_profile_id: str) -> str:
     """
     Agrupa instrument_profiles en familias lógicas:
-      - 'Drums', 'Bass', 'Guitars', 'KeysSynths', 'LeadVox', 'BGV', 'FX', 'Ambience', 'Other'.
+      - 'Drums', 'Bass', 'Guitars', 'Winds', 'KeysSynths', 'LeadVox', 'BGV', 'FX', 'Ambience', 'Other'.
 
     Se basa solo en el nombre del perfil (heurística).
     """
@@ -67,6 +67,10 @@ def get_instrument_family(instrument_profile_id: str) -> str:
     # Guitars
     if "Guitar" in name:
         return "Guitars"
+
+    # Winds / brass
+    if "Trumpet" in name or "Saxophone" in name or "Sax" in name or "Brass" in name:
+        return "Winds"
 
     # Voces lead
     if name.startswith("Lead_Vocal"):
@@ -130,6 +134,10 @@ def get_hpf_lpf_targets(instrument_profile_id: str) -> tuple[float | None, float
         hpf, lpf = 80.0, 18000.0
     elif name.startswith("Electric_Guitar"):
         hpf, lpf = 80.0, 15000.0
+    elif "Trumpet" in name:
+        hpf, lpf = 120.0, 18000.0
+    elif "Saxophone" in name or "Sax" in name:
+        hpf, lpf = 100.0, 18000.0
     elif "Keys" in name or "Piano" in name:
         hpf, lpf = 60.0, 18000.0
     elif "Lead_Vocal" in name:
