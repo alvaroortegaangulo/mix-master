@@ -83,6 +83,13 @@ export function getBackendBaseUrl(): string {
 }
 
 export function getApiBaseUrl(): string {
+  const envApi =
+    process.env.NEXT_PUBLIC_API_BASE_URL?.trim() ||
+    process.env.NEXT_PUBLIC_BACKEND_URL?.trim();
+  if (envApi) {
+    return envApi.replace(/\/+$/, "");
+  }
+
   if (typeof window !== "undefined") {
     return "/api";
   }
