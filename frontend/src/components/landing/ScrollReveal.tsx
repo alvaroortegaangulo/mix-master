@@ -26,7 +26,7 @@ export function ScrollReveal({
   const offset = reduceMotion ? 0 : y;
   const transition = reduceMotion
     ? { duration: 0 }
-    : { duration, delay, ease: [0.22, 1, 0.36, 1] };
+    : { duration, delay, ease: [0.22, 1, 0.36, 1] as any };
 
   return (
     <motion.div

@@ -505,6 +505,85 @@ if abs(dc_offset) > threshold:
         </section>
       </>
     ),
+    "stems-vs-stereo-mezcla": (
+      <>
+        <p>
+          El mastering estéreo es el estándar, pero el mastering por stems (o mezcla por grupos) es el arma secreta
+          de muchos ingenieros top. Al dividir tus pistas en grupos (batería, bajo, voces, sintes),
+          obtienes un control imposible con un solo archivo estéreo.
+        </p>
+
+        <section id="what-are-stems" className="scroll-mt-24">
+          <h2>¿Qué son los Stems?</h2>
+          <p>
+            Los stems son grupos estéreo de instrumentos. A diferencia del multitrack (cada pista individual),
+            los stems agrupan elementos similares. Una canción típica podría tener 4-8 stems.
+          </p>
+        </section>
+
+        <section id="benefits-of-stems" className="scroll-mt-24">
+          <h2>Beneficios de la Mezcla por Stems</h2>
+          <BlogChecklist
+            title="¿Por qué usar stems?"
+            items={[
+              "Más headroom y claridad.",
+              "Procesamiento dirigido (ej: hacer más brillantes solo las voces).",
+              "Mejor control sobre el low-end.",
+              "Evita la sobrecompresión de la mezcla entera."
+            ]}
+          />
+        </section>
+      </>
+    ),
+    "guia-mastering-lufs-true-peak": (
+      <>
+        <p>
+          La Loudness War ha terminado, pero el volumen sigue importando. LUFS (Loudness Units Full Scale)
+          es el estándar para medir qué tan fuerte percibimos la música.
+        </p>
+
+        <section id="what-is-lufs" className="scroll-mt-24">
+          <h2>¿Qué son los LUFS?</h2>
+          <p>
+            LUFS tiene en cuenta cómo el oído humano percibe las frecuencias. Es mucho más preciso que los medidores RMS
+            o Peak para juzgar el volumen real.
+          </p>
+        </section>
+
+        <section id="streaming-standards" className="scroll-mt-24">
+          <h2>Estándares de Streaming</h2>
+          <BlogCallout type="info" title="Valores objetivo">
+            Spotify y YouTube normalizan a aprox. -14 LUFS. Si masterizas más fuerte, te bajan el volumen.
+            Si masterizas más suave, te suben (a veces), pero a menudo usando limitadores que alteran el sonido.
+          </BlogCallout>
+        </section>
+      </>
+    ),
+    "flujo-trabajo-inteligencia-artificial": (
+      <>
+        <p>
+          Piroola combina análisis de IA con procesamiento DSP quirúrgico. Nuestro flujo de trabajo está diseñado para
+          respetar tu música mientras corrige errores técnicos.
+        </p>
+
+        <section id="stage-1-analysis" className="scroll-mt-24">
+          <h2>Etapa 1: Análisis Profundo</h2>
+          <p>
+            No solo escuchamos niveles. Analizamos problemas de fase, resonancias, dinámica y balance espectral
+            para cada stem individualmente.
+          </p>
+        </section>
+
+        <section id="stage-3-mastering" className="scroll-mt-24">
+          <h2>Etapa 3: Mastering Creativo</h2>
+          <p>
+            Al final está el mastering. Aquí damos el brillo final, el loudness correcto y
+            la consistencia en todos los sistemas de reproducción.
+          </p>
+        </section>
+      </>
+    ),
+  },
   en: {
     "como-eliminar-dc-offset-en-stems": (
       <>
@@ -1093,6 +1172,84 @@ signal_fixed = signal - dc_offset`}</code>
               "Do not try to fix deep nulls with EQ."
             ]}
           />
+        </section>
+      </>
+    ),
+    "stems-vs-stereo-mezcla": (
+      <>
+        <p>
+          Stereo mastering is the standard, but stem mastering (or stem mixing) is the secret weapon
+          of many top engineers. By splitting your tracks into groups (Drums, Bass, Vocals, Synths),
+          you gain control that is impossible with a single stereo file.
+        </p>
+
+        <section id="what-are-stems" className="scroll-mt-24">
+          <h2>What are Stems?</h2>
+          <p>
+            Stems are stereo groups of instruments. Unlike multitracks (each individual track),
+            stems group similar elements together. A typical song might have 4-8 stems.
+          </p>
+        </section>
+
+        <section id="benefits-of-stems" className="scroll-mt-24">
+          <h2>Benefits of Stem Mixing</h2>
+          <BlogChecklist
+            title="Why use stems?"
+            items={[
+              "More headroom and clarity.",
+              "Targeted processing (e.g., make only vocals brighter).",
+              "Better control over the low-end.",
+              "Avoid over-compression of the entire mix."
+            ]}
+          />
+        </section>
+      </>
+    ),
+    "guia-mastering-lufs-true-peak": (
+      <>
+        <p>
+          The Loudness War is over, but loudness still matters. LUFS (Loudness Units Full Scale)
+          is the standard for measuring how loud we perceive music.
+        </p>
+
+        <section id="what-is-lufs" className="scroll-mt-24">
+          <h2>What is LUFS?</h2>
+          <p>
+            LUFS takes into account how the human ear perceives frequencies. It is much more accurate than RMS
+            or Peak meters for judging actual loudness.
+          </p>
+        </section>
+
+        <section id="streaming-standards" className="scroll-mt-24">
+          <h2>Streaming Standards</h2>
+          <BlogCallout type="info" title="Target Values">
+            Spotify and YouTube normalize to approx. -14 LUFS. If you master louder, they turn you down.
+            If you master quieter, they (sometimes) turn you up, but often using limiters that alter the sound.
+          </BlogCallout>
+        </section>
+      </>
+    ),
+    "flujo-trabajo-inteligencia-artificial": (
+      <>
+        <p>
+          Piroola combines AI analysis with surgical DSP processing. Our workflow is designed to
+          respect your music while correcting technical errors.
+        </p>
+
+        <section id="stage-1-analysis" className="scroll-mt-24">
+          <h2>Stage 1: Deep Analysis</h2>
+          <p>
+            We don't just listen to levels. We analyze phase issues, resonances, dynamics, and spectral balance
+            for each stem individually.
+          </p>
+        </section>
+
+        <section id="stage-3-mastering" className="scroll-mt-24">
+          <h2>Stage 3: Creative Mastering</h2>
+          <p>
+            At the end is mastering. Here we provide the final polish, correct loudness, and
+            consistency across all playback systems.
+          </p>
         </section>
       </>
     ),
@@ -1909,6 +2066,84 @@ signal_fixed = signal - dc_offset`}</code>
         </section>
       </>
     ),
+    "stems-vs-stereo-mezcla": (
+      <>
+        <p>
+          Stereo-Mastering ist der Standard, aber Stem-Mastering (oder Stem-Mixing) ist die Geheimwaffe
+          vieler Top-Ingenieure. Wenn Sie Ihre Tracks in Gruppen (Drums, Bass, Vocals, Synths) aufteilen,
+          erhalten Sie eine Kontrolle, die mit einer einzigen Stereo-Datei unmöglich ist.
+        </p>
+
+        <section id="what-are-stems" className="scroll-mt-24">
+          <h2>Was sind Stems?</h2>
+          <p>
+            Stems sind Stereo-Gruppen von Instrumenten. Im Gegensatz zu Multitracks (jede einzelne Spur),
+            fassen Stems ähnliche Elemente zusammen. Ein typischer Song könnte 4-8 Stems haben.
+          </p>
+        </section>
+
+        <section id="benefits-of-stems" className="scroll-mt-24">
+          <h2>Vorteile von Stem-Mixing</h2>
+          <BlogChecklist
+            title="Warum Stems nutzen?"
+            items={[
+              "Mehr Headroom und Klarheit.",
+              "Gezielte Bearbeitung (z.B. nur die Vocals heller machen).",
+              "Bessere Kontrolle über den Low-End.",
+              "Vermeidung von Überkompression des gesamten Mixes."
+            ]}
+          />
+        </section>
+      </>
+    ),
+    "guia-mastering-lufs-true-peak": (
+      <>
+        <p>
+          Der Loudness War ist vorbei, aber Lautheit ist immer noch wichtig. LUFS (Loudness Units Full Scale)
+          ist der Standard, um zu messen, wie laut wir Musik wahrnehmen.
+        </p>
+
+        <section id="what-is-lufs" className="scroll-mt-24">
+          <h2>Was ist LUFS?</h2>
+          <p>
+            LUFS berücksichtigt, wie das menschliche Ohr Frequenzen wahrnimmt. Es ist viel genauer als RMS
+            oder Peak-Meter, um die tatsächliche Lautheit zu beurteilen.
+          </p>
+        </section>
+
+        <section id="streaming-standards" className="scroll-mt-24">
+          <h2>Streaming-Standards</h2>
+          <BlogCallout type="info" title="Zielwerte">
+            Spotify und YouTube normalisieren auf ca. -14 LUFS. Wenn Sie lauter mastern, drehen sie es leiser.
+            Wenn Sie leiser mastern, drehen sie es (manchmal) lauter, aber oft mit Limitern, die den Klang verändern.
+          </BlogCallout>
+        </section>
+      </>
+    ),
+    "flujo-trabajo-inteligencia-artificial": (
+      <>
+        <p>
+          Piroola kombiniert KI-Analyse mit chirurgischer DSP-Bearbeitung. Unser Workflow ist darauf ausgelegt,
+          Ihre Musik zu respektieren und gleichzeitig technische Fehler zu beheben.
+        </p>
+
+        <section id="stage-1-analysis" className="scroll-mt-24">
+          <h2>Stufe 1: Tiefenanalyse</h2>
+          <p>
+            Wir hören nicht nur auf Pegel. Wir analysieren Phasenprobleme, Resonanzen, Dynamik und spektrale Balance
+            für jeden Stem einzeln.
+          </p>
+        </section>
+
+        <section id="stage-3-mastering" className="scroll-mt-24">
+          <h2>Stufe 3: Kreatives Mastering</h2>
+          <p>
+            Am Ende steht das Mastering. Hier sorgen wir für den finalen Glanz, die richtige Lautheit und
+            die Konsistenz über alle Wiedergabesysteme hinweg.
+          </p>
+        </section>
+      </>
+    ),
   },
   it: {
     "como-eliminar-dc-offset-en-stems": (
@@ -2314,6 +2549,84 @@ signal_fixed = signal - dc_offset`}</code>
         </section>
       </>
     ),
+    "stems-vs-stereo-mezcla": (
+      <>
+        <p>
+          Il mastering stereo è lo standard, ma il mastering per stem (o mixaggio per stem) è l'arma segreta
+          di molti ingegneri top. Dividendo le tracce in gruppi (batteria, basso, voci, synth),
+          ottieni un controllo impossibile con un singolo file stereo.
+        </p>
+
+        <section id="what-are-stems" className="scroll-mt-24">
+          <h2>Cosa sono gli stem?</h2>
+          <p>
+            Gli stem sono gruppi stereo di strumenti. A differenza del multitraccia (ogni singola traccia),
+            gli stem raggruppano elementi simili. Una canzone tipica potrebbe avere 4-8 stem.
+          </p>
+        </section>
+
+        <section id="benefits-of-stems" className="scroll-mt-24">
+          <h2>Vantaggi del mixaggio per stem</h2>
+          <BlogChecklist
+            title="Perché usare gli stem?"
+            items={[
+              "Più headroom e chiarezza.",
+              "Elaborazione mirata (es. rendere più brillanti solo le voci).",
+              "Miglior controllo sulle basse frequenze.",
+              "Evita la sovracompressione dell'intero mix."
+            ]}
+          />
+        </section>
+      </>
+    ),
+    "guia-mastering-lufs-true-peak": (
+      <>
+        <p>
+          La Loudness War è finita, ma il volume è ancora importante. LUFS (Loudness Units Full Scale)
+          è lo standard per misurare quanto forte percepiamo la musica.
+        </p>
+
+        <section id="what-is-lufs" className="scroll-mt-24">
+          <h2>Cos'è LUFS?</h2>
+          <p>
+            LUFS tiene conto di come l'orecchio umano percepisce le frequenze. È molto più accurato dei meter RMS
+            o Peak per giudicare il volume effettivo.
+          </p>
+        </section>
+
+        <section id="streaming-standards" className="scroll-mt-24">
+          <h2>Standard di streaming</h2>
+          <BlogCallout type="info" title="Valori target">
+            Spotify e YouTube normalizzano a circa -14 LUFS. Se masterizzi più forte, abbassano il volume.
+            Se masterizzi più piano, (a volte) alzano il volume, ma spesso usando limiter che alterano il suono.
+          </BlogCallout>
+        </section>
+      </>
+    ),
+    "flujo-trabajo-inteligencia-artificial": (
+      <>
+        <p>
+          Piroola combina l'analisi IA con l'elaborazione DSP chirurgica. Il nostro workflow è progettato per
+          rispettare la tua musica correggendo allo stesso tempo gli errori tecnici.
+        </p>
+
+        <section id="stage-1-analysis" className="scroll-mt-24">
+          <h2>Fase 1: Analisi profonda</h2>
+          <p>
+            Non ascoltiamo solo i livelli. Analizziamo problemi di fase, risonanze, dinamica e bilanciamento spettrale
+            per ogni singolo stem.
+          </p>
+        </section>
+
+        <section id="stage-3-mastering" className="scroll-mt-24">
+          <h2>Fase 3: Mastering creativo</h2>
+          <p>
+            Alla fine c'è il mastering. Qui diamo il tocco finale, il volume giusto e
+            la coerenza su tutti i sistemi di riproduzione.
+          </p>
+        </section>
+      </>
+    ),
   },
   pt: {
     "como-eliminar-dc-offset-en-stems": (
@@ -2668,6 +2981,84 @@ signal_fixed = signal - dc_offset`}</code>
         </section>
       </>
     ),
+    "stems-vs-stereo-mezcla": (
+      <>
+        <p>
+          A masterização estéreo é o padrão, mas a masterização por stems (ou mixagem por stems) é a arma secreta
+          de muitos engenheiros de topo. Ao dividir suas faixas em grupos (bateria, baixo, vocais, sintetizadores),
+          você obtém um controle impossível com um único arquivo estéreo.
+        </p>
+
+        <section id="what-are-stems" className="scroll-mt-24">
+          <h2>O que são stems?</h2>
+          <p>
+            Stems são grupos estéreo de instrumentos. Ao contrário do multipista (cada faixa individual),
+            stems agrupam elementos semelhantes. Uma música típica pode ter 4-8 stems.
+          </p>
+        </section>
+
+        <section id="benefits-of-stems" className="scroll-mt-24">
+          <h2>Vantagens da mixagem por stems</h2>
+          <BlogChecklist
+            title="Por que usar stems?"
+            items={[
+              "Mais headroom e clareza.",
+              "Processamento direcionado (ex: tornar apenas os vocais mais brilhantes).",
+              "Melhor controle sobre os graves.",
+              "Evita a sobrecompressão da mixagem inteira."
+            ]}
+          />
+        </section>
+      </>
+    ),
+    "guia-mastering-lufs-true-peak": (
+      <>
+        <p>
+          A Loudness War acabou, mas o volume ainda importa. LUFS (Loudness Units Full Scale)
+          é o padrão para medir o quão alto percebemos a música.
+        </p>
+
+        <section id="what-is-lufs" className="scroll-mt-24">
+          <h2>O que é LUFS?</h2>
+          <p>
+            LUFS leva em conta como o ouvido humano percebe as frequências. É muito mais preciso que medidores RMS
+            ou Peak para julgar o volume real.
+          </p>
+        </section>
+
+        <section id="streaming-standards" className="scroll-mt-24">
+          <h2>Padrões de streaming</h2>
+          <BlogCallout type="info" title="Valores alvo">
+            Spotify e YouTube normalizam para cerca de -14 LUFS. Se você masterizar mais alto, eles baixam o volume.
+            Se masterizar mais baixo, eles (às vezes) aumentam o volume, mas frequentemente usando limitadores que alteram o som.
+          </BlogCallout>
+        </section>
+      </>
+    ),
+    "flujo-trabajo-inteligencia-artificial": (
+      <>
+        <p>
+          A Piroola combina análise de IA com processamento DSP cirúrgico. Nosso fluxo de trabalho é projetado para
+          respeitar sua música enquanto corrige erros técnicos.
+        </p>
+
+        <section id="stage-1-analysis" className="scroll-mt-24">
+          <h2>Etapa 1: Análise profunda</h2>
+          <p>
+            Não ouvimos apenas níveis. Analisamos problemas de fase, ressonâncias, dinâmica e equilíbrio espectral
+            para cada stem individualmente.
+          </p>
+        </section>
+
+        <section id="stage-3-mastering" className="scroll-mt-24">
+          <h2>Etapa 3: Mastering criativo</h2>
+          <p>
+            No final, há a masterização. Aqui damos o brilho final, o volume certo e
+            a consistência em todos os sistemas de reprodução.
+          </p>
+        </section>
+      </>
+    ),
   },
   ja: {
     "como-eliminar-dc-offset-en-stems": (
@@ -3015,6 +3406,83 @@ signal_fixed = signal - dc_offset`}</code>
         </section>
       </>
     ),
+    "stems-vs-stereo-mezcla": (
+      <>
+        <p>
+          ステレオマスタリングが標準ですが、ステムマスタリング（またはステムミキシング）は
+          多くのトップエンジニアの秘密兵器です。トラックをグループ（ドラム、ベース、ボーカル、シンセ）に分割することで、
+          単一のステレオファイルでは不可能なコントロールが得られます。
+        </p>
+
+        <section id="what-are-stems" className="scroll-mt-24">
+          <h2>ステムとは？</h2>
+          <p>
+            ステムは楽器のステレオグループです。マルチトラック（各個別トラック）とは異なり、
+            ステムは類似した要素をまとめます。一般的な曲には4〜8個のステムがあります。
+          </p>
+        </section>
+
+        <section id="benefits-of-stems" className="scroll-mt-24">
+          <h2>ステムミキシングの利点</h2>
+          <BlogChecklist
+            title="なぜステムを使うのか？"
+            items={[
+              "より多くのヘッドルームと明瞭さ。",
+              "ターゲットを絞った処理（例：ボーカルだけを明るくする）。",
+              "低域のより良いコントロール。",
+              "ミックス全体の過剰な圧縮を回避。"
+            ]}
+          />
+        </section>
+      </>
+    ),
+    "guia-mastering-lufs-true-peak": (
+      <>
+        <p>
+          ラウドネス・ウォーは終わりましたが、音量は依然として重要です。LUFS（Loudness Units Full Scale）は、
+          私たちが音楽をどのくらいの音量で知覚するかを測定するための標準です。
+        </p>
+
+        <section id="what-is-lufs" className="scroll-mt-24">
+          <h2>LUFSとは？</h2>
+          <p>
+            LUFSは、人間の耳が周波数をどのように知覚するかを考慮に入れています。RMSやピークメーターよりも
+            はるかに正確に実際の音量を判断できます。
+          </p>
+        </section>
+
+        <section id="streaming-standards" className="scroll-mt-24">
+          <h2>ストリーミング基準</h2>
+          <BlogCallout type="info" title="目標値">
+            SpotifyとYouTubeは約-14 LUFSにノーマライズします。それより大きくマスタリングすると、音量を下げられます。
+            それより小さくマスタリングすると、（時には）音量を上げられますが、多くの場合、音質を変えるリミッターが使用されます。
+          </BlogCallout>
+        </section>
+      </>
+    ),
+    "flujo-trabajo-inteligencia-artificial": (
+      <>
+        <p>
+          PiroolaはAI分析と外科的なDSP処理を組み合わせています。私たちのワークフローは、
+          技術的なエラーを修正しながらあなたの音楽を尊重するように設計されています。
+        </p>
+
+        <section id="stage-1-analysis" className="scroll-mt-24">
+          <h2>ステージ1：深層分析</h2>
+          <p>
+            レベルを聞くだけではありません。各ステム個別に位相の問題、共振、ダイナミクス、スペクトルバランスを分析します。
+          </p>
+        </section>
+
+        <section id="stage-3-mastering" className="scroll-mt-24">
+          <h2>ステージ3：クリエイティブマスタリング</h2>
+          <p>
+            最後にマスタリングがあります。ここで、最終的な輝き、適切な音量、
+            そしてすべての再生システムでの一貫性を提供します。
+          </p>
+        </section>
+      </>
+    ),
   },
   zh: {
     "como-eliminar-dc-offset-en-stems": (
@@ -3353,6 +3821,79 @@ signal_fixed = signal - dc_offset`}</code>
             <li>True Peak低于安全值。</li>
             <li>动态仍然存在。</li>
           </ul>
+        </section>
+      </>
+    ),
+    "stems-vs-stereo-mezcla": (
+      <>
+        <p>
+          立体声母带是标准，但分轨母带（或分轨混音）是许多顶级工程师的秘密武器。
+          如果你将音轨分成组（鼓、贝斯、人声、合成器），你将获得单一立体声文件无法实现的控制力。
+        </p>
+
+        <section id="what-are-stems" className="scroll-mt-24">
+          <h2>什么是 Stems？</h2>
+          <p>
+            Stems 是乐器的立体声组。与多轨（每个单独的音轨）不同，Stems 将相似的元素组合在一起。
+            一首典型的歌曲可能有 4-8 个 Stems。
+          </p>
+        </section>
+
+        <section id="benefits-of-stems" className="scroll-mt-24">
+          <h2>分轨混音的好处</h2>
+          <BlogChecklist
+            title="为什么要使用 Stems？"
+            items={[
+              "更多的余量和清晰度。",
+              "针对性处理（例如：只让人声更明亮）。",
+              "更好地控制低频。",
+              "避免对整个混音进行过度压缩。"
+            ]}
+          />
+        </section>
+      </>
+    ),
+    "guia-mastering-lufs-true-peak": (
+      <>
+        <p>
+          响度战争已经结束，但响度仍然很重要。LUFS（满刻度响度单位）是衡量我们感知音乐响度的标准。
+        </p>
+
+        <section id="what-is-lufs" className="scroll-mt-24">
+          <h2>什么是 LUFS？</h2>
+          <p>
+            LUFS 考虑了人耳如何感知频率。它比 RMS 或峰值表在判断实际响度方面要准确得多。
+          </p>
+        </section>
+
+        <section id="streaming-standards" className="scroll-mt-24">
+          <h2>流媒体标准</h2>
+          <BlogCallout type="info" title="目标值">
+            Spotify 和 YouTube 将响度标准化为约 -14 LUFS。如果你母带做得更响，他们会调低音量。
+            如果你母带做得更轻，他们（有时）会调高音量，但通常会使用改变音质的限制器。
+          </BlogCallout>
+        </section>
+      </>
+    ),
+    "flujo-trabajo-inteligencia-artificial": (
+      <>
+        <p>
+          Piroola 结合了 AI 分析和外科手术般的 DSP 处理。我们的工作流程旨在
+          尊重您的音乐，同时纠正技术错误。
+        </p>
+
+        <section id="stage-1-analysis" className="scroll-mt-24">
+          <h2>第一阶段：深度分析</h2>
+          <p>
+            我们不仅听电平。我们分别为每个 Stem 分析相位问题、共振、动态和频谱平衡。
+          </p>
+        </section>
+
+        <section id="stage-3-mastering" className="scroll-mt-24">
+          <h2>第三阶段：创意母带</h2>
+          <p>
+            最后是母带处理。在这里，我们提供最终的光泽、正确的响度以及在所有播放系统上的一致性。
+          </p>
         </section>
       </>
     ),
