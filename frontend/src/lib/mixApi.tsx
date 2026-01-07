@@ -163,109 +163,166 @@ function authHeaders(): HeadersInit {
   return headers;
 }
 
-export async function getStudioToken(jobId: string, ttlDays = 7): Promise<{ token: string; expires: number }> {
-  const baseUrl = getApiBaseUrl();
-  const res = await fetch(`${baseUrl}/jobs/${jobId}/studio-token`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...authHeaders(),
-    },
-    body: JSON.stringify({ ttl_days: ttlDays }),
-  });
-  if (!res.ok) {
-    throw new Error(`Failed to obtain studio token: ${res.status} ${res.statusText}`);
-  }
-  return (await res.json()) as { token: string; expires: number };
+function withTimeoutSignal(timeoutMs: number): {
+  signal: AbortSignal;
+  cleanup: () => void;
+} {
+  const controller = new AbortController();
+  const id =
+    typeof window === "undefined"
+      ? setTimeout(() => controller.abort(), timeoutMs)
+      : window.setTimeout(() => controller.abort(), timeoutMs);
+  const cleanup = () => {
+    if (typeof window === "undefined") clearTimeout(id);
+    else window.clearTimeout(id);
+  };
+  return { signal: controller.signal, cleanup };
 }
 
-export async function signFileUrl(jobId: string, filePath: string, token?: string): Promise<string> {
+export async function getStudioToken(
+  jobId: string,
+  ttlDays = 7,
+): Promise<{ token: string; expires: number }> {
+  const baseUrl = getApiBaseUrl();
+  const { signal, cleanup } = withTimeoutSignal(15000);
+  try {
+    const res = await fetch(`${baseUrl}/jobs/${jobId}/studio-token`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...authHeaders(),
+      },
+      body: JSON.stringify({ ttl_days: ttlDays }),
+      signal,
+      cache: "no-store",
+    });
+    if (!res.ok) {
+      throw new Error(
+        `Failed to obtain studio token: ${res.status} ${res.statusText}`,
+      );
+    }
+    return (await res.json()) as { token: string; expires: number };
+  } finally {
+    cleanup();
+  }
+}
+
+export async function signFileUrl(
+  jobId: string,
+  filePath: string,
+  token?: string,
+): Promise<string> {
   const backendBaseUrl = getBackendBaseUrl();
   const apiBaseUrl = getApiBaseUrl();
   const normalizedPath = normalizeFilePath(jobId, filePath);
 
   if (token) {
     const sep = normalizedPath ? "/" : "";
-    const clean = normalizedPath.startsWith("/") ? normalizedPath.slice(1) : normalizedPath;
-    return `${backendBaseUrl}/files/${jobId}${sep}${clean}?t=${encodeURIComponent(token)}`;
+    const clean = normalizedPath.startsWith("/")
+      ? normalizedPath.slice(1)
+      : normalizedPath;
+    return `${backendBaseUrl}/files/${jobId}${sep}${clean}?t=${encodeURIComponent(
+      token,
+    )}`;
   }
 
-  // Request a longer expiration time to prevent 401 on long sessions
-  const expiresIn = 3600;
+  // [FIX] Expiración amplia y timeout para evitar cuelgues de UI en sesiones largas
+  const expiresIn = 3600 * 6; // 6h
 
-  const res = await fetch(`${apiBaseUrl}/files/sign`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...authHeaders(),
-    },
-    body: JSON.stringify({
-      jobId,
-      filePath: normalizedPath,
-      expires_in: expiresIn,
-    }),
-  });
-  if (!res.ok) {
-    throw new Error(`Failed to sign URL: ${res.status} ${res.statusText}`);
-  }
-  const data = (await res.json()) as { url: string };
-
-  // [MODIFIED] Correct hostname in case backend returned internal container URL
+  const { signal, cleanup } = withTimeoutSignal(12000);
   try {
-    const signedUrlObj = new URL(data.url);
-    const currentBase = new URL(backendBaseUrl);
-
-    // Replace protocol/host/port if ANY differ (avoids http URLs blocked by CSP)
-    if (
-      signedUrlObj.host !== currentBase.host ||
-      signedUrlObj.protocol !== currentBase.protocol ||
-      signedUrlObj.port !== currentBase.port
-    ) {
-      signedUrlObj.protocol = currentBase.protocol;
-      signedUrlObj.host = currentBase.host;
-      signedUrlObj.port = currentBase.port;
-      return signedUrlObj.toString();
+    const res = await fetch(`${apiBaseUrl}/files/sign`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...authHeaders(),
+      },
+      body: JSON.stringify({
+        jobId,
+        filePath: normalizedPath,
+        expires_in: expiresIn,
+      }),
+      signal,
+      cache: "no-store",
+    });
+    if (!res.ok) {
+      throw new Error(`Failed to sign URL: ${res.status} ${res.statusText}`);
     }
-    return data.url;
-  } catch (e) {
-    // If URL parsing fails, return original
-    return data.url;
+    const data = (await res.json()) as { url: string };
+
+    // [MODIFIED] Correct hostname in case backend returned internal container URL
+    try {
+      const signedUrlObj = new URL(data.url);
+      const currentBase = new URL(backendBaseUrl);
+
+      // Replace protocol/host/port if ANY differ (avoids http URLs blocked by CSP)
+      if (
+        signedUrlObj.host !== currentBase.host ||
+        signedUrlObj.protocol !== currentBase.protocol ||
+        signedUrlObj.port !== currentBase.port
+      ) {
+        signedUrlObj.protocol = currentBase.protocol;
+        signedUrlObj.host = currentBase.host;
+        signedUrlObj.port = currentBase.port;
+        return signedUrlObj.toString();
+      }
+      return data.url;
+    } catch {
+      // If URL parsing fails, return original
+      return data.url;
+    }
+  } finally {
+    cleanup();
   }
 }
 
 export async function createShareLink(jobId: string): Promise<string> {
   const baseUrl = getApiBaseUrl();
-  const res = await fetch(`${baseUrl}/jobs/${jobId}/share`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      ...authHeaders(),
-    },
-  });
+  const { signal, cleanup } = withTimeoutSignal(15000);
+  try {
+    const res = await fetch(`${baseUrl}/jobs/${jobId}/share`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        ...authHeaders(),
+      },
+      signal,
+      cache: "no-store",
+    });
 
-  if (!res.ok) {
-    throw new Error("Failed to create share link");
+    if (!res.ok) {
+      throw new Error("Failed to create share link");
+    }
+
+    const data = await res.json();
+    return data.token;
+  } finally {
+    cleanup();
   }
-
-  const data = await res.json();
-  return data.token;
 }
 
 export async function getSharedJob(token: string): Promise<any> {
   const baseUrl = getApiBaseUrl();
-  // Public endpoint
-  const res = await fetch(`${baseUrl}/share/${token}`, {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-    },
-  });
+  const { signal, cleanup } = withTimeoutSignal(15000);
+  try {
+    // Public endpoint
+    const res = await fetch(`${baseUrl}/share/${token}`, {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      signal,
+      cache: "no-store",
+    });
 
-  if (!res.ok) {
-    throw new Error("Failed to fetch shared job");
+    if (!res.ok) {
+      throw new Error("Failed to fetch shared job");
+    }
+
+    return res.json();
+  } finally {
+    cleanup();
   }
-
-  return res.json();
 }
 
 /**
@@ -274,8 +331,37 @@ export async function getSharedJob(token: string): Promise<any> {
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function mapBackendStatusToJobStatus(raw: any, baseUrl: string): JobStatus {
-  const backendStatus = (raw.status ?? "pending") as string;
-  const jobId: string = raw.jobId ?? raw.job_id ?? "";
+  const backendStatus = (raw.status ?? raw.job_status ?? "pending") as string;
+  const jobId: string = raw.jobId ?? raw.job_id ?? raw.id ?? "";
+
+  // [FIX] Normalizamos stage_key/progress/stage_index para evitar estados finales perdidos
+  const rawStageKey: string =
+    raw.stage_key ?? raw.stageKey ?? raw.stage ?? raw.current_stage ?? "";
+  const rawProgress: number =
+    typeof raw.progress === "number" ? raw.progress : Number(raw.progress ?? 0);
+  const totalStagesFromRaw =
+    typeof raw.total_stages === "number"
+      ? raw.total_stages
+      : typeof raw.totalStages === "number"
+        ? raw.totalStages
+        : undefined;
+
+  const stageIndexFromRaw =
+    typeof raw.stage_index === "number"
+      ? raw.stage_index
+      : typeof raw.stageIndex === "number"
+        ? raw.stageIndex
+        : undefined;
+
+  const totalStages = totalStagesFromRaw ?? 18; // [FIX] 18 por defecto en tu pipeline, mejor que 7
+
+  // [FIX] Detección de "final real" aunque el backendStatus venga incoherente
+  const looksFinished =
+    rawStageKey === "finished" ||
+    rawStageKey === "done" ||
+    rawStageKey === "success" ||
+    rawProgress >= 100 ||
+    (typeof stageIndexFromRaw === "number" && stageIndexFromRaw >= totalStages);
 
   let status: JobStatus["status"];
   switch (backendStatus) {
@@ -286,7 +372,7 @@ export function mapBackendStatusToJobStatus(raw: any, baseUrl: string): JobStatu
     case "running":
     case "processing_correction":
     case "waiting_for_correction":
-      status = "running";
+      status = looksFinished ? "done" : "running"; // [FIX]
       break;
     case "finished":
     case "success":
@@ -299,13 +385,17 @@ export function mapBackendStatusToJobStatus(raw: any, baseUrl: string): JobStatu
       status = "error";
       break;
     default:
-      console.warn(`[mixApi] Unknown backend status: "${backendStatus}". Defaulting to error.`);
-      status = "error";
+      // [FIX] si parece finished, no lo marques como error por un string raro
+      if (looksFinished) {
+        status = "done";
+      } else {
+        console.warn(
+          `[mixApi] Unknown backend status: "${backendStatus}". Defaulting to error.`,
+        );
+        status = "error";
+      }
       break;
   }
-
-  const totalStages =
-    typeof raw.total_stages === "number" ? raw.total_stages : 7;
 
   const base: JobStatus = {
     jobId,
@@ -324,27 +414,25 @@ export function mapBackendStatusToJobStatus(raw: any, baseUrl: string): JobStatu
     base.progress = 0;
   } else if (status === "running") {
     base.stageIndex =
-      typeof raw.stage_index === "number" ? raw.stage_index : base.stageIndex;
+      typeof stageIndexFromRaw === "number" ? stageIndexFromRaw : base.stageIndex;
     base.totalStages =
-      typeof raw.total_stages === "number" ? raw.total_stages : base.totalStages;
-    base.stageKey = raw.stage_key ?? "running";
+      typeof totalStagesFromRaw === "number" ? totalStagesFromRaw : base.totalStages;
+    base.stageKey = rawStageKey || "running";
     base.message = raw.message ?? "Processing mix...";
-    base.progress =
-      typeof raw.progress === "number" ? raw.progress : base.progress;
+    base.progress = Number.isFinite(rawProgress) ? rawProgress : base.progress;
   } else if (status === "done") {
-    base.stageIndex = base.totalStages;
+    base.stageIndex =
+      typeof stageIndexFromRaw === "number" ? stageIndexFromRaw : base.totalStages;
     base.stageKey = "finished";
     base.message = raw.message ?? "Mix finished";
     base.progress = 100;
   } else if (status === "error") {
     base.stageKey = "error";
-    // If we fell into default error, append the status to the message for debugging
     const defaultMsg = ["failed", "failure", "error"].includes(backendStatus)
       ? "Error while processing mix"
       : `Unknown job status: "${backendStatus}"`;
-
     base.message = raw.message ?? raw.error ?? defaultMsg;
-    // Also ensure error field is set if missing so MixTool displays it
+
     if (!base.error && !raw.message && !raw.error) {
       base.error = defaultMsg;
     }
@@ -352,8 +440,23 @@ export function mapBackendStatusToJobStatus(raw: any, baseUrl: string): JobStatu
   }
 
   // Si tenemos resultado final, mapearlo a MixResult
-  if (status === "done" && raw.full_song_url) {
-    const m = raw.metrics ?? {};
+  // [FIX] soporta variaciones de claves (snake/camel y anidado)
+  const rawFullSongUrl =
+    raw.full_song_url ??
+    raw.fullSongUrl ??
+    raw.full_song ??
+    raw.result?.full_song_url ??
+    raw.result?.fullSongUrl;
+
+  const rawOriginalUrl =
+    raw.original_full_song_url ??
+    raw.originalFullSongUrl ??
+    raw.original_full_song ??
+    raw.result?.original_full_song_url ??
+    raw.result?.originalFullSongUrl;
+
+  if (status === "done" && rawFullSongUrl) {
+    const m = raw.metrics ?? raw.result?.metrics ?? {};
     const metrics: MixMetrics = {
       final_peak_dbfs: m.final_peak_dbfs ?? 0,
       final_rms_dbfs: m.final_rms_dbfs ?? 0,
@@ -370,9 +473,9 @@ export function mapBackendStatusToJobStatus(raw: any, baseUrl: string): JobStatu
     const result: MixResult = {
       jobId,
       originalFullSongUrl: appendApiKeyParam(
-        normalizeUrl(raw.original_full_song_url, baseUrl),
+        normalizeUrl(rawOriginalUrl, baseUrl),
       ),
-      fullSongUrl: appendApiKeyParam(normalizeUrl(raw.full_song_url, baseUrl)),
+      fullSongUrl: appendApiKeyParam(normalizeUrl(rawFullSongUrl, baseUrl)),
       metrics,
     };
 
@@ -382,13 +485,20 @@ export function mapBackendStatusToJobStatus(raw: any, baseUrl: string): JobStatu
   return base;
 }
 
-async function attachSignedResultUrls(jobId: string, status: JobStatus, baseUrl: string): Promise<JobStatus> {
+async function attachSignedResultUrls(
+  jobId: string,
+  status: JobStatus,
+  baseUrl: string,
+): Promise<JobStatus> {
   if (!status.result) return status;
 
   const nextResult: MixResult = { ...status.result };
   const next: JobStatus = { ...status, result: nextResult };
 
-  const signMaybe = async (rawUrl: string | undefined, key: "fullSongUrl" | "originalFullSongUrl") => {
+  const signMaybe = async (
+    rawUrl: string | undefined,
+    key: "fullSongUrl" | "originalFullSongUrl",
+  ) => {
     if (!rawUrl) return;
     try {
       const urlObj = new URL(rawUrl, baseUrl);
@@ -414,13 +524,20 @@ async function attachSignedResultUrls(jobId: string, status: JobStatus, baseUrl:
 }
 
 export async function cleanupTemp(): Promise<void> {
-  const res = await fetch(`${getApiBaseUrl()}/cleanup-temp`, {
-    method: "POST",
-    headers: authHeaders(),
-  });
+  const { signal, cleanup } = withTimeoutSignal(15000);
+  try {
+    const res = await fetch(`${getApiBaseUrl()}/cleanup-temp`, {
+      method: "POST",
+      headers: authHeaders(),
+      signal,
+      cache: "no-store",
+    });
 
-  if (!res.ok) {
-    throw new Error("Failed to cleanup temp");
+    if (!res.ok) {
+      throw new Error("Failed to cleanup temp");
+    }
+  } finally {
+    cleanup();
   }
 }
 
@@ -436,20 +553,26 @@ async function uploadSingleFileForJob(
   const fd = new FormData();
   fd.append("file", file);
 
-  const res = await fetch(
-    `${baseUrl}/mix/${encodeURIComponent(jobId)}/upload-file`,
-    {
-      method: "POST",
-      headers: authHeaders(),
-      body: fd,
-    },
-  );
-
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(
-      `Error uploading file "${file.name}": ${res.status} ${res.statusText} ${text}`,
+  const { signal, cleanup } = withTimeoutSignal(120000);
+  try {
+    const res = await fetch(
+      `${baseUrl}/mix/${encodeURIComponent(jobId)}/upload-file`,
+      {
+        method: "POST",
+        headers: authHeaders(),
+        body: fd,
+        signal,
+      },
     );
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw new Error(
+        `Error uploading file "${file.name}": ${res.status} ${res.statusText} ${text}`,
+      );
+    }
+  } finally {
+    cleanup();
   }
 }
 
@@ -506,10 +629,7 @@ export async function startMixJob(
       formData.append("stem_profiles_json", JSON.stringify(stemProfiles));
     }
 
-    if (
-      spaceDepthBusStyles &&
-      Object.keys(spaceDepthBusStyles).length > 0
-    ) {
+    if (spaceDepthBusStyles && Object.keys(spaceDepthBusStyles).length > 0) {
       formData.append(
         "space_depth_bus_styles_json",
         JSON.stringify(spaceDepthBusStyles),
@@ -518,20 +638,26 @@ export async function startMixJob(
 
     formData.append("upload_mode", uploadMode);
 
-    const res = await fetch(`${baseUrl}/mix`, {
-      method: "POST",
-      headers: authHeaders(),
-      body: formData,
-    });
+    const { signal, cleanup } = withTimeoutSignal(120000);
+    try {
+      const res = await fetch(`${baseUrl}/mix`, {
+        method: "POST",
+        headers: authHeaders(),
+        body: formData,
+        signal,
+      });
 
-    if (!res.ok) {
-      throw new Error(
-        `Error starting mix job: ${res.status} ${res.statusText}`,
-      );
+      if (!res.ok) {
+        throw new Error(
+          `Error starting mix job: ${res.status} ${res.statusText}`,
+        );
+      }
+
+      const data = (await res.json()) as { jobId: string };
+      return { jobId: data.jobId };
+    } finally {
+      cleanup();
     }
-
-    const data = (await res.json()) as { jobId: string };
-    return { jobId: data.jobId };
   }
 
   // Caso multi-archivo (>1): flujo en 3 pasos
@@ -559,39 +685,54 @@ export async function startMixJob(
 
   initForm.append("upload_mode", uploadMode);
 
-  const initRes = await fetch(`${baseUrl}/mix/init`, {
-    method: "POST",
-    headers: authHeaders(),
-    body: initForm,
-  });
+  const { signal: initSignal, cleanup: initCleanup } = withTimeoutSignal(60000);
+  let jobId: string;
+  try {
+    const initRes = await fetch(`${baseUrl}/mix/init`, {
+      method: "POST",
+      headers: authHeaders(),
+      body: initForm,
+      signal: initSignal,
+    });
 
-  if (!initRes.ok) {
-    const text = await initRes.text().catch(() => "");
-    throw new Error(
-      `Error initializing mix job: ${initRes.status} ${initRes.statusText} ${text}`,
-    );
+    if (!initRes.ok) {
+      const text = await initRes.text().catch(() => "");
+      throw new Error(
+        `Error initializing mix job: ${initRes.status} ${initRes.statusText} ${text}`,
+      );
+    }
+
+    const initData = (await initRes.json()) as { jobId: string };
+    jobId = initData.jobId;
+  } finally {
+    initCleanup();
   }
-
-  const initData = (await initRes.json()) as { jobId: string };
-  const jobId = initData.jobId;
 
   // 2) Uploads en paralelo (SIN compresión)
   await uploadFilesInParallelForJob(baseUrl, jobId, files, 10);
 
   // 3) Start: encolar tarea Celery para ese job
-  const startRes = await fetch(
-    `${baseUrl}/mix/${encodeURIComponent(jobId)}/start`,
-    {
-      method: "POST",
-      headers: authHeaders(),
-    },
-  );
-
-  if (!startRes.ok) {
-    const text = await startRes.text().catch(() => "");
-    throw new Error(
-      `Error starting mix pipeline for job ${jobId}: ${startRes.status} ${startRes.statusText} ${text}`,
+  const { signal: startSignal, cleanup: startCleanup } =
+    withTimeoutSignal(30000);
+  try {
+    const startRes = await fetch(
+      `${baseUrl}/mix/${encodeURIComponent(jobId)}/start`,
+      {
+        method: "POST",
+        headers: authHeaders(),
+        signal: startSignal,
+        cache: "no-store",
+      },
     );
+
+    if (!startRes.ok) {
+      const text = await startRes.text().catch(() => "");
+      throw new Error(
+        `Error starting mix pipeline for job ${jobId}: ${startRes.status} ${startRes.statusText} ${text}`,
+      );
+    }
+  } finally {
+    startCleanup();
   }
 
   return { jobId };
@@ -607,28 +748,33 @@ export async function fetchJobStatus(
 ): Promise<JobStatus> {
   const apiBaseUrl = getApiBaseUrl();
   const backendBaseUrl = getBackendBaseUrl();
-  const setTimeoutFn = typeof window === "undefined" ? setTimeout : window.setTimeout;
-  const clearTimeoutFn = typeof window === "undefined" ? clearTimeout : window.clearTimeout;
-  const controller = options?.timeoutMs ? new AbortController() : null;
-  const timeoutId = options?.timeoutMs
-    ? setTimeoutFn(() => controller?.abort(), options.timeoutMs)
-    : null;
+
+  // [FIX] timeout por defecto para evitar fetch colgado (y UI colgada)
+  const timeoutMs = options?.timeoutMs ?? 15000;
+  const controller = new AbortController();
+  const setTimeoutFn =
+    typeof window === "undefined" ? setTimeout : window.setTimeout;
+  const clearTimeoutFn =
+    typeof window === "undefined" ? clearTimeout : window.clearTimeout;
+
+  const timeoutId = setTimeoutFn(() => controller.abort(), timeoutMs);
 
   try {
-    const res = await fetch(`${apiBaseUrl}/jobs/${encodeURIComponent(jobId)}?_t=${Date.now()}`, {
-      method: "GET",
-      // Avoid any browser/proxy cache between pipeline updates
-      cache: "no-store",
-      headers: {
-        ...authHeaders(),
+    const res = await fetch(
+      `${apiBaseUrl}/jobs/${encodeURIComponent(jobId)}?_t=${Date.now()}`,
+      {
+        method: "GET",
+        // Avoid any browser/proxy cache between pipeline updates
+        cache: "no-store",
+        headers: {
+          ...authHeaders(),
+        },
+        signal: controller.signal,
       },
-      signal: controller?.signal,
-    });
+    );
 
     if (!res.ok) {
-      throw new Error(
-        `Error fetching job status: ${res.status} ${res.statusText}`,
-      );
+      throw new Error(`Error fetching job status: ${res.status} ${res.statusText}`);
     }
 
     const raw = await res.json();
@@ -646,9 +792,7 @@ export async function fetchJobStatus(
     }
     throw err;
   } finally {
-    if (timeoutId) {
-      clearTimeoutFn(timeoutId);
-    }
+    clearTimeoutFn(timeoutId);
   }
 }
 
@@ -683,6 +827,7 @@ export function openJobStatusStream(
   params.set("_t", Date.now().toString());
 
   const wsUrl = `${wsBase}/ws/jobs/${encodeURIComponent(jobId)}?${params.toString()}`;
+
   let socket: WebSocket;
   try {
     socket = new WebSocket(wsUrl);
@@ -691,8 +836,77 @@ export function openJobStatusStream(
     return null;
   }
 
+  // [FIX] Fallback polling para evitar quedarse colgado si el WS pierde el "finished"
+  let closed = false;
+  let lastActivityAt = Date.now();
+  let pollTimer: number | null = null;
+  let backoffMs = 2500;
+  const minBackoff = 2500;
+  const maxBackoff = 15000;
+
+  const clearPoll = () => {
+    if (pollTimer != null) {
+      window.clearTimeout(pollTimer);
+      pollTimer = null;
+    }
+  };
+
+  const schedulePoll = (ms: number) => {
+    if (closed) return;
+    clearPoll();
+    pollTimer = window.setTimeout(() => {
+      void pollOnce();
+    }, ms);
+  };
+
+  const finalizeAndClose = () => {
+    if (closed) return;
+    closed = true;
+    clearPoll();
+    try {
+      socket.close();
+    } catch {
+      // noop
+    }
+  };
+
+  const pollOnce = async () => {
+    if (closed) return;
+
+    const silenceMs = Date.now() - lastActivityAt;
+    const socketOpen = socket.readyState === WebSocket.OPEN;
+
+    // Si WS está activo y hay mensajes recientes, no hagas polling agresivo
+    if (socketOpen && silenceMs < 7000) {
+      schedulePoll(minBackoff);
+      return;
+    }
+
+    try {
+      const st = await fetchJobStatus(jobId, { timeoutMs: 12000 });
+      handlers.onStatus(st);
+      lastActivityAt = Date.now();
+      backoffMs = minBackoff;
+
+      if (st.status === "done" || st.status === "error") {
+        // [FIX] cerramos para que el consumidor (UI) deje de esperar
+        finalizeAndClose();
+        return;
+      }
+
+      schedulePoll(minBackoff);
+    } catch (e) {
+      // Reporta error pero sigue reintentando con backoff para no colgar UI
+      handlers.onError?.(e as Error);
+      backoffMs = Math.min(Math.round(backoffMs * 1.6), maxBackoff);
+      schedulePoll(backoffMs);
+    }
+  };
+
   socket.onopen = () => {
+    lastActivityAt = Date.now();
     handlers.onOpen?.();
+    schedulePoll(minBackoff); // arranca fallback
   };
 
   socket.onmessage = (event: MessageEvent) => {
@@ -708,9 +922,17 @@ export function openJobStatusStream(
         if (!rawText) return;
         const parsed = JSON.parse(rawText);
         const payload = parsed?.payload ?? parsed;
+
+        lastActivityAt = Date.now();
+
         const mapped = mapBackendStatusToJobStatus(payload, baseUrl);
         const signed = await attachSignedResultUrls(jobId, mapped, baseUrl);
         handlers.onStatus(signed);
+
+        // [FIX] Si llega el done/error por WS, cerramos y paramos polling
+        if (signed.status === "done" || signed.status === "error") {
+          finalizeAndClose();
+        }
       } catch (err) {
         console.warn("Failed to parse job status WS message", err);
       }
@@ -719,14 +941,21 @@ export function openJobStatusStream(
 
   socket.onerror = (event) => {
     handlers.onError?.(event);
+    // no cerramos; dejamos que el polling fallback lo rescate
   };
 
   socket.onclose = (event) => {
     handlers.onClose?.(event);
+    // si no está cerrado explícitamente, seguimos con polling (recovery)
+    if (!closed) {
+      schedulePoll(minBackoff);
+    }
   };
 
   return {
-    close: () => socket.close(),
+    close: () => {
+      finalizeAndClose();
+    },
   };
 }
 
@@ -742,41 +971,93 @@ export type PipelineStage = {
 
 export async function fetchPipelineStages(): Promise<PipelineStage[]> {
   const baseUrl = getApiBaseUrl();
-  const res = await fetch(`${baseUrl}/pipeline/stages`, { method: "GET" });
+  const { signal, cleanup } = withTimeoutSignal(15000);
+  try {
+    const res = await fetch(`${baseUrl}/pipeline/stages`, {
+      method: "GET",
+      signal,
+      cache: "no-store",
+    });
 
-  if (!res.ok) {
-    throw new Error(
-      `Error fetching pipeline stages: ${res.status} ${res.statusText}`,
-    );
+    if (!res.ok) {
+      throw new Error(
+        `Error fetching pipeline stages: ${res.status} ${res.statusText}`,
+      );
+    }
+
+    const data = (await res.json()) as PipelineStage[];
+    return data.sort((a, b) => a.index - b.index);
+  } finally {
+    cleanup();
   }
-
-  const data = (await res.json()) as PipelineStage[];
-  return data.sort((a, b) => a.index - b.index);
 }
 
 export async function fetchInstrumentProfiles(): Promise<InstrumentProfileDef[]> {
   const base = getApiBaseUrl();
-  const res = await fetch(`${base}/profiles/instruments`);
-  if (!res.ok) throw new Error("Error fetching instrument profiles");
-  return (await res.json()) as InstrumentProfileDef[];
+  const { signal, cleanup } = withTimeoutSignal(15000);
+  try {
+    const res = await fetch(`${base}/profiles/instruments`, {
+      signal,
+      cache: "no-store",
+    });
+    if (!res.ok) throw new Error("Error fetching instrument profiles");
+    return (await res.json()) as InstrumentProfileDef[];
+  } finally {
+    cleanup();
+  }
 }
 
 export async function fetchStyleProfiles(): Promise<StyleProfileDef[]> {
   const base = getApiBaseUrl();
-  const res = await fetch(`${base}/profiles/styles`);
-  if (!res.ok) throw new Error("Error fetching style profiles");
-  return (await res.json()) as StyleProfileDef[];
+  const { signal, cleanup } = withTimeoutSignal(15000);
+  try {
+    const res = await fetch(`${base}/profiles/styles`, {
+      signal,
+      cache: "no-store",
+    });
+    if (!res.ok) throw new Error("Error fetching style profiles");
+    return (await res.json()) as StyleProfileDef[];
+  } finally {
+    cleanup();
+  }
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function fetchJobReport(jobId: string): Promise<any> {
-  const signedUrl = await signFileUrl(jobId, "S11_REPORT_GENERATION/report.json");
-  const separator = signedUrl.includes("?") ? "&" : "?";
-  const urlWithTime = `${signedUrl}${separator}_t=${Date.now()}`;
+  // [FIX] No permitir “loading infinito” por firmado/report colgado:
+  // - timeout
+  // - fallback a URL directa si falla el sign
+  // - cache no-store
+  const backendBase = getBackendBaseUrl();
 
-  const res = await fetch(urlWithTime, { cache: "no-store" });
-  if (!res.ok) {
-    throw new Error(`Failed to fetch report: ${res.statusText}`);
+  let url: string | null = null;
+  try {
+    const signedUrl = await signFileUrl(jobId, "S11_REPORT_GENERATION/report.json");
+    const separator = signedUrl.includes("?") ? "&" : "?";
+    url = `${signedUrl}${separator}_t=${Date.now()}`;
+  } catch (e) {
+    // Fallback a URL directa (puede fallar con 401, pero no debe colgar)
+    url = `${backendBase}/files/${encodeURIComponent(jobId)}/S11_REPORT_GENERATION/report.json?_t=${Date.now()}`;
   }
-  return await res.json();
+
+  const { signal, cleanup } = withTimeoutSignal(15000);
+  try {
+    const res = await fetch(url, { cache: "no-store", signal });
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      throw new Error(`Failed to fetch report: ${res.status} ${res.statusText} ${text}`);
+    }
+
+    // Validación mínima para evitar que un HTML 200 se intente parsear “eternamente”
+    const contentType = res.headers.get("content-type") || "";
+    if (!contentType.toLowerCase().includes("application/json")) {
+      const snippet = await res.text().catch(() => "");
+      throw new Error(`Report is not JSON (content-type=${contentType}). Snippet: ${snippet.slice(0, 200)}`);
+    }
+
+    return await res.json();
+  } finally {
+    cleanup();
+  }
 }
