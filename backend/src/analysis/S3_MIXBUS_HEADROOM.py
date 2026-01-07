@@ -26,10 +26,12 @@ try:
     from utils.loudness_utils import (  # type: ignore  # noqa: E402
         measure_integrated_lufs,
         measure_true_peak_dbtp,
+        measure_sample_peak_dbfs,
     )
 except Exception:  # pragma: no cover
     measure_integrated_lufs = None  # type: ignore
     measure_true_peak_dbtp = None  # type: ignore
+    measure_sample_peak_dbfs = None  # type: ignore
 
 
 def _dbfs_from_peak(peak_lin: float) -> float:
@@ -105,36 +107,67 @@ def _mixbus_sample_peak_stream(stem_files: List[Path], block_size: int = 65536) 
                 pass
 
 
-def _mix_to_mono_in_memory(stem_files: List[Path], sr_hint: int | None) -> Tuple[np.ndarray, int]:
+def _mix_to_array_in_memory(stem_files: List[Path], sr_hint: int | None) -> Tuple[np.ndarray, int, int]:
     """
-    Mezcla a mono SIN normalizar (para LUFS/true-peak si procede).
-    Nota: esto carga audio (limitado por sf_read_limited si tu util limita).
+    Mezcla sumando stems SIN normalizar ni mezclar a mono.
+    Devuelve (array, sr, ch_ref) donde array tiene forma (n, ch_ref).
     """
     if not stem_files:
-        return np.zeros(1, dtype=np.float32), int(sr_hint or 44100)
+        ch_ref = 2
+        return np.zeros((1, ch_ref), dtype=np.float32), int(sr_hint or 44100), ch_ref
 
     ys: List[np.ndarray] = []
     sr_ref: int | None = None
+    ch_ref: int | None = None
 
     for p in stem_files:
-        y, sr = sf_read_limited(p, always_2d=False)
+        y, sr = sf_read_limited(p, always_2d=True)
         arr = np.asarray(y, dtype=np.float32)
-        if arr.ndim > 1:
-            arr = np.mean(arr, axis=1).astype(np.float32)
         if sr_ref is None:
             sr_ref = int(sr)
+            ch_ref = int(arr.shape[1])
+        if ch_ref is None:
+            ch_ref = int(arr.shape[1])
+        if arr.shape[1] != ch_ref:
+            if arr.shape[1] == 1 and ch_ref == 2:
+                arr = np.repeat(arr, 2, axis=1)
+            elif arr.shape[1] == 2 and ch_ref == 1:
+                arr = np.mean(arr, axis=1, keepdims=True)
+            else:
+                arr = np.mean(arr, axis=1, keepdims=True)
+                if ch_ref == 2:
+                    arr = np.repeat(arr, 2, axis=1)
         ys.append(arr)
 
     if not ys:
-        return np.zeros(1, dtype=np.float32), int(sr_ref or sr_hint or 44100)
+        ch = int(ch_ref or 2)
+        return np.zeros((1, ch), dtype=np.float32), int(sr_ref or sr_hint or 44100), ch
 
-    max_len = max(len(a) for a in ys)
-    mix = np.zeros(max_len, dtype=np.float32)
+    max_len = max(a.shape[0] for a in ys)
+    ch = int(ch_ref or ys[0].shape[1])
+    mix = np.zeros((max_len, ch), dtype=np.float32)
     for a in ys:
-        n = len(a)
-        mix[:n] += a
+        n = a.shape[0]
+        mix[:n, :] += a
 
-    return mix, int(sr_ref or sr_hint or 44100)
+    return mix, int(sr_ref or sr_hint or 44100), ch
+
+
+def _enforce_true_peak_invariant(sample_peak_dbfs: float, true_peak_dbtp: float, stage_tag: str) -> float:
+    """
+    Garantiza true_peak >= sample_peak (en lineal). Si se viola, ajusta y loggea.
+    """
+    if not np.isfinite(sample_peak_dbfs) or not np.isfinite(true_peak_dbtp):
+        return true_peak_dbtp
+
+    sample_lin = 10.0 ** (sample_peak_dbfs / 20.0)
+    true_lin = 10.0 ** (true_peak_dbtp / 20.0)
+    if true_lin + 1e-9 < sample_lin * 0.998:
+        logger.logger.info(
+            f"[{stage_tag}] Invariante TP>=sample incumplida (sample={sample_peak_dbfs:.2f} dBFS, true={true_peak_dbtp:.2f} dBTP). Ajustando true_peak al sample."
+        )
+        return float(sample_peak_dbfs)
+    return true_peak_dbtp
 
 
 def main() -> None:
@@ -168,18 +201,24 @@ def main() -> None:
     )
 
     # 1) pico del sumatorio REAL (sin normalizar)
-    mix_sample_peak_dbfs, sr_ref = _mixbus_sample_peak_stream(stem_files)
+    mix_sample_peak_dbfs_stream, sr_ref = _mixbus_sample_peak_stream(stem_files)
 
-    # 2) true-peak y LUFS (si están disponibles)
-    mix_true_peak_dbtp = mix_sample_peak_dbfs
+    # 2) true-peak y LUFS (si están disponibles) usando la misma mezcla
+    mix_sample_peak_dbfs = mix_sample_peak_dbfs_stream
+    mix_true_peak_dbtp = mix_sample_peak_dbfs_stream
     mix_lufs_integrated = float("-inf")
 
     if stem_files:
-        mix_mono, sr = _mix_to_mono_in_memory(stem_files, sr_ref)
+        mix_arr, sr, _ = _mix_to_array_in_memory(stem_files, sr_ref)
+        if measure_sample_peak_dbfs is not None:
+            mix_sample_peak_dbfs = float(measure_sample_peak_dbfs(mix_arr))
         if measure_true_peak_dbtp is not None:
-            mix_true_peak_dbtp = float(measure_true_peak_dbtp(mix_mono, sr))
+            mix_true_peak_dbtp = float(measure_true_peak_dbtp(mix_arr, sr))
+        mix_true_peak_dbtp = _enforce_true_peak_invariant(
+            mix_sample_peak_dbfs, mix_true_peak_dbtp, "S3_MIXBUS_HEADROOM_ANALYSIS"
+        )
         if measure_integrated_lufs is not None:
-            mix_lufs_integrated = float(measure_integrated_lufs(mix_mono, sr))
+            mix_lufs_integrated = float(measure_integrated_lufs(mix_arr, sr))
 
     stems_info: List[Dict[str, Any]] = []
     for p in stem_files:

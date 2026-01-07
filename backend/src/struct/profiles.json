@@ -1,6 +1,15 @@
 {
   "version": "1.0.0",
   "instrument_profiles": {
+    "Drums_Full_Kit": {
+      "id": "Drums_Full_Kit",
+      "family": "Drums",
+      "work_loudness_lufs_range": [-24.0, -18.0],
+      "work_peak_dbfs_max": -3.0,
+      "preferred_hpf_hz_range": [25.0, 45.0],
+      "preferred_lpf_hz_range": [16000.0, 20000.0],
+      "notes": "Batería completa en un solo stem (kit mezclado). Usa procesamiento tipo bus/pegamento y headroom estándar."
+    },
     "Kick": {
       "id": "Kick",
       "family": "Drums",

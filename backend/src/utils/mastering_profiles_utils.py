@@ -21,7 +21,8 @@ def get_mastering_profile(style_preset: str | None) -> Dict[str, Any]:
 
     # Perfil base "pop genérico"
     profile: Dict[str, Any] = {
-        "target_lufs_integrated": -11.0,
+        # Target global a -14 LUFS (Spotify) con tolerancia ±1.5 LU en QC posteriores.
+        "target_lufs_integrated": -14.0,
         "target_lra_min": 5.0,
         "target_lra_max": 10.0,
         "target_ceiling_dbtp": -1.0,
@@ -32,7 +33,7 @@ def get_mastering_profile(style_preset: str | None) -> Dict[str, Any]:
     if "flamenco" in style or "rumba" in style:
         profile.update(
             {
-                "target_lufs_integrated": -12.0,
+                "target_lufs_integrated": -14.0,
                 "target_lra_min": 6.0,
                 "target_lra_max": 12.0,
                 "target_ms_width_factor": 1.0,
@@ -43,7 +44,7 @@ def get_mastering_profile(style_preset: str | None) -> Dict[str, Any]:
     elif "urbano" in style or "trap" in style or "reggaeton" in style:
         profile.update(
             {
-                "target_lufs_integrated": -9.0,
+                "target_lufs_integrated": -14.0,
                 "target_lra_min": 4.0,
                 "target_lra_max": 8.0,
                 "target_ms_width_factor": 1.05,
@@ -54,7 +55,7 @@ def get_mastering_profile(style_preset: str | None) -> Dict[str, Any]:
     elif "edm" in style or "club" in style or "house" in style:
         profile.update(
             {
-                "target_lufs_integrated": -7.5,
+                "target_lufs_integrated": -14.0,
                 "target_lra_min": 3.0,
                 "target_lra_max": 7.0,
                 "target_ms_width_factor": 1.05,

@@ -256,6 +256,8 @@
           "metrics": {
             "target_true_peak_range_dbtp_min": -4.0,
             "target_true_peak_range_dbtp_max": -2.0,
+            "premaster_true_peak_range_dbtp_min": -6.0,
+            "premaster_true_peak_range_dbtp_max": -4.0,
             "max_thd_percent": 3.0
           },
           "limits": {

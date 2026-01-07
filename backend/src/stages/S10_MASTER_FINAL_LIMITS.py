@@ -20,7 +20,7 @@ import soundfile as sf  # noqa: E402
 
 from utils.analysis_utils import get_temp_dir
 from utils.loudness_utils import compute_lufs_and_lra  # noqa: E402
-from utils.color_utils import compute_true_peak_dbfs  # noqa: E402
+from utils.color_utils import compute_true_peak_dbfs, compute_sample_peak_dbfs  # noqa: E402
 from utils.mastering_profiles_utils import get_mastering_profile  # noqa: E402
 
 

@@ -21,10 +21,12 @@ try:
     from utils.loudness_utils import (  # type: ignore  # noqa: E402
         measure_integrated_lufs,
         measure_true_peak_dbtp,
+        measure_sample_peak_dbfs,
     )
 except Exception:  # pragma: no cover
     measure_integrated_lufs = None  # type: ignore
     measure_true_peak_dbtp = None  # type: ignore
+    measure_sample_peak_dbfs = None  # type: ignore
 
 
 def load_analysis(contract_id: str) -> Dict[str, Any]:
@@ -120,6 +122,23 @@ def _apply_gain_inplace(path: Path, gain_db: float) -> bool:
     except Exception as e:
         logger.logger.info(f"[S3_MIXBUS_HEADROOM] Error aplicando gain a {path.name}: {e}")
         return False
+
+
+def _enforce_true_peak_invariant(sample_peak_dbfs: float, true_peak_dbtp: float, stage_tag: str) -> float:
+    """
+    Garantiza true_peak >= sample_peak (en lineal). Si se viola, ajusta y loggea.
+    """
+    if not np.isfinite(sample_peak_dbfs) or not np.isfinite(true_peak_dbtp):
+        return true_peak_dbtp
+
+    sample_lin = 10.0 ** (sample_peak_dbfs / 20.0)
+    true_lin = 10.0 ** (true_peak_dbtp / 20.0)
+    if true_lin + 1e-9 < sample_lin * 0.998:
+        logger.logger.info(
+            f"[{stage_tag}] Invariante TP>=sample incumplida (sample={sample_peak_dbfs:.2f} dBFS, true={true_peak_dbtp:.2f} dBTP). Ajustando true_peak al sample."
+        )
+        return float(sample_peak_dbfs)
+    return true_peak_dbtp
 
 
 def main() -> None:
@@ -229,21 +248,42 @@ def main() -> None:
         for p in stem_paths:
             y, sr = sf.read(p, always_2d=False)
             arr = np.asarray(y, dtype=np.float32)
-            if arr.ndim > 1:
-                arr = np.mean(arr, axis=1).astype(np.float32)
+            if sr_ref is None:
+                sr_ref = int(sr)
             if sr_ref is None:
                 sr_ref = int(sr)
             ys.append(arr)
 
         if ys and sr_ref is not None:
-            max_len = max(len(a) for a in ys)
-            mix = np.zeros(max_len, dtype=np.float32)
+            # Mezcla multicanal sin promediar para mantener coherencia TP/sample
+            ch_ref = max(a.shape[1] if a.ndim == 2 else 1 for a in ys)
+            max_len = max(a.shape[0] if a.ndim == 2 else len(a) for a in ys)
+            mix = np.zeros((max_len, ch_ref), dtype=np.float32)
             for a in ys:
-                mix[: len(a)] += a
+                arr = a
+                if arr.ndim == 1:
+                    arr = arr[:, None]
+                if arr.shape[1] != ch_ref:
+                    if arr.shape[1] == 1 and ch_ref == 2:
+                        arr = np.repeat(arr, 2, axis=1)
+                    elif arr.shape[1] == 2 and ch_ref == 1:
+                        arr = np.mean(arr, axis=1, keepdims=True)
+                    else:
+                        arr = np.mean(arr, axis=1, keepdims=True)
+                        if ch_ref == 2:
+                            arr = np.repeat(arr, 2, axis=1)
+                n = arr.shape[0]
+                mix[:n, :] += arr
+
             if measure_integrated_lufs is not None:
                 post_lufs = float(measure_integrated_lufs(mix, int(sr_ref)))
             if measure_true_peak_dbtp is not None:
                 post_true_peak = float(measure_true_peak_dbtp(mix, int(sr_ref)))
+            if measure_sample_peak_dbfs is not None:
+                post_sample_peak = float(measure_sample_peak_dbfs(mix))
+            post_true_peak = _enforce_true_peak_invariant(
+                post_sample_peak, post_true_peak, "S3_MIXBUS_HEADROOM_STAGE"
+            )
 
     # 4) Guardar métricas pre/post para QC
     metrics_path = temp_dir / "headroom_metrics_S3_MIXBUS_HEADROOM.json"

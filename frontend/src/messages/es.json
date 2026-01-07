@@ -470,6 +470,7 @@
       "other": "Otros"
     },
     "profileOptions": {
+      "Drums_Full_Kit": "Batería completa (un solo stem)",
       "Kick": "Bombo (bombo principal)",
       "Snare": "Caja (caja principal)",
       "Percussion": "Percusión",

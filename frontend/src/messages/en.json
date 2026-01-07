@@ -473,6 +473,7 @@
       "other": "Other"
     },
     "profileOptions": {
+      "Drums_Full_Kit": "Drums - full kit (single stem)",
       "Kick": "Kick (main kick drum)",
       "Snare": "Snare (main snare)",
       "Percussion": "Percussion (palmas, bongos...)",

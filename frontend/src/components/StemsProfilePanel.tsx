@@ -89,6 +89,7 @@ const CATEGORY_ORDER: Array<Exclude<ProfileCategory, "all">> = [
 
 const PROFILE_SEARCH_TERMS: Record<string, string[]> = {
   auto: ["auto", "automatic", "detect", "recommended"],
+  Drums_Full_Kit: ["drums", "batería", "kit", "drumkit", "drum bus", "full kit"],
   Kick: ["kick", "bombo", "bass drum"],
   Snare: ["snare", "caja"],
   Percussion: ["percussion", "percusion", "bongos", "conga"],
@@ -108,6 +109,7 @@ const PROFILE_SEARCH_TERMS: Record<string, string[]> = {
 };
 
 const PROFILE_IMAGES: Partial<Record<string, string>> = {
+  Drums_Full_Kit: "/instruments/kick.webp",
   Kick: "/instruments/kick.webp",
   Snare: "/instruments/snare.webp",
   Percussion: "/instruments/bongos.webp",
@@ -314,6 +316,13 @@ export function StemsProfilePanel({ stems, onChangeProfile, accent = "amber" }: 
         category: "other",
         variant: "auto",
         keywords: PROFILE_SEARCH_TERMS.auto,
+      },
+      {
+        value: "Drums_Full_Kit",
+        label: t("profileOptions.Drums_Full_Kit"),
+        category: "drums",
+        variant: "kick",
+        keywords: PROFILE_SEARCH_TERMS.Drums_Full_Kit,
       },
       {
         value: "Kick",

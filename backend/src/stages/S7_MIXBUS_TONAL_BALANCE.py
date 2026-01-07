@@ -101,6 +101,50 @@ def compute_error_by_band_rel(
     return err, float(rms)
 
 
+def compute_error_aligned_abs(
+    current_abs: Dict[str, float],
+    target_abs: Dict[str, float],
+) -> Tuple[Dict[str, float], float, float]:
+    """
+    Calcula error por banda en dB tras alinear offset global (media de diffs).
+    Devuelve (err_by_band, rms_err, global_offset_db).
+    """
+    keys = set(current_abs.keys()) | set(target_abs.keys())
+    diffs: list[float] = []
+    for k in keys:
+        c = current_abs.get(k, float("-inf"))
+        t = target_abs.get(k, float("-inf"))
+        try:
+            cf = float(c)
+            tf = float(t)
+        except (TypeError, ValueError):
+            continue
+        if cf == float("-inf") or tf == float("-inf"):
+            continue
+        diffs.append(cf - tf)
+
+    offset = sum(diffs) / float(len(diffs)) if diffs else 0.0
+
+    err: Dict[str, float] = {}
+    sq: list[float] = []
+    for k in keys:
+        c = current_abs.get(k, float("-inf"))
+        t = target_abs.get(k, float("-inf"))
+        try:
+            cf = float(c)
+            tf = float(t)
+        except (TypeError, ValueError):
+            continue
+        if cf == float("-inf") or tf == float("-inf"):
+            continue
+        e = float((cf - offset) - tf)
+        err[k] = e
+        sq.append(e * e)
+
+    rms = (sum(sq) / float(len(sq))) ** 0.5 if sq else 0.0
+    return err, float(rms), float(offset)
+
+
 # ---------------------------------------------------------------------
 # Load analysis
 # ---------------------------------------------------------------------
@@ -217,6 +261,8 @@ def _save_tonal_metrics(
     eq_gains_db: Dict[str, float],
     max_tonal_error_db: float,
     max_eq_change_db: float,
+    pre_global_offset_db: float,
+    post_global_offset_db: float,
 ) -> None:
     metrics_path = temp_dir / "tonal_metrics_S7_MIXBUS_TONAL_BALANCE.json"
     data = {
@@ -228,11 +274,13 @@ def _save_tonal_metrics(
             "band_db": pre_band_db_rel,          # REL (shape)
             "band_db_abs": pre_band_db_abs,      # ABS (diag)
             "error_rms_db": pre_error_rms,
+            "global_offset_db": pre_global_offset_db,
         },
         "post": {
             "band_db": post_band_db_rel,         # REL (shape)
             "band_db_abs": post_band_db_abs,     # ABS (diag)
             "error_rms_db": post_error_rms,
+            "global_offset_db": post_global_offset_db,
         },
         "target_band_db": target_band_db_rel,    # REL (shape)
         "target_band_db_abs": target_band_db_abs,
@@ -316,7 +364,7 @@ def process(context: PipelineContext, *args) -> bool:
         logger.logger.info(f"[S7_MIXBUS_TONAL_BALANCE] No existe {full_song_path}; no se puede aplicar EQ.")
         return True
 
-    # 2) Obtener medición PRE (REL preferente; fallback a ABS->REL)
+    # 2) Obtener medición PRE (ABS + REL para shape)
     pre_band_rel = tonal_info.get("current_band_db", {}) or {}
     tgt_band_rel = tonal_info.get("target_band_db", {}) or {}
 
@@ -341,13 +389,14 @@ def process(context: PipelineContext, *args) -> bool:
     if _looks_empty_rel(tgt_band_rel):
         tgt_band_rel, _ = normalize_bands_db(tgt_band_abs)
 
-    pre_err_by_band, pre_error_rms = compute_error_by_band_rel(pre_band_rel, tgt_band_rel)
+    # Error en ABS alineando offset global para medir shape real
+    pre_err_by_band_abs, pre_error_rms, pre_global_offset_db = compute_error_aligned_abs(pre_band_abs, tgt_band_abs)
 
     # 3) Idempotencia
     MARGIN_RMS = 0.25
     if pre_error_rms <= max_tonal_error_db + MARGIN_RMS:
         logger.logger.info(
-            f"[S7_MIXBUS_TONAL_BALANCE] error_RMS_REL={pre_error_rms:.2f} dB "
+            f"[S7_MIXBUS_TONAL_BALANCE] error_RMS_abs_aligned={pre_error_rms:.2f} dB (offset={pre_global_offset_db:+.2f} dB) "
             f"<= umbral {max_tonal_error_db:.2f} dB (+{MARGIN_RMS:.2f}); no-op."
         )
         # Guardar métricas mínimas (post == pre)
@@ -366,10 +415,12 @@ def process(context: PipelineContext, *args) -> bool:
             eq_gains_db={},
             max_tonal_error_db=max_tonal_error_db,
             max_eq_change_db=max_eq_change_db,
+            pre_global_offset_db=pre_global_offset_db,
+            post_global_offset_db=pre_global_offset_db,
         )
         return True
 
-    # 4) Calcular ganancias por banda (REL)
+    # 4) Calcular ganancias por banda (error ABS alineado)
     bands = get_freq_bands()
     eq_gains_db: Dict[str, float] = {}
 
@@ -377,7 +428,7 @@ def process(context: PipelineContext, *args) -> bool:
         bid = b.get("id")
         if not bid:
             continue
-        err = float(pre_err_by_band.get(bid, 0.0))
+        err = float(pre_err_by_band_abs.get(bid, 0.0))
         desired = -eq_k * err  # si current > target => err>0 => desired negativo (recorta esa banda)
         gain = max(-max_eq_change_db, min(max_eq_change_db, desired))
         eq_gains_db[str(bid)] = float(gain)
@@ -418,6 +469,8 @@ def process(context: PipelineContext, *args) -> bool:
             eq_gains_db={},
             max_tonal_error_db=max_tonal_error_db,
             max_eq_change_db=max_eq_change_db,
+            pre_global_offset_db=pre_global_offset_db,
+            post_global_offset_db=pre_global_offset_db,
         )
         return True
 
@@ -442,10 +495,11 @@ def process(context: PipelineContext, *args) -> bool:
     # 6) Re-medición post (ABS->REL) y rollback si empeora
     post_band_abs = compute_band_energies(y_eq, sr)
     post_band_rel, _ = normalize_bands_db(post_band_abs)
-    _post_err_by_band, post_error_rms = compute_error_by_band_rel(post_band_rel, tgt_band_rel)
+    _post_err_by_band_abs, post_error_rms, post_global_offset_db = compute_error_aligned_abs(post_band_abs, tgt_band_abs)
 
     logger.logger.info(
-        f"[S7_MIXBUS_TONAL_BALANCE] error_RMS_REL pre={pre_error_rms:.2f} dB, post={post_error_rms:.2f} dB."
+        f"[S7_MIXBUS_TONAL_BALANCE] error_RMS_abs_aligned pre={pre_error_rms:.2f} dB (offset={pre_global_offset_db:+.2f}), "
+        f"post={post_error_rms:.2f} dB (offset={post_global_offset_db:+.2f})."
     )
 
     if rollback_if_worse and (post_error_rms > pre_error_rms + worsen_margin_db):
@@ -471,6 +525,8 @@ def process(context: PipelineContext, *args) -> bool:
             eq_gains_db={},
             max_tonal_error_db=max_tonal_error_db,
             max_eq_change_db=max_eq_change_db,
+            pre_global_offset_db=pre_global_offset_db,
+            post_global_offset_db=pre_global_offset_db,
         )
         return True
 
@@ -490,6 +546,8 @@ def process(context: PipelineContext, *args) -> bool:
         eq_gains_db=eq_gains_db,
         max_tonal_error_db=max_tonal_error_db,
         max_eq_change_db=max_eq_change_db,
+        pre_global_offset_db=pre_global_offset_db,
+        post_global_offset_db=post_global_offset_db,
     )
     return True
 
