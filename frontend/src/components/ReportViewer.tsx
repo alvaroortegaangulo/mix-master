@@ -7,6 +7,7 @@ import { jsPDF } from "jspdf";
 import { AdvancedInteractiveCharts, AnalysisData } from "./report/AdvancedInteractiveCharts";
 import { useAuth } from "../context/AuthContext";
 import { useModal } from "../context/ModalContext";
+import { AnsiLogViewer } from "./AnsiLogViewer";
 
 // --- Types ---
 interface StageParameter {
@@ -606,9 +607,15 @@ export const ReportViewer: React.FC<ReportViewerProps> = ({
                   <div className="text-xs text-amber-200">{logsError}</div>
                 )}
                 {!logsLoading && !logsError && (
-                  <pre className="whitespace-pre-wrap break-words rounded-lg border border-slate-800 bg-slate-950/80 p-4 text-[11px] text-slate-200">
-                    {logsContent || "Sin logs disponibles."}
-                  </pre>
+                  <div className="rounded-lg border border-slate-800 bg-slate-950/80 p-4">
+                    {logsContent ? (
+                      <AnsiLogViewer text={logsContent} />
+                    ) : (
+                      <span className="text-[11px] text-slate-200">
+                        Sin logs disponibles.
+                      </span>
+                    )}
+                  </div>
                 )}
               </section>
             )}
