@@ -49,6 +49,10 @@ def _style_saturation_factor(style_preset: str) -> float:
 
 
 def _estimate_noise_floor_dbfs(y: np.ndarray, sr: int) -> float:
+    """
+    Estimación pragmática del noise floor basada en RMS por frames (50 ms),
+    percentil 10 como cola baja robusta. Proxy (no separa ruido real vs pasajes suaves).
+    """
     arr = np.asarray(y, dtype=np.float32)
     if arr.ndim > 1:
         arr = np.mean(arr, axis=1).astype(np.float32)
@@ -75,12 +79,23 @@ def _estimate_noise_floor_dbfs(y: np.ndarray, sr: int) -> float:
     return 20.0 * np.log10(p10 + eps)
 
 
-def _apply_pedalboard_saturation(y: np.ndarray, sr: int, drive_db: float) -> np.ndarray:
+def _apply_pedalboard_saturation(y: np.ndarray, sr: int, color_drive_db: float) -> np.ndarray:
+    """
+    Saturación/Distortion (color). NO debe usarse como makeup gain.
+    """
     arr = np.asarray(y, dtype=np.float32)
     dist = Distortion()
-    dist.drive_db = float(drive_db)
+    dist.drive_db = float(color_drive_db)
     y_sat = dist(arr, int(sr))
     return np.asarray(y_sat, dtype=np.float32)
+
+
+def _db_to_lin(db: float) -> float:
+    return float(10.0 ** (db / 20.0))
+
+
+def _clamp(x: float, lo: float, hi: float) -> float:
+    return float(max(lo, min(hi, x)))
 
 
 def _process_mixbus_color_worker(
@@ -90,14 +105,20 @@ def _process_mixbus_color_worker(
     tp_max: float,
     max_thd_percent: float,
     max_sat_per_pass_db: float,
+    # Opcionales: si quieres un rango pre-master distinto sin tocar tp_min/tp_max del contrato
+    premaster_tp_min: float | None = None,
+    premaster_tp_max: float | None = None,
 ) -> Dict[str, Any]:
     """
-    Cambios clave:
-      - Under-levelled mode: si la mezcla llega muy baja, NO hacemos lift grande aquí.
-      - Si hay que levantar mucho, reducimos/omitimos saturación (evita dureza).
-      - Medimos noise_floor PRE/POST y guardamos delta y delta compensada por trim.
-      - Escribimos WAV en FLOAT para evitar cuantización (dureza/ruido).
-      - Evitamos clip por np.clip; usamos safety trim si TP se pasa.
+    S8 MIXBUS COLOR (corregido):
+      - Separa explícitamente:
+          * color_drive_db: saturación (color), controlada por THD y estilo.
+          * makeup_gain_clean_db: ganancia LIMPIA post-color para dejar el mixbus en rango útil.
+      - Under-levelled mode:
+          * Reduce/omite drive (evita aspereza).
+          * NO capa la ganancia limpia necesaria (makeup), porque eso es nivelado pre-master.
+      - Escribe WAV en FLOAT para evitar cuantización.
+      - Safety trim si el true peak se pasa del techo del rango.
     """
     full_song_path = Path(full_song_path_str)
 
@@ -116,124 +137,137 @@ def _process_mixbus_color_worker(
     )
 
     # --------------------------------------------------------------
-    # Detectar mezcla sub-nivelada (para no convertir S8 en makeup gain)
+    # Objetivo de nivel PRE-MASTER (por defecto usa tp_min/tp_max).
+    # Puedes pasar premaster_tp_min/max si quieres por contrato.
+    # --------------------------------------------------------------
+    target_tp_min = float(premaster_tp_min) if premaster_tp_min is not None else float(tp_min)
+    target_tp_max = float(premaster_tp_max) if premaster_tp_max is not None else float(tp_max)
+    target_mid = 0.5 * (target_tp_min + target_tp_max)
+
+    # --------------------------------------------------------------
+    # Detectar "under-levelled" (solo para limitar DRIVE, no makeup limpio)
     # --------------------------------------------------------------
     TP_MARGIN = 0.3
-    pre_in_range = (tp_min - TP_MARGIN) <= pre_tp <= (tp_max + TP_MARGIN)
+    pre_in_range = (target_tp_min - TP_MARGIN) <= pre_tp <= (target_tp_max + TP_MARGIN)
 
-    # Heurística: si el TP está MUY por debajo del rango, o el RMS es muy bajo,
-    # consideramos "under-levelled" y limitamos el lift aquí.
-    UNDERLEVEL_TP_DBTP = tp_min - 6.0  # p.ej. -10 dBTP si tp_min=-4
+    # Heurística: muy por debajo del rango objetivo o RMS muy bajo
+    UNDERLEVEL_TP_DBTP = target_tp_min - 6.0
     UNDERLEVEL_RMS_DBFS = -28.0
     under_levelled = (pre_tp < UNDERLEVEL_TP_DBTP) or (pre_rms < UNDERLEVEL_RMS_DBFS)
 
     # --------------------------------------------------------------
-    # Saturación (drive) controlada por estilo + idempotencia + underlevelled
+    # 1) COLOR: Saturación controlada (drive) - NO es makeup gain
     # --------------------------------------------------------------
     IDEMP_DRIVE_MAX_DB = 0.5
     style_factor = _style_saturation_factor(style_preset)
-    drive_db = float(max_sat_per_pass_db * style_factor)
+    color_drive_db = float(max_sat_per_pass_db * style_factor)
 
-    if pre_in_range and drive_db > IDEMP_DRIVE_MAX_DB:
-        drive_db = IDEMP_DRIVE_MAX_DB
+    # Idempotencia si ya estamos en rango
+    if pre_in_range and color_drive_db > IDEMP_DRIVE_MAX_DB:
+        color_drive_db = IDEMP_DRIVE_MAX_DB
 
-    # Si llega sub-nivelado, evitamos meter saturación “porque sí”
-    # cuando probablemente luego el master va a subir bastante.
+    # Under-levelled => reducimos drive para no añadir dureza
     if under_levelled:
-        drive_db = min(drive_db, 0.2)  # casi no-op; puedes poner 0.0 si quieres
+        color_drive_db = min(color_drive_db, 0.2)  # casi no-op (ajústalo a 0.0 si quieres)
 
     # Aplicar saturación + control THD
-    if drive_db < 0.1:
-        y_sat = y.copy()
+    if color_drive_db < 0.1:
+        y_color = y.copy()
         thd_pct = 0.0
-        logger.logger.info("[S8_MIXBUS_COLOR_GENERIC] Saturación omitida (drive < 0.1 dB).")
+        logger.logger.info("[S8_MIXBUS_COLOR_GENERIC] Color omitido (color_drive_db < 0.1 dB).")
     else:
-        y_sat = _apply_pedalboard_saturation(y, sr, drive_db=drive_db)
-        thd_pct = float(estimate_thd_percent(y, y_sat))
+        y_color = _apply_pedalboard_saturation(y, sr, color_drive_db=color_drive_db)
+        thd_pct = float(estimate_thd_percent(y, y_color))
 
         logger.logger.info(
-            f"[S8_MIXBUS_COLOR_GENERIC] THD estimada con drive={drive_db:.2f} dB: "
-            f"{thd_pct:.2f} % (límite={max_thd_percent:.2f} %)."
+            f"[S8_MIXBUS_COLOR_GENERIC] THD estimada con color_drive_db={color_drive_db:.2f} dB: "
+            f"{thd_pct:.2f}% (límite={max_thd_percent:.2f}%)."
         )
 
         if thd_pct > max_thd_percent:
             scale = max_thd_percent / max(thd_pct, 1e-6)
-            new_drive = float(drive_db * scale)
+            new_drive = float(color_drive_db * scale)
+
             if new_drive < 0.1:
-                drive_db = 0.0
-                y_sat = y.copy()
+                color_drive_db = 0.0
+                y_color = y.copy()
                 thd_pct = 0.0
                 logger.logger.info(
-                    "[S8_MIXBUS_COLOR_GENERIC] Saturación desactivada para respetar THD (drive ajustado < 0.1 dB)."
+                    "[S8_MIXBUS_COLOR_GENERIC] Color desactivado para respetar THD (drive ajustado < 0.1 dB)."
                 )
             else:
-                drive_db = new_drive
-                y_sat = _apply_pedalboard_saturation(y, sr, drive_db=drive_db)
-                thd_pct = float(estimate_thd_percent(y, y_sat))
-                logger.logger.info(f"[S8_MIXBUS_COLOR_GENERIC] Drive ajustado a {drive_db:.2f} dB, THD≈{thd_pct:.2f}%.")
+                color_drive_db = new_drive
+                y_color = _apply_pedalboard_saturation(y, sr, color_drive_db=color_drive_db)
+                thd_pct = float(estimate_thd_percent(y, y_color))
+                logger.logger.info(
+                    f"[S8_MIXBUS_COLOR_GENERIC] Color_drive ajustado a {color_drive_db:.2f} dB, THD≈{thd_pct:.2f}%."
+                )
 
-    tp_after_sat = float(compute_true_peak_dbfs(y_sat, oversample_factor=4))
+    tp_after_color = float(compute_true_peak_dbfs(y_color, oversample_factor=4))
 
     # --------------------------------------------------------------
-    # Trim: objetivo TP, pero cap estricto si under-levelled
+    # 2) MAKEUP GAIN LIMPIO: nivelado post-color para dejar pre-master en rango útil
+    #    (NO lo capamos agresivamente en under-levelled; ese era el bug).
     # --------------------------------------------------------------
-    target_mid = 0.5 * (tp_min + tp_max)  # p.ej. -3 dBTP
-    needed_trim = float(target_mid - tp_after_sat)
+    makeup_needed_db = float(target_mid - tp_after_color)
 
-    IDEMP_TRIM_MAX_DB = 0.5
+    # Caps razonables (no por miedo a “ruido/aspereza”, sino por estabilidad/idempotencia)
+    IDEMP_MAKEUP_MAX_DB = 0.5
+
+    # Si ya estamos en rango, cambios pequeños
     if pre_in_range:
-        max_trim_up_db = IDEMP_TRIM_MAX_DB
-        max_trim_down_db = IDEMP_TRIM_MAX_DB
-    elif under_levelled:
-        # Clave: NO levantar fuerte en S8 (evita subir ruido/dureza aquí)
-        max_trim_up_db = 1.5
-        max_trim_down_db = 2.0
+        max_makeup_up_db = IDEMP_MAKEUP_MAX_DB
+        max_makeup_down_db = IDEMP_MAKEUP_MAX_DB
     else:
-        max_trim_up_db = 6.0
-        max_trim_down_db = 2.0
+        # Permitir recuperar mezclas bajas (fix: no capar a 1.5 dB)
+        # Ajusta si quieres: 12 dB suele ser suficiente para casos tipo +5.55 dB.
+        max_makeup_up_db = 12.0
+        max_makeup_down_db = 6.0
 
-    if needed_trim >= 0.0:
-        trim_db = min(needed_trim, max_trim_up_db)
+    if makeup_needed_db >= 0.0:
+        makeup_gain_clean_db = min(makeup_needed_db, max_makeup_up_db)
     else:
-        trim_db = max(needed_trim, -max_trim_down_db)
+        makeup_gain_clean_db = max(makeup_needed_db, -max_makeup_down_db)
 
-    trim_lin = float(10.0 ** (trim_db / 20.0))
-    y_out = (y_sat * trim_lin).astype(np.float32) if abs(trim_db) > 0.05 else y_sat.copy()
-    if abs(trim_db) > 0.05:
+    if abs(makeup_gain_clean_db) > 0.05:
+        y_out = (y_color * _db_to_lin(makeup_gain_clean_db)).astype(np.float32)
         logger.logger.info(
-            f"[S8_MIXBUS_COLOR_GENERIC] Trim aplicado={trim_db:+.2f} dB "
-            f"(needed={needed_trim:+.2f}, cap_up={max_trim_up_db:.2f})."
+            f"[S8_MIXBUS_COLOR_GENERIC] Makeup limpio aplicado={makeup_gain_clean_db:+.2f} dB "
+            f"(needed={makeup_needed_db:+.2f}, cap_up={max_makeup_up_db:.2f})."
         )
     else:
-        trim_db = 0.0
-        logger.logger.info("[S8_MIXBUS_COLOR_GENERIC] Trim no significativo; no-op.")
+        makeup_gain_clean_db = 0.0
+        y_out = y_color.copy()
+        logger.logger.info("[S8_MIXBUS_COLOR_GENERIC] Makeup limpio no significativo; no-op.")
 
     # --------------------------------------------------------------
-    # Safety trim para NO pasarnos del techo del rango (evita clipping)
+    # Safety trim para NO pasarnos del techo del rango (evita clipping / TP runaway)
     # --------------------------------------------------------------
     post_tp = float(compute_true_peak_dbfs(y_out, oversample_factor=4))
     post_sample_peak = float(compute_sample_peak_dbfs(y_out))
     safety_trim_db = 0.0
+
     CEIL_MARGIN = 0.05
-    if post_tp > (tp_max + CEIL_MARGIN):
-        target_tp = tp_max - 0.2  # holgura
+    if post_tp > (target_tp_max + CEIL_MARGIN):
+        # dejamos holgura pequeña bajo el techo
+        target_tp = target_tp_max - 0.2
         safety_trim_db = float(target_tp - post_tp)
-        safety_lin = float(10.0 ** (safety_trim_db / 20.0))
-        y_out = (y_out * safety_lin).astype(np.float32)
+        y_out = (y_out * _db_to_lin(safety_trim_db)).astype(np.float32)
         post_tp = float(compute_true_peak_dbfs(y_out, oversample_factor=4))
         post_sample_peak = float(compute_sample_peak_dbfs(y_out))
         logger.logger.info(
             f"[S8_MIXBUS_COLOR_GENERIC] Safety trim adicional {safety_trim_db:+.2f} dB "
-            f"para respetar tp_max={tp_max:.2f} dBTP."
+            f"para respetar target_tp_max={target_tp_max:.2f} dBTP."
         )
 
     post_rms = float(compute_rms_dbfs(y_out))
     post_nf = float(_estimate_noise_floor_dbfs(y_out, sr))
 
     nf_delta = post_nf - pre_nf if (pre_nf != float("-inf") and post_nf != float("-inf")) else None
-    # “Compensado”: si solo subiste gain, post_nf ≈ pre_nf + trim_total. Esto intenta aislar “suciedad añadida”.
-    trim_total_db = float(trim_db + safety_trim_db)
-    post_nf_comp = (post_nf - trim_total_db) if (post_nf != float("-inf")) else None
+
+    # Compensado por gains lineales (makeup + safety), para aislar "suciedad añadida" del color
+    gain_total_db = float(makeup_gain_clean_db + safety_trim_db)
+    post_nf_comp = (post_nf - gain_total_db) if (post_nf != float("-inf")) else None
     nf_comp_delta = (post_nf_comp - pre_nf) if (post_nf_comp is not None and pre_nf != float("-inf")) else None
 
     logger.logger.info(
@@ -257,14 +291,24 @@ def _process_mixbus_color_worker(
         "noise_floor_delta_db": nf_delta,
         "post_noise_floor_compensated_dbfs": post_nf_comp,
         "noise_floor_compensated_delta_db": nf_comp_delta,
-        "drive_db_used": float(drive_db),
-        "trim_db_applied": float(trim_db),
+        # Color vs makeup (separados)
+        "color_drive_db_used": float(color_drive_db),
+        "makeup_gain_clean_db": float(makeup_gain_clean_db),
         "safety_trim_db": float(safety_trim_db),
-        "trim_total_db": float(trim_total_db),
+        "gain_total_db": float(gain_total_db),
         "thd_percent": float(thd_pct),
         "under_levelled_mode": bool(under_levelled),
-        "tp_after_saturation_dbtp": float(tp_after_sat),
-        "max_trim_up_db_used": float(max_trim_up_db),
+        "tp_after_color_dbtp": float(tp_after_color),
+        "target_tp_min_used": float(target_tp_min),
+        "target_tp_max_used": float(target_tp_max),
+        "target_tp_mid_used": float(target_mid),
+        "max_makeup_up_db_used": float(max_makeup_up_db),
+        # Backward-compat: mantenemos nombres antiguos para no romper consumidores
+        "drive_db_used": float(color_drive_db),
+        "trim_db_applied": float(makeup_gain_clean_db),
+        "trim_total_db": float(gain_total_db),
+        "tp_after_saturation_dbtp": float(tp_after_color),
+        "max_trim_up_db_used": float(max_makeup_up_db),
     }
 
 
@@ -281,8 +325,18 @@ def main() -> None:
 
     style_preset = analysis.get("style_preset", "default")
 
+    # Rango “default” (si no defines nada extra)
     tp_min = float(metrics.get("target_true_peak_range_dbtp_min", -4.0))
     tp_max = float(metrics.get("target_true_peak_range_dbtp_max", -2.0))
+
+    # Si quieres un rango específico pre-master en S8 (recomendado), añade en el contrato:
+    #   premaster_true_peak_range_dbtp_min: -6.0
+    #   premaster_true_peak_range_dbtp_max: -4.0
+    premaster_tp_min = metrics.get("premaster_true_peak_range_dbtp_min", None)
+    premaster_tp_max = metrics.get("premaster_true_peak_range_dbtp_max", None)
+    premaster_tp_min_f = float(premaster_tp_min) if premaster_tp_min is not None else None
+    premaster_tp_max_f = float(premaster_tp_max) if premaster_tp_max is not None else None
+
     max_thd_percent = float(metrics.get("max_thd_percent", 3.0))
     max_sat_per_pass_db = float(limits.get("max_additional_saturation_per_pass", 1.0))
 
@@ -300,6 +354,8 @@ def main() -> None:
         tp_max,
         max_thd_percent,
         max_sat_per_pass_db,
+        premaster_tp_min=premaster_tp_min_f,
+        premaster_tp_max=premaster_tp_max_f,
     )
 
     metrics_path = temp_dir / "color_metrics_S8_MIXBUS_COLOR_GENERIC.json"
@@ -311,6 +367,8 @@ def main() -> None:
                 "targets": {
                     "target_true_peak_range_dbtp_min": tp_min,
                     "target_true_peak_range_dbtp_max": tp_max,
+                    "premaster_true_peak_range_dbtp_min": premaster_tp_min_f,
+                    "premaster_true_peak_range_dbtp_max": premaster_tp_max_f,
                     "max_thd_percent": max_thd_percent,
                     "max_additional_saturation_per_pass_db": max_sat_per_pass_db,
                 },
@@ -330,15 +388,24 @@ def main() -> None:
                     "noise_floor_compensated_delta_db": res["noise_floor_compensated_delta_db"],
                 },
                 "process": {
-                    "drive_db_used": res["drive_db_used"],
-                    "thd_percent": res["thd_percent"],
-                    "trim_db_applied": res["trim_db_applied"],
+                    "color_drive_db_used": res["color_drive_db_used"],
+                    "makeup_gain_clean_db": res["makeup_gain_clean_db"],
                     "safety_trim_db": res["safety_trim_db"],
+                    "gain_total_db": res["gain_total_db"],
+                    "tp_after_color_dbtp": res["tp_after_color_dbtp"],
+                    "thd_percent": res["thd_percent"],
+                    "under_levelled_mode": res["under_levelled_mode"],
+                    "target_tp_min_used": res["target_tp_min_used"],
+                    "target_tp_max_used": res["target_tp_max_used"],
+                    "target_tp_mid_used": res["target_tp_mid_used"],
+                    "max_makeup_up_db_used": res["max_makeup_up_db_used"],
+                    "written_subtype": "FLOAT",
+                    # backward-compat
+                    "drive_db_used": res["drive_db_used"],
+                    "trim_db_applied": res["trim_db_applied"],
                     "trim_total_db": res["trim_total_db"],
                     "tp_after_saturation_dbtp": res["tp_after_saturation_dbtp"],
-                    "under_levelled_mode": res["under_levelled_mode"],
                     "max_trim_up_db_used": res["max_trim_up_db_used"],
-                    "written_subtype": "FLOAT",
                 },
             },
             f,

@@ -1,574 +1,654 @@
-# C:\mix-master\backend\src\stages\S7_MIXBUS_TONAL_BALANCE.py
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 
-from __future__ import annotations
-from utils.logger import logger
+"""
+S7_MIXBUS_TONAL_BALANCE
+-----------------------
+Objetivo:
+- Analizar el mixbus (full_song.wav) y estimar un error de balance tonal por bandas.
+- Aplicar correcciones EQ suaves (por banda) para acercar el perfil al target del estilo.
+- Guardar métricas y generar un full_song_tonal.wav.
 
-import sys
+Notas:
+- El stage trabaja con perfiles por estilo desde utils/tonal_balance_utils.py
+- Se usa Pedalboard para aplicar EQ.
+"""
+
+import json
 from pathlib import Path
 from typing import Dict, Any, Optional, Tuple, List
 
-# --- hack sys.path para ejecutar como script suelto desde stage.py ---
-THIS_DIR = Path(__file__).resolve().parent
-SRC_DIR = THIS_DIR.parent  # .../src
-if str(SRC_DIR) not in sys.path:
-    sys.path.insert(0, str(SRC_DIR))
-
-import json  # noqa: E402
 import numpy as np  # noqa: E402
+import scipy.signal as spsig
 import soundfile as sf  # noqa: E402
 
-from pedalboard import (  # noqa: E402
-    Pedalboard,
-    LowShelfFilter,
-    HighShelfFilter,
-    PeakFilter,
-)
+from pedalboard import Pedalboard, LowShelfFilter, PeakFilter, HighShelfFilter  # noqa: E402
 
-from utils.analysis_utils import get_temp_dir  # noqa: E402
-from utils.tonal_balance_utils import (  # noqa: E402
-    get_freq_bands,
+from src.utils.logger import get_logger  # noqa: E402
+from src.utils.tonal_balance_utils import (  # noqa: E402
     compute_band_energies,
+    normalize_band_energies,
     get_style_tonal_profile,
+    get_freq_bands,
 )
 
-try:
-    from context import PipelineContext
-except ImportError:
-    PipelineContext = None  # type: ignore
+logger = get_logger("S7_MIXBUS_TONAL_BALANCE")
+
+DEFAULT_MAX_TONAL_ERROR_DB = 3.0
+DEFAULT_MAX_EQ_CHANGE_DB = 1.5
 
 
 # ---------------------------------------------------------------------
-# Helpers REL / error consistente
+# Helpers dB
 # ---------------------------------------------------------------------
-
-def _finite_values(d: Dict[str, float]) -> list[float]:
-    vals: list[float] = []
-    for v in d.values():
-        try:
-            fv = float(v)
-        except (TypeError, ValueError):
-            continue
-        if fv == float("-inf"):
-            continue
-        vals.append(fv)
-    return vals
+def linear_to_db(x: float) -> float:
+    return 20.0 * np.log10(max(1e-12, float(x)))
 
 
-def normalize_bands_db(
-    band_db_abs: Dict[str, float],
-) -> Tuple[Dict[str, float], float]:
-    vals = _finite_values(band_db_abs)
-    if not vals:
-        return {k: float("-inf") for k in band_db_abs.keys()}, 0.0
-    mean_abs = sum(vals) / float(len(vals))
-    rel: Dict[str, float] = {}
-    for k, v in band_db_abs.items():
-        try:
-            fv = float(v)
-        except (TypeError, ValueError):
-            rel[k] = float("-inf")
-            continue
-        if fv == float("-inf"):
-            rel[k] = float("-inf")
-        else:
-            rel[k] = float(fv - mean_abs)
-    return rel, float(mean_abs)
+def db_to_linear(db: float) -> float:
+    return float(10.0 ** (float(db) / 20.0))
 
 
-def compute_error_by_band_rel(
-    current_rel: Dict[str, float],
-    target_rel: Dict[str, float],
-) -> Tuple[Dict[str, float], float]:
-    err: Dict[str, float] = {}
-    sq: list[float] = []
+# ---------------------------------------------------------------------
+# Error (relativo y absoluto alineado)
+# ---------------------------------------------------------------------
+def compute_error_rel(
+    band_rel_db: Dict[str, float], target_rel_db: Dict[str, float]
+) -> Tuple[float, Dict[str, float]]:
+    """
+    Error por banda en espacio relativo (ya normalizado por media).
+    err = band_rel_db - target_rel_db
 
-    keys = set(current_rel.keys()) | set(target_rel.keys())
+    Devuelve:
+    - RMS del error
+    - dict error por banda
+    """
+    keys = sorted(set(band_rel_db.keys()) & set(target_rel_db.keys()))
+    if not keys:
+        return 0.0, {}
+
+    errs = []
+    err_by_band = {}
     for k in keys:
-        c = current_rel.get(k, float("-inf"))
-        t = target_rel.get(k, float("-inf"))
-        try:
-            cf = float(c)
-            tf = float(t)
-        except (TypeError, ValueError):
-            continue
-        if cf == float("-inf") or tf == float("-inf"):
-            continue
-        e = float(cf - tf)  # definido: current - target
-        err[k] = e
-        sq.append(e * e)
+        e = float(band_rel_db[k] - target_rel_db[k])
+        err_by_band[k] = e
+        errs.append(e)
 
-    rms = (sum(sq) / float(len(sq))) ** 0.5 if sq else 0.0
-    return err, float(rms)
+    err_rms = float(np.sqrt(np.mean(np.square(errs)))) if errs else 0.0
+    return err_rms, err_by_band
 
 
 def compute_error_aligned_abs(
-    current_abs: Dict[str, float],
-    target_abs: Dict[str, float],
-) -> Tuple[Dict[str, float], float, float]:
+    band_abs_db: Dict[str, float], target_rel_db: Dict[str, float]
+) -> Tuple[float, Dict[str, float], float]:
     """
-    Calcula error por banda en dB tras alinear offset global (media de diffs).
-    Devuelve (err_by_band, rms_err, global_offset_db).
+    A partir de energías absolutas (dB) del audio y un target relativo,
+    calcula un target absoluto alineado con el audio (offset global) y
+    devuelve RMS del error absoluto alineado.
+
+    target_abs_db[k] = target_rel_db[k] + global_offset_db
+
+    global_offset_db se elige para minimizar el error (media de (band_abs_db - target_rel_db)).
     """
-    keys = set(current_abs.keys()) | set(target_abs.keys())
-    diffs: list[float] = []
+    keys = sorted(set(band_abs_db.keys()) & set(target_rel_db.keys()))
+    if not keys:
+        return 0.0, {}, 0.0
+
+    diffs = [float(band_abs_db[k] - target_rel_db[k]) for k in keys]
+    global_offset_db = float(np.mean(diffs))
+
+    err_by_band = {}
+    errs = []
     for k in keys:
-        c = current_abs.get(k, float("-inf"))
-        t = target_abs.get(k, float("-inf"))
-        try:
-            cf = float(c)
-            tf = float(t)
-        except (TypeError, ValueError):
-            continue
-        if cf == float("-inf") or tf == float("-inf"):
-            continue
-        diffs.append(cf - tf)
+        target_abs = float(target_rel_db[k] + global_offset_db)
+        e = float(band_abs_db[k] - target_abs)
+        err_by_band[k] = e
+        errs.append(e)
 
-    offset = sum(diffs) / float(len(diffs)) if diffs else 0.0
-
-    err: Dict[str, float] = {}
-    sq: list[float] = []
-    for k in keys:
-        c = current_abs.get(k, float("-inf"))
-        t = target_abs.get(k, float("-inf"))
-        try:
-            cf = float(c)
-            tf = float(t)
-        except (TypeError, ValueError):
-            continue
-        if cf == float("-inf") or tf == float("-inf"):
-            continue
-        e = float((cf - offset) - tf)
-        err[k] = e
-        sq.append(e * e)
-
-    rms = (sum(sq) / float(len(sq))) ** 0.5 if sq else 0.0
-    return err, float(rms), float(offset)
+    err_rms = float(np.sqrt(np.mean(np.square(errs)))) if errs else 0.0
+    return err_rms, err_by_band, global_offset_db
 
 
-# ---------------------------------------------------------------------
-# Load analysis
-# ---------------------------------------------------------------------
+def _band_rms_db_welch(
+    y: np.ndarray,
+    sr: int,
+    fmin_hz: float,
+    fmax_hz: float,
+    nperseg: int = 8192,
+    noverlap: int = 4096,
+) -> float:
+    """Band RMS en dB usando Welch PSD (estable y con ventana)."""
+    if y.size == 0:
+        return -120.0
+    y = np.asarray(y, dtype=np.float32)
+    y = y - float(np.mean(y))  # remove DC
 
-def load_analysis(contract_id: str) -> Dict[str, Any]:
-    temp_dir = get_temp_dir(contract_id, create=False)
-    analysis_path = temp_dir / f"analysis_{contract_id}.json"
-    if not analysis_path.exists():
-        raise FileNotFoundError(f"No se encuentra el análisis en {analysis_path}")
-    with analysis_path.open("r", encoding="utf-8") as f:
-        return json.load(f)
+    nper = min(nperseg, max(2048, y.size))
+    nov = min(noverlap, max(1024, nper // 2))
+
+    freqs, pxx = spsig.welch(y, fs=sr, nperseg=nper, noverlap=nov, scaling="spectrum")
+    mask = (freqs >= float(fmin_hz)) & (freqs < float(fmax_hz))
+    if not np.any(mask):
+        return -120.0
+
+    power = float(np.mean(pxx[mask]))
+    rms = float(np.sqrt(max(power, 1e-20)))
+    return linear_to_db(rms)
 
 
-def load_analysis_with_context(context: PipelineContext) -> Dict[str, Any]:
-    stage_id = context.stage_id
-    temp_dir = context.get_stage_dir()
-    analysis_path = temp_dir / f"analysis_{stage_id}.json"
-    if not analysis_path.exists():
-        raise FileNotFoundError(f"No se encuentra el análisis en {analysis_path}")
-    with analysis_path.open("r", encoding="utf-8") as f:
-        return json.load(f)
+def compute_edge_ratio_db(
+    y: np.ndarray,
+    sr: int,
+    edge_band_hz: Tuple[float, float] = (5000.0, 10000.0),
+    ref_band_hz: Tuple[float, float] = (1000.0, 4000.0),
+) -> float:
+    """
+    Proxy simple de estridencia/edge:
+    edge_ratio_db = RMS(5–10k) - RMS(1–4k)
+
+    Menos negativo => más brillante/edgy.
+    """
+    edge_db = _band_rms_db_welch(y, sr, edge_band_hz[0], edge_band_hz[1])
+    ref_db = _band_rms_db_welch(y, sr, ref_band_hz[0], ref_band_hz[1])
+    return float(edge_db - ref_db)
 
 
 # ---------------------------------------------------------------------
-# EQ multibanda con Pedalboard
+# Pedalboard EQ (por banda)
 # ---------------------------------------------------------------------
-
 def _build_pedalboard_eq(eq_gains_db: Dict[str, float], sr: int) -> Pedalboard:
-    bands = get_freq_bands()
-    nyquist = float(sr) / 2.0 if sr > 0 else None
+    """
+    Construye una cadena de filtros con ganancia por banda.
+    Las bandas están definidas en tonal_balance_utils.get_freq_bands()
+
+    Mapeo (aprox):
+    sub        -> LowShelf 60 Hz
+    low        -> Peak 120 Hz
+    low_mid    -> Peak 350 Hz
+    mid        -> Peak 1 kHz
+    high_mid   -> Peak 2.5 kHz
+    presence   -> Peak 4.5 kHz
+    air        -> HighShelf 10 kHz
+    ultra_air  -> HighShelf 14 kHz
+    """
+    if not eq_gains_db:
+        return Pedalboard([], sample_rate=sr)
+
+    # filtros por banda
+    band_to_filter = {
+        "sub": lambda g: LowShelfFilter(cutoff_frequency_hz=60, gain_db=g, q=0.7),
+        "low": lambda g: PeakFilter(cutoff_frequency_hz=120, q=0.9, gain_db=g),
+        "low_mid": lambda g: PeakFilter(cutoff_frequency_hz=350, q=1.0, gain_db=g),
+        "mid": lambda g: PeakFilter(cutoff_frequency_hz=1000, q=1.0, gain_db=g),
+        "high_mid": lambda g: PeakFilter(cutoff_frequency_hz=2500, q=1.0, gain_db=g),
+        "presence": lambda g: PeakFilter(cutoff_frequency_hz=4500, q=0.9, gain_db=g),
+        "air": lambda g: HighShelfFilter(cutoff_frequency_hz=10000, gain_db=g, q=0.7),
+        "ultra_air": lambda g: HighShelfFilter(cutoff_frequency_hz=14000, gain_db=g, q=0.7),
+    }
+
     plugins = []
-
-    if not bands:
-        return Pedalboard([])
-
-    n_bands = len(bands)
-
-    for idx, band in enumerate(bands):
-        band_id = band.get("id")
-        if band_id is None:
+    for band in get_freq_bands():
+        bid = band["id"]
+        g = float(eq_gains_db.get(bid, 0.0))
+        if abs(g) < 1e-3:
             continue
+        if bid in band_to_filter:
+            plugins.append(band_to_filter[bid](g))
 
-        gain_db = float(eq_gains_db.get(band_id, 0.0))
-        if abs(gain_db) < 1e-3:
-            continue
-
-        f_min = float(band.get("f_min", 0.0))
-        f_max = float(band.get("f_max", 0.0))
-
-        if nyquist is not None and nyquist > 0.0:
-            f_min = max(0.0, min(f_min, nyquist))
-            f_max = max(0.0, min(f_max, nyquist))
-
-        if f_max <= 0.0:
-            continue
-
-        # Low shelf
-        if idx == 0 or f_min <= 0.0:
-            cutoff = max(20.0, f_max if nyquist is None else min(f_max, nyquist))
-            plugins.append(LowShelfFilter(cutoff_frequency_hz=cutoff, gain_db=gain_db, q=0.707))
-            continue
-
-        # High shelf
-        if idx == n_bands - 1 or (nyquist is not None and f_max >= nyquist * 0.9):
-            cutoff = max(20.0, f_min if nyquist is None else min(f_min, nyquist))
-            plugins.append(HighShelfFilter(cutoff_frequency_hz=cutoff, gain_db=gain_db, q=0.707))
-            continue
-
-        # Peak
-        center = (f_min * f_max) ** 0.5 if f_min > 0.0 else f_max
-        if nyquist is not None:
-            center = max(20.0, min(center, nyquist))
-
-        bandwidth = max(f_max - f_min, 1.0)
-        q = float(center / bandwidth) if bandwidth > 0.0 else 1.0
-        q = max(0.1, min(q, 4.0))
-
-        plugins.append(PeakFilter(cutoff_frequency_hz=center, gain_db=gain_db, q=q))
-
-    return Pedalboard(plugins)
+    return Pedalboard(plugins, sample_rate=sr)
 
 
-def _apply_multiband_eq_pedalboard(audio: np.ndarray, sr: int, eq_gains_db: Dict[str, float]) -> np.ndarray:
+def _apply_multiband_eq_pedalboard(
+    audio: np.ndarray,
+    sr: int,
+    eq_gains_db: Dict[str, float],
+    *,
+    extra_plugins: Optional[List[Any]] = None,
+) -> np.ndarray:
     x = np.asarray(audio, dtype=np.float32)
     if x.size == 0 or sr <= 0:
         return x
-    if not eq_gains_db or all(abs(v) < 1e-3 for v in eq_gains_db.values()):
+    if (not eq_gains_db) or all(abs(v) < 1e-3 for v in eq_gains_db.values()):
         return x
 
     board = _build_pedalboard_eq(eq_gains_db, sr)
-    if len(board) == 0:
+    plugins = list(board)
+
+    if extra_plugins:
+        plugins.extend(list(extra_plugins))
+
+    if len(plugins) == 0:
         return x
 
-    y = board(x, sr)
+    board2 = Pedalboard(plugins, sample_rate=sr)
+    y = board2(x, sr)
     return np.asarray(y, dtype=np.float32)
 
 
 # ---------------------------------------------------------------------
 # Métricas
 # ---------------------------------------------------------------------
-
 def _save_tonal_metrics(
     temp_dir: Path,
     contract_id: str,
-    style_preset: str,
-    pre_band_db_rel: Dict[str, float],
-    post_band_db_rel: Dict[str, float],
-    target_band_db_rel: Dict[str, float],
-    pre_band_db_abs: Dict[str, float],
-    post_band_db_abs: Dict[str, float],
-    target_band_db_abs: Dict[str, float],
-    pre_error_rms: float,
-    post_error_rms: float,
-    eq_gains_db: Dict[str, float],
-    max_tonal_error_db: float,
-    max_eq_change_db: float,
+    pre_band_abs_db: Dict[str, float],
+    pre_band_rel_db: Dict[str, float],
+    target_rel_db: Dict[str, float],
+    pre_error_rms_rel: float,
+    pre_err_by_band_rel: Dict[str, float],
+    pre_error_rms_abs: float,
+    pre_err_by_band_abs: Dict[str, float],
     pre_global_offset_db: float,
+    eq_gains_db: Dict[str, float],
+    post_band_abs_db: Dict[str, float],
+    post_band_rel_db: Dict[str, float],
+    post_error_rms_rel: float,
+    post_err_by_band_rel: Dict[str, float],
+    post_error_rms_abs: float,
+    post_err_by_band_abs: Dict[str, float],
     post_global_offset_db: float,
+    extra_metrics: Optional[Dict[str, Any]] = None,
 ) -> None:
-    metrics_path = temp_dir / "tonal_metrics_S7_MIXBUS_TONAL_BALANCE.json"
     data = {
-        "contract_id": contract_id,
-        "style_preset": style_preset,
-        "max_tonal_balance_error_db": max_tonal_error_db,
-        "max_eq_change_db_per_band_per_pass": max_eq_change_db,
         "pre": {
-            "band_db": pre_band_db_rel,          # REL (shape)
-            "band_db_abs": pre_band_db_abs,      # ABS (diag)
-            "error_rms_db": pre_error_rms,
-            "global_offset_db": pre_global_offset_db,
+            "band_db_abs": pre_band_abs_db,
+            "band_db_rel": pre_band_rel_db,
+            "error_rms_rel_db": float(pre_error_rms_rel),
+            "error_by_band_rel_db": pre_err_by_band_rel,
+            "error_rms_abs_aligned_db": float(pre_error_rms_abs),
+            "error_by_band_abs_aligned_db": pre_err_by_band_abs,
+            "global_offset_abs_db": float(pre_global_offset_db),
         },
-        "post": {
-            "band_db": post_band_db_rel,         # REL (shape)
-            "band_db_abs": post_band_db_abs,     # ABS (diag)
-            "error_rms_db": post_error_rms,
-            "global_offset_db": post_global_offset_db,
-        },
-        "target_band_db": target_band_db_rel,    # REL (shape)
-        "target_band_db_abs": target_band_db_abs,
+        "target_rel_db": target_rel_db,
         "eq_gains_db": eq_gains_db,
+        "post": {
+            "band_db_abs": post_band_abs_db,
+            "band_db_rel": post_band_rel_db,
+            "error_rms_rel_db": float(post_error_rms_rel),
+            "error_by_band_rel_db": post_err_by_band_rel,
+            "error_rms_abs_aligned_db": float(post_error_rms_abs),
+            "error_by_band_abs_aligned_db": post_err_by_band_abs,
+            "global_offset_abs_db": float(post_global_offset_db),
+        },
     }
+
+    metrics_path = temp_dir / f"tonal_metrics_{contract_id}.json"
+
+    if extra_metrics:
+        data.update(extra_metrics)
 
     with metrics_path.open("w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
 
-    logger.logger.info(f"[S7_MIXBUS_TONAL_BALANCE] Métricas guardadas en: {metrics_path}")
+
+# ---------------------------------------------------------------------
+# Interactivo (comparación pre/post)
+# ---------------------------------------------------------------------
+def _write_interactive_comparison(
+    temp_dir: Path,
+    contract_id: str,
+    pre_band_rel_db: Dict[str, float],
+    post_band_rel_db: Dict[str, float],
+    target_rel_db: Dict[str, float],
+    eq_gains_db: Dict[str, float],
+) -> None:
+    """
+    Escribe un JSON muy simple que el front puede usar para graficar barras.
+    """
+    out = {
+        "contract_id": contract_id,
+        "bands": [b["id"] for b in get_freq_bands()],
+        "pre_rel_db": pre_band_rel_db,
+        "post_rel_db": post_band_rel_db,
+        "target_rel_db": target_rel_db,
+        "eq_gains_db": eq_gains_db,
+    }
+
+    path_out = temp_dir / f"tonal_interactive_{contract_id}.json"
+    with path_out.open("w", encoding="utf-8") as f:
+        json.dump(out, f, indent=2, ensure_ascii=False)
 
 
 # ---------------------------------------------------------------------
-# Stage principal
+# Main
 # ---------------------------------------------------------------------
-
-def _smooth_gains(bands: List[Dict[str, Any]], gains: Dict[str, float]) -> Dict[str, float]:
+def process(contract_id: str) -> bool:
     """
-    Suavizado 3-tap por orden de bandas (evita correcciones serrucho).
+    Lee contrato {temp_dir}/{contract_id}.json, procesa full_song.wav y escribe:
+    - full_song_tonal.wav
+    - tonal_metrics_{contract_id}.json
+    - tonal_interactive_{contract_id}.json
     """
-    ids = [b.get("id") for b in bands if b.get("id") is not None]
-    out: Dict[str, float] = dict(gains)
-
-    for i, bid in enumerate(ids):
-        g0 = float(gains.get(bid, 0.0))
-        g_prev = float(gains.get(ids[i - 1], g0)) if i > 0 else g0
-        g_next = float(gains.get(ids[i + 1], g0)) if i < (len(ids) - 1) else g0
-        out[bid] = float((g_prev + 2.0 * g0 + g_next) / 4.0)
-
-    return out
-
-
-def _detect_global_gain_like(gains: Dict[str, float], min_bands: int = 3) -> Tuple[bool, float, float, int]:
-    """
-    Detecta el patrón "todas las bandas casi igual" => trim global.
-    """
-    vals = [float(v) for v in gains.values() if abs(float(v)) >= 0.10]
-    n = len(vals)
-    if n < min_bands:
-        return False, 0.0, 0.0, n
-
-    mean = sum(vals) / float(n)
-    var = sum((v - mean) ** 2 for v in vals) / float(n)
-    std = var ** 0.5
-
-    # Si casi no hay varianza pero hay media apreciable -> es un global gain
-    is_global = (std <= 0.12) and (abs(mean) >= 0.25)
-    return is_global, float(mean), float(std), n
-
-
-def process(context: PipelineContext, *args) -> bool:
-    contract_id = context.stage_id
-    temp_dir = context.get_stage_dir()
-
-    # 1) Cargar análisis
     try:
-        analysis = load_analysis_with_context(context)
-    except FileNotFoundError:
-        analysis = load_analysis(contract_id)
+        temp_dir = Path("/tmp") / contract_id
+        contract_path = temp_dir / f"{contract_id}.json"
+        if not contract_path.exists():
+            logger.logger.error("No existe contrato: %s", contract_path)
+            return False
 
-    metrics: Dict[str, Any] = analysis.get("metrics_from_contract", {}) or {}
-    limits: Dict[str, Any] = analysis.get("limits_from_contract", {}) or {}
-    session: Dict[str, Any] = analysis.get("session", {}) or {}
+        with contract_path.open("r", encoding="utf-8") as f:
+            contract = json.load(f)
 
-    style_preset = analysis.get("style_preset", "default")
-    tonal_info: Dict[str, Any] = session.get("tonal_bands", {}) or {}
+        analysis = contract.get("analysis", {}) or {}
+        metrics = contract.get("metrics", {}) or {}
+        style_preset = analysis.get("style_preset", "balanced")
 
-    # Umbrales
-    max_tonal_error_db = float(metrics.get("max_tonal_balance_error_db", 3.0))
-    max_eq_change_db = float(limits.get("max_eq_change_db_per_band_per_pass", 1.5))
+        full_song_path = temp_dir / "full_song.wav"
+        if not full_song_path.exists():
+            # fallback a la ruta en analysis si existe
+            p = analysis.get("mixbus_path")
+            if p:
+                full_song_path = Path(p)
+        if not full_song_path.exists():
+            logger.logger.error("No existe full_song.wav para S7: %s", full_song_path)
+            return True
 
-    # Parámetros de control (nuevos defaults seguros)
-    eq_k = float(metrics.get("eq_proportional_factor", 0.75))  # <1 para evitar overshoot
-    do_smooth = bool(metrics.get("smooth_eq_gains", True))
-    rollback_if_worse = bool(metrics.get("rollback_if_worse", True))
-    worsen_margin_db = float(metrics.get("worsen_margin_db", 0.05))  # si empeora más que esto, rollback
-    min_gain_db = float(metrics.get("min_gain_db", 0.10))
+        # ---------------------------------------------------------------------
+        # De-harsh / anti-stridency guard (conservative; only acts when needed)
+        # ---------------------------------------------------------------------
+        deharsh_enable = bool(metrics.get("deharsh_enable", True))
+        deharsh_edge_ratio_threshold_db = float(metrics.get("deharsh_edge_ratio_threshold_db", -14.0))
+        deharsh_max_cut_db = float(metrics.get("deharsh_max_cut_db", 2.5))
+        deharsh_sensitivity = float(metrics.get("deharsh_sensitivity", 0.75))
+        deharsh_fc_hz = float(metrics.get("deharsh_fc_hz", 6500.0))
+        deharsh_q = float(metrics.get("deharsh_q", 0.9))
 
-    full_song_path = temp_dir / "full_song.wav"
-    if not full_song_path.exists():
-        logger.logger.info(f"[S7_MIXBUS_TONAL_BALANCE] No existe {full_song_path}; no se puede aplicar EQ.")
-        return True
+        # Positive boost caps (avoid adding stridency). Defaults are intentionally conservative.
+        boost_cap_high_mid_db = float(metrics.get("boost_cap_high_mid_db", 0.75))
+        boost_cap_presence_db = float(metrics.get("boost_cap_presence_db", 0.50))
+        boost_cap_air_db = float(metrics.get("boost_cap_air_db", 0.35))
+        boost_cap_ultra_air_db = float(metrics.get("boost_cap_ultra_air_db", 0.25))
 
-    # 2) Obtener medición PRE (ABS + REL para shape)
-    pre_band_rel = tonal_info.get("current_band_db", {}) or {}
-    tgt_band_rel = tonal_info.get("target_band_db", {}) or {}
+        # Compute edge ratio (5–10 kHz vs 1–4 kHz). Less negative => brighter/edgier.
+        try:
+            y_edge, sr_edge = sf.read(full_song_path, always_2d=False)
+            y_edge = np.asarray(y_edge, dtype=np.float32)
+            if y_edge.ndim > 1:
+                y_edge = np.mean(y_edge, axis=1)
+            edge_ratio_db_pre = compute_edge_ratio_db(y_edge, int(sr_edge))
+        except Exception:
+            edge_ratio_db_pre = float("nan")
 
-    pre_band_abs = tonal_info.get("current_band_db_abs", {}) or {}
-    tgt_band_abs = tonal_info.get("target_band_db_abs", {}) or {}
+        deharsh_cut_db = 0.0
+        if deharsh_enable and np.isfinite(edge_ratio_db_pre) and edge_ratio_db_pre > deharsh_edge_ratio_threshold_db:
+            excess = float(edge_ratio_db_pre - deharsh_edge_ratio_threshold_db)
+            deharsh_cut_db = min(deharsh_max_cut_db, max(0.0, excess * deharsh_sensitivity))
 
-    if not tgt_band_abs:
-        tgt_band_abs = get_style_tonal_profile(style_preset) or {}
+            # When de-harsh is active, disallow additional positive boosts in the upper bands.
+            boost_cap_high_mid_db = min(boost_cap_high_mid_db, 0.0)
+            boost_cap_presence_db = min(boost_cap_presence_db, 0.0)
+            boost_cap_air_db = min(boost_cap_air_db, 0.0)
+            boost_cap_ultra_air_db = min(boost_cap_ultra_air_db, 0.0)
 
-    if not pre_band_abs:
-        # Si análisis no guardó ABS, medimos aquí (fallback)
-        y0, sr0 = sf.read(full_song_path, always_2d=False)
-        y0 = np.asarray(y0, dtype=np.float32)
-        pre_band_abs = compute_band_energies(y0, sr0)
-
-    # Si REL está vacío o lleno de -inf, reconstruimos
-    def _looks_empty_rel(d: Dict[str, float]) -> bool:
-        return (not d) or all((v == float("-inf")) for v in d.values())
-
-    if _looks_empty_rel(pre_band_rel):
-        pre_band_rel, _ = normalize_bands_db(pre_band_abs)
-    if _looks_empty_rel(tgt_band_rel):
-        tgt_band_rel, _ = normalize_bands_db(tgt_band_abs)
-
-    # Error en ABS alineando offset global para medir shape real
-    pre_err_by_band_abs, pre_error_rms, pre_global_offset_db = compute_error_aligned_abs(pre_band_abs, tgt_band_abs)
-
-    # 3) Idempotencia
-    MARGIN_RMS = 0.25
-    if pre_error_rms <= max_tonal_error_db + MARGIN_RMS:
         logger.logger.info(
-            f"[S7_MIXBUS_TONAL_BALANCE] error_RMS_abs_aligned={pre_error_rms:.2f} dB (offset={pre_global_offset_db:+.2f} dB) "
-            f"<= umbral {max_tonal_error_db:.2f} dB (+{MARGIN_RMS:.2f}); no-op."
+            "[S7_MIXBUS_TONAL_BALANCE] De-harsh: edge_ratio_pre=%s dB (threshold %+.2f) cut=%0.2f dB | boost_caps high_mid=%+.2f presence=%+.2f air=%+.2f ultra_air=%+.2f",
+            "nan" if not np.isfinite(edge_ratio_db_pre) else f"{edge_ratio_db_pre:+.2f}",
+            deharsh_edge_ratio_threshold_db,
+            deharsh_cut_db,
+            boost_cap_high_mid_db,
+            boost_cap_presence_db,
+            boost_cap_air_db,
+            boost_cap_ultra_air_db,
         )
-        # Guardar métricas mínimas (post == pre)
+
+        # 2) Obtener medición PRE (band energies)
+        tonal_info = analysis.get("tonal_balance", {}) or {}
+        pre_band_abs = tonal_info.get("band_energies_db", None)
+        sr = int(tonal_info.get("sr", 44100))
+
+        if not pre_band_abs:
+            y0, sr0 = sf.read(full_song_path, always_2d=False)
+            y0 = np.asarray(y0, dtype=np.float32)
+            if y0.ndim > 1:
+                y0 = np.mean(y0, axis=1)
+
+            sr = int(sr0)
+            pre_band_abs = compute_band_energies(y0, sr)
+
+        pre_band_rel = normalize_band_energies(pre_band_abs)
+
+        # 3) Target tonal profile por estilo
+        target_rel = get_style_tonal_profile(style_preset)
+
+        # 3.1) Error relativo
+        pre_err_rms_rel, pre_err_by_band_rel = compute_error_rel(pre_band_rel, target_rel)
+
+        # 3.2) Error absoluto alineado (para diagnóstico)
+        pre_err_rms_abs, pre_err_by_band_abs, pre_global_offset_db = compute_error_aligned_abs(pre_band_abs, target_rel)
+
+        logger.logger.info(
+            "[S7_MIXBUS_TONAL_BALANCE] PRE error RMS REL=%0.2f dB | RMS ABS(aligned)=%0.2f dB | global_offset_abs=%+.2f dB",
+            pre_err_rms_rel,
+            pre_err_rms_abs,
+            pre_global_offset_db,
+        )
+
+        # 4) Construir EQ gains (por banda) a partir del error relativo
+        max_err = float(metrics.get("max_tonal_balance_error_db", DEFAULT_MAX_TONAL_ERROR_DB))
+        max_eq_change_db = float(metrics.get("max_eq_change_db_per_band", DEFAULT_MAX_EQ_CHANGE_DB))
+        max_tonal_error_db = float(metrics.get("max_tonal_error_db", max_err))
+        min_gain = float(metrics.get("min_gain_db", 0.10))
+        smooth = bool(metrics.get("smooth_eq", True))
+
+        eq_gains_db: Dict[str, float] = {}
+        for band in get_freq_bands():
+            bid = band["id"]
+            e = float(pre_err_by_band_rel.get(bid, 0.0))
+
+            # recortar error extremo antes de traducir a ganancia
+            e = float(np.clip(e, -max_tonal_error_db, max_tonal_error_db))
+
+            # regla simple: si el audio está por encima del target (e>0), recortar;
+            # si está por debajo (e<0), realzar.
+            g = float(np.clip(-e, -max_eq_change_db, max_eq_change_db))
+            eq_gains_db[bid] = g
+
+        # 4.3) Suavizado opcional (promediar con vecinos)
+        if smooth:
+            bands = [b["id"] for b in get_freq_bands()]
+            smoothed = dict(eq_gains_db)
+            for i, bid in enumerate(bands):
+                neigh = [eq_gains_db[bid]]
+                if i > 0:
+                    neigh.append(eq_gains_db[bands[i - 1]])
+                if i < len(bands) - 1:
+                    neigh.append(eq_gains_db[bands[i + 1]])
+                smoothed[bid] = float(np.mean(neigh))
+            eq_gains_db = smoothed
+
+        # eliminar ganancias muy pequeñas
+        eq_gains_db = {k: v for k, v in eq_gains_db.items() if abs(v) >= min_gain}
+
+        # “global trim” detection: si casi todas las bandas están igual, es probablemente un offset global -> no aplicar
+        if len(eq_gains_db) >= 3:
+            vals = list(eq_gains_db.values())
+            mean_g = float(np.mean(vals))
+            std_g = float(np.std(vals))
+            if abs(mean_g) >= 0.25 and std_g <= 0.12:
+                logger.logger.warning(
+                    "[S7_MIXBUS_TONAL_BALANCE] Detectado patrón de 'global trim' (mean=%+.2f std=%0.2f). No aplico EQ.",
+                    mean_g,
+                    std_g,
+                )
+                eq_gains_db = {}
+
+        # Si hay bass boost incoherente: si sub/low piden boost pero low_mid/mid piden cortes grandes, atenuar bass boost.
+        if eq_gains_db:
+            bass_boost = float(eq_gains_db.get("sub", 0.0) + eq_gains_db.get("low", 0.0))
+            mids_cut = float(min(eq_gains_db.get("low_mid", 0.0), eq_gains_db.get("mid", 0.0)))
+            if bass_boost > 0.50 and mids_cut < -0.80:
+                logger.logger.warning(
+                    "[S7_MIXBUS_TONAL_BALANCE] Incoherencia: bass_boost=%0.2f, mids_cut=%0.2f. Atenúo boosts de sub/low.",
+                    bass_boost,
+                    mids_cut,
+                )
+                if "sub" in eq_gains_db:
+                    eq_gains_db["sub"] *= 0.5
+                if "low" in eq_gains_db:
+                    eq_gains_db["low"] *= 0.5
+
+        # High-frequency boost governor (prevents adding stridency even if target requests it).
+        boost_caps = {
+            "high_mid": boost_cap_high_mid_db,
+            "presence": boost_cap_presence_db,
+            "air": boost_cap_air_db,
+            "ultra_air": boost_cap_ultra_air_db,
+        }
+        for b, cap in boost_caps.items():
+            if b in eq_gains_db and eq_gains_db[b] > 0.0:
+                eq_gains_db[b] = float(min(eq_gains_db[b], cap))
+
+        # Si quedó todo a 0, no-op
+        if not eq_gains_db:
+            logger.logger.info("[S7_MIXBUS_TONAL_BALANCE] No-op. No se aplica EQ.")
+            _save_tonal_metrics(
+                temp_dir=temp_dir,
+                contract_id=contract_id,
+                pre_band_abs_db=pre_band_abs,
+                pre_band_rel_db=pre_band_rel,
+                target_rel_db=target_rel,
+                pre_error_rms_rel=pre_err_rms_rel,
+                pre_err_by_band_rel=pre_err_by_band_rel,
+                pre_error_rms_abs=pre_err_rms_abs,
+                pre_err_by_band_abs=pre_err_by_band_abs,
+                pre_global_offset_db=pre_global_offset_db,
+                eq_gains_db={},
+                post_band_abs_db=pre_band_abs,
+                post_band_rel_db=pre_band_rel,
+                post_error_rms_rel=pre_err_rms_rel,
+                post_err_by_band_rel=pre_err_by_band_rel,
+                post_error_rms_abs=pre_err_rms_abs,
+                post_err_by_band_abs=pre_err_by_band_abs,
+                post_global_offset_db=pre_global_offset_db,
+            extra_metrics={
+                "edge_ratio_db_pre": float(edge_ratio_db_pre) if np.isfinite(edge_ratio_db_pre) else None,
+                "deharsh_cut_db": float(deharsh_cut_db),
+                "boost_caps_db": {
+                    "high_mid": float(boost_cap_high_mid_db),
+                    "presence": float(boost_cap_presence_db),
+                    "air": float(boost_cap_air_db),
+                    "ultra_air": float(boost_cap_ultra_air_db),
+                },
+            },
+        )
+
+            _write_interactive_comparison(
+                temp_dir=temp_dir,
+                contract_id=contract_id,
+                pre_band_rel_db=pre_band_rel,
+                post_band_rel_db=pre_band_rel,
+                target_rel_db=target_rel,
+                eq_gains_db={},
+            )
+            return True
+
+        logger.logger.info("[S7_MIXBUS_TONAL_BALANCE] EQ gains (dB): %s", eq_gains_db)
+
+        # 5) Aplicar EQ sobre audio y escribir WAV
+        y, sr = sf.read(full_song_path, always_2d=False)
+        y = np.asarray(y, dtype=np.float32)
+        if y.ndim > 1:
+            y = np.mean(y, axis=1)
+
+    extra_plugins = []
+    if deharsh_cut_db > 0.0:
+        extra_plugins.append(
+            PeakFilter(
+                cutoff_frequency_hz=float(deharsh_fc_hz),
+                q=float(deharsh_q),
+                gain_db=float(-deharsh_cut_db),
+            )
+        )
+
+    y_eq = _apply_multiband_eq_pedalboard(y, sr, eq_gains_db, extra_plugins=extra_plugins)
+
+        out_path = temp_dir / "full_song_tonal.wav"
+        sf.write(out_path, y_eq, sr)
+        logger.logger.info("[S7_MIXBUS_TONAL_BALANCE] Escrito: %s", out_path)
+
+        # 6) Métricas POST
+        post_band_abs = compute_band_energies(y_eq, sr)
+        post_band_rel = normalize_band_energies(post_band_abs)
+
+        post_err_rms_rel, post_err_by_band_rel = compute_error_rel(post_band_rel, target_rel)
+        post_err_rms_abs, post_err_by_band_abs, post_global_offset_db = compute_error_aligned_abs(post_band_abs, target_rel)
+
+        logger.logger.info(
+            "[S7_MIXBUS_TONAL_BALANCE] POST error RMS REL=%0.2f dB | RMS ABS(aligned)=%0.2f dB | global_offset_abs=%+.2f dB",
+            post_err_rms_rel,
+            post_err_rms_abs,
+            post_global_offset_db,
+        )
+
+        # Rollback si empeoró claramente (sólo relativo)
+        if post_err_rms_rel > pre_err_rms_rel + 0.25:
+            logger.logger.warning(
+                "[S7_MIXBUS_TONAL_BALANCE] Rollback: empeoró error rel (pre=%0.2f post=%0.2f).",
+                pre_err_rms_rel,
+                post_err_rms_rel,
+            )
+            sf.write(out_path, y, sr)
+
+            # usar PRE como POST en métricas
+            post_band_abs = pre_band_abs
+            post_band_rel = pre_band_rel
+            post_err_rms_rel = pre_err_rms_rel
+            post_err_by_band_rel = pre_err_by_band_rel
+            post_err_rms_abs = pre_err_rms_abs
+            post_err_by_band_abs = pre_err_by_band_abs
+            post_global_offset_db = pre_global_offset_db
+            eq_gains_db = {}
+
         _save_tonal_metrics(
             temp_dir=temp_dir,
             contract_id=contract_id,
-            style_preset=style_preset,
-            pre_band_db_rel=pre_band_rel,
-            post_band_db_rel=pre_band_rel,
-            target_band_db_rel=tgt_band_rel,
-            pre_band_db_abs=pre_band_abs,
-            post_band_db_abs=pre_band_abs,
-            target_band_db_abs=tgt_band_abs,
-            pre_error_rms=pre_error_rms,
-            post_error_rms=pre_error_rms,
-            eq_gains_db={},
-            max_tonal_error_db=max_tonal_error_db,
-            max_eq_change_db=max_eq_change_db,
+            pre_band_abs_db=pre_band_abs,
+            pre_band_rel_db=pre_band_rel,
+            target_rel_db=target_rel,
+            pre_error_rms_rel=pre_err_rms_rel,
+            pre_err_by_band_rel=pre_err_by_band_rel,
+            pre_error_rms_abs=pre_err_rms_abs,
+            pre_err_by_band_abs=pre_err_by_band_abs,
             pre_global_offset_db=pre_global_offset_db,
-            post_global_offset_db=pre_global_offset_db,
-        )
-        return True
-
-    # 4) Calcular ganancias por banda (error ABS alineado)
-    bands = get_freq_bands()
-    eq_gains_db: Dict[str, float] = {}
-
-    for b in bands:
-        bid = b.get("id")
-        if not bid:
-            continue
-        err = float(pre_err_by_band_abs.get(bid, 0.0))
-        desired = -eq_k * err  # si current > target => err>0 => desired negativo (recorta esa banda)
-        gain = max(-max_eq_change_db, min(max_eq_change_db, desired))
-        eq_gains_db[str(bid)] = float(gain)
-
-    # Suavizado opcional
-    if do_smooth:
-        eq_gains_db = _smooth_gains(bands, eq_gains_db)
-
-    # Zero small
-    for k in list(eq_gains_db.keys()):
-        if abs(float(eq_gains_db[k])) < min_gain_db:
-            eq_gains_db[k] = 0.0
-
-    # Detectar patrón de “trim global”
-    is_global, mean_g, std_g, n_sig = _detect_global_gain_like(eq_gains_db, min_bands=3)
-    if is_global:
-        logger.logger.info(
-            f"[S7_MIXBUS_TONAL_BALANCE] Detectado patrón de ganancia global (mean={mean_g:+.2f} dB, std={std_g:.2f}, bands={n_sig}). "
-            "Este stage no debe hacer atenuación global → no-op."
-        )
-        eq_gains_db = {k: 0.0 for k in eq_gains_db.keys()}
-
-    # Si quedó todo a 0, no-op
-    if all(abs(float(v)) < 1e-6 for v in eq_gains_db.values()):
-        logger.logger.info("[S7_MIXBUS_TONAL_BALANCE] EQ resultante ~0 dB en todas las bandas → no-op.")
-        _save_tonal_metrics(
-            temp_dir=temp_dir,
-            contract_id=contract_id,
-            style_preset=style_preset,
-            pre_band_db_rel=pre_band_rel,
-            post_band_db_rel=pre_band_rel,
-            target_band_db_rel=tgt_band_rel,
-            pre_band_db_abs=pre_band_abs,
-            post_band_db_abs=pre_band_abs,
-            target_band_db_abs=tgt_band_abs,
-            pre_error_rms=pre_error_rms,
-            post_error_rms=pre_error_rms,
-            eq_gains_db={},
-            max_tonal_error_db=max_tonal_error_db,
-            max_eq_change_db=max_eq_change_db,
-            pre_global_offset_db=pre_global_offset_db,
-            post_global_offset_db=pre_global_offset_db,
-        )
-        return True
-
-    logger.logger.info("[S7_MIXBUS_TONAL_BALANCE] Ganancias de EQ por banda (dB):")
-    for b in bands:
-        bid = b.get("id")
-        if not bid:
-            continue
-        g = float(eq_gains_db.get(str(bid), 0.0))
-        if abs(g) >= min_gain_db:
-            logger.logger.info(f"  - {bid}: {g:+.2f} dB")
-
-    # 5) Aplicar EQ
-    y, sr = sf.read(full_song_path, always_2d=False)
-    y = np.asarray(y, dtype=np.float32)
-    y_before = y.copy()
-
-    y_eq = _apply_multiband_eq_pedalboard(y, sr, eq_gains_db)
-    sf.write(full_song_path, y_eq, sr, subtype="FLOAT")
-    logger.logger.info(f"[S7_MIXBUS_TONAL_BALANCE] EQ aplicada sobre {full_song_path.name}.")
-
-    # 6) Re-medición post (ABS->REL) y rollback si empeora
-    post_band_abs = compute_band_energies(y_eq, sr)
-    post_band_rel, _ = normalize_bands_db(post_band_abs)
-    _post_err_by_band_abs, post_error_rms, post_global_offset_db = compute_error_aligned_abs(post_band_abs, tgt_band_abs)
-
-    logger.logger.info(
-        f"[S7_MIXBUS_TONAL_BALANCE] error_RMS_abs_aligned pre={pre_error_rms:.2f} dB (offset={pre_global_offset_db:+.2f}), "
-        f"post={post_error_rms:.2f} dB (offset={post_global_offset_db:+.2f})."
+            eq_gains_db=eq_gains_db,
+            post_band_abs_db=post_band_abs,
+            post_band_rel_db=post_band_rel,
+            post_error_rms_rel=post_err_rms_rel,
+            post_err_by_band_rel=post_err_by_band_rel,
+            post_error_rms_abs=post_err_rms_abs,
+            post_err_by_band_abs=post_err_by_band_abs,
+            post_global_offset_db=post_global_offset_db,
+            extra_metrics={
+                "edge_ratio_db_pre": float(edge_ratio_db_pre) if np.isfinite(edge_ratio_db_pre) else None,
+                "deharsh_cut_db": float(deharsh_cut_db),
+                "boost_caps_db": {
+                    "high_mid": float(boost_cap_high_mid_db),
+                    "presence": float(boost_cap_presence_db),
+                    "air": float(boost_cap_air_db),
+                    "ultra_air": float(boost_cap_ultra_air_db),
+                },
+            },
     )
 
-    if rollback_if_worse and (post_error_rms > pre_error_rms + worsen_margin_db):
-        logger.logger.info(
-            f"[S7_MIXBUS_TONAL_BALANCE] Rollback: el error empeoró (+{post_error_rms - pre_error_rms:.2f} dB). "
-            "Se revierte full_song.wav y se anula EQ."
-        )
-        sf.write(full_song_path, y_before, sr, subtype="FLOAT")
-
-        # Métricas rollback (post == pre)
-        _save_tonal_metrics(
+        _write_interactive_comparison(
             temp_dir=temp_dir,
             contract_id=contract_id,
-            style_preset=style_preset,
-            pre_band_db_rel=pre_band_rel,
-            post_band_db_rel=pre_band_rel,
-            target_band_db_rel=tgt_band_rel,
-            pre_band_db_abs=pre_band_abs,
-            post_band_db_abs=pre_band_abs,
-            target_band_db_abs=tgt_band_abs,
-            pre_error_rms=pre_error_rms,
-            post_error_rms=pre_error_rms,
-            eq_gains_db={},
-            max_tonal_error_db=max_tonal_error_db,
-            max_eq_change_db=max_eq_change_db,
-            pre_global_offset_db=pre_global_offset_db,
-            post_global_offset_db=pre_global_offset_db,
+            pre_band_rel_db=pre_band_rel,
+            post_band_rel_db=post_band_rel,
+            target_rel_db=target_rel,
+            eq_gains_db=eq_gains_db,
         )
+
         return True
 
-    # 7) Guardar métricas finales
-    _save_tonal_metrics(
-        temp_dir=temp_dir,
-        contract_id=contract_id,
-        style_preset=style_preset,
-        pre_band_db_rel=pre_band_rel,
-        post_band_db_rel=post_band_rel,
-        target_band_db_rel=tgt_band_rel,
-        pre_band_db_abs=pre_band_abs,
-        post_band_db_abs=post_band_abs,
-        target_band_db_abs=tgt_band_abs,
-        pre_error_rms=pre_error_rms,
-        post_error_rms=post_error_rms,
-        eq_gains_db=eq_gains_db,
-        max_tonal_error_db=max_tonal_error_db,
-        max_eq_change_db=max_eq_change_db,
-        pre_global_offset_db=pre_global_offset_db,
-        post_global_offset_db=post_global_offset_db,
-    )
-    return True
-
-
-def main() -> None:
-    if len(sys.argv) < 2:
-        logger.logger.info("Uso: python S7_MIXBUS_TONAL_BALANCE.py <CONTRACT_ID>")
-        sys.exit(1)
-
-    contract_id = sys.argv[1]
-    temp_dir = get_temp_dir(contract_id, create=False)
-    temp_root = temp_dir.parent
-    job_id = temp_root.name
-
-    if PipelineContext:
-        ctx = PipelineContext(stage_id=contract_id, job_id=job_id, temp_root=temp_root)
-        process(ctx)
-    else:
-        logger.logger.info("Error: PipelineContext no disponible en legacy main wrapper")
-        sys.exit(1)
+    except Exception as e:
+        logger.logger.exception("[S7_MIXBUS_TONAL_BALANCE] Error: %s", e)
+        return False
 
 
 if __name__ == "__main__":
-    main()
+    import sys
+
+    cid = sys.argv[1] if len(sys.argv) > 1 else "S7_MIXBUS_TONAL_BALANCE"
+    ok = process(cid)
+    sys.exit(0 if ok else 1)

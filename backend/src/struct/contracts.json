@@ -235,14 +235,34 @@
           "target_scope": "mixbus",
           "metrics": {
             "use_style_profile_tonal_balance": true,
-            "max_tonal_balance_error_db": 3.0
+
+            "max_tonal_balance_error_db": 3.0,
+            "max_eq_change_db_per_band": 1.5,
+            "min_gain_db": 0.10,
+            "smooth_eq": true,
+
+            "deharsh_enable": true,
+
+            "deharsh_edge_ratio_threshold_db": -16.0,
+            "deharsh_sensitivity": 0.90,
+            "deharsh_max_cut_db": 3.00,
+
+            "deharsh_fc_hz": 6500.0,
+            "deharsh_q": 0.90,
+
+            "boost_cap_high_mid_db": 0.25,
+            "boost_cap_presence_db": 0.00,
+            "boost_cap_air_db": 0.00,
+            "boost_cap_ultra_air_db": 0.00
           },
           "limits": {
-            "max_eq_change_db_per_band_per_pass": 1.5
+            "max_eq_change_db_per_band_per_pass": 1.5,
+            "max_tonal_balance_error_db": 3.0
           }
         }
       ]
     },
+
     "S8_MIXBUS_COLOR": {
       "id": "S8_MIXBUS_COLOR",
       "name": "Mix Bus Color",
