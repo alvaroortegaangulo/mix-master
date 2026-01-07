@@ -1447,7 +1447,7 @@ export function MixTool({ resumeJobId }: MixToolProps) {
                                                         className="sr-only peer"
                                                         checked={isSelected}
                                                         onChange={() => toggleGroup(group.id)}
-                                                        disabled={isGroupDisabled}
+                                                        disabled={Boolean(isGroupDisabled)}
                                                     />
                                                     <div className={`w-9 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-slate-400 after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all ${theme.toggle} peer-checked:after:bg-white`}></div>
                                                 </label>
@@ -1494,7 +1494,7 @@ export function MixTool({ resumeJobId }: MixToolProps) {
                                                             className={`rounded border-slate-700 bg-slate-800 ${theme.text} focus:ring-opacity-50 h-3 w-3 disabled:cursor-not-allowed disabled:opacity-50`}
                                                             checked={isStageSelected}
                                                             onChange={() => toggleStage(stage.key)}
-                                                            disabled={isStageDisabled || isStageLocked}
+                                                            disabled={Boolean(isStageDisabled || isStageLocked)}
                                                         />
                                                    </div>
                                                );
