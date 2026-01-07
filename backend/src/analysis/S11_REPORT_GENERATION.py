@@ -9,6 +9,7 @@ from typing import Dict, Any, List
 import json
 import datetime
 import os
+import math
 
 # --- hack para importar utils ---
 THIS_DIR = Path(__file__).resolve().parent
@@ -314,6 +315,17 @@ def main() -> None:
     final_corr = float("nan")
     final_diff_lr = float("nan")
 
+    def _first_finite(*vals: float) -> float:
+        for v in vals:
+            try:
+                f = float(v)
+            except (TypeError, ValueError):
+                continue
+            if math.isfinite(f):
+                return f
+        return float("nan")
+
+    # 4a) Intentar QC (S10 stage)
     if qc_path.exists():
         try:
             with qc_path.open("r", encoding="utf-8") as f:
@@ -328,6 +340,27 @@ def main() -> None:
             logger.logger.info(f"[S11_REPORT_GENERATION] Aviso: no se pudo leer {qc_path}: {e}")
     else:
         logger.logger.info(f"[S11] QC Metrics file not found at {qc_path}")
+
+    # 4b) Fallback: analysis de S10 si el QC falta o trae NaN
+    s10_analysis_path = qc_dir / "analysis_S10_MASTER_FINAL_LIMITS.json"
+    if s10_analysis_path.exists():
+        try:
+            with s10_analysis_path.open("r", encoding="utf-8") as f:
+                s10_data = json.load(f)
+            s10_session = s10_data.get("session", {}) or {}
+            s10_tp = s10_session.get("true_peak_dbtp")
+            s10_lufs = s10_session.get("lufs_integrated")
+            s10_lra = s10_session.get("lra")
+            s10_corr = s10_session.get("correlation")
+            s10_diff = s10_session.get("channel_loudness_diff_db")
+
+            final_tp = _first_finite(final_tp, s10_tp)
+            final_lufs = _first_finite(final_lufs, s10_lufs)
+            final_lra = _first_finite(final_lra, s10_lra)
+            final_corr = _first_finite(final_corr, s10_corr)
+            final_diff_lr = _first_finite(final_diff_lr, s10_diff)
+        except Exception as e:
+            logger.logger.info(f"[S11] Fallback a analysis_S10_MASTER_FINAL_LIMITS falló: {e}")
 
     # 5) Leer audio final (master) para crest & histograma
     #    Preferimos el full_song de S11; si no existe o falla, usamos el de S10.
