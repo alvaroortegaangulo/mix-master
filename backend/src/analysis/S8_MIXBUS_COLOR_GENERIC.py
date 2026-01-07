@@ -23,6 +23,7 @@ from utils.session_utils import load_session_config  # noqa: E402
 from utils.color_utils import (  # noqa: E402
     compute_rms_dbfs,
     compute_true_peak_dbfs,
+    compute_sample_peak_dbfs,
 )
 
 
@@ -66,6 +67,7 @@ def _analyze_mixbus_color(full_song_path: Path) -> Dict[str, Any]:
     """
     Lee full_song.wav y calcula:
       - true peak
+      - sample peak
       - RMS
       - noise floor proxy
     """
@@ -82,6 +84,7 @@ def _analyze_mixbus_color(full_song_path: Path) -> Dict[str, Any]:
         }
 
     pre_true_peak_dbtp = compute_true_peak_dbfs(y, oversample_factor=4)
+    pre_sample_peak_dbfs = compute_sample_peak_dbfs(y)
     pre_rms_dbfs = compute_rms_dbfs(y)
     pre_noise_floor_dbfs = _estimate_noise_floor_dbfs(y, int(sr))
 
@@ -92,6 +95,7 @@ def _analyze_mixbus_color(full_song_path: Path) -> Dict[str, Any]:
     return {
         "sr_mix": int(sr),
         "pre_true_peak_dbtp": float(pre_true_peak_dbtp),
+        "pre_sample_peak_dbfs": float(pre_sample_peak_dbfs),
         "pre_rms_dbfs": float(pre_rms_dbfs),
         "pre_noise_floor_dbfs": float(pre_noise_floor_dbfs),
         "pre_snr_db": pre_snr_db,
@@ -124,6 +128,7 @@ def main() -> None:
 
     sr_mix: int | None = None
     pre_true_peak_dbtp = float("-inf")
+    pre_sample_peak_dbfs = float("-inf")
     pre_rms_dbfs = float("-inf")
     pre_noise_floor_dbfs = float("-inf")
     pre_snr_db = None
@@ -135,13 +140,15 @@ def main() -> None:
         else:
             sr_mix = result["sr_mix"]
             pre_true_peak_dbtp = result["pre_true_peak_dbtp"]
+            pre_sample_peak_dbfs = result["pre_sample_peak_dbfs"]
             pre_rms_dbfs = result["pre_rms_dbfs"]
             pre_noise_floor_dbfs = result["pre_noise_floor_dbfs"]
             pre_snr_db = result["pre_snr_db"]
 
             logger.logger.info(
                 f"[S8_MIXBUS_COLOR_GENERIC] full_song.wav analizado (sr={sr_mix}). "
-                f"true_peak={pre_true_peak_dbtp:.2f} dBTP, RMS={pre_rms_dbfs:.2f} dBFS, "
+                f"true_peak={pre_true_peak_dbtp:.2f} dBTP, sample_peak={pre_sample_peak_dbfs:.2f} dBFS, "
+                f"RMS={pre_rms_dbfs:.2f} dBFS, "
                 f"noise_floor≈{pre_noise_floor_dbfs:.2f} dBFS."
             )
     else:
@@ -166,6 +173,7 @@ def main() -> None:
             "target_true_peak_range_dbtp_max": tp_max,
             "max_thd_percent": max_thd_percent,
             "max_additional_saturation_per_pass_db": max_sat_per_pass_db,
+            "pre_sample_peak_dbfs": pre_sample_peak_dbfs,
         },
     }
 

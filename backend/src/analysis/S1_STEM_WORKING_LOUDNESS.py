@@ -1,3 +1,4 @@
+# C:\mix-master\backend\src\analysis\S1_STEM_WORKING_LOUDNESS
 from __future__ import annotations
 from utils.logger import logger
 
@@ -25,11 +26,16 @@ from utils.session_utils import load_session_config  # noqa: E402
 from utils.profiles_utils import get_instrument_profile  # noqa: E402
 
 try:
-    # Si existe, úsalo (tu pipeline ya lo usa en S3)
-    from utils.loudness_utils import measure_integrated_lufs, measure_true_peak_dbfs  # type: ignore  # noqa: E402
+    # Si existe, úsalo (mismo medidor que etapas posteriores)
+    from utils.loudness_utils import (  # type: ignore  # noqa: E402
+        measure_integrated_lufs,
+        measure_true_peak_dbtp,
+        measure_sample_peak_dbfs,
+    )
 except Exception:  # pragma: no cover
     measure_integrated_lufs = None  # type: ignore
-    measure_true_peak_dbfs = None  # type: ignore
+    measure_true_peak_dbtp = None  # type: ignore
+    measure_sample_peak_dbfs = None  # type: ignore
 
 
 # ------------------------------------------------------------
@@ -121,9 +127,10 @@ def _mixbus_peak_stream(
 def _analyze_stem(args: Tuple[Path, str, str]) -> Dict[str, Any]:
     """
     Analiza un stem:
-      - LUFS integrados (si loudness_utils está disponible; si no, fallback simple)
-      - true peak (si loudness_utils está disponible; si no, sample peak)
-      - crest_db = peak - lufs (para detectar transitorios)
+      - LUFS integrados (BS.1770 + gating EBU R128 si está disponible)
+      - true peak (dBTP, oversampling >=4x)
+      - sample peak (dBFS)
+      - crest_db = true_peak - lufs (para detectar transitorios)
     """
     stem_path, requested_profile, resolved_profile = args
     fname = stem_path.name
@@ -138,30 +145,32 @@ def _analyze_stem(args: Tuple[Path, str, str]) -> Dict[str, Any]:
             "instrument_profile_resolved": resolved_profile,
             "samplerate_hz": None,
             "integrated_lufs": float("-inf"),
-            "true_peak_dbfs": float("-inf"),
+            "true_peak_dbtp": float("-inf"),
+            "sample_peak_dbfs": float("-inf"),
             "crest_db": float("inf"),
             "error": str(e),
         }
 
-    # mono para loudness (más estable)
     arr = np.asarray(y, dtype=np.float32)
-    if arr.ndim > 1:
-        mono = np.mean(arr, axis=1).astype(np.float32)
-    else:
-        mono = arr
+    mono = np.mean(arr, axis=1).astype(np.float32) if arr.ndim > 1 else arr
 
     if measure_integrated_lufs is not None:
-        lufs = float(measure_integrated_lufs(mono, int(sr)))
+        lufs = float(measure_integrated_lufs(arr, int(sr)))
     else:
         # fallback: RMS->dB (no LUFS real). Mejor que nada.
         eps = 1e-12
         rms = float(np.sqrt(np.mean(mono**2)) + eps)
         lufs = float(20.0 * np.log10(rms) - 23.0)  # aproximación grosera
 
-    if measure_true_peak_dbfs is not None:
-        tp = float(measure_true_peak_dbfs(mono, int(sr)))
+    if measure_true_peak_dbtp is not None:
+        tp = float(measure_true_peak_dbtp(arr, int(sr)))
     else:
-        tp = _dbfs_from_peak(float(np.max(np.abs(mono))) if mono.size else 0.0)
+        tp = _dbfs_from_peak(float(np.max(np.abs(arr))) if arr.size else 0.0)
+
+    if measure_sample_peak_dbfs is not None:
+        sample_peak_dbfs = float(measure_sample_peak_dbfs(arr))
+    else:
+        sample_peak_dbfs = _dbfs_from_peak(float(np.max(np.abs(arr))) if arr.size else 0.0)
 
     crest = float(tp - lufs) if (lufs != float("-inf") and tp != float("-inf")) else float("inf")
 
@@ -172,7 +181,9 @@ def _analyze_stem(args: Tuple[Path, str, str]) -> Dict[str, Any]:
         "instrument_profile_resolved": resolved_profile,
         "samplerate_hz": int(sr),
         "integrated_lufs": lufs,
-        "true_peak_dbfs": tp,
+        "true_peak_dbtp": tp,
+        "true_peak_dbfs": tp,  # alias legacy
+        "sample_peak_dbfs": sample_peak_dbfs,
         "crest_db": crest,
         "error": None,
     }

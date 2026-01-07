@@ -131,6 +131,7 @@ def _process_final_limits_worker(
 
     # Métricas pre-QC
     pre_true_peak = compute_true_peak_dbfs(y, oversample_factor=4)
+    pre_sample_peak = compute_sample_peak_dbfs(y)
     pre_lufs, pre_lra = compute_lufs_and_lra(y, sr)
     ch_info_pre = _compute_channel_lufs_diff(y, sr)
     pre_lufs_L = ch_info_pre["lufs_L"]
@@ -145,6 +146,7 @@ def _process_final_limits_worker(
 
     logger.logger.info(
         f"[S10_MASTER_FINAL_LIMITS] PRE-QC: TP={pre_true_peak:.2f} dBTP, "
+        f"sample_peak={pre_sample_peak:.2f} dBFS, "
         f"LUFS={pre_lufs:.2f}, LRA={pre_lra:.2f}, "
         f"diff_LR={pre_channel_diff:.2f} dB, corr={pre_corr:.3f}."
     )
@@ -176,6 +178,7 @@ def _process_final_limits_worker(
 
     # Métricas post-QC
     post_true_peak = compute_true_peak_dbfs(y_post, oversample_factor=4)
+    post_sample_peak = compute_sample_peak_dbfs(y_post)
     post_lufs, post_lra = compute_lufs_and_lra(y_post, sr)
     ch_info_post = _compute_channel_lufs_diff(y_post, sr)
     post_lufs_L = ch_info_post["lufs_L"]
@@ -189,7 +192,7 @@ def _process_final_limits_worker(
     )
 
     logger.logger.info(
-        f"[S10_MASTER_FINAL_LIMITS] POST-QC: TP={post_true_peak:.2f} dBTP, "
+        f"[S10_MASTER_FINAL_LIMITS] POST-QC: TP={post_true_peak:.2f} dBTP, sample_peak={post_sample_peak:.2f} dBFS, "
         f"LUFS={post_lufs:.2f}, LRA={post_lra:.2f}, "
         f"diff_LR={post_channel_diff:.2f} dB, corr={post_corr:.3f}."
     )
@@ -200,6 +203,7 @@ def _process_final_limits_worker(
 
     return {
         "pre_true_peak_dbtp": float(pre_true_peak),
+        "pre_sample_peak_dbfs": float(pre_sample_peak),
         "pre_lufs_integrated": float(pre_lufs),
         "pre_lra": float(pre_lra),
         "pre_lufs_L": float(pre_lufs_L),
@@ -208,6 +212,7 @@ def _process_final_limits_worker(
         "pre_corr": float(pre_corr),
         "pre_lufs_within_style": bool(pre_lufs_within_style),
         "post_true_peak_dbtp": float(post_true_peak),
+        "post_sample_peak_dbfs": float(post_sample_peak),
         "post_lufs_integrated": float(post_lufs),
         "post_lra": float(post_lra),
         "post_lufs_L": float(post_lufs_L),
@@ -295,6 +300,7 @@ def main() -> None:
                 },
                 "pre": {
                     "true_peak_dbtp": result["pre_true_peak_dbtp"],
+                    "sample_peak_dbfs": result["pre_sample_peak_dbfs"],
                     "lufs_integrated": result["pre_lufs_integrated"],
                     "lra": result["pre_lra"],
                     "lufs_L": result["pre_lufs_L"],
@@ -307,6 +313,7 @@ def main() -> None:
                 },
                 "post": {
                     "true_peak_dbtp": result["post_true_peak_dbtp"],
+                    "sample_peak_dbfs": result["post_sample_peak_dbfs"],
                     "lufs_integrated": result["post_lufs_integrated"],
                     "lra": result["post_lra"],
                     "lufs_L": result["post_lufs_L"],

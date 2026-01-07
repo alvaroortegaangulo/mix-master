@@ -5,6 +5,8 @@ from __future__ import annotations
 from typing import Tuple
 import numpy as np
 
+from utils.loudness_utils import measure_true_peak_dbtp, measure_sample_peak_dbfs
+
 
 def _to_mono(x: np.ndarray) -> np.ndarray:
     """Convierte audio 1D/2D a mono (media de canales)."""
@@ -25,31 +27,23 @@ def compute_rms_dbfs(x: np.ndarray) -> float:
     return 20.0 * np.log10(rms)
 
 
+def compute_true_peak_dbtp(x: np.ndarray, oversample_factor: int = 4) -> float:
+    """
+    True Peak (dBTP) usando oversampling >=4× (coherente con el resto del pipeline).
+    """
+    return measure_true_peak_dbtp(x, sr=None, oversample=oversample_factor)
+
+
 def compute_true_peak_dbfs(x: np.ndarray, oversample_factor: int = 4) -> float:
     """
-    True peak aproximado mediante oversampling lineal.
-
-    No necesita sr; solo escala relativa. Oversample_factor=4 suele ser suficiente.
+    Alias histórico: devuelve dBTP aunque el nombre diga dBFS.
     """
-    mono = _to_mono(x)
-    n = mono.size
-    if n == 0:
-        return float("-inf")
+    return compute_true_peak_dbtp(x, oversample_factor=oversample_factor)
 
-    # Oversampling lineal simple
-    t_in = np.arange(n, dtype=np.float32)
-    t_out = np.arange(
-        0.0,
-        float(n - 1) + 1.0 / float(oversample_factor),
-        1.0 / float(oversample_factor),
-        dtype=np.float32,
-    )
-    up = np.interp(t_out, t_in, mono).astype(np.float32)
 
-    peak = float(np.max(np.abs(up)))
-    if peak <= 0.0:
-        return float("-inf")
-    return 20.0 * np.log10(peak)
+def compute_sample_peak_dbfs(x: np.ndarray) -> float:
+    """Sample-peak en dBFS (sin oversampling)."""
+    return measure_sample_peak_dbfs(x)
 
 
 def apply_soft_saturation(

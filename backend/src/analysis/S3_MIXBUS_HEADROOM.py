@@ -23,10 +23,13 @@ from utils.analysis_utils import (  # noqa: E402
 from utils.session_utils import load_session_config  # noqa: E402
 
 try:
-    from utils.loudness_utils import measure_integrated_lufs, measure_true_peak_dbfs  # type: ignore  # noqa: E402
+    from utils.loudness_utils import (  # type: ignore  # noqa: E402
+        measure_integrated_lufs,
+        measure_true_peak_dbtp,
+    )
 except Exception:  # pragma: no cover
     measure_integrated_lufs = None  # type: ignore
-    measure_true_peak_dbfs = None  # type: ignore
+    measure_true_peak_dbtp = None  # type: ignore
 
 
 def _dbfs_from_peak(peak_lin: float) -> float:
@@ -168,13 +171,13 @@ def main() -> None:
     mix_sample_peak_dbfs, sr_ref = _mixbus_sample_peak_stream(stem_files)
 
     # 2) true-peak y LUFS (si están disponibles)
-    mix_true_peak_dbfs = mix_sample_peak_dbfs
+    mix_true_peak_dbtp = mix_sample_peak_dbfs
     mix_lufs_integrated = float("-inf")
 
     if stem_files:
         mix_mono, sr = _mix_to_mono_in_memory(stem_files, sr_ref)
-        if measure_true_peak_dbfs is not None:
-            mix_true_peak_dbfs = float(measure_true_peak_dbfs(mix_mono, sr))
+        if measure_true_peak_dbtp is not None:
+            mix_true_peak_dbtp = float(measure_true_peak_dbtp(mix_mono, sr))
         if measure_integrated_lufs is not None:
             mix_lufs_integrated = float(measure_integrated_lufs(mix_mono, sr))
 
@@ -196,7 +199,8 @@ def main() -> None:
             "lufs_integrated_min_target": lufs_min,
             "lufs_integrated_max_target": lufs_max,
             "mix_sample_peak_dbfs_measured": mix_sample_peak_dbfs,
-            "mix_true_peak_dbfs_measured": mix_true_peak_dbfs,
+            "mix_true_peak_dbtp_measured": mix_true_peak_dbtp,
+            "mix_true_peak_dbfs_measured": mix_true_peak_dbtp,  # alias legacy
             "mix_lufs_integrated_measured": mix_lufs_integrated,
             "samplerate_hz": sr_ref,
         },
@@ -209,7 +213,7 @@ def main() -> None:
 
     logger.logger.info(
         f"[S3_MIXBUS_HEADROOM] Análisis OK. "
-        f"sample_peak={mix_sample_peak_dbfs:.2f} dBFS, true_peak={mix_true_peak_dbfs:.2f} dBFS, "
+        f"sample_peak={mix_sample_peak_dbfs:.2f} dBFS, true_peak={mix_true_peak_dbtp:.2f} dBTP, "
         f"LUFS={mix_lufs_integrated:.2f}. JSON: {output_path}"
     )
 

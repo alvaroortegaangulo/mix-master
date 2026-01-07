@@ -13,6 +13,8 @@ import math
 import traceback
 import scipy.signal
 
+from utils.loudness_utils import compute_lufs_and_lra
+
 # Límite global de segundos para análisis (se puede sobrescribir con MIX_ANALYSIS_MAX_SECONDS)
 # Solo se aplica en helpers de análisis; NO se toca el comportamiento global de soundfile.read
 MAX_ANALYSIS_SECONDS = float(os.getenv("MIX_ANALYSIS_MAX_SECONDS", 90.0))
@@ -215,52 +217,14 @@ def compute_mixbus_peak_dbfs(stem_paths: List[Path], max_seconds: float | None =
 
 
 def compute_integrated_loudness_lufs(mono: np.ndarray, sr: int) -> float:
+    """
+    Loudness integrado (LUFS) según ITU-R BS.1770 con gating EBU R128.
+    """
     if mono.size == 0:
         return float("-inf")
 
-    audio = mono.astype(np.float32)
-
-    try:
-        import essentia.standard as es
-        loudness_algo = es.LoudnessEBUR128(sampleRate=sr)
-
-        # LoudnessEBUR128 espera VECTOR_STEREOSAMPLE; si llega 1D falla con
-        # "Cannot convert data from type VECTOR_REAL ...".  Duplicamos a 2
-        # canales (R en silencio para conservar energia) cuando sea mono.
-        if audio.ndim == 1:
-            audio_for_es = np.column_stack((audio, np.zeros_like(audio)))
-        elif audio.ndim == 2:
-            if audio.shape[1] == 1:
-                audio_for_es = np.column_stack((audio[:, 0], np.zeros_like(audio[:, 0])))
-            else:
-                audio_for_es = audio
-        else:
-            audio_for_es = audio.reshape(-1, 2)
-
-        # Essentia necesita C-contiguous float32 array para convertir a VECTOR_STEREOSAMPLE
-        audio_for_es = np.ascontiguousarray(audio_for_es, dtype=np.float32)
-
-        _, _, integrated, _ = loudness_algo(audio_for_es)
-        return float(integrated)
-    except ImportError:
-        pass
-    except TypeError:
-        # Si Essentia esta disponible pero no acepta el input, seguimos con fallback.
-        pass
-
-    try:
-        import pyloudnorm as pyln
-        meter = pyln.Meter(sr)
-        lufs = meter.integrated_loudness(audio)
-        return float(lufs)
-    except ImportError:
-        pass
-
-    rms = float(np.sqrt(np.mean(mono ** 2)))
-    if rms <= 0.0:
-        return float("-inf")
-
-    return float(20.0 * np.log10(rms) - 0.691)
+    lufs, _ = compute_lufs_and_lra(mono, sr)
+    return float(lufs)
 
 
 def _compute_multiband_width(audio: np.ndarray, sr: int, target_len: int) -> Dict[str, List[float]]:

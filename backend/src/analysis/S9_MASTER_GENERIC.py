@@ -22,7 +22,7 @@ from utils.analysis_utils import (  # noqa: E402
 )
 from utils.session_utils import load_session_config  # noqa: E402
 from utils.loudness_utils import compute_lufs_and_lra  # noqa: E402
-from utils.color_utils import compute_true_peak_dbfs  # noqa: E402
+from utils.color_utils import compute_true_peak_dbfs, compute_sample_peak_dbfs  # noqa: E402
 from utils.mastering_profiles_utils import get_mastering_profile  # noqa: E402
 
 
@@ -30,6 +30,7 @@ def _analyze_master(full_song_path: Path) -> Dict[str, Any]:
     """
     Lee full_song.wav y calcula:
       - true peak (dBTP)
+      - sample peak (dBFS)
       - LUFS integrados
       - LRA
     """
@@ -39,17 +40,20 @@ def _analyze_master(full_song_path: Path) -> Dict[str, Any]:
         return {
             "sr_mix": None,
             "pre_true_peak_dbtp": float("-inf"),
+            "pre_sample_peak_dbfs": float("-inf"),
             "pre_lufs_integrated": float("-inf"),
             "pre_lra": 0.0,
             "error": f"[S9_MASTER_GENERIC] Aviso: no se puede leer full_song.wav: {e}.",
         }
 
     pre_true_peak_dbtp = compute_true_peak_dbfs(y, oversample_factor=4)
+    pre_sample_peak_dbfs = compute_sample_peak_dbfs(y)
     pre_lufs_integrated, pre_lra = compute_lufs_and_lra(y, sr)
 
     return {
         "sr_mix": int(sr),
         "pre_true_peak_dbtp": float(pre_true_peak_dbtp),
+        "pre_sample_peak_dbfs": float(pre_sample_peak_dbfs),
         "pre_lufs_integrated": float(pre_lufs_integrated),
         "pre_lra": float(pre_lra),
         "error": None,
@@ -86,6 +90,7 @@ def main() -> None:
     full_song_path = temp_dir / "full_song.wav"
 
     pre_true_peak_dbtp = float("-inf")
+    pre_sample_peak_dbfs = float("-inf")
     pre_lufs_integrated = float("-inf")
     pre_lra = 0.0
     sr_mix: int | None = None
@@ -97,6 +102,7 @@ def main() -> None:
         else:
             sr_mix = result["sr_mix"]
             pre_true_peak_dbtp = result["pre_true_peak_dbtp"]
+            pre_sample_peak_dbfs = result["pre_sample_peak_dbfs"]
             pre_lufs_integrated = result["pre_lufs_integrated"]
             pre_lra = result["pre_lra"]
 
@@ -105,6 +111,7 @@ def main() -> None:
 
             logger.logger.info(
                 f"[S9_MASTER_GENERIC] PRE (sr={sr_mix}): TP={pre_true_peak_dbtp:.2f} dBTP, "
+                f"sample_peak={pre_sample_peak_dbfs:.2f} dBFS, "
                 f"LUFS={pre_lufs_integrated:.2f}, LRA={pre_lra:.2f}. "
                 f"Delta→target={delta_to_target:+.2f} LU, gain_max_by_GR≈{max_gain_by_gr:.2f} dB."
             )
@@ -119,11 +126,12 @@ def main() -> None:
         "style_preset": style_preset,
         "metrics_from_contract": metrics,
         "limits_from_contract": limits,
-        "session": {
-            "samplerate_hz": sr_mix,
-            "pre_true_peak_dbtp": pre_true_peak_dbtp,
-            "pre_lufs_integrated": pre_lufs_integrated,
-            "pre_lra": pre_lra,
+            "session": {
+                "samplerate_hz": sr_mix,
+                "pre_true_peak_dbtp": pre_true_peak_dbtp,
+                "pre_sample_peak_dbfs": pre_sample_peak_dbfs,
+                "pre_lufs_integrated": pre_lufs_integrated,
+                "pre_lra": pre_lra,
             "max_limiter_gain_reduction_db": max_limiter_gr_db,
             "max_eq_change_db_per_band_per_pass": max_eq_change_db,
             "max_stereo_width_change_percent": max_width_change_pct,

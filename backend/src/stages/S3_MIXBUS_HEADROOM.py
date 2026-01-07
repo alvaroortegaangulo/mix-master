@@ -18,10 +18,13 @@ import soundfile as sf  # noqa: E402
 from utils.analysis_utils import get_temp_dir  # noqa: E402
 
 try:
-    from utils.loudness_utils import measure_integrated_lufs, measure_true_peak_dbfs  # type: ignore  # noqa: E402
+    from utils.loudness_utils import (  # type: ignore  # noqa: E402
+        measure_integrated_lufs,
+        measure_true_peak_dbtp,
+    )
 except Exception:  # pragma: no cover
     measure_integrated_lufs = None  # type: ignore
-    measure_true_peak_dbfs = None  # type: ignore
+    measure_true_peak_dbtp = None  # type: ignore
 
 
 def load_analysis(contract_id: str) -> Dict[str, Any]:
@@ -146,10 +149,16 @@ def main() -> None:
     MIN_STEP_DB = float(metrics.get("min_gain_step_db", 0.1))
 
     # Preferimos true-peak si está medido; si no, sample-peak
-    pre_peak = session.get("mix_true_peak_dbfs_measured", session.get("mix_sample_peak_dbfs_measured", float("-inf")))
+    pre_true_peak = session.get("mix_true_peak_dbtp_measured", session.get("mix_true_peak_dbfs_measured", float("-inf")))
+    pre_sample_peak = session.get("mix_sample_peak_dbfs_measured", float("-inf"))
     pre_lufs = session.get("mix_lufs_integrated_measured", float("-inf"))
-    pre_peak = float(pre_peak) if pre_peak is not None else float("-inf")
+
+    pre_true_peak = float(pre_true_peak) if pre_true_peak is not None else float("-inf")
+    pre_sample_peak = float(pre_sample_peak) if pre_sample_peak is not None else float("-inf")
     pre_lufs = float(pre_lufs) if pre_lufs is not None else float("-inf")
+
+    pre_peak = pre_true_peak if np.isfinite(pre_true_peak) else pre_sample_peak
+    peak_metric_used = "true_peak_dbtp" if np.isfinite(pre_true_peak) else "sample_peak_dbfs"
 
     temp_dir = get_temp_dir(contract_id, create=False)
     stem_paths: List[Path] = sorted(
@@ -175,9 +184,18 @@ def main() -> None:
                 {
                     "contract_id": contract_id,
                     "gain_db_applied": 0.0,
-                    "pre": {"peak_dbfs": pre_peak, "lufs": pre_lufs},
-                    "post": {"peak_dbfs": pre_peak, "lufs": pre_lufs},
+                    "pre": {
+                        "sample_peak_dbfs": pre_sample_peak,
+                        "true_peak_dbtp": pre_true_peak,
+                        "lufs": pre_lufs,
+                    },
+                    "post": {
+                        "sample_peak_dbfs": pre_sample_peak,
+                        "true_peak_dbtp": pre_true_peak,
+                        "lufs": pre_lufs,
+                    },
                     "targets": {"peak_dbfs_max": peak_max, "lufs_min": lufs_min, "lufs_max": lufs_max},
+                    "peak_metric_used": peak_metric_used,
                 },
                 f,
                 indent=2,
@@ -185,7 +203,8 @@ def main() -> None:
             )
 
         logger.logger.info(
-            f"[S3_MIXBUS_HEADROOM] No-op. peak_pre={pre_peak:.2f} dBFS <= {peak_max:.2f}. "
+            f"[S3_MIXBUS_HEADROOM] No-op. {peak_metric_used}_pre={pre_peak:.2f} "
+            f"(sample={pre_sample_peak:.2f} dBFS, true={pre_true_peak:.2f} dBTP) <= {peak_max:.2f}. "
             f"LUFS_pre={pre_lufs:.2f}. Métricas: {metrics_path}"
         )
         return
@@ -197,15 +216,16 @@ def main() -> None:
         if ok:
             touched += 1
 
-    # 3) Re-medir pico real post (sample-peak de sumatorio)
-    post_peak = _mixbus_sample_peak_stream(stem_paths)
+    # 3) Re-medir pico real post (sample-peak de sumatorio) y true-peak opcional
+    post_sample_peak = _mixbus_sample_peak_stream(stem_paths)
+    post_true_peak = post_sample_peak
 
     # LUFS post (si hay medidor). Si no, heredamos el pre como “unknown”.
     post_lufs = pre_lufs
-    if measure_integrated_lufs is not None and stem_paths:
-        # Mezcla rápida en memoria para LUFS (solo si tu pipeline lo tolera)
+    sr_ref = None
+    if stem_paths and (measure_integrated_lufs is not None or measure_true_peak_dbtp is not None):
+        # Mezcla rápida en memoria para LUFS/TP (solo si tu pipeline lo tolera)
         ys = []
-        sr_ref = None
         for p in stem_paths:
             y, sr = sf.read(p, always_2d=False)
             arr = np.asarray(y, dtype=np.float32)
@@ -220,7 +240,10 @@ def main() -> None:
             mix = np.zeros(max_len, dtype=np.float32)
             for a in ys:
                 mix[: len(a)] += a
-            post_lufs = float(measure_integrated_lufs(mix, int(sr_ref)))
+            if measure_integrated_lufs is not None:
+                post_lufs = float(measure_integrated_lufs(mix, int(sr_ref)))
+            if measure_true_peak_dbtp is not None:
+                post_true_peak = float(measure_true_peak_dbtp(mix, int(sr_ref)))
 
     # 4) Guardar métricas pre/post para QC
     metrics_path = temp_dir / "headroom_metrics_S3_MIXBUS_HEADROOM.json"
@@ -229,9 +252,18 @@ def main() -> None:
             {
                 "contract_id": contract_id,
                 "gain_db_applied": float(gain_db),
-                "pre": {"peak_dbfs": float(pre_peak), "lufs": float(pre_lufs)},
-                "post": {"peak_dbfs": float(post_peak), "lufs": float(post_lufs)},
+                "pre": {
+                    "sample_peak_dbfs": float(pre_sample_peak),
+                    "true_peak_dbtp": float(pre_true_peak),
+                    "lufs": float(pre_lufs),
+                },
+                "post": {
+                    "sample_peak_dbfs": float(post_sample_peak),
+                    "true_peak_dbtp": float(post_true_peak),
+                    "lufs": float(post_lufs),
+                },
                 "targets": {"peak_dbfs_max": float(peak_max), "lufs_min": float(lufs_min), "lufs_max": float(lufs_max)},
+                "peak_metric_used": peak_metric_used,
             },
             f,
             indent=2,
@@ -240,7 +272,8 @@ def main() -> None:
 
     logger.logger.info(
         f"[S3_MIXBUS_HEADROOM] Aplicado gain global {gain_db:+.2f} dB a {touched} stems. "
-        f"peak_pre={pre_peak:.2f} -> peak_post={post_peak:.2f} dBFS (max={peak_max:.2f}). "
+        f"{peak_metric_used}_pre={pre_peak:.2f} -> sample_post={post_sample_peak:.2f} dBFS, "
+        f"true_post={post_true_peak:.2f} dBTP (max={peak_max:.2f}). "
         f"LUFS_pre={pre_lufs:.2f} -> LUFS_post={post_lufs:.2f}. Métricas: {metrics_path}"
     )
 

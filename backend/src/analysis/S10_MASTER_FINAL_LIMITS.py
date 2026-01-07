@@ -25,7 +25,7 @@ from utils.analysis_utils import (  # noqa: E402
 )
 from utils.session_utils import load_session_config  # noqa: E402
 from utils.loudness_utils import compute_lufs_and_lra  # noqa: E402
-from utils.color_utils import compute_true_peak_dbfs  # noqa: E402
+from utils.color_utils import compute_true_peak_dbfs, compute_sample_peak_dbfs  # noqa: E402
 from utils.mastering_profiles_utils import get_mastering_profile  # noqa: E402
 
 
@@ -108,6 +108,7 @@ def _analyze_master_final(full_song_path: Path) -> Dict[str, Any]:
 
     Lee full_song.wav y calcula:
       - true_peak_dbtp
+      - sample_peak_dbfs
       - lufs_integrated
       - lra
       - lufs por canal L/R y diferencia
@@ -121,6 +122,7 @@ def _analyze_master_final(full_song_path: Path) -> Dict[str, Any]:
         return {
             "sr_mix": None,
             "true_peak_dbtp": float("-inf"),
+            "sample_peak_dbfs": float("-inf"),
             "lufs_integrated": float("-inf"),
             "lra": 0.0,
             "channel_lufs_L": float("-inf"),
@@ -131,6 +133,7 @@ def _analyze_master_final(full_song_path: Path) -> Dict[str, Any]:
         }
 
     true_peak_dbtp = compute_true_peak_dbfs(y, oversample_factor=4)
+    sample_peak_dbfs = compute_sample_peak_dbfs(y)
     lufs_integrated, lra = compute_lufs_and_lra(y, sr)
     ch_info = _compute_channel_lufs_diff(y, sr)
     correlation = _compute_stereo_correlation(y)
@@ -138,6 +141,7 @@ def _analyze_master_final(full_song_path: Path) -> Dict[str, Any]:
     return {
         "sr_mix": sr,
         "true_peak_dbtp": true_peak_dbtp,
+        "sample_peak_dbfs": sample_peak_dbfs,
         "lufs_integrated": lufs_integrated,
         "lra": lra,
         "channel_lufs_L": ch_info["lufs_L"],
@@ -187,6 +191,7 @@ def main() -> None:
 
     full_song_path = temp_dir / "full_song.wav"
     true_peak_dbtp = float("-inf")
+    sample_peak_dbfs = float("-inf")
     lufs_integrated = float("-inf")
     lra = 0.0
     channel_lufs_L = float("-inf")
@@ -204,6 +209,7 @@ def main() -> None:
         else:
             sr_mix = result["sr_mix"]
             true_peak_dbtp = result["true_peak_dbtp"]
+            sample_peak_dbfs = result["sample_peak_dbfs"]
             lufs_integrated = result["lufs_integrated"]
             lra = result["lra"]
             channel_lufs_L = result["channel_lufs_L"]
@@ -214,6 +220,7 @@ def main() -> None:
             logger.logger.info(
                 "[S10_MASTER_FINAL_LIMITS] full_song.wav analizado (sr=" + str(sr_mix) + "). " +
                 "TP=" + f"{true_peak_dbtp:.2f}" + " dBTP, " +
+                "sample_peak=" + f"{sample_peak_dbfs:.2f}" + " dBFS, " +
                 "LUFS=" + f"{lufs_integrated:.2f}" + ", LRA=" + f"{lra:.2f}" + ". " +
                 "diff_LR=" + f"{channel_diff_db:.2f}" + " dB, corr=" + f"{correlation:.3f}" + "."
             )
@@ -238,6 +245,7 @@ def main() -> None:
         "session": {
             "samplerate_hz": sr_mix,
             "true_peak_dbtp": true_peak_dbtp,
+            "sample_peak_dbfs": sample_peak_dbfs,
             "true_peak_max_dbtp_target": true_peak_max_dbtp,
             "lufs_integrated": lufs_integrated,
             "target_lufs_integrated": target_lufs,

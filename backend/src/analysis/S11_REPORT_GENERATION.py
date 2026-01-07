@@ -118,7 +118,7 @@ def _compute_crest_and_histogram(
     """
     Calcula crest factor aproximado y un histograma de niveles (en dB).
 
-    - Crest factor = TP_dBFS - RMS_dBFS del master (mono).
+    - Crest factor = TP_dBTP - RMS_dBFS del master (mono).
     - Histograma de niveles basado en RMS por frames.
     """
     arr = np.asarray(y, dtype=np.float32)

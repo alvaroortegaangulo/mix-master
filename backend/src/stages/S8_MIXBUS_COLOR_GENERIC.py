@@ -20,6 +20,7 @@ from utils.analysis_utils import get_temp_dir  # noqa: E402
 from utils.color_utils import (  # noqa: E402
     compute_rms_dbfs,
     compute_true_peak_dbfs,
+    compute_sample_peak_dbfs,
     estimate_thd_percent,
 )
 
@@ -104,12 +105,13 @@ def _process_mixbus_color_worker(
     sr = int(sr)
 
     pre_tp = float(compute_true_peak_dbfs(y, oversample_factor=4))
+    pre_sample_peak = float(compute_sample_peak_dbfs(y))
     pre_rms = float(compute_rms_dbfs(y))
     pre_nf = float(_estimate_noise_floor_dbfs(y, sr))
 
     logger.logger.info(
-        f"[S8_MIXBUS_COLOR_GENERIC] PRE: true_peak={pre_tp:.2f} dBTP, RMS={pre_rms:.2f} dBFS, "
-        f"noise_floor≈{pre_nf:.2f} dBFS."
+        f"[S8_MIXBUS_COLOR_GENERIC] PRE: true_peak={pre_tp:.2f} dBTP, sample_peak={pre_sample_peak:.2f} dBFS, "
+        f"RMS={pre_rms:.2f} dBFS, noise_floor≈{pre_nf:.2f} dBFS."
     )
 
     # --------------------------------------------------------------
@@ -209,6 +211,7 @@ def _process_mixbus_color_worker(
     # Safety trim para NO pasarnos del techo del rango (evita clipping)
     # --------------------------------------------------------------
     post_tp = float(compute_true_peak_dbfs(y_out, oversample_factor=4))
+    post_sample_peak = float(compute_sample_peak_dbfs(y_out))
     safety_trim_db = 0.0
     CEIL_MARGIN = 0.05
     if post_tp > (tp_max + CEIL_MARGIN):
@@ -217,6 +220,7 @@ def _process_mixbus_color_worker(
         safety_lin = float(10.0 ** (safety_trim_db / 20.0))
         y_out = (y_out * safety_lin).astype(np.float32)
         post_tp = float(compute_true_peak_dbfs(y_out, oversample_factor=4))
+        post_sample_peak = float(compute_sample_peak_dbfs(y_out))
         logger.logger.info(
             f"[S8_MIXBUS_COLOR_GENERIC] Safety trim adicional {safety_trim_db:+.2f} dB "
             f"para respetar tp_max={tp_max:.2f} dBTP."
@@ -232,8 +236,8 @@ def _process_mixbus_color_worker(
     nf_comp_delta = (post_nf_comp - pre_nf) if (post_nf_comp is not None and pre_nf != float("-inf")) else None
 
     logger.logger.info(
-        f"[S8_MIXBUS_COLOR_GENERIC] POST: true_peak={post_tp:.2f} dBTP, RMS={post_rms:.2f} dBFS, "
-        f"noise_floor≈{post_nf:.2f} dBFS, THD≈{thd_pct:.2f}%."
+        f"[S8_MIXBUS_COLOR_GENERIC] POST: true_peak={post_tp:.2f} dBTP, sample_peak={post_sample_peak:.2f} dBFS, "
+        f"RMS={post_rms:.2f} dBFS, noise_floor≈{post_nf:.2f} dBFS, THD≈{thd_pct:.2f}%."
     )
 
     # Guardar como FLOAT para NO introducir cuantización/dureza
@@ -242,9 +246,11 @@ def _process_mixbus_color_worker(
 
     return {
         "pre_true_peak_dbtp": pre_tp,
+        "pre_sample_peak_dbfs": pre_sample_peak,
         "pre_rms_dbfs": pre_rms,
         "pre_noise_floor_dbfs": pre_nf,
         "post_true_peak_dbtp": post_tp,
+        "post_sample_peak_dbfs": post_sample_peak,
         "post_rms_dbfs": post_rms,
         "post_noise_floor_dbfs": post_nf,
         "noise_floor_delta_db": nf_delta,
@@ -309,11 +315,13 @@ def main() -> None:
                 },
                 "pre": {
                     "true_peak_dbtp": res["pre_true_peak_dbtp"],
+                    "sample_peak_dbfs": res["pre_sample_peak_dbfs"],
                     "rms_dbfs": res["pre_rms_dbfs"],
                     "noise_floor_dbfs": res["pre_noise_floor_dbfs"],
                 },
                 "post": {
                     "true_peak_dbtp": res["post_true_peak_dbtp"],
+                    "sample_peak_dbfs": res["post_sample_peak_dbfs"],
                     "rms_dbfs": res["post_rms_dbfs"],
                     "noise_floor_dbfs": res["post_noise_floor_dbfs"],
                     "noise_floor_delta_db": res["noise_floor_delta_db"],

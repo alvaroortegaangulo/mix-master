@@ -217,10 +217,12 @@ def _process_master(
     y = np.asarray(y, dtype=np.float32)
 
     pre_tp = _measure_tp_dbfs(y, sr)
+    pre_sample_peak = _peak_dbfs_sample(y)
     pre_lufs, pre_lra = compute_lufs_and_lra(y, sr)
 
     logger.logger.info(
-        f"[S9_MASTER_GENERIC] PRE: TP={pre_tp:.2f} dB, LUFS={pre_lufs:.2f}, LRA={pre_lra:.2f}."
+        f"[S9_MASTER_GENERIC] PRE: TP={pre_tp:.2f} dBTP, sample_peak={pre_sample_peak:.2f} dBFS, "
+        f"LUFS={pre_lufs:.2f}, LRA={pre_lra:.2f}."
     )
 
     # ------------------------------------------------------------
@@ -272,13 +274,15 @@ def _process_master(
     y_lim = _apply_limiter_chain(y, sr, pre_gain_db, target_ceiling)
 
     tp_post_limiter = _measure_tp_dbfs(y_lim, sr)
+    sample_peak_post_limiter = _peak_dbfs_sample(y_lim)
     post_lim_lufs, post_lim_lra = compute_lufs_and_lra(y_lim, sr)
 
     # Estimación de GR “de pico” (no perfecta, pero consistente)
     limiter_gr_est = max(0.0, float(tp_pre_limiter - tp_post_limiter))
 
     logger.logger.info(
-        f"[S9_MASTER_GENERIC] POST-LIMITER: TP={tp_post_limiter:.2f} dB, "
+        f"[S9_MASTER_GENERIC] POST-LIMITER: TP={tp_post_limiter:.2f} dBTP, "
+        f"sample_peak={sample_peak_post_limiter:.2f} dBFS, "
         f"LUFS={post_lim_lufs:.2f}, LRA={post_lim_lra:.2f}, "
         f"GR_est≈{limiter_gr_est:.2f} dB."
     )
@@ -316,6 +320,7 @@ def _process_master(
         y_ms, sr, target_ceiling, safety_db=0.3
     )
     post_lufs, post_lra = compute_lufs_and_lra(y_final, sr)
+    post_sample_peak = _peak_dbfs_sample(y_final)
 
     if trim_db != 0.0:
         logger.logger.info(
@@ -324,7 +329,7 @@ def _process_master(
         )
 
     logger.logger.info(
-        f"[S9_MASTER_GENERIC] POST-FINAL: TP={post_tp:.2f} dB, "
+        f"[S9_MASTER_GENERIC] POST-FINAL: TP={post_tp:.2f} dBTP, sample_peak={post_sample_peak:.2f} dBFS, "
         f"LUFS={post_lufs:.2f}, LRA={post_lra:.2f}, "
         f"width_ratio_pre={width_ratio_pre:.3f}, width_ratio_post={width_ratio_post:.3f}."
     )
@@ -337,16 +342,19 @@ def _process_master(
 
     return {
         "pre_true_peak_dbtp": float(pre_tp),
+        "pre_sample_peak_dbfs": float(pre_sample_peak),
         "pre_lufs_integrated": float(pre_lufs),
         "pre_lra": float(pre_lra),
         "pre_gain_db": float(pre_gain_db),
 
         "post_true_peak_lim_dbtp": float(tp_post_limiter),
+        "post_sample_peak_lim_dbfs": float(sample_peak_post_limiter),
         "post_lufs_lim": float(post_lim_lufs),
         "post_lra_lim": float(post_lim_lra),
         "limiter_gr_db": float(limiter_gr_est),
 
         "post_true_peak_final_dbtp": float(post_tp),
+        "post_sample_peak_final_dbfs": float(post_sample_peak),
         "post_lufs_final": float(post_lufs),
         "post_lra_final": float(post_lra),
 
@@ -434,11 +442,13 @@ def main() -> None:
                 },
                 "pre": {
                     "true_peak_dbtp": result["pre_true_peak_dbtp"],
+                    "sample_peak_dbfs": result["pre_sample_peak_dbfs"],
                     "lufs_integrated": result["pre_lufs_integrated"],
                     "lra": result["pre_lra"],
                 },
                 "post_limiter": {
                     "true_peak_dbtp": result["post_true_peak_lim_dbtp"],
+                    "sample_peak_dbfs": result["post_sample_peak_lim_dbfs"],
                     "lufs_integrated": result["post_lufs_lim"],
                     "lra": result["post_lra_lim"],
                     "limiter_gr_db": result["limiter_gr_db"],
@@ -446,6 +456,7 @@ def main() -> None:
                 },
                 "post_final": {
                     "true_peak_dbtp": result["post_true_peak_final_dbtp"],
+                    "sample_peak_dbfs": result["post_sample_peak_final_dbfs"],
                     "lufs_integrated": result["post_lufs_final"],
                     "lra": result["post_lra_final"],
                     "width_ratio_pre": result["width_ratio_pre"],

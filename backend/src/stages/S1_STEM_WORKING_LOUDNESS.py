@@ -1,10 +1,12 @@
+# C:\mix-master\backend\src\stages\S1_STEM_WORKING_LOUDNESS.py
 from __future__ import annotations
 from utils.logger import logger
 
 import sys
 from pathlib import Path
-from typing import Dict, Any, List, Tuple
+from typing import Dict, Any, List, Tuple, Optional
 import os
+from collections.abc import Mapping
 
 # --- hack sys.path para ejecutar como script suelto desde stage.py ---
 THIS_DIR = Path(__file__).resolve().parent
@@ -20,10 +22,77 @@ from utils.analysis_utils import get_temp_dir  # noqa: E402
 from utils.profiles_utils import get_instrument_profile  # noqa: E402
 
 try:
-    from utils.loudness_utils import measure_integrated_lufs, measure_true_peak_dbfs  # type: ignore  # noqa: E402
+    from utils.loudness_utils import (  # type: ignore  # noqa: E402
+        measure_integrated_lufs,
+        measure_true_peak_dbtp,
+        measure_sample_peak_dbfs,
+    )
 except Exception:  # pragma: no cover
     measure_integrated_lufs = None  # type: ignore
-    measure_true_peak_dbfs = None  # type: ignore
+    measure_true_peak_dbtp = None  # type: ignore
+    measure_sample_peak_dbfs = None  # type: ignore
+
+
+def _coerce_contract_id(obj: Any) -> Optional[str]:
+    """
+    Resuelve contract_id de forma robusta para soportar llamadas del pipeline tipo:
+      - process("CONTRACT_ID")
+      - process(ctx) donde ctx es PipelineContext (usa ctx.stage_id)
+      - process({"contract_id": "..."}) o {"stage_id": "..."}
+      - ejecución CLI: sys.argv[1]
+    """
+    if obj is None:
+        return None
+
+    # Caso típico: string directo
+    if isinstance(obj, str):
+        s = obj.strip()
+        return s if s else None
+
+    # Algunos pipelines podrían pasar Path con el nombre del contrato
+    if isinstance(obj, Path):
+        s = obj.name.strip()
+        return s if s else None
+
+    # Mapping/dict
+    if isinstance(obj, Mapping):
+        for k in ("contract_id", "contractId", "stage_id", "stageId", "id"):
+            if k in obj and obj[k] is not None:
+                v = obj[k]
+                if isinstance(v, str):
+                    s = v.strip()
+                    return s if s else None
+                return str(v)
+
+    # Duck-typing sobre objetos tipo PipelineContext
+    for attr in ("contract_id", "contractId", "stage_id", "stageId", "id"):
+        if hasattr(obj, attr):
+            v = getattr(obj, attr)
+            if v is None:
+                continue
+            if isinstance(v, str):
+                s = v.strip()
+                return s if s else None
+            return str(v)
+
+    return None
+
+
+def _resolve_contract_id(args: tuple[Any, ...]) -> Optional[str]:
+    # 1) Si viene por args (pipeline), intenta sacar contract_id de cualquiera de los args
+    if args:
+        for a in args:
+            cid = _coerce_contract_id(a)
+            if cid:
+                return cid
+
+    # 2) Si viene por CLI
+    if len(sys.argv) >= 2:
+        cid = _coerce_contract_id(sys.argv[1])
+        if cid:
+            return cid
+
+    return None
 
 
 def load_analysis(contract_id: str) -> Dict[str, Any]:
@@ -134,13 +203,15 @@ def _compute_stem_ceiling_gain_db(
     prof_id = str(stem.get("instrument_profile_resolved") or stem.get("instrument_profile_requested") or "Other")
 
     lufs = float(stem.get("integrated_lufs", float("-inf")))
-    peak = float(stem.get("true_peak_dbfs", float("-inf")))
+    true_peak = float(stem.get("true_peak_dbtp", stem.get("true_peak_dbfs", float("-inf"))))
+    sample_peak = float(stem.get("sample_peak_dbfs", float("-inf")))
     crest = float(stem.get("crest_db", float("inf")))
 
     # Peak ceiling
     gain_peak = 0.0
-    if peak != float("-inf") and peak > peak_target_dbfs:
-        gain_peak = float(peak_target_dbfs - peak)  # negativo
+    peak_used = true_peak if true_peak != float("-inf") else sample_peak
+    if peak_used != float("-inf") and peak_used > peak_target_dbfs:
+        gain_peak = float(peak_target_dbfs - peak_used)  # negativo
 
     # LUFS ceiling (solo si no es transitorio)
     gain_lufs = 0.0
@@ -149,7 +220,6 @@ def _compute_stem_ceiling_gain_db(
     transient = _is_transient_stem(crest, crest_threshold_db)
 
     if not transient and lufs != float("-inf"):
-        # Obtenemos rango del perfil; si falla, no forzamos LUFS
         try:
             prof = get_instrument_profile(prof_id)
             lufs_min = float(prof.get("target_lufs_min", float("-inf")))
@@ -157,15 +227,12 @@ def _compute_stem_ceiling_gain_db(
         except Exception:
             lufs_min, lufs_max = float("-inf"), float("inf")
 
-        # Solo ceiling: si está por encima del máximo, bajamos hasta el máximo
         if np.isfinite(lufs_max) and lufs > lufs_max:
             gain_lufs = float(lufs_max - lufs)  # negativo
             lufs_applied = True
 
-    # Elegimos el recorte más restrictivo (más negativo)
     gain = min(0.0, float(gain_peak), float(gain_lufs))
 
-    # Cap duro por stem
     if gain < -abs(max_cut_db_per_stem):
         gain = -abs(max_cut_db_per_stem)
 
@@ -173,7 +240,8 @@ def _compute_stem_ceiling_gain_db(
         "file": fname,
         "profile": prof_id,
         "lufs": lufs,
-        "peak": peak,
+        "true_peak_dbtp": true_peak,
+        "sample_peak_dbfs": sample_peak,
         "crest": crest,
         "transient": transient,
         "gain_peak_db": float(gain_peak),
@@ -194,7 +262,6 @@ def _apply_gain_inplace(path: Path, gain_db: float) -> bool:
         g_lin = float(10.0 ** (float(gain_db) / 20.0))
         y = (x * g_lin).astype(np.float32)
 
-        # Escribir en FLOAT para evitar clip por PCM
         sf.write(path, y, int(sr), subtype="FLOAT")
         return True
     except Exception as e:
@@ -204,17 +271,19 @@ def _apply_gain_inplace(path: Path, gain_db: float) -> bool:
 
 def process(*args) -> bool:
     """
-    Stage S1_STEM_WORKING_LOUDNESS (versión robusta):
-      - Aplica primero atenuación global si el mixbus excede el techo.
-      - Aplica después ceilings por stem (peak siempre; LUFS solo no-transitorio).
-      - Caps para evitar recortes agresivos y desiguales.
+    Stage S1_STEM_WORKING_LOUDNESS (robusto):
+      - Evita crash cuando stage.py llama process(context, stage_id).
       - Guarda métricas en working_loudness_metrics_S1_STEM_WORKING_LOUDNESS.json.
     """
-    if len(sys.argv) < 2 and not args:
-        logger.logger.info("Uso: python S1_STEM_WORKING_LOUDNESS.py <CONTRACT_ID>")
+    contract_id = _resolve_contract_id(args)
+    if not contract_id:
+        logger.logger.info(
+            "[S1_STEM_WORKING_LOUDNESS] ERROR: No se pudo resolver contract_id. "
+            "Uso CLI: python S1_STEM_WORKING_LOUDNESS.py <CONTRACT_ID> "
+            "o desde pipeline: process(context, stage_id)"
+        )
         return False
 
-    contract_id = args[0] if args else sys.argv[1]
     temp_dir = get_temp_dir(contract_id, create=False)
 
     analysis = load_analysis(contract_id)
@@ -223,24 +292,21 @@ def process(*args) -> bool:
     session: Dict[str, Any] = analysis.get("session", {}) or {}
     stems: List[Dict[str, Any]] = analysis.get("stems", []) or []
 
-    # Targets
     mixbus_target = float(session.get("mixbus_peak_target_max_dbfs", metrics.get("mixbus_peak_target_max_dbfs", -6.0)))
-    stem_peak_target = float(session.get("true_peak_per_stem_target_max_dbfs", metrics.get("true_peak_per_stem_target_max_dbfs", -6.0)))
+    stem_peak_target = float(
+        session.get("true_peak_per_stem_target_max_dbfs", metrics.get("true_peak_per_stem_target_max_dbfs", -6.0))
+    )
 
-    # Caps / heurísticas
     max_global_step_db = float(limits.get("max_global_gain_change_db_per_pass", limits.get("max_gain_change_db_per_pass", 6.0)))
     max_cut_per_stem_db = float(limits.get("max_cut_db_per_stem_per_pass", limits.get("max_gain_change_db_per_pass", 6.0)))
     crest_transient_threshold_db = float(metrics.get("crest_transient_threshold_db", 14.0))
     min_step_db = float(metrics.get("min_gain_step_db", 0.1))
 
-    # Medición del mixbus en analysis (sample-peak real)
     mixbus_peak = float(session.get("mixbus_peak_dbfs_measured", float("-inf")))
 
-    # 1) Gain global para alcanzar el techo (sin tocar balance)
     global_gain_db = 0.0
     if mixbus_peak != float("-inf") and mixbus_peak > mixbus_target:
-        needed = float(mixbus_target - mixbus_peak)  # negativo
-        # cap global
+        needed = float(mixbus_target - mixbus_peak)
         if needed < -abs(max_global_step_db):
             needed = -abs(max_global_step_db)
         global_gain_db = float(needed)
@@ -248,7 +314,6 @@ def process(*args) -> bool:
     if abs(global_gain_db) < min_step_db:
         global_gain_db = 0.0
 
-    # 2) Gains extra por stem (ceiling)
     gain_by_file: Dict[str, float] = {}
     debug_rows: List[Dict[str, Any]] = []
 
@@ -266,10 +331,7 @@ def process(*args) -> bool:
             max_cut_db_per_stem=max_cut_per_stem_db,
         )
 
-        # total = global + extra (ambos <= 0)
         total_gain = float(global_gain_db + extra_gain_db)
-
-        # cuantización mínima
         if abs(total_gain) < min_step_db:
             total_gain = 0.0
 
@@ -278,28 +340,18 @@ def process(*args) -> bool:
         reasons["gain_total_db"] = float(total_gain)
         debug_rows.append(reasons)
 
-    # 3) Predicción de pico de mixbus con gains propuestos (virtual)
-    stem_paths = sorted(
-        p for p in temp_dir.glob("*.wav") if p.name.lower() != "full_song.wav"
-    )
+    stem_paths = sorted(p for p in temp_dir.glob("*.wav") if p.name.lower() != "full_song.wav")
     predicted_peak = _mixbus_peak_stream_with_gains(stem_paths, gain_by_file)
 
-    # Si aún no llegamos al techo y tenemos margen global (cap), aplicamos “extra global” uniforme
     if predicted_peak != float("-inf") and predicted_peak > mixbus_target + 0.1:
-        remaining = -abs(max_global_step_db) - global_gain_db  # negativo o cero (ojo: global_gain_db <= 0)
-        # remaining es cuanto más podríamos bajar global en esta pasada (valor negativo)
-        needed2 = float(mixbus_target - predicted_peak)  # negativo
+        remaining = -abs(max_global_step_db) - global_gain_db
+        needed2 = float(mixbus_target - predicted_peak)
         add_global = 0.0
 
         if remaining < 0.0:
-            # podemos bajar más (en negativo), pero limitado
-            add_global = max(needed2, remaining)  # el más alto (menos negativo) entre needed2 y remaining? NO: queremos no pasarnos del límite
-            # aquí remaining es p.ej. -6 - (-3) = -3. Si needed2 = -4, max(-4, -3) = -3 (cap).
-        else:
-            add_global = 0.0
+            add_global = max(needed2, remaining)
 
         if abs(add_global) >= min_step_db:
-            # aplicar a todos
             for k in list(gain_by_file.keys()):
                 gain_by_file[k] = float(gain_by_file[k] + add_global)
 
@@ -312,7 +364,6 @@ def process(*args) -> bool:
             )
             predicted_peak = predicted_peak2
 
-    # 4) Aplicar gains a stems
     touched = 0
     for p in stem_paths:
         g = float(gain_by_file.get(p.name, 0.0))
@@ -322,17 +373,16 @@ def process(*args) -> bool:
         if ok:
             touched += 1
 
-    # 5) Logging claro
     logger.logger.info(f"[S1_STEM_WORKING_LOUDNESS] Global gain aplicado: {global_gain_db:+.2f} dB.")
     for r in debug_rows:
         logger.logger.info(
             f"[S1_STEM_WORKING_LOUDNESS] {r['file']}: total={r['gain_total_db']:+.2f} dB "
             f"(global={r['gain_global_db']:+.2f}, extra={r['gain_extra_db']:+.2f}) | "
-            f"LUFS={r['lufs']:.2f}, TP={r['peak']:.2f}, crest={r['crest']:.2f}, transient={r['transient']} | "
+            f"LUFS={r['lufs']:.2f}, TP={r['true_peak_dbtp']:.2f} dBTP, "
+            f"sample_peak={r['sample_peak_dbfs']:.2f} dBFS, crest={r['crest']:.2f}, transient={r['transient']} | "
             f"peak_adj={r['gain_peak_db']:+.2f}, lufs_adj={r['gain_lufs_db']:+.2f}"
         )
 
-    # 6) Guardar métricas para check/debug
     metrics_path = temp_dir / "working_loudness_metrics_S1_STEM_WORKING_LOUDNESS.json"
     with metrics_path.open("w", encoding="utf-8") as f:
         json.dump(

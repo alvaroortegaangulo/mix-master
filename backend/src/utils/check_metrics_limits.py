@@ -452,9 +452,10 @@ def _check_S3_MIXBUS_HEADROOM(data: Dict[str, Any]) -> bool:
     pre = m.get("pre", {}) or {}
 
     try:
-        peak_post = float(post.get("peak_dbfs", float("-inf")))
+        peak_post = float(post.get("sample_peak_dbfs", float("-inf")))
         lufs_post = float(post.get("lufs", float("-inf")))
-        peak_pre = float(pre.get("peak_dbfs", float("-inf")))
+        peak_pre = float(pre.get("sample_peak_dbfs", float("-inf")))
+        true_peak_post = float(post.get("true_peak_dbtp", float("-inf")))
     except (TypeError, ValueError):
         print(f"[{contract_id}] Métricas numéricas inválidas en {mpath}.")
         return False
@@ -462,12 +463,15 @@ def _check_S3_MIXBUS_HEADROOM(data: Dict[str, Any]) -> bool:
     MARGIN_DB = 0.5
     ok = True
 
-    # HARD: peak
+    # HARD: peak (sample-peak vs target dBFS)
     if peak_post > peak_max + MARGIN_DB:
         logger.print_metric("Mix Peak Post", peak_post, target=f"<= {peak_max}", status="FAIL", details=f"Margin: {MARGIN_DB}")
         ok = False
     else:
         logger.print_metric("Mix Peak Post", peak_post, target=f"<= {peak_max}", status="PASS")
+
+    if np.isfinite(true_peak_post):
+        logger.print_metric("Mix True Peak Post", true_peak_post, status="INFO")
 
     # SOFT: LUFS
     if lufs_post == float("-inf"):
