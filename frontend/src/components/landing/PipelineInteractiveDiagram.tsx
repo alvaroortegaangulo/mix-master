@@ -217,7 +217,7 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
 
   return (
     <section
-      className={`relative min-h-[400px] flex flex-col items-center justify-center px-2 lg:px-4 py-12 md:py-14 lg:py-16 2xl:py-20 selection:bg-violet-500 selection:text-white overflow-hidden ${className || 'bg-[#050508]'}`}
+      className={`relative min-h-[400px] lg:min-h-screen flex flex-col items-center justify-center px-2 lg:px-4 py-12 md:py-14 lg:py-16 2xl:py-20 selection:bg-violet-500 selection:text-white overflow-hidden ${className || 'bg-[#050508]'}`}
     >
       <div className="absolute inset-0 pointer-events-none z-0">
         <div className="absolute inset-0 pipeline-wallpaper" />

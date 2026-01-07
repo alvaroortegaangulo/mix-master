@@ -146,7 +146,7 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
   }, [isManual]);
 
   return (
-    <section id="benefits" className={`py-12 md:py-14 lg:py-16 2xl:py-20 relative overflow-hidden ${className || 'bg-slate-950'}`}>
+    <section id="benefits" className={`lg:min-h-screen flex flex-col justify-center py-12 md:py-14 lg:py-16 2xl:py-20 relative overflow-hidden ${className || 'bg-slate-950'}`}>
         {/* Background Elements */}
         <div className="absolute inset-0 pointer-events-none z-0">
             <div className="absolute -inset-6 blur-[4px] scale-[1.02]">
