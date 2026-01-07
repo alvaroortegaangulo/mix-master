@@ -54,7 +54,7 @@ export default function PipelineViewer() {
   };
 
   return (
-    <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+    <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-6">
       {/* List Column */}
       <div className="lg:col-span-5 space-y-2">
         {STAGES.map((stage, index) => {
