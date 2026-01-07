@@ -69,11 +69,11 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
             <div className="absolute inset-0 analysis-wallpaper-overlay" />
         </div>
 
-      <div className="max-w-7xl 2xl:max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 2xl:px-4 relative z-10">
+      <div className="max-w-7xl 2xl:max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 2xl:px-4 relative z-10">
         {/* Header */}
         <ScrollReveal className="mb-6 text-right" delay={0.05}>
           <h2
-            className="text-3xl md:text-5xl font-bold tracking-tight mb-4 font-['Orbitron'] text-white glow-teal metallic-sheen"
+            className="text-3xl md:text-5xl 2xl:text-6xl font-bold tracking-tight mb-4 font-['Orbitron'] text-white glow-teal metallic-sheen"
             data-text={titlePlain}
           >
             {t.rich('title', {
@@ -90,7 +90,7 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
 
           {/* LEFT PANEL: Frequency Spectrum */}
           <ScrollReveal
-            className="lg:col-span-2 bg-slate-900/50 rounded-3xl border border-slate-800 p-3 md:p-4 2xl:p-5 flex flex-col justify-between min-h-[190px] md:min-h-[220px] shadow-2xl relative overflow-hidden"
+            className="lg:col-span-2 bg-slate-900/50 rounded-3xl border border-slate-800 p-3 md:p-4 2xl:p-5 flex flex-col justify-between min-h-[190px] md:min-h-[220px] 2xl:min-h-[300px] shadow-2xl relative overflow-hidden"
             delay={0.1}
           >
 
@@ -127,16 +127,16 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
              {/* Bottom Metrics */}
              <div className="grid grid-cols-3 gap-2 border-t border-slate-800 pt-3 relative z-10">
                  <div>
-                     <div className="text-[10px] uppercase tracking-wider text-slate-300 mb-1">{t('spectrum.sub')}</div>
-                     <div className="text-white font-medium">{t('spectrum.balanced')}</div>
+                     <div className="text-[10px] 2xl:text-xs uppercase tracking-wider text-slate-300 mb-1">{t('spectrum.sub')}</div>
+                     <div className="text-white font-medium 2xl:text-lg">{t('spectrum.balanced')}</div>
                  </div>
                  <div>
-                     <div className="text-[10px] uppercase tracking-wider text-slate-300 mb-1">{t('spectrum.vocal')}</div>
-                     <div className="text-teal-400 font-medium">{t('spectrum.optimal')}</div>
+                     <div className="text-[10px] 2xl:text-xs uppercase tracking-wider text-slate-300 mb-1">{t('spectrum.vocal')}</div>
+                     <div className="text-teal-400 font-medium 2xl:text-lg">{t('spectrum.optimal')}</div>
                  </div>
                  <div className="text-right">
-                     <div className="text-[10px] uppercase tracking-wider text-slate-300 mb-1">{t('spectrum.air')}</div>
-                     <div className="text-white font-medium">+1.2 dB</div>
+                     <div className="text-[10px] 2xl:text-xs uppercase tracking-wider text-slate-300 mb-1">{t('spectrum.air')}</div>
+                     <div className="text-white font-medium 2xl:text-lg">+1.2 dB</div>
                  </div>
              </div>
 
@@ -151,11 +151,11 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
              {/* Card 1: Integrated Loudness */}
              <div className="bg-slate-900/50 rounded-2xl border border-slate-800 p-3 2xl:p-4 shadow-lg relative group overflow-hidden">
                 <div className="flex justify-between items-start mb-2">
-                    <div className="text-[10px] uppercase tracking-wider text-slate-300">{t('metrics.loudness')}</div>
+                    <div className="text-[10px] 2xl:text-xs uppercase tracking-wider text-slate-300">{t('metrics.loudness')}</div>
                     <SpeakerWaveIcon className="w-4 h-4 text-teal-400/70 icon-float" aria-hidden="true" />
                 </div>
-                <div className="text-xl 2xl:text-2xl font-bold text-white mb-1 tabular-nums tracking-tight">
-                    {lufs.toFixed(1)} <span className="text-sm sm:text-base font-normal text-slate-200">LUFS</span>
+                <div className="text-xl 2xl:text-4xl font-bold text-white mb-1 tabular-nums tracking-tight">
+                    {lufs.toFixed(1)} <span className="text-sm sm:text-base 2xl:text-xl font-normal text-slate-200">LUFS</span>
                 </div>
 
                 {/* Progress Bar */}
