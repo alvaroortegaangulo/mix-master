@@ -229,7 +229,7 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
         />
       </div>
 
-      <div className="relative z-30 mt-6 flex justify-center sm:absolute sm:bottom-10 sm:right-6 sm:mt-0 sm:justify-start">
+      <div className="relative z-30 mt-6 flex justify-center sm:absolute sm:bottom-10 sm:right-6 2xl:bottom-32 sm:mt-0 sm:justify-start">
         <div className="hero-faq-pop group w-[min(90vw,340px)] origin-bottom sm:origin-bottom-right">
           <div className="hero-faq-float relative rounded-2xl border border-slate-800 bg-slate-950/90 p-3 sm:p-4 text-left shadow-2xl shadow-black/40 backdrop-blur">
             <div className="flex items-start gap-2">

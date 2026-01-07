@@ -224,18 +224,18 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
         <div className="absolute inset-0 pipeline-wallpaper-overlay" />
       </div>
 
-      <div className="relative z-10 w-full max-w-7xl 2xl:max-w-5xl">
+      <div className="relative z-10 w-full max-w-7xl 2xl:max-w-[1600px]">
         <ScrollReveal delay={0.05}>
           <header className="text-left mb-6 lg:mb-8 relative z-10 max-w-3xl">
             <h2
-              className="text-3xl md:text-5xl font-black font-['Orbitron'] tracking-wide mb-4 text-white glow-violet metallic-sheen"
+              className="text-3xl md:text-5xl 2xl:text-6xl font-black font-['Orbitron'] tracking-wide mb-4 text-white glow-violet metallic-sheen"
               data-text={titlePlain}
             >
               {t.rich('title', {
                 violet: (chunks) => <span className="text-violet-400">{chunks}</span>,
               })}
             </h2>
-            <p className="text-slate-400 text-sm sm:text-base font-light leading-relaxed">
+            <p className="text-slate-400 text-sm sm:text-base 2xl:text-lg font-light leading-relaxed">
               {t.rich('description', {
                 highlight: (chunks) => <span className="text-amber-400 font-bold">{chunks}</span>,
               })}
@@ -245,7 +245,7 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
 
         <ScrollReveal delay={0.1}>
           <main
-            className="w-full max-w-7xl 2xl:max-w-5xl flex flex-col md:flex-row gap-2 md:gap-4 relative z-10 md:items-stretch"
+            className="w-full max-w-7xl 2xl:max-w-[1600px] flex flex-col md:flex-row gap-2 md:gap-4 relative z-10 md:items-stretch"
             style={panelHeightStyle}
           >
             {steps.map((step, index) => {
@@ -316,17 +316,17 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
                             <step.icon className={`w-5 h-5 lg:w-6 lg:h-6 ${colors.text}`} />
                           </div>
                           <div>
-                            <h3 className="text-xl lg:text-3xl font-black text-white font-['Orbitron'] mb-0.5 tracking-wide glow-text">
+                            <h3 className="text-xl lg:text-3xl 2xl:text-4xl font-black text-white font-['Orbitron'] mb-0.5 tracking-wide glow-text">
                               {step.title}
                             </h3>
-                            <p className={`${colors.textSoft} font-medium tracking-wider text-[10px] lg:text-xs uppercase opacity-90 leading-tight`}>
+                            <p className={`${colors.textSoft} font-medium tracking-wider text-[10px] lg:text-xs 2xl:text-sm uppercase opacity-90 leading-tight`}>
                               {step.subtitle}
                             </p>
                           </div>
                         </div>
 
                         <div className="flex flex-col items-start py-1 lg:py-2 space-y-0 text-left">
-                          <p className={`text-xs lg:text-sm text-slate-200 leading-snug max-w-2xl border-l-2 ${colors.border} pl-3 bg-gradient-to-r ${colors.gradientFrom} to-transparent p-1.5 rounded-r-lg`}>
+                          <p className={`text-xs lg:text-sm 2xl:text-base text-slate-200 leading-snug max-w-2xl border-l-2 ${colors.border} pl-3 bg-gradient-to-r ${colors.gradientFrom} to-transparent p-1.5 rounded-r-lg`}>
                             {step.description}
                           </p>
 

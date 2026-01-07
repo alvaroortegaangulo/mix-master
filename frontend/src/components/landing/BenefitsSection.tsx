@@ -160,12 +160,12 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
             </div>
         </div>
 
-            <div className="relative z-10 max-w-7xl 2xl:max-w-5xl w-full mx-auto space-y-6 px-4 sm:px-6 lg:px-8 2xl:px-4">
+            <div className="relative z-10 max-w-7xl 2xl:max-w-[1600px] w-full mx-auto space-y-6 px-4 sm:px-6 lg:px-8 2xl:px-4">
 
             {/* Header */}
             <ScrollReveal className="text-right" delay={0.05}>
                 <h2
-                    className="text-3xl md:text-5xl font-bold tracking-tight text-white mb-4 font-['Orbitron'] glow-burgundy metallic-sheen"
+                    className="text-3xl md:text-5xl 2xl:text-6xl font-bold tracking-tight text-white mb-4 font-['Orbitron'] glow-burgundy metallic-sheen"
                     data-text={headerTitlePlain}
                 >
                     {t.rich('headerTitle', {
@@ -190,7 +190,7 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
 
                 {/* Card 1: AI Efficiency (Interactive) - Spans 7 cols */}
                 <ScrollReveal
-                    className="md:col-span-7 bg-slate-900/60 backdrop-blur-md border border-slate-800 rounded-3xl p-4 relative overflow-hidden group flex flex-col justify-between min-h-[160px] transition-transform duration-300 hover:-translate-y-1 hover:border-rose-500/70 hover:ring-1 hover:ring-rose-500/35"
+                    className="md:col-span-7 bg-slate-900/60 backdrop-blur-md border border-slate-800 rounded-3xl p-4 relative overflow-hidden group flex flex-col justify-between min-h-[160px] 2xl:min-h-[240px] transition-transform duration-300 hover:-translate-y-1 hover:border-rose-500/70 hover:ring-1 hover:ring-rose-500/35"
                     delay={0.1}
                 >
                     <div className="relative z-10">
@@ -212,7 +212,7 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
                             </button>
                         </div>
 
-                        <h3 className="text-lg md:text-2xl font-bold leading-tight mb-2 transition-all duration-500 font-['Orbitron']">
+                        <h3 className="text-lg md:text-2xl 2xl:text-4xl font-bold leading-tight mb-2 transition-all duration-500 font-['Orbitron']">
                             {t.rich('speedTitle', {
                                 strike: (chunks) => (
                                   <span className="relative inline-block">
@@ -234,7 +234,7 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
                                 br: () => " "
                             })}
                         </h3>
-                        <p className="text-slate-300 text-[11px] md:text-xs leading-relaxed w-full md:w-2/3">
+                        <p className="text-slate-300 text-[11px] md:text-xs 2xl:text-lg leading-relaxed w-full md:w-2/3">
                             {t('speedDescription')}
                         </p>
                     </div>
@@ -250,7 +250,7 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
 
                 {/* Card 2: Visual Interface Scan - Spans 5 cols */}
                 <ScrollReveal
-                    className="md:col-span-5 bg-slate-900/60 backdrop-blur-md border border-slate-800 rounded-3xl relative overflow-hidden group min-h-[160px] transition-transform duration-300 hover:-translate-y-1 hover:border-rose-500/70 hover:ring-1 hover:ring-rose-500/35"
+                    className="md:col-span-5 bg-slate-900/60 backdrop-blur-md border border-slate-800 rounded-3xl relative overflow-hidden group min-h-[160px] 2xl:min-h-[240px] transition-transform duration-300 hover:-translate-y-1 hover:border-rose-500/70 hover:ring-1 hover:ring-rose-500/35"
                     delay={0.15}
                 >
                     <img

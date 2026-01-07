@@ -1,6 +1,7 @@
 import { Link } from "../../../i18n/routing";
 import Script from "next/script";
 import { useTranslations } from "next-intl";
+import FAQItem from "../../../components/FAQItem";
 
 export const metadata = {
   title: "FAQ - Piroola",
@@ -97,17 +98,11 @@ export default function FAQPage() {
 
           <div className="space-y-6">
             {FAQ_ITEMS.map((item, index) => (
-              <div
+              <FAQItem
                 key={index}
-                className="rounded-2xl border border-slate-800/60 bg-slate-900/50 p-6 shadow-lg transition hover:border-teal-500/30"
-              >
-                <h3 className="mb-3 text-xl font-semibold text-slate-200">
-                  {item.question}
-                </h3>
-                <p className="text-slate-400 leading-relaxed">
-                  {item.answer}
-                </p>
-              </div>
+                question={item.question}
+                answer={item.answer}
+              />
             ))}
           </div>
         </div>

@@ -157,7 +157,7 @@ export function FeaturesSection({ className }: { className?: string }) {
         >
 
           {/* Image Display Area */}
-          <div className="relative h-[260px] sm:h-[160px] md:h-[240px] lg:h-[280px] w-full overflow-hidden bg-black group">
+          <div className="relative h-[260px] sm:h-[160px] md:h-[240px] lg:h-[280px] 2xl:h-[450px] w-full overflow-hidden bg-black group">
             <img
               key={currentFeature.imageUrl}
               src={currentFeature.imageUrl}
@@ -174,7 +174,7 @@ export function FeaturesSection({ className }: { className?: string }) {
             <div className="scanline"></div>
 
             {/* Floating Content Card */}
-            <div className="absolute top-1/2 -translate-y-1/2 left-5 md:left-10 lg:left-12 z-20 w-[88%] sm:w-[70%] md:w-[440px] lg:w-[480px]">
+            <div className="absolute top-1/2 -translate-y-1/2 left-5 md:left-10 lg:left-12 z-20 w-[88%] sm:w-[70%] md:w-[440px] lg:w-[480px] 2xl:w-[600px]">
               <div className="relative rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-4 md:px-6 md:py-6 shadow-[0_22px_60px_rgba(0,0,0,0.6)] backdrop-blur-xl">
                 <div className="absolute inset-0 rounded-2xl ring-1 ring-amber-500/15 pointer-events-none" />
                 <div className="relative flex items-center gap-3 mb-3">
@@ -186,14 +186,14 @@ export function FeaturesSection({ className }: { className?: string }) {
                       {t(`steps.${currentIndex}.slideLabel`)}
                     </span>
                     <h3
-                      className="text-lg md:text-2xl font-semibold font-['Orbitron'] text-white glow-text"
+                      className="text-lg md:text-2xl 2xl:text-4xl font-semibold font-['Orbitron'] text-white glow-text"
                       style={{ '--glow-color': currentFeature.glowColor } as React.CSSProperties}
                     >
                       {t(`steps.${currentIndex}.title`)}
                     </h3>
                   </div>
                 </div>
-                <p className="text-slate-200 text-[11px] md:text-sm leading-relaxed">
+                <p className="text-slate-200 text-[11px] md:text-sm 2xl:text-lg leading-relaxed">
                   {t(`steps.${currentIndex}.description`)}
                 </p>
                 <div className="mt-4 border-t border-white/10 pt-3 grid grid-cols-3 gap-3">
