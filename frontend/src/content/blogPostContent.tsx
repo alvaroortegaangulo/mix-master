@@ -396,7 +396,115 @@ if abs(dc_offset) > threshold:
         </section>
       </>
     ),
-  },
+    "ia-en-produccion-musical-aliado-enemigo": (
+      <>
+        <p>
+          La inteligencia artificial ha entrado en el estudio como un elefante en una cacharrería.
+          Promete mezclas instantáneas y masters perfectos con un clic. Pero, ¿dónde queda el criterio artístico?
+          ¿Es la IA una herramienta para agilizar tareas tediosas o un reemplazo peligroso de la creatividad humana?
+        </p>
+
+        <section id="nuevas-herramientas" className="scroll-mt-24">
+          <h2>Nuevas herramientas asistidas por IA</h2>
+          <p>
+            Hoy en día, la IA no solo genera música desde cero. En el mundo de la ingeniería, herramientas como la
+            separación de stems (demixing), la reducción de ruido espectral y los asistentes de EQ inteligentes
+            están cambiando las reglas del juego.
+          </p>
+          <BlogCallout type="info" title="No Es Magia, Es Estadística">
+             Las IAs de audio no "escuchan" como nosotros. Analizan millones de canciones para encontrar patrones estadísticos.
+             Saben cómo suele sonar un bombo de techno, pero no saben si tu canción necesita un bombo triste o agresivo.
+             Ese contexto emocional es 100% humano.
+          </BlogCallout>
+        </section>
+
+        <section id="limites-de-confianza" className="scroll-mt-24">
+          <h2>Límites de confianza con la automatización</h2>
+          <p>
+            El peligro real es la "fatiga de decisión delegada". Si dejas que la IA decida el balance, la EQ y la compresión,
+            te arriesgas a un sonido genérico. La IA tiende a la media, a lo "correcto" según el estándar, eliminando
+            a menudo las imperfecciones que dan carácter.
+          </p>
+          <ul>
+            <li><strong>Úsala para:</strong> Limpieza de ruidos, alineación de fase, matching de EQ, loudness.</li>
+            <li><strong>Evítala para:</strong> Decisiones de arreglo, automatización de volumen emocional, saturación creativa.</li>
+          </ul>
+        </section>
+
+        <section id="flujo-hibrido" className="scroll-mt-24">
+          <h2>Diseñar un flujo híbrido</h2>
+          <p>
+            El futuro no es humano vs máquina, es el "Cyborg Engineer". Usa la IA para quitarte el trabajo sucio.
+            En Piroola, por ejemplo, usamos algoritmos para detectar DC offset o resonancias molestas (tareas objetivas),
+            pero dejamos los parámetros de color y dinámica abiertos a la interpretación del género.
+          </p>
+        </section>
+
+        <section id="checklist" className="scroll-mt-24">
+          <BlogChecklist
+            title="Checklist antes de subir stems"
+            items={[
+              "Revisa que el proceso automático no haya comido los transientes del kick.",
+              "Comprueba que no haya artefactos digitales ('burbujeo') en las voces aisladas.",
+              "Asegúrate de que la IA no haya eliminado el ruido de sala que daba vida a la batería.",
+              "Confía en tus oídos: si suena bien, está bien, lo diga el algoritmo o no."
+            ]}
+          />
+        </section>
+      </>
+    ),
+    "tratamiento-acustico-vs-calibracion-dsp": (
+      <>
+        <p>
+          Es el eterno debate del home studio moderno: ¿Gasto 1000€ en paneles de lana de roca o 300€ en un software de corrección de sala?
+          La respuesta corta es: el software no puede romper las leyes de la física, pero puede salvarte la vida si entiendes sus límites.
+        </p>
+
+        <section id="fisica-vs-dsp" className="scroll-mt-24">
+          <h2>Paneles físicos vs. trucos digitales</h2>
+          <p>
+            El tratamiento acústico (paneles, trampas de graves, difusores) cambia cómo el sonido viaja físicamente en tu sala.
+            Reduce el tiempo de reverberación (RT60) y controla las reflexiones. La calibración DSP (como Sonarworks o el sistema de Piroola)
+            solo cambia la señal que sale de los altavoces para <em>compensar</em> lo que la sala va a hacer después.
+          </p>
+          <BlogCallout type="warning" title="No Puedes Ecualizar un Nulo">
+             Si tu sala tiene una cancelación de fase (un nulo) en 80Hz donde dos ondas se anulan físicamente,
+             subir 80Hz con un EQ no lo arreglará. Solo forzarás tus altavoces a trabajar más para seguir sin oír nada en ese punto.
+          </BlogCallout>
+        </section>
+
+        <section id="limitaciones-dsp" className="scroll-mt-24">
+          <h2>Dónde la calibración DSP ayuda</h2>
+          <p>
+            El DSP es fantástico para corregir la respuesta en frecuencia en el punto dulce (sweet spot). Puede domar un pico
+            de graves molesto o suavizar unos agudos brillantes. Pero no puede arreglar el tiempo de decaimiento (reverb) de la sala.
+            Una sala con mucho eco seguirá teniendo mucho eco, aunque la EQ sea plana.
+          </p>
+        </section>
+
+        <section id="casos-practicos" className="scroll-mt-24">
+          <h2>Casos reales con salas domésticas</h2>
+          <p>
+            En un dormitorio sin tratar, poner paneles de espuma baratos suele hacer poco por los graves. Aquí, una corrección DSP
+            puede ayudar a limpiar la imagen estéreo y darte una referencia más fiable, siempre que no te muevas de la silla.
+            Pero si grabas voces o instrumentos, el DSP en los monitores no sirve de nada para el micrófono: necesitas tratamiento físico.
+          </p>
+        </section>
+
+        <section id="plan-hibrido" className="scroll-mt-24">
+          <h2>Hoja de ruta híbrida</h2>
+          <BlogChecklist
+            title="Tu Plan de Acción"
+            items={[
+              "Prioridad 1: Coloca trampas de graves (bass traps) en las esquinas. Es donde más energía se acumula.",
+              "Prioridad 2: Trata los puntos de primera reflexión (paredes laterales y techo) con paneles absorbentes.",
+              "Prioridad 3: Usa software de calibración para el 'toque final', corrigiendo desviaciones de +/- 3dB o 5dB.",
+              "No intentes corregir nulos profundos con EQ."
+            ]}
+          />
+        </section>
+      </>
+    ),
   en: {
     "como-eliminar-dc-offset-en-stems": (
       <>
@@ -878,6 +986,113 @@ signal_fixed = signal - dc_offset`}</code>
             <li>True peak below the safety ceiling.</li>
             <li>Dynamics and punch preserved.</li>
           </ul>
+        </section>
+      </>
+    ),
+    "ia-en-produccion-musical-aliado-enemigo": (
+      <>
+        <p>
+          Artificial intelligence has entered the studio like a bull in a china shop.
+          It promises instant mixes and perfect masters with a click. But where does artistic judgment fit in?
+          Is AI a tool to speed up tedious tasks or a dangerous replacement for human creativity?
+        </p>
+
+        <section id="new-tools" className="scroll-mt-24">
+          <h2>New AI mastering copilots</h2>
+          <p>
+            Today, AI doesn't just generate music from scratch. In the engineering world, tools like
+            stem separation (demixing), spectral noise reduction, and intelligent EQ assistants
+            are changing the game.
+          </p>
+          <BlogCallout type="info" title="It's Not Magic, It's Statistics">
+             Audio AIs don't "listen" like we do. They analyze millions of songs to find statistical patterns.
+             They know what a techno kick usually sounds like, but they don't know if your song needs a sad or aggressive kick.
+             That emotional context is 100% human.
+          </BlogCallout>
+        </section>
+
+        <section id="trust-boundaries" className="scroll-mt-24">
+          <h2>Trust boundaries with automation</h2>
+          <p>
+            The real danger is "delegated decision fatigue". If you let AI decide the balance, EQ, and compression,
+            you risk a generic sound. AI tends towards the average, the "correct" standard, often eliminating
+            the imperfections that give character.
+          </p>
+          <ul>
+            <li><strong>Use it for:</strong> Noise cleaning, phase alignment, EQ matching, loudness.</li>
+            <li><strong>Avoid it for:</strong> Arrangement decisions, emotional volume automation, creative saturation.</li>
+          </ul>
+        </section>
+
+        <section id="hybrid-workflow" className="scroll-mt-24">
+          <h2>Designing a hybrid workflow</h2>
+          <p>
+            The future isn't human vs machine, it's the "Cyborg Engineer". Use AI to handle the dirty work.
+            At Piroola, for example, we use algorithms to detect DC offset or annoying resonances (objective tasks),
+            but we leave color and dynamics parameters open to genre interpretation.
+          </p>
+        </section>
+
+        <section id="ready-checklist" className="scroll-mt-24">
+          <h2>Checklist before uploading stems</h2>
+          <ul>
+            <li>Check that the automatic process hasn't eaten the kick transients.</li>
+            <li>Verify there are no digital artifacts ('bubbling') in isolated vocals.</li>
+            <li>Ensure the AI hasn't removed room noise that gave life to the drums.</li>
+            <li>Trust your ears: if it sounds good, it is good, whether the algorithm says so or not.</li>
+          </ul>
+        </section>
+      </>
+    ),
+    "tratamiento-acustico-vs-calibracion-dsp": (
+      <>
+        <p>
+          It is the eternal debate of the modern home studio: Do I spend $1000 on rock wool panels or $300 on room correction software?
+          The short answer is: software cannot break the laws of physics, but it can save your life if you understand its limits.
+        </p>
+
+        <section id="physical-vs-dsp" className="scroll-mt-24">
+          <h2>Physical panels vs. DSP tricks</h2>
+          <p>
+            Acoustic treatment (panels, bass traps, diffusers) changes how sound physically travels in your room.
+            It reduces reverberation time (RT60) and controls reflections. DSP calibration (like Sonarworks or Piroola's system)
+            only changes the signal coming out of the speakers to <em>compensate</em> for what the room will do next.
+          </p>
+          <BlogCallout type="warning" title="You Can't EQ a Null">
+             If your room has a phase cancellation (a null) at 80Hz where two waves physically cancel each other out,
+             boosting 80Hz with an EQ won't fix it. You'll only force your speakers to work harder to still hear nothing at that spot.
+          </BlogCallout>
+        </section>
+
+        <section id="dsp-limitations" className="scroll-mt-24">
+          <h2>Where DSP calibration helps</h2>
+          <p>
+            DSP is fantastic for correcting frequency response in the sweet spot. It can tame an annoying
+            bass peak or smooth out bright highs. But it cannot fix the room's decay time (reverb).
+            A room with a lot of echo will still have a lot of echo, even if the EQ is flat.
+          </p>
+        </section>
+
+        <section id="monitoring-strategies" className="scroll-mt-24">
+          <h2>Real monitoring strategies on a budget</h2>
+          <p>
+            In an untreated bedroom, putting up cheap foam panels usually does little for bass. Here, DSP correction
+            can help clean up the stereo image and give you a more reliable reference, provided you don't move from your chair.
+            But if you record vocals or instruments, DSP on the monitors does nothing for the microphone: you need physical treatment.
+          </p>
+        </section>
+
+        <section id="hybrid-plan" className="scroll-mt-24">
+          <h2>Hybrid correction road map</h2>
+          <BlogChecklist
+            title="Your Action Plan"
+            items={[
+              "Priority 1: Place bass traps in corners. That's where energy builds up most.",
+              "Priority 2: Treat first reflection points (side walls and ceiling) with absorptive panels.",
+              "Priority 3: Use calibration software for the 'final touch', correcting deviations of +/- 3dB or 5dB.",
+              "Do not try to fix deep nulls with EQ."
+            ]}
+          />
         </section>
       </>
     ),
