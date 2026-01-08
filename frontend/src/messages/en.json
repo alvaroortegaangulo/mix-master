@@ -304,6 +304,7 @@
     "generateMix": "Generate AI Mix",
     "generateMaster": "Generate AI Mastering",
     "processing": "Processing...",
+    "viewDetails": "View details",
     "waitingQueue": "Waiting in queue…",
     "runningStage": "Running stage",
     "stage": {
