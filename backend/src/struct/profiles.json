@@ -1,5 +1,12 @@
 {
-  "version": "1.0.0",
+  "version": "1.1.0",
+  "style_profile_aliases": {
+    "Unknown": "neutral",
+    "unknown": "neutral",
+    "default": "neutral",
+    "balanced": "neutral",
+    "Balanced": "neutral"
+  },
   "instrument_profiles": {
     "Drums_Full_Kit": {
       "id": "Drums_Full_Kit",
@@ -156,6 +163,71 @@
     }
   },
   "style_profiles": {
+    "neutral": {
+      "id": "neutral",
+      "mastering_targets": {
+        "lufs_integrated_target": -13.5,
+        "lufs_tolerance": 1.5,
+        "lra_min": 6.0,
+        "lra_max": 12.0,
+        "true_peak_max_dbtp": -1.0
+      },
+      "reverb_profile_by_bus": {},
+      "tonal_balance_targets": {
+        "bands_hz": [20, 80, 250, 1000, 4000, 10000, 20000],
+        "target_db": [0.0, -0.5, -0.5, 0.0, 0.5, 1.0],
+        "tolerance_db": 3.0
+      }
+    },
+    "balanced": {
+      "id": "balanced",
+      "mastering_targets": {
+        "lufs_integrated_target": -13.5,
+        "lufs_tolerance": 1.5,
+        "lra_min": 6.0,
+        "lra_max": 12.0,
+        "true_peak_max_dbtp": -1.0
+      },
+      "reverb_profile_by_bus": {},
+      "tonal_balance_targets": {
+        "bands_hz": [20, 80, 250, 1000, 4000, 10000, 20000],
+        "target_db": [0.0, -0.5, -0.5, 0.0, 0.5, 1.0],
+        "tolerance_db": 3.0
+      }
+    },
+    "modern_pop": {
+      "id": "modern_pop",
+      "mastering_targets": {
+        "lufs_integrated_target": -12.0,
+        "lufs_tolerance": 1.0,
+        "lra_min": 5.0,
+        "lra_max": 10.0,
+        "true_peak_max_dbtp": -1.0
+      },
+      "reverb_profile_by_bus": {},
+      "tonal_balance_targets": {
+        "bands_hz": [20, 80, 250, 1000, 4000, 10000, 20000],
+        "target_db": [1.5, 1.0, -0.5, 0.0, 1.0, 2.0],
+        "tolerance_db": 3.0
+      }
+    },
+    "rock": {
+      "id": "rock",
+      "mastering_targets": {
+        "lufs_integrated_target": -13.0,
+        "lufs_tolerance": 1.5,
+        "lra_min": 6.0,
+        "lra_max": 12.0,
+        "true_peak_max_dbtp": -1.0
+      },
+      "reverb_profile_by_bus": {},
+      "tonal_balance_targets": {
+        "bands_hz": [20, 80, 250, 1000, 4000, 10000, 20000],
+        "target_db": [0.0, -0.5, -1.0, 0.0, 0.5, 1.5],
+        "tolerance_db": 3.0
+      }
+    },
+
     "Flamenco_Rumba": {
       "id": "Flamenco_Rumba",
       "mastering_targets": {
@@ -203,6 +275,7 @@
         "tolerance_db": 3.0
       }
     },
+
     "EDM_Club": {
       "id": "EDM_Club",
       "mastering_targets": {
@@ -245,6 +318,7 @@
         "tolerance_db": 3.0
       }
     },
+
     "Acoustic_SingerSongwriter": {
       "id": "Acoustic_SingerSongwriter",
       "mastering_targets": {
