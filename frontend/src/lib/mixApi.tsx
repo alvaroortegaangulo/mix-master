@@ -355,13 +355,23 @@ export function mapBackendStatusToJobStatus(raw: any, baseUrl: string): JobStatu
 
   const totalStages = totalStagesFromRaw ?? 18; // [FIX] 18 por defecto en tu pipeline, mejor que 7
 
-  // [FIX] Detección de "final real" aunque el backendStatus venga incoherente
+  // [FIX] Detección de "final real" aunque el backendStatus venga incoherente.
+  // [MOD] Eliminamos rawProgress >= 100 y stageIndex >= totalStages para evitar falsos positivos
+  // cuando el backend sigue escribiendo ficheros finales.
+  const rawResult = raw.result ?? {};
+  const hasResultUrls = !!(
+    raw.full_song_url ??
+    raw.fullSongUrl ??
+    raw.full_song ??
+    rawResult.full_song_url ??
+    rawResult.fullSongUrl
+  );
+
   const looksFinished =
     rawStageKey === "finished" ||
     rawStageKey === "done" ||
     rawStageKey === "success" ||
-    rawProgress >= 100 ||
-    (typeof stageIndexFromRaw === "number" && stageIndexFromRaw >= totalStages);
+    hasResultUrls; // Solo si tenemos URL final nos fiamos de que acabó
 
   let status: JobStatus["status"];
   switch (backendStatus) {
@@ -372,7 +382,7 @@ export function mapBackendStatusToJobStatus(raw: any, baseUrl: string): JobStatu
     case "running":
     case "processing_correction":
     case "waiting_for_correction":
-      status = looksFinished ? "done" : "running"; // [FIX]
+      status = looksFinished ? "done" : "running";
       break;
     case "finished":
     case "success":
