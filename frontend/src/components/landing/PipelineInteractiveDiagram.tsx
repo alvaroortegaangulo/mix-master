@@ -353,10 +353,10 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
                             <div className="flex items-start gap-2 relative z-10">
                               <LightBulbIcon className={`w-4 h-4 lg:w-5 lg:h-5 ${colors.text} mt-1`} aria-hidden="true" />
                               <div>
-                                <h4 className={`${colors.text} font-bold text-[10px] uppercase tracking-widest mb-1`}>
+                                <h4 className={`${colors.text} font-bold text-[10px] 2xl:text-xs uppercase tracking-widest mb-1`}>
                                   {t('proTip')}
                                 </h4>
-                                <p className="text-[10px] lg:text-xs text-slate-200 italic font-medium">
+                                <p className="text-[10px] lg:text-xs 2xl:text-sm text-slate-200 italic font-medium">
                                   &quot;{step.proTip}&quot;
                                 </p>
                               </div>

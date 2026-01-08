@@ -199,10 +199,10 @@ export function FeaturesSection({ className }: { className?: string }) {
                 <div className="mt-4 border-t border-white/10 pt-3 grid grid-cols-3 gap-3">
                   {stats.map((stat, index) => (
                     <div key={stat.label} className="space-y-1">
-                      <div className="text-[9px] uppercase tracking-[0.22em] text-amber-300/70">
+                      <div className="text-[9px] 2xl:text-xs uppercase tracking-[0.22em] text-amber-300/70">
                         {stat.label}
                       </div>
-                      <div className={`text-[10px] md:text-xs font-semibold tabular-nums ${index === 2 ? "text-emerald-300" : "text-slate-200"}`}>
+                      <div className={`text-[10px] md:text-xs 2xl:text-sm font-semibold tabular-nums ${index === 2 ? "text-emerald-300" : "text-slate-200"}`}>
                         {stat.value}
                       </div>
                     </div>
