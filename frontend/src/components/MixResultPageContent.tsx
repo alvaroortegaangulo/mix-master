@@ -336,20 +336,29 @@ export function MixResultPageContent({ jobId }: Props) {
          const durationLabel = formatDuration(report.pipeline_durations?.total_duration_sec);
          if (durationLabel) m.pipelineTime = durationLabel;
 
-         const finalMetrics = report.final_metrics || {};
-         if (typeof finalMetrics.lufs_integrated === "number") {
-           m.lufs = finalMetrics.lufs_integrated.toFixed(2);
+         const sourceMetrics = showOriginal ? (report.original_metrics || {}) : (report.final_metrics || {});
+
+         if (typeof sourceMetrics.lufs_integrated === "number") {
+           m.lufs = sourceMetrics.lufs_integrated.toFixed(2);
+         } else if (showOriginal) {
+            m.lufs = "N/A";
          }
-         if (typeof finalMetrics.true_peak_dbtp === "number") {
-           m.tp = finalMetrics.true_peak_dbtp.toFixed(2);
+
+         if (typeof sourceMetrics.true_peak_dbtp === "number") {
+           m.tp = sourceMetrics.true_peak_dbtp.toFixed(2);
+         } else if (showOriginal) {
+            m.tp = "N/A";
          }
-         if (typeof finalMetrics.lra === "number") {
-           m.lra = finalMetrics.lra.toFixed(2);
+
+         if (typeof sourceMetrics.lra === "number") {
+           m.lra = sourceMetrics.lra.toFixed(2);
+         } else if (showOriginal) {
+            m.lra = "N/A";
          }
       }
 
       return m;
-  }, [report]);
+  }, [report, showOriginal]);
 
   // --- Active Stage Details ---
   const processedStages = useMemo(() => {
