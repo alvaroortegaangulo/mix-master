@@ -113,6 +113,9 @@ export function MixResultPageContent({ jobId }: Props) {
   const [shareLink, setShareLink] = useState("");
   const [loadingShare, setLoadingShare] = useState(false);
 
+  // Animation State
+  const [animState, setAnimState] = useState<'idle' | 'exiting' | 'entering'>('idle');
+
   // --- Pipeline Stages Load ---
   useEffect(() => {
     let cancelled = false;
@@ -448,6 +451,18 @@ export function MixResultPageContent({ jobId }: Props) {
   }, [activeStageKey, stages, jobStatus?.result, jobId]);
 
   // --- Handlers ---
+  const handleToggle = (wantOriginal: boolean) => {
+    if (wantOriginal === showOriginal) return;
+    setAnimState('exiting');
+    setTimeout(() => {
+        setShowOriginal(wantOriginal);
+        setAnimState('entering');
+        setTimeout(() => {
+            setAnimState('idle');
+        }, 420); // matches step-scale-in duration
+    }, 180); // matches step-scale-out duration
+  };
+
   const handleOpenReport = () => {
     setIsReportOpen(true);
     if (!report && !loadingReport) {
@@ -628,6 +643,8 @@ export function MixResultPageContent({ jobId }: Props) {
       );
   }
 
+  const animClass = animState === 'exiting' ? 'step-transition-exit' : (animState === 'entering' ? 'step-transition-enter' : '');
+
   return (
     <div className="max-w-7xl mx-auto px-4 py-8">
         {/* HEADER */}
@@ -660,7 +677,7 @@ export function MixResultPageContent({ jobId }: Props) {
         </div>
 
         {/* METRICS BAR */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+        <div className={`grid grid-cols-2 md:grid-cols-4 gap-4 mb-8 ${animClass}`}>
             <div className="bg-slate-900/50 rounded-2xl p-4 border border-slate-800 text-center relative overflow-hidden group">
                 <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-amber-500/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
                 <p className="text-[10px] uppercase tracking-wider text-slate-500 mb-1">TIEMPO PIPELINE</p>
@@ -698,13 +715,15 @@ export function MixResultPageContent({ jobId }: Props) {
                 <div className="flex flex-col items-center justify-center mb-8 relative">
                     <div className="inline-flex bg-slate-900 p-1 rounded-full border border-slate-800">
                         <button
-                            onClick={() => setShowOriginal(true)}
+                            onClick={() => handleToggle(true)}
+                            disabled={animState !== 'idle'}
                             className={`px-6 py-1.5 rounded-full text-xs font-bold transition-all ${showOriginal ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:text-slate-300'}`}
                         >
                             Original
                         </button>
                         <button
-                            onClick={() => setShowOriginal(false)}
+                            onClick={() => handleToggle(false)}
+                            disabled={animState !== 'idle'}
                             className={`px-6 py-1.5 rounded-full text-xs font-bold transition-all ${!showOriginal ? 'bg-amber-500 text-slate-950 shadow-lg shadow-amber-500/20' : 'text-slate-500 hover:text-slate-300'}`}
                         >
                             Master AI
@@ -713,7 +732,7 @@ export function MixResultPageContent({ jobId }: Props) {
                 </div>
 
                 {/* Waveform */}
-                <div className="mb-8">
+                <div className={`mb-8 ${animClass}`}>
                 <div className="relative z-0">
                   <WaveformPlayer
                     src={signedFullUrl}
@@ -729,7 +748,7 @@ export function MixResultPageContent({ jobId }: Props) {
               </div>
 
                 {/* Controls & Actions */}
-                <div className="flex flex-col md:flex-row items-center justify-between gap-6 pt-6 border-t border-slate-900">
+                <div className={`flex flex-col md:flex-row items-center justify-between gap-6 pt-6 border-t border-slate-900 ${animClass}`}>
 
                     {/* Transport (Visual only mostly, WaveformPlayer handles play/pause internally but we can't easily control it from outside without ref hoisting.
                         The requested image shows external controls.
@@ -764,7 +783,7 @@ export function MixResultPageContent({ jobId }: Props) {
                             className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-amber-500 text-slate-950 text-sm font-bold hover:bg-amber-400 transition shadow-[0_0_18px_rgba(251,191,36,0.45)] disabled:opacity-60"
                         >
                             <ArrowDownTrayIcon className="w-4 h-4" />
-                            {isDownloading ? tStudio('downloading') : "Descargar Master"}
+                            {isDownloading ? tStudio('downloading') : (showOriginal ? "Descargar Original" : "Descargar Master")}
                         </button>
                     </div>
                 </div>
