@@ -1319,7 +1319,7 @@
     }
   },
   "MixPipelinePanel": {
-    "title": "Pipeline",
+    "title": "Pipeline de Procesamiento (cambios por fase)",
     "description": "Explora cómo evoluciona la mezcla en cada fase escuchando el resultado acumulado después de cada bloque principal de procesamiento.",
     "loading": "Cargando definición del pipeline...",
     "error": "Error cargando la definición del pipeline.",
