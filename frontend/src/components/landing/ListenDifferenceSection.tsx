@@ -29,7 +29,7 @@ export function ListenDifferenceSection({ className }: { className?: string }) {
       <div className="relative z-10 mx-auto max-w-6xl">
         <ScrollReveal className="mx-auto max-w-3xl text-center" delay={0.05}>
           <h2
-            className="text-3xl sm:text-4xl md:text-5xl font-black font-['Orbitron'] tracking-tight text-white mb-4 metallic-sheen"
+            className="text-3xl sm:text-4xl md:text-5xl font-black font-['Orbitron'] tracking-tight text-white mb-4 glow-amber metallic-sheen"
             data-text={titlePlain}
           >
             {t.rich("title", {
