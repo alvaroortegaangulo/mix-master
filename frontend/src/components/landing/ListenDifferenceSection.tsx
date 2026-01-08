@@ -14,6 +14,8 @@ import {
 
 export function ListenDifferenceSection({ className }: { className?: string }) {
   const t = useTranslations("ListenDifferenceSection");
+  const title = t("title");
+  const titlePlain = title.replace(/<[^>]+>/g, "");
   const examples = useTranslations("Examples");
   const [showOriginal, setShowOriginal] = useState(false);
 
