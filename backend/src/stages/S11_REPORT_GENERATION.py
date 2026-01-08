@@ -23,6 +23,7 @@ except ImportError:
     PipelineContext = Any
 
 from utils.analysis_utils import get_temp_dir, sanitize_json_floats, compute_interactive_data
+from utils.loudness_utils import measure_true_peak_dbtp, compute_lufs_and_lra
 import soundfile as sf
 
 # --- Metric Mapping for Report ---
@@ -428,9 +429,23 @@ def process(context: PipelineContext, *args) -> bool:
 
         if audio_original is None:
              # Load S0 or S0_MIX_ORIGINAL
-             audio_original, _ = _load_mix_audio_for_report(context, ["S0_MIX_ORIGINAL", "S0_SESSION_FORMAT"])
+             audio_original, original_sr = _load_mix_audio_for_report(context, ["S0_MIX_ORIGINAL", "S0_SESSION_FORMAT"])
              if audio_original is not None:
-                 logger.logger.info(f"[S11] Loaded original audio from disk")
+                 logger.logger.info(f"[S11] Loaded original audio from disk (sr={original_sr})")
+
+                 # Compute basic metrics for Original (Requested by user)
+                 try:
+                     sr_for_metrics = original_sr if original_sr else sample_rate
+                     if sr_for_metrics:
+                         orig_lufs, orig_lra = compute_lufs_and_lra(audio_original, sr_for_metrics)
+                         orig_tp = measure_true_peak_dbtp(audio_original, sr_for_metrics)
+                         report["original_metrics"] = {
+                             "lufs_integrated": orig_lufs,
+                             "true_peak_dbtp": orig_tp,
+                             "lra": orig_lra
+                         }
+                 except Exception as e:
+                     logger.logger.warning(f"[S11] Failed to compute original metrics: {e}")
 
         if audio_arr is not None and sample_rate:
             chart_data = compute_interactive_data(audio_arr, int(sample_rate), audio_original=audio_original)

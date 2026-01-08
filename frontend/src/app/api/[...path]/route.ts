@@ -39,8 +39,9 @@ function buildProxyHeaders(request: NextRequest): Headers {
   return headers;
 }
 
-async function proxy(request: NextRequest, context: { params: { path?: string[] } }) {
-  const pathParts = context.params?.path ?? [];
+async function proxy(request: NextRequest, context: { params: Promise<{ path?: string[] }> }) {
+  const { path } = await context.params;
+  const pathParts = path ?? [];
   const backendBase = getBackendBaseUrl();
   const targetUrl = new URL(backendBase);
   targetUrl.pathname = `/${pathParts.join("/")}`;
