@@ -227,21 +227,21 @@ export function FeaturesSection({ className }: { className?: string }) {
                     : "bg-slate-950/60 text-slate-500 hover:text-slate-200"
                 }`}
               >
-                <span className={`flex h-9 w-9 items-center justify-center rounded-xl border transition-colors ${
+                <span className={`flex h-9 w-9 2xl:h-12 2xl:w-12 items-center justify-center rounded-xl border transition-colors ${
                   isActive
                     ? "border-amber-500/30 bg-amber-500/15 text-amber-300 shadow-[0_0_12px_rgba(251,146,60,0.25)]"
                     : "border-slate-800 bg-slate-900/80 text-slate-500 group-hover:text-amber-300/80"
                 }`}>
-                  <feature.Icon className="h-4 w-4" />
+                  <feature.Icon className="h-4 w-4 2xl:h-6 2xl:w-6" />
                 </span>
 
                 <div className="min-w-0">
-                  <span className={`block text-[10px] font-semibold uppercase tracking-wider font-['Orbitron'] ${
+                  <span className={`block text-[10px] 2xl:text-sm font-semibold uppercase tracking-wider font-['Orbitron'] ${
                     isActive ? "text-amber-200" : "text-slate-400"
                   }`}>
                     {t(`steps.${index}.tabTitle`)}
                   </span>
-                  <span className={`block text-[9px] truncate ${
+                  <span className={`block text-[9px] 2xl:text-xs truncate ${
                     isActive ? "text-slate-300" : "text-slate-600"
                   }`}>
                     {t(`steps.${index}.title`)}
