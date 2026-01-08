@@ -29,6 +29,11 @@ import {
   ArrowLeftIcon
 } from "@heroicons/react/24/outline";
 import { ProcessingVisualizer } from "./ProcessingVisualizer";
+import {
+  calculateStageEstimate,
+  getAudioDuration,
+  StemCounts
+} from "../lib/estimation";
 
 const siteName = "Piroola";
 const fallbackSiteUrl = "https://music-mix-master.com";
@@ -153,8 +158,6 @@ const QUICK_MODE_OPTIONAL_KEYS = {
   drums: "S2_GROUP_PHASE_DRUMS",
   leadVocal: "S3_LEADVOX_AUDIBILITY",
 };
-
-const STAGE_ESTIMATE_SECONDS = 15;
 
 const STEP_EXIT_DURATION_MS = 180;
 const STEP_ENTER_DURATION_MS = 420;
@@ -314,6 +317,8 @@ export function MixTool({ resumeJobId }: MixToolProps) {
   const [selectedStageKeys, setSelectedStageKeys] = useState<string[]>([]);
   const [showStageSelector, setShowStageSelector] = useState(true);
   const [isQuickMode, setIsQuickMode] = useState(false);
+  const [maxDuration, setMaxDuration] = useState(180);
+  const [showDetailedEstimates, setShowDetailedEstimates] = useState(false);
 
   // Group expansion state
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
@@ -820,6 +825,28 @@ export function MixTool({ resumeJobId }: MixToolProps) {
     }
   };
 
+  // Duration calculation
+  useEffect(() => {
+    if (!files.length) {
+      setMaxDuration(180);
+      return;
+    }
+    let active = true;
+    (async () => {
+      try {
+        const durations = await Promise.all(files.map(getAudioDuration));
+        if (active) {
+          // Use the longest file as the session duration
+          const max = Math.max(...durations, 1);
+          setMaxDuration(max);
+        }
+      } catch (err) {
+        console.error("Error calculating duration", err);
+      }
+    })();
+    return () => { active = false; };
+  }, [files]);
+
   const handleStemProfileChange = (id: string, profile: string) => {
     setStemProfiles((prev) =>
       prev.map((stem) =>
@@ -877,23 +904,72 @@ export function MixTool({ resumeJobId }: MixToolProps) {
   };
 
   const hasFiles = files.length > 0;
-  const estimatedSeconds = useMemo(() => {
-    if (!files.length) return 0;
+
+  // Estimation Logic
+  const estimationDetails = useMemo(() => {
+    if (!files.length || !availableStages.length) return { totalSeconds: 0, details: [] };
+
+    // Count stem types
+    const vocalCount = activeBusKeys.includes("lead_vocal") || activeBusKeys.includes("backing_vocals")
+      ? stemProfiles.filter(p => {
+          const bus = PROFILE_TO_BUS[p.profile] || ["other"];
+          return bus.includes("lead_vocal") || bus.includes("backing_vocals");
+        }).length
+      : 0;
+
+    const drumCount = activeBusKeys.includes("drums") || activeBusKeys.includes("percussion")
+      ? stemProfiles.filter(p => {
+          const bus = PROFILE_TO_BUS[p.profile] || ["other"];
+          return bus.includes("drums") || bus.includes("percussion");
+        }).length
+      : 0;
+
+    // Use actual counts, fallback to assumptions if activeBusKeys implies existence but count is 0 (e.g. unknown profile)
+    // If activeBusKeys has 'lead_vocal' but vocalCount is 0, maybe assume 1?
+    // Let's rely on profiles if set, or just total count if all "auto".
+    const counts: StemCounts = {
+      total: files.length,
+      vocals: vocalCount > 0 ? vocalCount : (activeBusKeys.includes("lead_vocal") ? 1 : 0),
+      drums: drumCount > 0 ? drumCount : (activeBusKeys.includes("drums") ? 1 : 0),
+    };
 
     const hiddenStages = availableStages
       .filter((stage) => STAGE_TO_GROUP[stage.key] === "HIDDEN")
       .map((stage) => stage.key);
-    const stageKeys = Array.from(new Set([...selectedStageKeys, ...hiddenStages]));
-    return stageKeys.length * STAGE_ESTIMATE_SECONDS;
-  }, [
-    availableStages,
-    selectedStageKeys,
-    files.length,
-  ]);
+
+    const activeKeys = Array.from(new Set([...selectedStageKeys, ...hiddenStages]));
+
+    let total = 0;
+    const details: { key: string; label: string; seconds: number }[] = [];
+
+    activeKeys.forEach(key => {
+        const stage = availableStages.find(s => s.key === key);
+        const est = calculateStageEstimate(key, maxDuration, counts);
+        total += est;
+        // Only show details for visible stages or significant hidden ones if desired
+        // Showing all active stages in the breakdown
+        details.push({
+            key,
+            label: stage ? (HUMAN_STAGE_TEXT[key]?.title || stage.label) : key,
+            seconds: est
+        });
+    });
+
+    // Sort by processing order (index in availableStages)
+    details.sort((a, b) => {
+        const idxA = availableStages.findIndex(s => s.key === a.key);
+        const idxB = availableStages.findIndex(s => s.key === b.key);
+        return idxA - idxB;
+    });
+
+    return { totalSeconds: total, details };
+  }, [files.length, availableStages, selectedStageKeys, maxDuration, stemProfiles, activeBusKeys, HUMAN_STAGE_TEXT]);
+
   const estimatedMinutes = useMemo(() => {
-    if (!estimatedSeconds) return 0;
-    return Math.max(1, Math.ceil(estimatedSeconds / 60));
-  }, [estimatedSeconds]);
+    if (!estimationDetails.totalSeconds) return 0;
+    return Math.max(1, Math.ceil(estimationDetails.totalSeconds / 60));
+  }, [estimationDetails.totalSeconds]);
+
   const isSongReady = isSongMode && hasFiles;
   const isReadyForMix =
     isSongReady || (uploadStep === 3 && !showBusPanel && Boolean(busConfirmationMessage));
@@ -1508,10 +1584,36 @@ export function MixTool({ resumeJobId }: MixToolProps) {
                 </div>
 
                 {hasFiles && estimatedMinutes > 0 && (
-                    <div className="mt-6 border-t border-slate-800 pt-4 text-center">
-                        <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400">
-                            Duración estimada: {estimatedMinutes} min de procesamiento
-                        </p>
+                    <div className="mt-6 border-t border-slate-800 pt-4">
+                        <div className="text-center">
+                            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-400 flex items-center justify-center gap-2">
+                                <span>Duración estimada: {estimatedMinutes} min de procesamiento</span>
+                                <button
+                                    onClick={() => setShowDetailedEstimates(!showDetailedEstimates)}
+                                    className="text-teal-500 hover:text-teal-400 flex items-center gap-1 transition-colors"
+                                >
+                                    <span className="text-[10px] tracking-normal capitalize">{t('viewDetails') || "Ver detalles"}</span>
+                                    <ChevronDownIcon className={`w-3 h-3 transition-transform ${showDetailedEstimates ? "rotate-180" : ""}`} />
+                                </button>
+                            </p>
+                        </div>
+
+                        {showDetailedEstimates && (
+                            <div className="mt-3 bg-slate-950/50 rounded-lg p-3 text-[10px] text-slate-400 space-y-1 animate-in slide-in-from-top-2">
+                                {estimationDetails.details.map((d) => (
+                                    <div key={d.key} className="flex justify-between items-center">
+                                        <span className="truncate pr-2">{d.label}</span>
+                                        <span className="font-mono text-slate-500">
+                                            {d.seconds < 60 ? `${d.seconds}s` : `${Math.floor(d.seconds / 60)}m ${d.seconds % 60}s`}
+                                        </span>
+                                    </div>
+                                ))}
+                                <div className="border-t border-slate-800 mt-2 pt-2 flex justify-between items-center font-semibold text-slate-300">
+                                    <span>Total</span>
+                                    <span>{estimationDetails.totalSeconds < 60 ? `${estimationDetails.totalSeconds}s` : `${Math.floor(estimationDetails.totalSeconds / 60)}m ${estimationDetails.totalSeconds % 60}s`}</span>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 )}
             </div>

@@ -316,6 +316,7 @@
     "generateMix": "Generar Mezcla IA",
     "generateMaster": "Generar Masterización IA",
     "processing": "Procesando...",
+    "viewDetails": "Ver detalles",
     "waitingQueue": "Esperando en cola…",
     "runningStage": "Ejecutando etapa",
     "stageGroups": {
