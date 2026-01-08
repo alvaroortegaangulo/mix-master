@@ -1027,6 +1027,51 @@
       "billing": "Facturación y Precios",
       "feedback": "Comentarios y Sugerencias",
       "other": "Otro"
+    },
+    "heroSearchPlaceholder": "¿Cómo podemos ayudarte hoy?",
+    "searchNoResults": "No se encontraron resultados para",
+    "quickAccess": {
+      "quickStart": "Guía de Inicio Rápido",
+      "videoTutorials": "Tutoriales de Video",
+      "videoTutorialsDesc": "Tutoriales paso a paso.",
+      "faq": "Preguntas Frecuentes",
+      "systemStatus": "Estado del Sistema",
+      "checkStatusDesc": "Verifica el estado en tiempo real de nuestro motor.",
+      "apiOperational": "API: Operativa",
+      "workerNodesOperational": "Nodos de trabajo: Operativos"
+    },
+    "articles": {
+      "formats": "Formatos de audio soportados (WAV, AIFF)",
+      "export": "Cómo exportar stems desde Ableton",
+      "levels": "Guía de niveles y headroom",
+      "payment": "Problemas de pago",
+      "refunds": "Política de reembolsos",
+      "mastering": "Masterización para Spotify vs Apple Music"
+    },
+    "contactTabs": {
+      "technical": "Soporte Técnico",
+      "billing": "Ayuda con Facturación",
+      "technicalDesc": "¿Tienes problemas técnicos? Describe tu incidencia y te ayudaremos.",
+      "billingDesc": "¿Dudas sobre tu plan o factura? Contacta con administración."
+    },
+    "billingOptions": {
+      "invoice": "Solicitar Factura",
+      "cancel": "Cancelar Suscripción",
+      "changePlan": "Cambiar Plan",
+      "paymentMethod": "Método de Pago"
+    },
+    "technicalOptions": {
+      "uploadError": "Problema con la subida de archivos",
+      "downloadError": "Error en la descarga",
+      "audioQuality": "Calidad del audio",
+      "other": "Otro"
+    },
+    "attachFile": "Adjuntar captura o log (Opcional)",
+    "systemStatus": {
+      "allSystemsOperational": "Todos los sistemas operativos",
+      "serviceStatus": "Estado del Servicio",
+      "privacyPolicy": "Política de Privacidad",
+      "terms": "Términos"
     }
   },
   "Profile": {
