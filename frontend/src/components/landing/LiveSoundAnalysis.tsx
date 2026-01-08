@@ -90,7 +90,7 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
 
           {/* LEFT PANEL: Frequency Spectrum */}
           <ScrollReveal
-            className="lg:col-span-2 bg-slate-900/50 rounded-3xl border border-slate-800 p-3 md:p-4 2xl:p-5 flex flex-col justify-between min-h-[190px] md:min-h-[220px] 2xl:min-h-[300px] shadow-2xl relative overflow-hidden"
+            className="lg:col-span-2 bg-slate-900/50 rounded-3xl border border-slate-800 p-3 md:p-4 2xl:p-6 flex flex-col justify-between min-h-[190px] md:min-h-[220px] 2xl:min-h-[500px] shadow-2xl relative overflow-hidden"
             delay={0.1}
           >
 
