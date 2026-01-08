@@ -307,7 +307,7 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
                         className="md:col-span-4 bg-slate-900/60 backdrop-blur-md border border-slate-800 rounded-3xl p-2 sm:p-3 flex flex-col min-h-[120px] sm:min-h-[140px] transition-transform duration-300 hover:-translate-y-1 hover:border-rose-500/70 hover:ring-1 hover:ring-rose-500/35"
                         delay={0.25}
                     >
-                        <h3 className="text-sm sm:text-base font-bold text-white mb-1.5 sm:mb-2 flex items-center font-['Orbitron']">
+                        <h3 className="text-sm sm:text-base 2xl:text-lg font-bold text-white mb-1.5 sm:mb-2 flex items-center font-['Orbitron']">
                             <AdjustmentsVerticalIcon className="w-3 h-3 sm:w-3.5 sm:h-3.5 mr-2 text-emerald-400" />
                             {t('toolkitTitle')}
                         </h3>
@@ -317,21 +317,21 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
                                 <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0 group-hover:bg-emerald-500 group-hover:text-white transition-colors text-emerald-400">
                                     <ArrowsRightLeftIcon className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                                 </div>
-                                <h4 className="text-[10px] sm:text-xs font-semibold text-slate-200">{t('toolkitItems.0.title')}</h4>
+                                <h4 className="text-[10px] sm:text-xs 2xl:text-sm font-semibold text-slate-200">{t('toolkitItems.0.title')}</h4>
                             </div>
                             {/* Feature Item */}
                             <div className="group flex items-center gap-1.5 sm:gap-2 p-0.5 sm:p-1 rounded-lg hover:bg-white/5 transition-colors cursor-default">
                                 <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0 group-hover:bg-emerald-500 group-hover:text-white transition-colors text-emerald-400">
                                     <AdjustmentsVerticalIcon className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                                 </div>
-                                <h4 className="text-[10px] sm:text-xs font-semibold text-slate-200">{t('toolkitItems.1.title')}</h4>
+                                <h4 className="text-[10px] sm:text-xs 2xl:text-sm font-semibold text-slate-200">{t('toolkitItems.1.title')}</h4>
                             </div>
                             {/* Feature Item */}
                             <div className="group flex items-center gap-1.5 sm:gap-2 p-0.5 sm:p-1 rounded-lg hover:bg-white/5 transition-colors cursor-default">
                                 <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0 group-hover:bg-emerald-500 group-hover:text-white transition-colors text-emerald-400">
                                     <SpeakerWaveIcon className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
                                 </div>
-                                <h4 className="text-[10px] sm:text-xs font-semibold text-slate-200">{t('toolkitItems.2.title')}</h4>
+                                <h4 className="text-[10px] sm:text-xs 2xl:text-sm font-semibold text-slate-200">{t('toolkitItems.2.title')}</h4>
                             </div>
                         </div>
                     </ScrollReveal>
@@ -344,8 +344,8 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
                         {/* Abstract BG */}
                         <div className="absolute top-0 right-0 w-32 h-32 bg-rose-500/10 rounded-full blur-3xl -mr-10 -mt-10"></div>
 
-                        <h3 className="text-sm sm:text-base font-bold text-white mb-1 sm:mb-1.5 relative z-10 font-['Orbitron']">{t('readyForWorldTitle')}</h3>
-                        <p className="text-[10px] sm:text-xs text-slate-400 mb-2 sm:mb-3 relative z-10">{t('readyForWorldDesc')}</p>
+                        <h3 className="text-sm sm:text-base 2xl:text-lg font-bold text-white mb-1 sm:mb-1.5 relative z-10 font-['Orbitron']">{t('readyForWorldTitle')}</h3>
+                        <p className="text-[10px] sm:text-xs 2xl:text-sm text-slate-400 mb-2 sm:mb-3 relative z-10">{t('readyForWorldDesc')}</p>
 
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2 relative z-10">
                             <div className="flex items-center justify-center p-1.5 sm:p-2 rounded-full opacity-80 hover:opacity-100 hover:scale-105 transition-all duration-300">
