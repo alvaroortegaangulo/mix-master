@@ -21,8 +21,23 @@
   },
   "ListenDifferenceSection": {
     "title": "Escucha la <amber>diferencia</amber>",
-    "subtitle": "Nuestra IA analiza y masteriza tu pista al instante. Alterna entre la versión original y la masterizada para sentir la potencia, claridad y volumen profesional.",
-    "cta": "Escuchar más ejemplos"
+    "subtitle": "Nuestra IA analiza tu pista y aplica compresión, ecualización y limitación de nivel de estudio al instante. Alterna abajo para sentir la potencia.",
+    "cta": "Escuchar más ejemplos",
+    "metrics": {
+      "integratedLufs": "Integrated LUFS",
+      "truePeak": "True Peak",
+      "lra": "LRA",
+      "crestFactor": "Crest Factor",
+      "correlation": "Correlation",
+      "diffLr": "Diff L/R"
+    },
+    "improvementsTitle": "Mejoras",
+    "improvements": {
+      "eqMatching": "EQ Matching AI",
+      "dynamicGlue": "Compresión Glue Dinámica",
+      "stereoWidth": "Mejora de Imagen Estéreo",
+      "truePeakLimiting": "Limitación True Peak"
+    }
   },
   "HeroSection": {
     "alertConstruction": "ACCESO BETA V2.0 DISPONIBLE",
