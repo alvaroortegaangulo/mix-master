@@ -108,7 +108,7 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
         </ScrollReveal>
 
         {/* Main Heading - LCP Element (No entrance animation to minimize render delay) */}
-        <h1 className="flex flex-col text-4xl font-extrabold tracking-[-0.02em] sm:text-5xl lg:text-6xl 2xl:text-8xl gap-1 2xl:gap-3 font-['Orbitron']">
+        <h1 className="flex flex-col text-4xl font-extrabold tracking-[-0.02em] sm:text-5xl lg:text-6xl 2xl:text-8xl gap-1 2xl:gap-3 font-['Orbitron'] glow-violet">
           <span className="text-white leading-[0.95]">
             {t('studioSound')}
           </span>

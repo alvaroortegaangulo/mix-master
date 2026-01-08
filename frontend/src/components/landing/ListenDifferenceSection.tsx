@@ -61,7 +61,8 @@ export function ListenDifferenceSection({ className }: { className?: string }) {
       <div className="relative z-10 mx-auto max-w-7xl w-full">
         <ScrollReveal className="mx-auto max-w-3xl text-center mb-10 md:mb-14" delay={0.05}>
           <h2
-            className="text-3xl sm:text-4xl md:text-5xl font-black font-['Orbitron'] tracking-tight text-white mb-4"
+            className="text-3xl sm:text-4xl md:text-5xl font-black font-['Orbitron'] tracking-tight text-white mb-4 glow-amber metallic-sheen"
+            data-text={titlePlain}
           >
             {t.rich("title", {
               amber: (chunks) => <span className="text-amber-400">{chunks}</span>,
