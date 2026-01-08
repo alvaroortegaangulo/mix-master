@@ -1,4 +1,4 @@
-# C:\mix-master\backend\src\analysis\S2_GROUP_PHASE_DRUMS.py
+#C:\mix-master\backend\src\analysis\S2_GROUP_PHASE_DRUMS.py
 
 from __future__ import annotations
 from utils.logger import logger
@@ -16,7 +16,6 @@ if str(SRC_DIR) not in sys.path:
 
 import json  # noqa: E402
 import numpy as np  # noqa: E402
-import soundfile as sf  # noqa: E402
 
 from utils.analysis_utils import (  # noqa: E402
     load_contract,
@@ -32,8 +31,6 @@ def _is_in_family(instrument_profile: str | None, target_family: str) -> bool:
     Clasificación mínima de familias.
 
     Para 'Drums', consideramos varios perfiles relacionados.
-    Idealmente esto saldría de profiles.json, pero lo dejamos
-    aquí para mantener el script operativo.
     """
     if not instrument_profile:
         return False
@@ -51,7 +48,6 @@ def _is_in_family(instrument_profile: str | None, target_family: str) -> bool:
         )
         return instrument_profile.startswith(prefixes)
 
-    # otras familias se podrían añadir aquí (Bass, Guitars, etc.)
     return False
 
 
@@ -65,6 +61,118 @@ def _normalize_audio(x: np.ndarray) -> np.ndarray:
     return x
 
 
+def _compute_lag_curve(
+    ref_norm: np.ndarray,
+    cand_norm: np.ndarray,
+    sr: int,
+    max_time_shift_ms_curve: float,
+    fmin: float,
+    fmax: float,
+    num_points: int,
+    window_sec: float,
+    correlation_min: float,
+) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
+    """
+    Estima el lag en varios anclajes temporales para detectar deriva.
+
+    Devuelve:
+      - lag_curve: lista de dicts con anchor_sample, anchor_sec, lag_samples, lag_ms, correlation, valid
+      - summary: dict con drift_range_ms, valid_points, etc.
+    """
+    ref_norm = np.asarray(ref_norm, dtype=np.float32)
+    cand_norm = np.asarray(cand_norm, dtype=np.float32)
+
+    min_len = int(min(ref_norm.shape[0], cand_norm.shape[0]))
+    if min_len <= 0 or sr <= 0:
+        return [], {
+            "enabled": False,
+            "reason": "audio vacío o sr inválido",
+        }
+
+    dur_sec = float(min_len / sr)
+
+    # Ajustes robustos de ventana
+    window_sec = float(window_sec)
+    window_sec = max(0.5, min(window_sec, 6.0, max(0.5, dur_sec * 0.25)))
+    win_len = int(round(window_sec * sr))
+    win_len = max(2048, min(win_len, min_len))
+
+    if num_points < 2:
+        num_points = 2
+
+    # Evitar anclajes justo en 0/fin (suele haber silencios/fades)
+    anchors = np.linspace(0.1, 0.9, num_points, dtype=np.float64) * dur_sec
+
+    curve: List[Dict[str, Any]] = []
+    for t_sec in anchors.tolist():
+        center = int(round(t_sec * sr))
+        start = int(center - win_len // 2)
+        start = max(0, min(start, min_len - win_len))
+        end = start + win_len
+
+        ref_seg = ref_norm[start:end]
+        cand_seg = cand_norm[start:end]
+
+        try:
+            res = estimate_best_lag_and_corr(
+                ref=ref_seg,
+                cand=cand_seg,
+                sr=sr,
+                max_time_shift_ms=max_time_shift_ms_curve,
+                fmin=fmin,
+                fmax=fmax,
+            )
+            lag_s = float(res["lag_samples"])
+            lag_ms = float(res["lag_ms"])
+            corr = float(res["correlation"])
+        except Exception as e:
+            lag_s = 0.0
+            lag_ms = 0.0
+            corr = float("-inf")
+            logger.logger.info(
+                f"[S2_GROUP_PHASE_DRUMS] Aviso: fallo al estimar lag_curve en t={t_sec:.2f}s: {e}"
+            )
+
+        valid = bool(np.isfinite(corr) and corr >= correlation_min)
+
+        curve.append(
+            {
+                "anchor_sec": float(start / sr),
+                "anchor_sample": int(start),
+                "window_sec": float(win_len / sr),
+                "lag_samples": float(lag_s),
+                "lag_ms": float(lag_ms),
+                "correlation": float(corr),
+                "valid": bool(valid),
+            }
+        )
+
+    valid_lags_ms = [p["lag_ms"] for p in curve if p.get("valid", False)]
+    valid_count = int(len(valid_lags_ms))
+
+    if valid_count >= 2:
+        drift_range_ms = float(max(valid_lags_ms) - min(valid_lags_ms))
+        lag_ms_median = float(np.median(np.asarray(valid_lags_ms, dtype=np.float32)))
+    elif valid_count == 1:
+        drift_range_ms = 0.0
+        lag_ms_median = float(valid_lags_ms[0])
+    else:
+        drift_range_ms = 0.0
+        lag_ms_median = 0.0
+
+    summary = {
+        "enabled": True,
+        "duration_sec_analyzed": float(dur_sec),
+        "num_points": int(num_points),
+        "window_sec_used": float(win_len / sr),
+        "max_time_shift_ms_curve": float(max_time_shift_ms_curve),
+        "valid_points": int(valid_count),
+        "drift_range_ms": float(drift_range_ms),
+        "lag_ms_median": float(lag_ms_median),
+    }
+    return curve, summary
+
+
 def _analyze_drum_stem(
     args: Tuple[
         int,
@@ -76,22 +184,18 @@ def _analyze_drum_stem(
         float,
         float,
         bool,
+        float,
+        bool,
+        int,
+        float,
+        float,
+        float,
     ]
 ) -> Tuple[int, Dict[str, Any]]:
     """
-
-    Recibe:
-      - idx: índice del stem en stems_info_raw / stem_files
-      - base_info: dict con info básica (file_name, file_path, instrument_profile, in_family)
-      - stem_path: ruta al .wav candidato
-      - ref_mono: array mono de la referencia
-      - ref_sr: samplerate de la referencia
-      - max_time_shift_ms: límite de desplazamiento en ms
-      - band_fmin / band_fmax: banda de frecuencia para la correlación
-      - allow_polarity_flip: si se evalúa o no la inversión de polaridad
-
-    Devuelve:
-      (idx, info_actualizada)
+    Analiza un stem candidato vs referencia:
+      - lag global + correlación (y flip de polaridad opcional)
+      - curva de lag a lo largo del tiempo para detectar deriva
     """
     (
         idx,
@@ -103,13 +207,18 @@ def _analyze_drum_stem(
         band_fmin,
         band_fmax,
         allow_polarity_flip,
+        correlation_min,
+        enable_time_varying,
+        drift_num_points,
+        drift_window_sec,
+        max_time_shift_ms_curve,
+        drift_min_range_ms,
     ) = args
 
     info = dict(base_info)
 
     cand_data, cand_sr = sf_read_limited(stem_path, always_2d=False)
     if cand_sr != ref_sr:
-        # En teoría no debería pasar tras S0_SESSION_FORMAT
         logger.logger.info(
             f"[S2_GROUP_PHASE_DRUMS] Advertencia: samplerate distinto en {stem_path.name} "
             f"({cand_sr} vs {ref_sr}), se trunca al menor."
@@ -120,16 +229,37 @@ def _analyze_drum_stem(
     else:
         cand_mono = np.asarray(cand_data, dtype=np.float32)
 
-    # Copias locales para normalizar sin tocar ref_mono original
     ref_local = np.asarray(ref_mono, dtype=np.float32)
-    cand_local = cand_mono
+    cand_local = np.asarray(cand_mono, dtype=np.float32)
+
+    # Truncar a longitud común para análisis estable
+    min_len = int(min(ref_local.shape[0], cand_local.shape[0]))
+    if min_len <= 0:
+        info.update(
+            {
+                "is_reference": False,
+                "lag_samples": 0.0,
+                "lag_ms": 0.0,
+                "correlation_band_100_500": float("-inf"),
+                "use_polarity_flip": False,
+                "time_varying_recommended": False,
+                "drift": {"enabled": False, "reason": "audio vacío"},
+                "lag_curve": [],
+            }
+        )
+        return idx, info
+
+    ref_local = ref_local[:min_len]
+    cand_local = cand_local[:min_len]
 
     ref_norm = _normalize_audio(ref_local)
     cand_norm = _normalize_audio(cand_local)
 
-    sr = ref_sr
+    sr = int(ref_sr)
 
-    # Opción 1: sin invertir polaridad
+    # -----------------------
+    # 1) Lag global (como antes)
+    # -----------------------
     res_norm = estimate_best_lag_and_corr(
         ref=ref_norm,
         cand=cand_norm,
@@ -138,9 +268,8 @@ def _analyze_drum_stem(
         fmin=band_fmin,
         fmax=band_fmax,
     )
-    corr_norm = res_norm["correlation"]
+    corr_norm = float(res_norm["correlation"])
 
-    # Opción 2: invertir polaridad
     if allow_polarity_flip:
         res_flip = estimate_best_lag_and_corr(
             ref=ref_norm,
@@ -150,10 +279,10 @@ def _analyze_drum_stem(
             fmin=band_fmin,
             fmax=band_fmax,
         )
-        corr_flip = res_flip["correlation"]
+        corr_flip = float(res_flip["correlation"])
     else:
         res_flip = None
-        corr_flip = -999.0
+        corr_flip = float("-inf")
 
     if corr_flip > corr_norm:
         best = res_flip
@@ -162,13 +291,52 @@ def _analyze_drum_stem(
         best = res_norm
         use_flip = False
 
+    lag_global_samples = float(best["lag_samples"])
+    lag_global_ms = float(best["lag_ms"])
+    corr_global = float(best["correlation"])
+
+    # -----------------------
+    # 2) Curva de deriva (time-varying)
+    # -----------------------
+    lag_curve: List[Dict[str, Any]] = []
+    drift_summary: Dict[str, Any] = {"enabled": False}
+
+    if enable_time_varying:
+        # Importante: la curva debe evaluarse con la misma polaridad que “gana”
+        cand_for_curve = (-cand_norm) if use_flip else cand_norm
+
+        lag_curve, drift_summary = _compute_lag_curve(
+            ref_norm=ref_norm,
+            cand_norm=cand_for_curve,
+            sr=sr,
+            max_time_shift_ms_curve=max_time_shift_ms_curve,
+            fmin=band_fmin,
+            fmax=band_fmax,
+            num_points=drift_num_points,
+            window_sec=drift_window_sec,
+            correlation_min=correlation_min,
+        )
+
+    drift_range_ms = float(drift_summary.get("drift_range_ms", 0.0)) if drift_summary else 0.0
+    valid_points = int(drift_summary.get("valid_points", 0)) if drift_summary else 0
+
+    time_varying_recommended = bool(
+        enable_time_varying
+        and valid_points >= 2
+        and drift_range_ms >= float(drift_min_range_ms)
+    )
+
     info.update(
         {
             "is_reference": False,
-            "lag_samples": best["lag_samples"],
-            "lag_ms": best["lag_ms"],
-            "correlation_band_100_500": best["correlation"],
-            "use_polarity_flip": use_flip,
+            "lag_samples": float(lag_global_samples),
+            "lag_ms": float(lag_global_ms),
+            "correlation_band_100_500": float(corr_global),
+            "use_polarity_flip": bool(use_flip),
+
+            "time_varying_recommended": bool(time_varying_recommended),
+            "drift": dict(drift_summary) if drift_summary else {"enabled": False},
+            "lag_curve": lag_curve,
         }
     )
 
@@ -196,9 +364,17 @@ def main() -> None:
 
     target_family = metrics.get("target_family", "Drums")
     correlation_min = float(metrics.get("correlation_min", 0.0))
+
     max_time_shift_ms = float(limits.get("max_time_shift_ms", 2.0))
     allow_polarity_flip = bool(limits.get("allow_polarity_flip", True))
     ref_instrument_id = contract.get("instrument_id", "Kick")
+
+    # --- NUEVO: parámetros deriva (con defaults seguros) ---
+    enable_time_varying = bool(limits.get("enable_time_varying_alignment", True))
+    drift_num_points = int(limits.get("drift_num_points", 5))
+    drift_window_sec = float(limits.get("drift_window_sec", 2.0))
+    max_time_shift_ms_curve = float(limits.get("max_time_shift_ms_curve", max(6.0, max_time_shift_ms * 4.0)))
+    drift_min_range_ms = float(limits.get("drift_min_range_ms", 0.25))  # umbral para “merece la pena”
 
     # 2) Directorio temp/<contract_id> y session_config
     temp_dir = get_temp_dir(contract_id, create=True)
@@ -214,7 +390,6 @@ def main() -> None:
 
     if not stem_files:
         logger.logger.info("[S2_GROUP_PHASE_DRUMS] No se han encontrado stems en temp.")
-        # Aun así generamos un JSON vacío
         session_state = {
             "contract_id": contract_id,
             "stage_id": stage_id,
@@ -227,6 +402,12 @@ def main() -> None:
                 "max_time_shift_ms": max_time_shift_ms,
                 "allow_polarity_flip": allow_polarity_flip,
                 "reference_stem_name": None,
+
+                "enable_time_varying_alignment": enable_time_varying,
+                "drift_num_points": drift_num_points,
+                "drift_window_sec": drift_window_sec,
+                "max_time_shift_ms_curve": max_time_shift_ms_curve,
+                "drift_min_range_ms": drift_min_range_ms,
             },
             "stems": [],
         }
@@ -256,7 +437,6 @@ def main() -> None:
 
     if not drum_indices:
         logger.logger.info("[S2_GROUP_PHASE_DRUMS] No hay stems de familia Drums según instrument_profile.")
-        # Aun así generamos JSON
         session_state = {
             "contract_id": contract_id,
             "stage_id": stage_id,
@@ -269,6 +449,12 @@ def main() -> None:
                 "max_time_shift_ms": max_time_shift_ms,
                 "allow_polarity_flip": allow_polarity_flip,
                 "reference_stem_name": None,
+
+                "enable_time_varying_alignment": enable_time_varying,
+                "drift_num_points": drift_num_points,
+                "drift_window_sec": drift_window_sec,
+                "max_time_shift_ms_curve": max_time_shift_ms_curve,
+                "drift_min_range_ms": drift_min_range_ms,
             },
             "stems": stems_info_raw,
         }
@@ -298,10 +484,9 @@ def main() -> None:
     BAND_FMIN = 100.0
     BAND_FMAX = 500.0
 
-    # Preparamos estructura de salida preservando orden
     stems_analysis: List[Dict[str, Any] | None] = [None] * len(stems_info_raw)
 
-    # 5) Rellenar casos triviales (no familia + referencia)
+    # 5) Casos triviales (no familia + referencia)
     for idx, base_info in enumerate(stems_info_raw):
         info = dict(base_info)
         in_family = info["in_family"]
@@ -315,6 +500,10 @@ def main() -> None:
                     "lag_ms": 0.0,
                     "correlation_band_100_500": None,
                     "use_polarity_flip": False,
+
+                    "time_varying_recommended": False,
+                    "drift": {"enabled": False},
+                    "lag_curve": [],
                 }
             )
             stems_analysis[idx] = info
@@ -326,19 +515,24 @@ def main() -> None:
                     "lag_ms": 0.0,
                     "correlation_band_100_500": 1.0,
                     "use_polarity_flip": False,
+
+                    "time_varying_recommended": False,
+                    "drift": {"enabled": False},
+                    "lag_curve": [],
                 }
             )
             stems_analysis[idx] = info
 
-    # 6) Preparar tareas para stems de drums que NO son referencia
-    tasks: List[Tuple[int, Dict[str, Any], Path, np.ndarray, int, float, float, float, bool]] = []
+    # 6) Tareas de drums que NO son referencia
+    tasks: List[
+        Tuple[int, Dict[str, Any], Path, np.ndarray, int, float, float, float, bool, float, bool, int, float, float, float]
+    ] = []
 
     for idx, base_info in enumerate(stems_info_raw):
-        in_family = base_info["in_family"]
-        if not in_family:
+        if not base_info["in_family"]:
             continue
         if idx == ref_idx:
-            continue  # ya tratado como referencia
+            continue
 
         stem_path = stem_files[idx]
         tasks.append(
@@ -352,20 +546,24 @@ def main() -> None:
                 BAND_FMIN,
                 BAND_FMAX,
                 allow_polarity_flip,
+                correlation_min,
+                enable_time_varying,
+                drift_num_points,
+                drift_window_sec,
+                max_time_shift_ms_curve,
+                drift_min_range_ms,
             )
         )
 
-    # 7) Ejecutar análisis para candidatos de drums en serie
+    # 7) Ejecutar análisis en serie
     if tasks:
         for idx_res, info_res in map(_analyze_drum_stem, tasks):
             stems_analysis[idx_res] = info_res
 
-    # Por seguridad, rellenar cualquier hueco que pudiera quedar (no debería)
     for idx, val in enumerate(stems_analysis):
         if val is None:
             stems_analysis[idx] = dict(stems_info_raw[idx])
 
-    # Cast seguro a List[Dict[str, Any]]
     stems_analysis_final: List[Dict[str, Any]] = [dict(x) for x in stems_analysis]
 
     session_state: Dict[str, Any] = {
@@ -382,6 +580,12 @@ def main() -> None:
             "reference_stem_name": ref_name,
             "band_fmin_hz": BAND_FMIN,
             "band_fmax_hz": BAND_FMAX,
+
+            "enable_time_varying_alignment": enable_time_varying,
+            "drift_num_points": drift_num_points,
+            "drift_window_sec": drift_window_sec,
+            "max_time_shift_ms_curve": max_time_shift_ms_curve,
+            "drift_min_range_ms": drift_min_range_ms,
         },
         "stems": stems_analysis_final,
     }

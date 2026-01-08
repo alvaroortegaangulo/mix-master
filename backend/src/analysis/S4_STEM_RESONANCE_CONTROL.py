@@ -124,6 +124,23 @@ def main() -> None:
     BAND_FMAX = float(metrics.get("res_band_fmax_hz", 12000.0))
     LOCAL_WINDOW_HZ = float(metrics.get("res_local_window_hz", 200.0))
 
+    # ------------------------------------------------------------
+    # NUEVO: Config "protección de transitorios" (solo config, no análisis DSP)
+    # ------------------------------------------------------------
+    transient_cfg = {
+        "enable_transient_protection": bool(limits.get("enable_transient_protection", True)),
+        "transient_frame_ms": float(limits.get("transient_frame_ms", 5.0)),
+        "transient_fast_attack_ms": float(limits.get("transient_fast_attack_ms", 1.0)),
+        "transient_fast_release_ms": float(limits.get("transient_fast_release_ms", 25.0)),
+        "transient_slow_attack_ms": float(limits.get("transient_slow_attack_ms", 25.0)),
+        "transient_slow_release_ms": float(limits.get("transient_slow_release_ms", 200.0)),
+        "transient_threshold": float(limits.get("transient_threshold", 0.60)),
+        "transient_min_rms_db": float(limits.get("transient_min_rms_db", -45.0)),
+        "transient_hold_ms": float(limits.get("transient_hold_ms", 4.0)),
+        "transient_bypass_release_ms": float(limits.get("transient_bypass_release_ms", 25.0)),
+        "transient_bypass_strength": float(limits.get("transient_bypass_strength", 1.0)),  # 1.0 = bypass total del notch
+    }
+
     temp_dir = get_temp_dir(contract_id, create=True)
     cfg = load_session_config(contract_id)
     style_preset = cfg["style_preset"]
@@ -168,6 +185,9 @@ def main() -> None:
             "res_band_fmax_hz": BAND_FMAX,
             "res_local_window_hz": LOCAL_WINDOW_HZ,
             "total_resonances_detected": int(total_resonances),
+
+            # NUEVO
+            "transient_protection": transient_cfg,
         },
         "stems": stems_analysis,
     }
