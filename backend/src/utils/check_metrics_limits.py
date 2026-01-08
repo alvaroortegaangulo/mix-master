@@ -1362,6 +1362,12 @@ def _check_S8_MIXBUS_COLOR_GENERIC(data: Dict[str, Any]) -> bool:
     except (TypeError, ValueError):
         max_sat_per_pass_contract = 1.0
 
+    # --- CORRECCIÓN CLAVE: Leer límite de ganancia del contrato (ej. 6.0 dB) ---
+    try:
+        max_gain_allowed = float(limits_from_contract.get("max_gain_change_db_per_pass", 2.0))
+    except (TypeError, ValueError):
+        max_gain_allowed = 2.0
+
     temp_dir = get_temp_dir(contract_id, create=False)
     metrics_path = temp_dir / "color_metrics_S8_MIXBUS_COLOR_GENERIC.json"
     if not metrics_path.exists():
@@ -1399,8 +1405,7 @@ def _check_S8_MIXBUS_COLOR_GENERIC(data: Dict[str, Any]) -> bool:
 
     # Guardas “calidad”
     NF_COMP_WARN_DB = 1.5  # si el noise floor compensado sube > 1.5 dB, hay suciedad añadida
-    BIG_LIFT_WARN_DB = 2.0 # subir >2 dB en un stage de color es sospechoso
-
+    
     ok = True
 
     # 1) True peak: NO permitir pasarse del máximo. Si queda bajo y under_levelled, WARN (no FAIL).
@@ -1433,8 +1438,9 @@ def _check_S8_MIXBUS_COLOR_GENERIC(data: Dict[str, Any]) -> bool:
         ok = False
 
     # 4) Guardas informativas sobre lift grande / ruido
-    if abs(trim_total_db) > BIG_LIFT_WARN_DB:
-        logger.print_metric("Trim Total", trim_total_db, target=f"<= {BIG_LIFT_WARN_DB}", status="WARN", details="Large lift in color stage")
+    # --- CORRECCIÓN APLICADA: Usar max_gain_allowed en lugar de hardcode 2.0 ---
+    if abs(trim_total_db) > max_gain_allowed:
+        logger.print_metric("Trim Total", trim_total_db, target=f"<= {max_gain_allowed}", status="WARN", details="Large lift in color stage")
 
     if isinstance(nf_comp_delta, (int, float)):
         if float(nf_comp_delta) > NF_COMP_WARN_DB:

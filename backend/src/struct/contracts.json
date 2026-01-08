@@ -281,6 +281,7 @@
             "max_thd_percent": 3.0
           },
           "limits": {
+            "max_gain_change_db_per_pass": 6.0,
             "max_additional_saturation_per_pass": 1.0
           }
         }
