@@ -303,10 +303,7 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
                         <div className="hidden md:flex h-full w-full flex-col items-center pt-4 pb-4">
                           <step.icon className={`w-6 h-6 lg:w-8 lg:h-8 ${colors.text} group-hover:scale-125 transition-transform duration-300 drop-shadow-lg`} />
                           <div className="flex-1 flex items-center justify-center">
-                            <h3 className="vertical-text 2xl:hidden text-[10px] lg:text-sm font-bold tracking-widest text-slate-400 group-hover:text-white transition-colors font-['Orbitron'] uppercase">
-                              {step.title}
-                            </h3>
-                            <h3 className="hidden 2xl:block text-center text-sm font-bold tracking-widest text-slate-400 group-hover:text-white transition-colors font-['Orbitron'] uppercase">
+                            <h3 className="vertical-text text-[10px] lg:text-sm font-bold tracking-widest text-slate-400 group-hover:text-white transition-colors font-['Orbitron'] uppercase">
                               {step.title}
                             </h3>
                           </div>
