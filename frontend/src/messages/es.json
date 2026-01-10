@@ -33,10 +33,38 @@
     },
     "improvementsTitle": "Mejoras",
     "improvements": {
-      "eqMatching": "EQ Matching AI",
-      "dynamicGlue": "Compresión Glue Dinámica",
-      "stereoWidth": "Mejora de Imagen Estéreo",
-      "truePeakLimiting": "Limitación True Peak"
+      "instantProSound": {
+        "title": "Sonido “pro” al instante",
+        "description": "Lleva tu mezcla a un acabado más pulido y competitivo en segundos."
+      },
+      "claritySeparation": {
+        "title": "Más claridad y separación",
+        "description": "Limpia la mezcla para que cada elemento se entienda mejor y respire."
+      },
+      "punchyLows": {
+        "title": "Graves con pegada, sin bola",
+        "description": "Refuerza el low-end manteniéndolo firme, controlado y definido."
+      },
+      "presence": {
+        "title": "Presencia que se nota",
+        "description": "Haz que lo importante destaque sin necesidad de subir el volumen."
+      },
+      "premiumSheen": {
+        "title": "Brillo premium, cero aspereza",
+        "description": "Aporta aire y detalle manteniendo un sonido suave y agradable."
+      },
+      "glueCohesion": {
+        "title": "Pegada y cohesión",
+        "description": "Une la mezcla con dinámica controlada para un resultado más sólido."
+      },
+      "platformLoudness": {
+        "title": "Volumen listo para plataformas",
+        "description": "Optimiza el nivel percibido para que suene fuerte y consistente donde lo subas."
+      },
+      "stereoWidth": {
+        "title": "Estéreo más amplio y estable",
+        "description": "Mejora la sensación de espacio sin comprometer la compatibilidad en mono."
+      }
     }
   },
   "HeroSection": {

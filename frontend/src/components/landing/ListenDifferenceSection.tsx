@@ -9,7 +9,11 @@ import {
   SparklesIcon,
   BoltIcon,
   ArrowsPointingOutIcon,
-  ShieldCheckIcon
+  MicrophoneIcon,
+  SunIcon,
+  CubeTransparentIcon,
+  ArrowUpTrayIcon,
+  WifiIcon
 } from "@heroicons/react/24/outline";
 
 export function ListenDifferenceSection({ className }: { className?: string }) {
@@ -41,10 +45,46 @@ export function ListenDifferenceSection({ className }: { className?: string }) {
   const currentMetrics = showOriginal ? metricsData.original : metricsData.master;
 
   const improvements = [
-    { icon: SparklesIcon, key: "eqMatching" },
-    { icon: BoltIcon, key: "dynamicGlue" },
-    { icon: ArrowsPointingOutIcon, key: "stereoWidth" },
-    { icon: ShieldCheckIcon, key: "truePeakLimiting" }
+    {
+      key: "instantProSound",
+      icon: SparklesIcon,
+      color: "bg-blue-500/10 text-blue-400"
+    },
+    {
+      key: "claritySeparation",
+      icon: ArrowsPointingOutIcon,
+      color: "bg-emerald-500/10 text-emerald-400"
+    },
+    {
+      key: "punchyLows",
+      icon: BoltIcon,
+      color: "bg-purple-500/10 text-purple-400"
+    },
+    {
+      key: "presence",
+      icon: MicrophoneIcon,
+      color: "bg-orange-500/10 text-orange-400"
+    },
+    {
+      key: "premiumSheen",
+      icon: SunIcon,
+      color: "bg-yellow-500/10 text-yellow-400"
+    },
+    {
+      key: "glueCohesion",
+      icon: CubeTransparentIcon,
+      color: "bg-indigo-500/10 text-indigo-400"
+    },
+    {
+      key: "platformLoudness",
+      icon: ArrowUpTrayIcon,
+      color: "bg-rose-500/10 text-rose-400"
+    },
+    {
+      key: "stereoWidth",
+      icon: WifiIcon,
+      color: "bg-cyan-500/10 text-cyan-400"
+    }
   ];
 
   return (
@@ -162,30 +202,29 @@ export function ListenDifferenceSection({ className }: { className?: string }) {
           </div>
         </ScrollReveal>
 
-        {/* Improvements Section */}
-        <ScrollReveal className="mt-8" delay={0.2}>
-           <div className="rounded-[24px] bg-slate-900/40 border border-slate-800/60 p-6 backdrop-blur">
-              <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-                 <h3 className="text-lg font-bold text-white shrink-0 pr-4 border-r border-slate-800 hidden md:block">
-                    {t("improvementsTitle")}
-                 </h3>
-                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full">
-                    {improvements.map(({ icon: Icon, key }) => (
-                      <div key={key} className="flex items-center gap-3 bg-slate-950/50 rounded-xl p-3 border border-slate-800/50">
-                         <div className={`p-2 rounded-lg ${showOriginal ? 'bg-slate-800 text-slate-500' : 'bg-teal-500/10 text-teal-400'}`}>
-                           <Icon className="w-5 h-5" />
-                         </div>
-                         <span className="text-xs sm:text-sm font-medium text-slate-300 leading-tight">
-                           {t(`improvements.${key}`)}
-                         </span>
-                      </div>
-                    ))}
-                 </div>
+        {/* Improvements Grid */}
+        <ScrollReveal className="mt-12" delay={0.2}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {improvements.map(({ icon: Icon, key, color }) => (
+              <div
+                key={key}
+                className="bg-slate-900/40 border border-slate-800 rounded-2xl p-6 hover:bg-slate-900/60 transition-colors duration-300"
+              >
+                <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-4 ${color}`}>
+                  <Icon className="w-6 h-6" />
+                </div>
+                <h3 className="text-white font-bold text-base mb-2">
+                  {t(`improvements.${key}.title`)}
+                </h3>
+                <p className="text-slate-400 text-sm leading-relaxed">
+                  {t(`improvements.${key}.description`)}
+                </p>
               </div>
-           </div>
+            ))}
+          </div>
         </ScrollReveal>
 
-        <ScrollReveal className="mt-10 flex justify-center" delay={0.25}>
+        <ScrollReveal className="mt-12 flex justify-center" delay={0.25}>
           <Link
             href="/examples"
             className="inline-flex items-center justify-center rounded-full bg-amber-400 px-8 py-3 text-sm font-bold text-slate-950 shadow-lg shadow-amber-500/20 transition hover:bg-amber-300 hover:scale-105 active:scale-95"

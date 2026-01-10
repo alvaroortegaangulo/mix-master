@@ -22,7 +22,42 @@
   "ListenDifferenceSection": {
     "title": "Hear the <amber>difference</amber>",
     "subtitle": "Our AI analyzes and masters your track instantly. Switch between the original and the master to feel the power, clarity, and professional loudness.",
-    "cta": "Listen to more examples"
+    "cta": "Listen to more examples",
+    "improvementsTitle": "Improvements",
+    "improvements": {
+      "instantProSound": {
+        "title": "Instant \"Pro\" Sound",
+        "description": "Take your mix to a polished, competitive finish in seconds."
+      },
+      "claritySeparation": {
+        "title": "More Clarity & Separation",
+        "description": "Clean up the mix so every element is understood better and breathes."
+      },
+      "punchyLows": {
+        "title": "Punchy Lows, No Mud",
+        "description": "Reinforce the low-end keeping it tight, controlled, and defined."
+      },
+      "presence": {
+        "title": "Noticeable Presence",
+        "description": "Make what's important stand out without needing to raise the volume."
+      },
+      "premiumSheen": {
+        "title": "Premium Sheen, Zero Harshness",
+        "description": "Add air and detail while keeping the sound smooth and pleasant."
+      },
+      "glueCohesion": {
+        "title": "Punch & Cohesion",
+        "description": "Glue the mix with controlled dynamics for a more solid result."
+      },
+      "platformLoudness": {
+        "title": "Platform-Ready Loudness",
+        "description": "Optimize perceived level to sound loud and consistent wherever you upload."
+      },
+      "stereoWidth": {
+        "title": "Wider & Stable Stereo",
+        "description": "Improve the sense of space without compromising mono compatibility."
+      }
+    }
   },
   "HeroSection": {
     "alertConstruction": "BETA ACCESS V2.0 AVAILABLE",
