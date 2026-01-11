@@ -83,48 +83,6 @@ export async function HeroSection() {
           </Link>
         </div>
 
-        <style jsx>{`
-          .hero-faq-pop {
-            animation: hero-faq-pop 0.75s cubic-bezier(0.22, 1.2, 0.32, 1) 0.2s both;
-          }
-
-          .hero-faq-float {
-            animation: hero-faq-float 4.2s ease-in-out 1.2s infinite;
-            will-change: transform;
-          }
-
-          .shine-delayed::before {
-            animation-delay: 0.6s !important;
-          }
-
-          @keyframes hero-faq-pop {
-            0% {
-              transform: scale(0);
-              opacity: 0;
-            }
-            65% {
-              transform: scale(1.06);
-              opacity: 1;
-            }
-            85% {
-              transform: scale(0.98);
-            }
-          100% {
-            transform: scale(1);
-          }
-        }
-
-        @keyframes hero-faq-float {
-          0%,
-          100% {
-            transform: translateY(0);
-          }
-          50% {
-            transform: translateY(-6px);
-          }
-        }
-      `}</style>
-
       </div>
 
       <div className="absolute inset-0 opacity-[0.55] pointer-events-none mix-blend-screen z-[1]">
