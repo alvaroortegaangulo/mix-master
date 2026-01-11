@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import Image from "next/image";
-import { PlayCircleIcon, StarIcon } from "@heroicons/react/24/solid";
+import { PlayCircleIcon } from "@heroicons/react/24/solid";
 import { useTranslations } from 'next-intl';
 import { Link } from '../../i18n/routing';
 import { ScrollReveal } from "./ScrollReveal";
@@ -207,18 +207,6 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
         }
       `}</style>
 
-        {/* Rating Section */}
-        <ScrollReveal
-          className="flex items-center gap-2 text-[11px] font-medium text-slate-300 mt-1 sm:mt-2 sm:text-xs 2xl:text-base 2xl:mt-4"
-          delay={0.25}
-        >
-          <div className="flex items-center gap-1 text-amber-300">
-            <StarIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4 2xl:h-5 2xl:w-5" aria-hidden="true" />
-            <span>{t('rating')}</span>
-          </div>
-          <span className="text-slate-400">&bull;</span>
-          <span>{t('tracksMastered')}</span>
-        </ScrollReveal>
       </div>
 
       <div className="absolute inset-0 opacity-[0.55] pointer-events-none mix-blend-screen z-[1]">
