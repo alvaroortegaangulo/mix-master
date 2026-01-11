@@ -127,7 +127,7 @@ export function FeaturesSection({ className }: { className?: string }) {
   const getGradientColors = () => "from-amber-300 via-amber-400 to-orange-400";
 
   return (
-    <section id="features" className={`relative isolate z-0 min-h-screen flex items-center justify-center px-4 py-10 md:py-14 lg:py-16 2xl:py-20 text-white overflow-hidden ${className || 'bg-[#050508]'}`}>
+    <section id="features" className={`relative isolate z-0 min-h-screen flex items-center justify-center px-4 py-10 md:py-14 lg:py-16 2xl:py-20 text-white overflow-hidden ${className || ''}`}>
       <AuroraBackground />
       <div className="relative z-10 max-w-7xl w-full mx-auto">
 
