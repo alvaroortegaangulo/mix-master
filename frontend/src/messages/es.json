@@ -20,7 +20,8 @@
     "startMixing": "Empieza a Mezclar Gratis"
   },
   "ListenDifferenceSection": {
-    "title": "Escucha la <amber>diferencia</amber>",
+    "titleMain": "Escucha la <amber>diferencia</amber>",
+    "titlePlain": "Escucha la diferencia",
     "subtitle": "Nuestra IA analiza tu pista y aplica compresión, ecualización y limitación de nivel de estudio al instante. Alterna abajo para sentir la potencia.",
     "cta": "Escuchar más ejemplos",
     "metrics": {

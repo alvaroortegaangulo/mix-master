@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { SpeakerWaveIcon } from "@heroicons/react/24/outline";
 import { useTranslations } from "next-intl";
 import { ScrollReveal } from "./ScrollReveal";
+import { GridBackground } from "./GridBackground";
 
 export function LiveSoundAnalysis({ className }: { className?: string }) {
   const t = useTranslations('LiveSoundAnalysis');
@@ -63,11 +64,7 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
 
     return (
     <section className={`lg:min-h-screen flex flex-col justify-center py-12 md:py-14 lg:py-16 2xl:py-20 border-t border-slate-900 relative overflow-hidden ${className || 'bg-slate-950'}`}>
-        {/* Background image */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
-            <div className="absolute inset-0 analysis-wallpaper" />
-            <div className="absolute inset-0 analysis-wallpaper-overlay" />
-        </div>
+        <GridBackground />
 
       <div className="max-w-7xl 2xl:max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 2xl:px-4 relative z-10">
         {/* Header */}
@@ -146,7 +143,7 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
 
 
           {/* RIGHT COLUMN: Metrics Cards */}
-          <ScrollReveal className="flex flex-col gap-3" delay={0.15}>
+          <ScrollReveal className="flex flex-col gap-3 h-full justify-between" delay={0.15}>
 
              {/* Card 1: Integrated Loudness */}
              <div className="bg-slate-900/50 rounded-2xl border border-slate-800 p-3 2xl:p-4 shadow-lg relative group overflow-hidden">

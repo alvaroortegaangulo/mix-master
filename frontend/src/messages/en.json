@@ -20,7 +20,8 @@
     "startMixing": "Start Mixing for Free"
   },
   "ListenDifferenceSection": {
-    "title": "Hear the <amber>difference</amber>",
+    "titleMain": "Hear the <amber>difference</amber>",
+    "titlePlain": "Hear the difference",
     "subtitle": "Our AI analyzes and masters your track instantly. Switch between the original and the master to feel the power, clarity, and professional loudness.",
     "cta": "Listen to more examples",
     "metrics": {

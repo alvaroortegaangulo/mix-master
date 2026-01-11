@@ -79,47 +79,6 @@ body {
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
 }
 
-.section-blend {
-  position: relative;
-}
-
-.section-blend::before,
-.section-blend::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  right: 0;
-  height: var(--blend-size, clamp(64px, 12vw, 240px));
-  pointer-events: none;
-  z-index: 5;
-  opacity: var(--blend-opacity, 1);
-}
-
-.section-blend::before {
-  top: 0;
-  background: linear-gradient(to bottom, var(--blend-prev, transparent), transparent);
-}
-
-.section-blend::after {
-  bottom: 0;
-  background: linear-gradient(to top, var(--blend-next, transparent), transparent);
-}
-
-.blend-prev-slate-950 {
-  --blend-prev: var(--color-slate-950);
-}
-
-.blend-prev-slate-900 {
-  --blend-prev: var(--color-slate-900);
-}
-
-.blend-next-slate-950 {
-  --blend-next: var(--color-slate-950);
-}
-
-.blend-next-slate-900 {
-  --blend-next: var(--color-slate-900);
-}
 
 @layer utilities {
   .custom-scrollbar::-webkit-scrollbar {
@@ -645,4 +604,13 @@ body {
 
 .animate-fade-in-down {
   animation: fade-in-down 0.8s ease-out;
+}
+
+@keyframes grid-flow {
+  0% { background-position: 0% 0%; }
+  100% { background-position: 0% 50px; }
+}
+
+.animate-grid-flow {
+  animation: grid-flow 2s linear infinite;
 }

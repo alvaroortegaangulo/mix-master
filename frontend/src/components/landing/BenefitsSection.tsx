@@ -1,6 +1,7 @@
 import { useRef, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { ScrollReveal } from "./ScrollReveal";
+import { PipelineBackground } from "./PipelineBackground";
 import {
   BoltIcon,
   CheckCircleIcon,
@@ -147,20 +148,11 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
 
   return (
     <section id="benefits" className={`lg:min-h-screen flex flex-col justify-center py-12 md:py-14 lg:py-16 2xl:py-20 relative overflow-hidden ${className || 'bg-slate-950'}`}>
-        {/* Background Elements */}
-        <div className="absolute inset-0 pointer-events-none z-0">
-            <div className="absolute -inset-6 blur-[4px] scale-[1.02]">
-              <div className="absolute inset-0 benefits-burgundy-base" />
-              <div className="absolute inset-0 benefits-burgundy-grid" />
-              <div className="absolute inset-0 benefits-burgundy-pipes" />
-              <div className="absolute inset-0 benefits-burgundy-lines" />
-              <div className="absolute inset-0 benefits-burgundy-vignette" />
-              <div className="absolute -top-[20%] right-[-15%] h-[48%] w-[48%] rounded-full benefits-burgundy-glow" />
-              <div className="absolute bottom-[-25%] left-[-10%] h-[55%] w-[55%] rounded-full benefits-burgundy-glow-soft" />
-            </div>
-        </div>
+        {/* Fondo Animado Pro */}
+        <div className="absolute inset-0 z-0 bg-gradient-to-b from-slate-950 via-rose-950/20 to-slate-950" />
+        <PipelineBackground />
 
-            <div className="relative z-10 max-w-7xl 2xl:max-w-[1600px] w-full mx-auto space-y-6 px-4 sm:px-6 lg:px-8 2xl:px-4">
+        <div className="relative z-10 max-w-7xl 2xl:max-w-[1600px] w-full mx-auto space-y-6 px-4 sm:px-6 lg:px-8 2xl:px-4">
 
             {/* Header */}
             <ScrollReveal className="text-right" delay={0.05}>
