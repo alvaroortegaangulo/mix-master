@@ -24,12 +24,30 @@
     "subtitle": "Nuestra IA analiza tu pista y aplica compresión, ecualización y limitación de nivel de estudio al instante. Alterna abajo para sentir la potencia.",
     "cta": "Escuchar más ejemplos",
     "metrics": {
-      "integratedLufs": "Integrated LUFS",
-      "truePeak": "True Peak",
-      "lra": "LRA",
-      "crestFactor": "Crest Factor",
-      "correlation": "Correlation",
-      "diffLr": "Diff L/R"
+      "integratedLufs": {
+        "label": "Volumen final",
+        "tooltip": "Loudness integrado (Integrated LUFS). Más alto = suena más fuerte."
+      },
+      "truePeak": {
+        "label": "Picos seguros",
+        "tooltip": "True Peak. Evita distorsión/clipping en plataformas."
+      },
+      "lra": {
+        "label": "Dinámica",
+        "tooltip": "Rango dinámico (LRA). Más bajo = más consistente; más alto = más contrastes."
+      },
+      "crestFactor": {
+        "label": "Pegada",
+        "tooltip": "Crest Factor. Relación entre picos y nivel medio: sensación de ‘impacto’."
+      },
+      "correlation": {
+        "label": "Mono-safe",
+        "tooltip": "Correlación estéreo. Cerca de 1 = estable; negativo puede indicar problemas al sumar a mono."
+      },
+      "diffLr": {
+        "label": "Balance L/R",
+        "tooltip": "Diferencia de nivel entre canales. Cerca de 0 = centrado."
+      }
     },
     "improvementsTitle": "Mejoras",
     "improvements": {
@@ -1170,7 +1188,7 @@
       },
       "3": {
         "title": "4. Propiedad Intelectual",
-        "content": "Conservas todos los derechos y la propiedad de tu contenido original. Al subir contenido, nos otorgas una licencia limitada para procesar, almacenar y modificar tu contenido únicamente con el propósito de proporcionarte el servicio. El resultado procesado es de tu propiedad."
+        "content": "Conservas todos los derechos y la propiedad de tu contenido original. Al subir contenido, nos otorgas una licencia limitada para procesar, almacenar y modificar tu contenido únicamente con el propósito de proporcionar el servicio. El resultado procesado es de tu propiedad."
       },
       "4": {
         "title": "5. Limitación de Responsabilidad",

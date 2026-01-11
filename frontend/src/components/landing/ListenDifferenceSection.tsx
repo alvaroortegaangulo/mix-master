@@ -13,7 +13,8 @@ import {
   SunIcon,
   CubeTransparentIcon,
   ArrowUpTrayIcon,
-  WifiIcon
+  WifiIcon,
+  InformationCircleIcon
 } from "@heroicons/react/24/outline";
 
 export function ListenDifferenceSection({ className }: { className?: string }) {
@@ -25,20 +26,20 @@ export function ListenDifferenceSection({ className }: { className?: string }) {
 
   const metricsData = {
     original: {
-      integratedLufs: "-16.0",
-      truePeak: "-4.5 dBTP",
-      lra: "5.5 LU",
-      crestFactor: "14.2 dB",
-      correlation: "0.82",
-      diffLr: "0.35 dB"
+      integratedLufs: { value: "-16.0", unit: "LUFS" },
+      truePeak: { value: "-4.5", unit: "dBTP" },
+      lra: { value: "5.5", unit: "LU" },
+      crestFactor: { value: "14.2", unit: "dB" },
+      correlation: { value: "0.82", unit: "" },
+      diffLr: { value: "0.35", unit: "dB" }
     },
     master: {
-      integratedLufs: "-9.5",
-      truePeak: "-0.2 dBTP",
-      lra: "3.5 LU",
-      crestFactor: "9.8 dB",
-      correlation: "0.98",
-      diffLr: "0.05 dB"
+      integratedLufs: { value: "-9.5", unit: "LUFS" },
+      truePeak: { value: "-0.2", unit: "dBTP" },
+      lra: { value: "3.5", unit: "LU" },
+      crestFactor: { value: "9.8", unit: "dB" },
+      correlation: { value: "0.98", unit: "" },
+      diffLr: { value: "0.05", unit: "dB" }
     }
   };
 
@@ -183,18 +184,30 @@ export function ListenDifferenceSection({ className }: { className?: string }) {
             <div className="flex-1 relative rounded-[28px] border border-slate-800 bg-slate-900/60 p-6 sm:p-8 shadow-xl backdrop-blur flex flex-col justify-center">
                <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
                  <span className="w-2 h-2 rounded-full bg-teal-500 animate-pulse"></span>
-                 {t("metrics.integratedLufs")}
+                 {t("metrics.integratedLufs.label")}
                </h3>
 
                <div className="space-y-5">
-                 {Object.entries(currentMetrics).map(([key, value]) => (
-                   <div key={key} className="flex justify-between items-end border-b border-slate-800/60 pb-2">
-                     <span className="text-sm text-slate-400 font-medium">
-                        {t(`metrics.${key}`)}
-                     </span>
-                     <span className={`text-base font-mono font-bold ${showOriginal ? 'text-slate-300' : 'text-teal-400'}`}>
-                       {value}
-                     </span>
+                 {Object.entries(currentMetrics).map(([key, { value, unit }]) => (
+                   <div key={key} className="flex justify-between items-center border-b border-slate-800/60 pb-2">
+                     <div className="flex items-center gap-2">
+                       <span className="text-sm text-slate-400 font-medium">
+                          {t(`metrics.${key}.label`)}
+                       </span>
+                       <div className="group relative">
+                          <InformationCircleIcon className="w-4 h-4 text-slate-600 hover:text-teal-400 cursor-help transition-colors" />
+                          <div className="absolute bottom-full left-1/2 mb-2 hidden -translate-x-1/2 whitespace-normal rounded-lg bg-slate-800 px-3 py-2 text-xs text-white shadow-xl w-48 z-50 border border-slate-700 pointer-events-none group-hover:block">
+                            {t(`metrics.${key}.tooltip`)}
+                            <div className="absolute top-full left-1/2 -mt-1 -ml-1 h-2 w-2 border-r border-b border-slate-700 bg-slate-800 rotate-45"></div>
+                          </div>
+                       </div>
+                     </div>
+                     <div className="text-right">
+                       <span className={`text-base font-mono font-bold ${showOriginal ? 'text-slate-300' : 'text-teal-400'}`}>
+                         {value}
+                       </span>
+                       {unit && <span className="text-xs text-slate-500 ml-1">{unit}</span>}
+                     </div>
                    </div>
                  ))}
                </div>
