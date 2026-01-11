@@ -1,7 +1,7 @@
 import { useRef, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { ScrollReveal } from "./ScrollReveal";
-import { PipelineBackground } from "./PipelineBackground";
+import { ComplexPipelineBackground } from "./ComplexPipelineBackground";
 import {
   BoltIcon,
   CheckCircleIcon,
@@ -149,8 +149,7 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
   return (
     <section id="benefits" className={`lg:min-h-screen flex flex-col justify-center py-12 md:py-14 lg:py-16 2xl:py-20 relative isolate z-0 overflow-hidden ${className || 'bg-slate-950'}`}>
         {/* Fondo Animado Pro */}
-        <div className="absolute inset-0 z-0 bg-gradient-to-b from-slate-950 via-rose-950/20 to-slate-950" />
-        <PipelineBackground />
+        <ComplexPipelineBackground />
 
         <div className="relative z-10 max-w-7xl 2xl:max-w-[1600px] w-full mx-auto space-y-6 px-4 sm:px-6 lg:px-8 2xl:px-4">
 
