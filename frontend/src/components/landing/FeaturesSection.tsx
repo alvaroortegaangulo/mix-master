@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { ScrollReveal } from "./ScrollReveal";
+import { AuroraBackground } from "./AuroraBackground";
 
 // Define icons locally to avoid import issues
 const CpuChipIcon = (props: React.SVGProps<SVGSVGElement>) => (
@@ -127,13 +128,7 @@ export function FeaturesSection({ className }: { className?: string }) {
 
   return (
     <section id="features" className={`relative min-h-screen flex items-center justify-center px-4 py-10 md:py-14 lg:py-16 2xl:py-20 text-white overflow-hidden ${className || 'bg-[#050508]'}`}>
-      <div className="absolute inset-0 pointer-events-none z-0">
-        <div className="absolute inset-0 bg-[#050508]" />
-        <div className="absolute inset-0 grid-landing-diagonal" />
-        <div className="absolute inset-0 grid-landing-vignette" />
-        <div className="absolute -top-[22%] left-1/2 h-[42%] w-[42%] -translate-x-1/2 rounded-full bg-amber-500/12 blur-[140px]" />
-        <div className="absolute top-[6%] left-1/2 h-[28%] w-[28%] -translate-x-1/2 rounded-full bg-orange-400/12 blur-[120px]" />
-      </div>
+      <AuroraBackground />
       <div className="relative z-10 max-w-7xl w-full mx-auto">
 
         {/* Header */}
