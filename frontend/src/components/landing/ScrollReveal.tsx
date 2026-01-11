@@ -1,7 +1,8 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { motion, useReducedMotion } from "framer-motion";
+import { useEffect, useRef } from "react";
+import { useReducedMotion } from "framer-motion";
 
 type ScrollRevealProps = {
   children: ReactNode;
@@ -11,6 +12,24 @@ type ScrollRevealProps = {
   y?: number;
   once?: boolean;
   amount?: number;
+};
+
+type ScrollRevealInstance = ReturnType<typeof import("scrollreveal").default>;
+
+let sharedInstance: ScrollRevealInstance | null = null;
+let sharedPromise: Promise<ScrollRevealInstance> | null = null;
+
+const getScrollReveal = () => {
+  if (sharedInstance) {
+    return Promise.resolve(sharedInstance);
+  }
+  if (!sharedPromise) {
+    sharedPromise = import("scrollreveal").then((mod) => {
+      sharedInstance = mod.default();
+      return sharedInstance;
+    });
+  }
+  return sharedPromise;
 };
 
 export function ScrollReveal({
@@ -23,20 +42,49 @@ export function ScrollReveal({
   amount = 0.25,
 }: ScrollRevealProps) {
   const reduceMotion = useReducedMotion();
-  const offset = reduceMotion ? 0 : y;
-  const transition = reduceMotion
-    ? { duration: 0 }
-    : { duration, delay, ease: [0.22, 1, 0.36, 1] as any };
+  const elementRef = useRef<HTMLDivElement | null>(null);
+  const cleanupTargetRef = useRef<Element | null>(null);
+  const instanceRef = useRef<ScrollRevealInstance | null>(null);
+
+  useEffect(() => {
+    if (reduceMotion) return;
+
+    let active = true;
+    const target = elementRef.current;
+    if (!target) return;
+
+    const distanceValue = `${Math.abs(y)}px`;
+    const originValue = y < 0 ? "top" : "bottom";
+
+    getScrollReveal().then((sr) => {
+      if (!active || !elementRef.current) return;
+
+      instanceRef.current = sr;
+      cleanupTargetRef.current = elementRef.current;
+
+      sr.reveal(elementRef.current, {
+        delay: Math.round(delay * 1000),
+        duration: Math.round(duration * 1000),
+        distance: distanceValue,
+        origin: originValue,
+        opacity: 0,
+        easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+        viewFactor: amount,
+        reset: !once,
+      });
+    });
+
+    return () => {
+      active = false;
+      if (cleanupTargetRef.current && instanceRef.current) {
+        instanceRef.current.clean(cleanupTargetRef.current);
+      }
+    };
+  }, [reduceMotion, delay, duration, y, once, amount]);
 
   return (
-    <motion.div
-      className={className}
-      initial={{ opacity: 0, y: offset }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once, amount }}
-      transition={transition}
-    >
+    <div ref={elementRef} className={className}>
       {children}
-    </motion.div>
+    </div>
   );
 }

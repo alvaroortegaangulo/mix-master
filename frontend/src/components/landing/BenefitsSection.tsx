@@ -247,7 +247,7 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
                     <img
                         src="/landing/benefits/hours_to_minutes.webp"
                         alt="Piroola Interface"
-                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 opacity-80 group-hover:opacity-40"
+                        className="scroll-image-reveal absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 opacity-80 group-hover:opacity-40"
                     />
                     <div className="absolute inset-0 bg-slate-950/30 group-hover:bg-slate-950/80 transition-colors duration-500 z-10"></div>
 
@@ -280,7 +280,7 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
                     <img
                         src="/landing/benefits/accesible_quality.webp"
                         alt="Spectrum Analyzer"
-                        className="absolute inset-0 w-full h-full object-cover opacity-60 transition-opacity duration-500 group-hover:opacity-80"
+                        className="scroll-image-reveal absolute inset-0 w-full h-full object-cover opacity-60 transition-opacity duration-500 group-hover:opacity-80"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent z-10"></div>
                     <div className="relative z-20">
@@ -302,7 +302,7 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
                             <AdjustmentsVerticalIcon className="w-3 h-3 sm:w-3.5 sm:h-3.5 mr-2 text-emerald-400" />
                             {t('toolkitTitle')}
                         </h3>
-                        <div className="space-y-0.5 sm:space-y-1 custom-scrollbar overflow-y-hidden max-h-[110px] sm:max-h-[120px] pr-1">
+                        <div className="scroll-list-fade space-y-0.5 sm:space-y-1 custom-scrollbar overflow-y-hidden max-h-[110px] sm:max-h-[120px] pr-1">
                             {/* Feature Item */}
                             <div className="group flex items-center gap-1.5 sm:gap-2 p-0.5 sm:p-1 rounded-lg hover:bg-white/5 transition-colors cursor-default">
                                 <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0 group-hover:bg-emerald-500 group-hover:text-white transition-colors text-emerald-400">

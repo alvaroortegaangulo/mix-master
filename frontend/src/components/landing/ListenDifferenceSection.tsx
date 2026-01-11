@@ -209,8 +209,8 @@ export function ListenDifferenceSection({ className }: { className?: string }) {
         </ScrollReveal>
 
         {/* Improvements Grid */}
-        <ScrollReveal className="mt-12" delay={0.2}>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <ScrollReveal className="mt-12" delay={0.2} once={false}>
+          <div className="scroll-list-fade grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {improvements.map(({ icon: Icon, key, color }) => (
               <div
                 key={key}
