@@ -3,6 +3,7 @@
 import React, { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { ScrollReveal } from "./ScrollReveal";
+import { StarBackground } from "./StarBackground";
 import {
   PresentationChartLineIcon,
   WrenchScrewdriverIcon,
@@ -217,12 +218,15 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
 
   return (
     <section
-      className={`relative min-h-[400px] lg:min-h-screen flex flex-col items-center justify-center px-2 lg:px-4 py-12 md:py-14 lg:py-16 2xl:py-20 selection:bg-violet-500 selection:text-white overflow-hidden ${className || 'bg-[#050508]'}`}
+      id="pipeline-diagram"
+      className={`relative min-h-[400px] lg:min-h-screen flex flex-col items-center justify-center px-2 lg:px-4 py-12 md:py-14 lg:py-16 2xl:py-20 selection:bg-violet-500 selection:text-white overflow-hidden ${className || 'bg-gradient-to-b from-black via-purple-900/40 to-black'}`}
     >
       <div className="absolute inset-0 pointer-events-none z-0">
         <div className="absolute inset-0 pipeline-wallpaper" />
         <div className="absolute inset-0 pipeline-wallpaper-overlay" />
       </div>
+
+      <StarBackground />
 
       <div className="relative z-10 w-full max-w-7xl 2xl:max-w-[1600px]">
         <ScrollReveal delay={0.05}>
