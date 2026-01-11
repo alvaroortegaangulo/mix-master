@@ -49,7 +49,7 @@ export function FeaturesSection({ className }: { className?: string }) {
       // Matches "Estudio en la Nube" in es.json
       id: "cloud",
       Icon: CloudArrowUpIcon,
-      imageUrl: "/upload.webp",
+      imageUrl: "/integration.webp",
       color: "14, 165, 233", // Sky-500
       glowColor: "14, 165, 233",
     },
