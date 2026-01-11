@@ -646,3 +646,12 @@ body {
 .animate-fade-in-down {
   animation: fade-in-down 0.8s ease-out;
 }
+
+@keyframes grid-flow {
+  0% { background-position: 0% 0%; }
+  100% { background-position: 0% 50px; }
+}
+
+.animate-grid-flow {
+  animation: grid-flow 2s linear infinite;
+}
