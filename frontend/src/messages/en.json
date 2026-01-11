@@ -101,11 +101,11 @@
     "subtitle": "We have simplified complex engineering into a seamless experience. No infinite menus, just superior sonic results.",
     "steps": {
       "0": {
-        "tabStep": "01. Connection",
-        "tabTitle": "DAW Integration",
+        "tabStep": "01. Upload",
+        "tabTitle": "Cloud Studio",
         "slideLabel": "STEP 1",
-        "title": "Seamless Integration",
-        "description": "Forget about exporting and importing. Piroola lives inside your favorite DAW (Ableton, Logic, Pro Tools) as a native VST3/AU plugin."
+        "title": "No plugins, no hassle",
+        "description": "Upload your stems directly from your browser. Our cloud studio processes your audio instantly without draining your computer's CPU."
       },
       "1": {
         "tabStep": "02. Process",
@@ -137,9 +137,9 @@
       },
       "values": {
         "0": {
-          "latency": "< 1 ms",
-          "processing": "Native",
-          "status": "Active"
+          "latency": "Cloud",
+          "processing": "Remote",
+          "status": "Secure"
         },
         "1": {
           "latency": "AI Core",
