@@ -45,7 +45,7 @@ export function LandingPage() {
       <ListenDifferenceSection className="bg-slate-950 section-blend blend-next-slate-900" />
 
       {/* 3. Pipeline: Light (bg-slate-900) */}
-      <PipelineInteractiveDiagram className="bg-slate-900 section-blend blend-next-slate-950" />
+      <PipelineInteractiveDiagram className="bg-gradient-to-b from-black via-purple-900/40 to-black section-blend blend-next-slate-950" />
 
       {/* 4. Live Analysis: Dark (bg-slate-950) */}
       <LiveSoundAnalysis className="bg-slate-950 section-blend blend-next-slate-900" />
