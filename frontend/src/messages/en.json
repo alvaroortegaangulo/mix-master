@@ -23,6 +23,32 @@
     "title": "Hear the <amber>difference</amber>",
     "subtitle": "Our AI analyzes and masters your track instantly. Switch between the original and the master to feel the power, clarity, and professional loudness.",
     "cta": "Listen to more examples",
+    "metrics": {
+      "integratedLufs": {
+        "label": "Integrated LUFS",
+        "tooltip": "Integrated Loudness. Higher = louder perceived volume."
+      },
+      "truePeak": {
+        "label": "True Peak",
+        "tooltip": "Max peak level. Prevents distortion/clipping on platforms."
+      },
+      "lra": {
+        "label": "Dynamic Range (LRA)",
+        "tooltip": "Loudness Range. Lower = more consistent; Higher = more contrast."
+      },
+      "crestFactor": {
+        "label": "Punch / Crest Factor",
+        "tooltip": "Ratio between peaks and average level: sensation of 'impact'."
+      },
+      "correlation": {
+        "label": "Stereo Correlation",
+        "tooltip": "Phase correlation. Near 1 = stable; negative = phase cancellation issues."
+      },
+      "diffLr": {
+        "label": "L/R Balance",
+        "tooltip": "Level difference between channels. Near 0 = centered."
+      }
+    },
     "improvementsTitle": "Improvements",
     "improvements": {
       "instantProSound": {
