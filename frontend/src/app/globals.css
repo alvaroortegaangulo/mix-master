@@ -89,10 +89,10 @@ body {
   position: absolute;
   left: 0;
   right: 0;
-  height: var(--blend-size, clamp(32px, 7vw, 160px));
+  height: var(--blend-size, clamp(64px, 12vw, 240px));
   pointer-events: none;
   z-index: 5;
-  opacity: var(--blend-opacity, 0.5);
+  opacity: var(--blend-opacity, 1);
 }
 
 .section-blend::before {
