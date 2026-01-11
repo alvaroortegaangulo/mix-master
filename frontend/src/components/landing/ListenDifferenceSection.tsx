@@ -127,8 +127,8 @@ export function ListenDifferenceSection({ className }: { className?: string }) {
             {/* Header / Info */}
             <div className="mb-6 flex justify-between items-start">
               <div>
-                <h3 className="text-xl sm:text-2xl font-bold text-white mb-1">Deep Flow</h3>
-                <p className="text-sm text-slate-400">Trap / Hip-Hop • 140 BPM</p>
+                <h3 className="text-xl sm:text-2xl font-bold text-white mb-1">Street Noise</h3>
+                <p className="text-sm text-slate-400">Rock & Roll • 105 BPM</p>
               </div>
               <div className="bg-slate-950/50 px-3 py-1 rounded-full border border-slate-800 text-xs text-amber-400 font-mono">
                 {showOriginal ? "-16.0 LUFS" : "-9.5 LUFS (Optimized)"}
