@@ -20,8 +20,7 @@ import {
 
 export function ListenDifferenceSection({ className }: { className?: string }) {
   const t = useTranslations("ListenDifferenceSection");
-  const title = t("title");
-  const titlePlain = title.replace(/<[^>]+>/g, "");
+  const titlePlain = t("titlePlain");
   const examples = useTranslations("Examples");
   const [showOriginal, setShowOriginal] = useState(false);
 
@@ -101,7 +100,7 @@ export function ListenDifferenceSection({ className }: { className?: string }) {
             className="text-3xl sm:text-4xl md:text-5xl font-black font-['Orbitron'] tracking-tight text-white mb-4 glow-amber metallic-sheen"
             data-text={titlePlain}
           >
-            {t.rich("title", {
+            {t.rich("titleMain", {
               amber: (chunks) => <span className="text-amber-400">{chunks}</span>,
             })}
           </h2>
