@@ -1,0 +1,43 @@
+
+> frontend@0.1.0 dev
+> next dev
+
+▲ Next.js 16.1.1 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.0.2:3000
+- Experiments (use with caution):
+  · optimizePackageImports
+
+✓ Starting...
+Attention: Next.js now collects completely anonymous telemetry regarding usage.
+This information is used to shape Next.js' roadmap and prioritize features.
+You can learn more, including how to opt-out if you'd not like to participate in this anonymous program, by visiting the following URL:
+https://nextjs.org/telemetry
+
+✓ Ready in 2.5s
+○ Compiling /[locale] ...
+Error: FORMATTING_ERROR: The intl string context variable "amber" was not provided to the string "Hear the <amber>difference</amber>"
+    at ListenDifferenceSection (src/components/landing/ListenDifferenceSection.tsx:22:17)
+  20 | export function ListenDifferenceSection({ className }: { className?: string }) {
+  21 |   const t = useTranslations("ListenDifferenceSection");
+> 22 |   const title = t("title");
+     |                 ^
+  23 |   const titlePlain = title.replace(/<[^>]+>/g, "");
+  24 |   const examples = useTranslations("Examples");
+  25 |   const [showOriginal, setShowOriginal] = useState(false); {
+  code: 'FORMATTING_ERROR',
+  originalMessage: 'The intl string context variable "amber" was not provided to the string "Hear the <amber>difference</amber>"'
+}
+Error: FORMATTING_ERROR: The intl string context variable "daw" was not provided to the string "From your <daw>DAW</daw> to the World."
+    at FeaturesSection (src/components/landing/FeaturesSection.tsx:43:21)
+  41 |   const [currentIndex, setCurrentIndex] = useState(0);
+  42 |   const [progress, setProgress] = useState(0);
+> 43 |   const titleText = t("title");
+     |                     ^
+  44 |   const titlePlain = titleText.replace(/<[^>]+>/g, "");
+  45 |
+  46 |   // Logical mapping of existing content (S0-S3) to new visual themes {
+  code: 'FORMATTING_ERROR',
+  originalMessage: 'The intl string context variable "daw" was not provided to the string "From your <daw>DAW</daw> to the World."'
+}
+ GET /en 200 in 16.1s (compile: 14.6s, proxy.ts: 21ms, generate-params: 1140ms, render: 1445ms)
