@@ -50,7 +50,7 @@ export function FeaturesSection({ className }: { className?: string }) {
       // Matches "Estudio en la Nube" in es.json
       id: "cloud",
       Icon: CloudArrowUpIcon,
-      imageUrl: "/integration.webp",
+      imageUrl: "/landing/features/integration.webp",
       color: "14, 165, 233", // Sky-500
       glowColor: "14, 165, 233",
     },
@@ -59,7 +59,7 @@ export function FeaturesSection({ className }: { className?: string }) {
       // Matches "Inteligencia Sonora" in es.json
       id: "analysis",
       Icon: CpuChipIcon,
-      imageUrl: "/neural.webp",
+      imageUrl: "/landing/features/neural.webp",
       color: "245, 158, 11", // Amber-500
       glowColor: "245, 158, 11",
     },
@@ -68,7 +68,7 @@ export function FeaturesSection({ className }: { className?: string }) {
       // Matches "Pulido de Grado Mastering" in es.json
       id: "mastering",
       Icon: ChartBarIcon,
-      imageUrl: "/mastering_grade.webp",
+      imageUrl: "/landing/features/mastering_grade.webp",
       color: "217, 119, 6", // Amber-600
       glowColor: "217, 119, 6",
     },
@@ -77,7 +77,7 @@ export function FeaturesSection({ className }: { className?: string }) {
       // Matches "Listo para el Mundo" in es.json
       id: "export",
       Icon: GlobeAmericasIcon,
-      imageUrl: "/ready_world.webp",
+      imageUrl: "/landing/features/ready_world.webp",
       color: "234, 88, 12", // Orange-600
       glowColor: "234, 88, 12",
     },
@@ -127,7 +127,7 @@ export function FeaturesSection({ className }: { className?: string }) {
   const getGradientColors = () => "from-amber-300 via-amber-400 to-orange-400";
 
   return (
-    <section id="features" className={`relative min-h-screen flex items-center justify-center px-4 py-10 md:py-14 lg:py-16 2xl:py-20 text-white overflow-hidden ${className || 'bg-[#050508]'}`}>
+    <section id="features" className={`relative isolate z-0 min-h-screen flex items-center justify-center px-4 py-10 md:py-14 lg:py-16 2xl:py-20 text-white overflow-hidden ${className || 'bg-[#050508]'}`}>
       <AuroraBackground />
       <div className="relative z-10 max-w-7xl w-full mx-auto">
 

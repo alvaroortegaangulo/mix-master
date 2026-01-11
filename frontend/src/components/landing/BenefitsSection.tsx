@@ -147,7 +147,7 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
   }, [isManual]);
 
   return (
-    <section id="benefits" className={`lg:min-h-screen flex flex-col justify-center py-12 md:py-14 lg:py-16 2xl:py-20 relative overflow-hidden ${className || 'bg-slate-950'}`}>
+    <section id="benefits" className={`lg:min-h-screen flex flex-col justify-center py-12 md:py-14 lg:py-16 2xl:py-20 relative isolate z-0 overflow-hidden ${className || 'bg-slate-950'}`}>
         {/* Fondo Animado Pro */}
         <div className="absolute inset-0 z-0 bg-gradient-to-b from-slate-950 via-rose-950/20 to-slate-950" />
         <PipelineBackground />
@@ -246,7 +246,7 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
                     delay={0.15}
                 >
                     <img
-                        src="/hours_to_minutes.webp"
+                        src="/landing/benefits/hours_to_minutes.webp"
                         alt="Piroola Interface"
                         className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110 opacity-80 group-hover:opacity-40"
                     />
@@ -279,7 +279,7 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
                     delay={0.2}
                 >
                     <img
-                        src="/accesible_quality.webp"
+                        src="/landing/benefits/accesible_quality.webp"
                         alt="Spectrum Analyzer"
                         className="absolute inset-0 w-full h-full object-cover opacity-60 transition-opacity duration-500 group-hover:opacity-80"
                     />

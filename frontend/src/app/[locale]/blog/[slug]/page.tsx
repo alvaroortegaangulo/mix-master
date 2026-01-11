@@ -89,7 +89,7 @@ export default async function BlogPostPage({ params }: Props) {
       name: "Piroola",
       logo: {
         "@type": "ImageObject",
-        url: `${siteUrl}/logo.webp`,
+        url: `${siteUrl}/brand/logo.webp`,
       },
     },
     mainEntityOfPage: `${siteUrl}/${blogLocale}/blog/${post.slug}`,

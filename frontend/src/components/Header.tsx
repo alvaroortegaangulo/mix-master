@@ -72,7 +72,7 @@ export function Header() {
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <div className="flex items-center gap-3 shrink-0">
           <Link href="/" onClick={handleLogoClick} className="flex items-center gap-2 cursor-pointer">
-            <Image src="/logo.webp" alt="Piroola Logo" width={32} height={32} className="h-8 w-8" />
+            <Image src="/brand/logo.webp" alt="Piroola Logo" width={32} height={32} className="h-8 w-8" />
             <span className="text-xl font-bold tracking-tight text-white hidden sm:block">Piroola</span>
           </Link>
           <button

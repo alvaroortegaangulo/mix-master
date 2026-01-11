@@ -12,10 +12,10 @@ import {
 } from "@heroicons/react/24/outline";
 
 const STEPS = [
-  { id: "step1", icon: CloudArrowUpIcon, image: "/upload_dropzone.webp", width: 832, height: 514 },
-  { id: "step2", icon: AdjustmentsVerticalIcon, image: "/stems_profile.webp", width: 358, height: 514 },
-  { id: "step3", icon: CpuChipIcon, image: "/pipeline_steps.webp", width: 736, height: 445 },
-  { id: "step4", icon: SpeakerWaveIcon, image: "/space_depth.webp", width: 355, height: 480 },
+  { id: "step1", icon: CloudArrowUpIcon, image: "/docs/how-to-use/upload_dropzone.webp", width: 832, height: 514 },
+  { id: "step2", icon: AdjustmentsVerticalIcon, image: "/docs/how-to-use/stems_profile.webp", width: 358, height: 514 },
+  { id: "step3", icon: CpuChipIcon, image: "/docs/how-to-use/pipeline_steps.webp", width: 736, height: 445 },
+  { id: "step4", icon: SpeakerWaveIcon, image: "/docs/how-to-use/space_depth.webp", width: 355, height: 480 },
   { id: "step5", icon: SparklesIcon, image: null, width: 0, height: 0 },
 ];
 

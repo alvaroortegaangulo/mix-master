@@ -93,7 +93,7 @@ export default function BlogContent({ posts, allTags, copy, locale }: BlogConten
                     */}
                     <div className="absolute inset-0 bg-gradient-to-br from-slate-900 to-slate-800">
                         <Image
-                           src={featuredPost.image || `/images/blog/${featuredPost.slug}.webp`}
+                           src={featuredPost.image || `/blog/covers/${featuredPost.slug}.webp`}
                            alt={featuredPost.title}
                            fill
                            className="object-cover transition-transform duration-700 group-hover:scale-105"
@@ -154,7 +154,7 @@ export default function BlogContent({ posts, allTags, copy, locale }: BlogConten
                 {/* Card Image */}
                 <Link href={`/blog/${post.slug}`} className="relative h-48 w-full overflow-hidden bg-slate-800">
                      <Image
-                           src={post.image || `/images/blog/${post.slug}.webp`}
+                           src={post.image || `/blog/covers/${post.slug}.webp`}
                            alt={post.title}
                            fill
                            className="object-cover transition-transform duration-500 group-hover:scale-110"

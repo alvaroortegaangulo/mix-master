@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Particles, { initParticlesEngine } from "@tsparticles/react";
 import { loadSlim } from "@tsparticles/slim";
 
-export function StarBackground() {
+export function StarBackground({ className }: { className?: string }) {
   const [init, setInit] = useState(false);
 
   useEffect(() => {
@@ -18,10 +18,11 @@ export function StarBackground() {
   if (!init) return null;
 
   return (
-    <div className="absolute inset-0 -z-10 pointer-events-none">
+    <div className={`absolute inset-0 z-0 pointer-events-none ${className || ""}`}>
       <Particles
         id="tsparticles"
         options={{
+          fullScreen: { enable: false },
           background: {
             color: {
               value: "transparent",

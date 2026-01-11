@@ -97,7 +97,7 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
         {/* Logo */}
         <ScrollReveal className="mx-auto flex justify-center mb-1 2xl:mb-4">
           <Image
-            src="/logo.webp"
+            src="/brand/logo.webp"
             alt="Piroola logo"
             width={96}
             height={96}

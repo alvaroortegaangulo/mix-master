@@ -155,7 +155,7 @@ const DSP_CALIBRATION_ES: BlogPostTranslation = {
 export const blogPosts: BlogPost[] = [
   {
     slug: "como-eliminar-dc-offset-en-stems",
-    image: "/blog/blog_eliminarDC.png",
+    image: "/blog/covers/blog_eliminarDC.png",
     publishedAt: "2025-01-10",
     translations: {
       en: {
@@ -394,7 +394,7 @@ export const blogPosts: BlogPost[] = [
   },
   {
     slug: "compresion-bus-bateria-punch-glue",
-    image: "/blog/blog_compresionBus.png",
+    image: "/blog/covers/blog_compresionBus.png",
     publishedAt: "2025-01-10",
     translations: {
       en: {
@@ -609,7 +609,7 @@ export const blogPosts: BlogPost[] = [
   },
   {
     slug: "alineacion-fase-bateria-multimic",
-    image: "/blog/blog_alineacionFase.png",
+    image: "/blog/covers/blog_alineacionFase.png",
     publishedAt: "2025-01-12",
     translations: {
       en: {
@@ -824,7 +824,7 @@ export const blogPosts: BlogPost[] = [
   },
   {
     slug: "control-resonancias-stems",
-    image: "/blog/blog_resonancias.png",
+    image: "/blog/covers/blog_resonancias.png",
     publishedAt: "2025-01-14",
     translations: {
       en: {
@@ -1039,7 +1039,7 @@ export const blogPosts: BlogPost[] = [
   },
   {
     slug: "lufs-true-peak-loudness",
-    image: "/mastering.webp",
+    image: "/blog/covers/mastering.webp",
     publishedAt: "2025-01-16",
     translations: {
       en: {
@@ -1254,7 +1254,7 @@ export const blogPosts: BlogPost[] = [
   },
   {
     slug: "ia-en-produccion-musical-aliado-enemigo",
-    image: "/blog/blog_ia.png",
+    image: "/blog/covers/blog_ia.png",
     publishedAt: "2025-01-20",
     translations: {
       en: {
@@ -1469,7 +1469,7 @@ export const blogPosts: BlogPost[] = [
   },
   {
     slug: "tratamiento-acustico-vs-calibracion-dsp",
-    image: "/blog/blog_dsp.png",
+    image: "/blog/covers/blog_dsp.png",
     publishedAt: "2025-01-22",
     translations: {
       en: {
@@ -1676,7 +1676,7 @@ export const blogPosts: BlogPost[] = [
   },
 {
 slug: "stems-vs-stereo-mezcla",
-image: "/images/blog/stems_vs_stereo.webp",
+image: "/blog/covers/stems_vs_stereo.webp",
 publishedAt: "2025-01-25",
 translations: {
   en: {
@@ -1811,7 +1811,7 @@ translations: {
 },
 {
 slug: "guia-mastering-lufs-true-peak",
-image: "/images/blog/lufs_guide.webp",
+image: "/blog/covers/lufs_guide.webp",
 publishedAt: "2025-01-27",
 translations: {
   en: {
@@ -1946,7 +1946,7 @@ translations: {
 },
 {
 slug: "flujo-trabajo-inteligencia-artificial",
-image: "/images/blog/workflow_ai.webp",
+image: "/blog/covers/workflow_ai.webp",
 publishedAt: "2025-01-30",
 translations: {
   en: {

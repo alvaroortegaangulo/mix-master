@@ -44,7 +44,6 @@ type PipelineStep = {
   proTip: string;
   icon: React.ElementType;
   color: PipelineColor;
-  bgImage: string;
 };
 
 const colorStyles: Record<
@@ -126,7 +125,6 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
         proTip: t('steps.0.tip'),
         icon: PresentationChartLineIcon,
         color: 'violet',
-        bgImage: '/analysis.webp',
       },
       {
         id: 'correccion',
@@ -141,7 +139,6 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
         proTip: t('steps.1.tip'),
         icon: WrenchScrewdriverIcon,
         color: 'violet',
-        bgImage: '/correction.webp',
       },
       {
         id: 'dinamica',
@@ -156,7 +153,6 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
         proTip: t('steps.2.tip'),
         icon: ArrowsPointingInIcon,
         color: 'violet',
-        bgImage: '/dynamics.webp',
       },
       {
         id: 'espacial',
@@ -171,7 +167,6 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
         proTip: t('steps.3.tip'),
         icon: GlobeAltIcon,
         color: 'violet',
-        bgImage: '/spatial.webp',
       },
       {
         id: 'mastering',
@@ -186,7 +181,6 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
         proTip: t('steps.4.tip'),
         icon: CheckBadgeIcon,
         color: 'violet',
-        bgImage: '/mastering.webp',
       },
     ],
     [t]
@@ -219,13 +213,8 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
   return (
     <section
       id="pipeline-diagram"
-      className={`relative min-h-[400px] lg:min-h-screen flex flex-col items-center justify-center px-2 lg:px-4 py-12 md:py-14 lg:py-16 2xl:py-20 selection:bg-violet-500 selection:text-white overflow-hidden ${className || 'bg-gradient-to-b from-black via-purple-900/40 to-black'}`}
+      className={`relative isolate z-0 min-h-[400px] lg:min-h-screen flex flex-col items-center justify-center px-2 lg:px-4 py-12 md:py-14 lg:py-16 2xl:py-20 selection:bg-violet-500 selection:text-white overflow-hidden ${className || 'bg-gradient-to-b from-black via-purple-900/40 to-black'}`}
     >
-      <div className="absolute inset-0 pointer-events-none z-0">
-        <div className="absolute inset-0 pipeline-wallpaper" />
-        <div className="absolute inset-0 pipeline-wallpaper-overlay" />
-      </div>
-
       <StarBackground />
 
       <div className="relative z-10 w-full max-w-7xl 2xl:max-w-[1600px]">
@@ -265,16 +254,12 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
                   onClick={() => {
                     if (!isActive) setActiveStep(index);
                   }}
-                  className={`panel-transition relative overflow-hidden rounded-2xl border border-opacity-50 cursor-pointer bg-slate-900 group select-none md:h-[var(--panel-height)] ${isActive ? `flex-[5] lg:flex-[3] brightness-100 ${colors.border}` : `flex-[1] lg:flex-[0.5] hover:flex-[1.2] brightness-50 hover:brightness-75 border-slate-800 hover:border-slate-600`}`}
+                  className={`panel-transition relative overflow-hidden rounded-2xl border border-opacity-50 cursor-pointer bg-slate-950/35 backdrop-blur-md group select-none md:h-[var(--panel-height)] ${isActive ? `flex-[5] lg:flex-[3] brightness-100 ${colors.border}` : `flex-[1] lg:flex-[0.5] hover:flex-[1.2] brightness-50 hover:brightness-75 border-slate-800 hover:border-slate-600`}`}
                   style={isActive ? { boxShadow: `0 0 30px ${colors.shadow}` } : undefined}
                 >
-                  <img
-                    src={step.bgImage}
-                    alt={`${step.title} Background`}
-                    className={`absolute inset-0 w-full h-full object-cover transition-transform duration-1000 ${isActive ? 'scale-110' : 'scale-100 opacity-60'}`}
-                  />
-
-                  <div className={`absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-900/80 to-slate-900/40 ${isActive ? 'opacity-90' : 'opacity-80'}`}></div>
+                  <div
+                    className={`absolute inset-0 bg-gradient-to-t from-slate-950/90 via-slate-900/55 to-slate-900/20 ${isActive ? 'opacity-90' : 'opacity-80'}`}
+                  ></div>
 
                   {isActive && (
                     <div className="particles">

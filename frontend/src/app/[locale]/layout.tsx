@@ -59,7 +59,7 @@ const organizationJsonLd = {
   "@type": "Organization",
   name: siteName,
   url: siteUrl,
-  logo: `${siteUrl}/logo.webp`,
+  logo: `${siteUrl}/brand/logo.webp`,
   contactPoint: [
     {
       "@type": "ContactPoint",
@@ -71,8 +71,8 @@ const organizationJsonLd = {
       contactType: "privacy",
       email: "privacy@piroola.com",
     },
-  ],
-};
+    ],
+  };
 
 const softwareApplicationJsonLd = {
   "@context": "https://schema.org",
@@ -140,9 +140,9 @@ export async function generateMetadata({params}: {params: Promise<{locale: strin
       "vocal mixing",
     ],
     icons: {
-      icon: "/logo.webp",
-      shortcut: "/logo.webp",
-      apple: "/logo.webp",
+      icon: "/brand/logo.webp",
+      shortcut: "/brand/logo.webp",
+      apple: "/brand/logo.webp",
     },
     robots: {
       index: true,
@@ -155,7 +155,7 @@ export async function generateMetadata({params}: {params: Promise<{locale: strin
       siteName,
       images: [
         {
-          url: "/logo.webp",
+          url: "/brand/logo.webp",
           width: 512,
           height: 512,
           alt: "Piroola Logo",
@@ -168,7 +168,7 @@ export async function generateMetadata({params}: {params: Promise<{locale: strin
       card: "summary_large_image",
       title: t('title'),
       description: t('description'),
-      images: ["/logo.webp"],
+      images: ["/brand/logo.webp"],
     },
   };
 }

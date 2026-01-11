@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 
 export function AuroraBackground({ className }: { className?: string }) {
   return (
-    <div className={`absolute inset-0 overflow-hidden pointer-events-none -z-10 ${className}`}>
+    <div className={`absolute inset-0 overflow-hidden pointer-events-none z-0 ${className || ""}`}>
 
       {/* Fondo base oscuro */}
       <div className="absolute inset-0 bg-slate-950" />

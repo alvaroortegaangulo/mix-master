@@ -63,7 +63,7 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
   }, []);
 
     return (
-    <section className={`lg:min-h-screen flex flex-col justify-center py-12 md:py-14 lg:py-16 2xl:py-20 border-t border-slate-900 relative overflow-hidden ${className || 'bg-slate-950'}`}>
+    <section className={`lg:min-h-screen flex flex-col justify-center py-12 md:py-14 lg:py-16 2xl:py-20 border-t border-slate-900 relative isolate z-0 overflow-hidden ${className || 'bg-slate-950'}`}>
         <GridBackground />
 
       <div className="max-w-7xl 2xl:max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 2xl:px-4 relative z-10">
