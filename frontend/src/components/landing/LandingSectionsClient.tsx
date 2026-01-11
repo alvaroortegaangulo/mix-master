@@ -36,6 +36,10 @@ const TechSpecsSection = dynamic(
   { loading: () => <div className="h-96 bg-slate-950" /> }
 );
 
+const preloadSection = (section: unknown) => {
+  (section as { preload?: () => void })?.preload?.();
+};
+
 export function LandingSectionsClient() {
   const t = useTranslations("LandingPage");
   const readyToElevate = t("readyToElevate");
@@ -43,32 +47,50 @@ export function LandingSectionsClient() {
   return (
     <>
       {/* 2. Listen Difference: Highlight (bg-slate-950) */}
-      <ViewportMount className="bg-slate-950 min-h-[700px]">
+      <ViewportMount
+        className="bg-slate-950 min-h-[700px]"
+        preload={() => preloadSection(ListenDifferenceSection)}
+      >
         <ListenDifferenceSection className="bg-slate-950" />
       </ViewportMount>
 
       {/* 3. Pipeline: Light (bg-slate-900) */}
-      <ViewportMount className="bg-slate-900 min-h-[400px] lg:min-h-screen">
+      <ViewportMount
+        className="bg-slate-900 min-h-[400px] lg:min-h-screen"
+        preload={() => preloadSection(PipelineInteractiveDiagram)}
+      >
         <PipelineInteractiveDiagram className="bg-gradient-to-b from-black via-purple-900/40 to-black section-blend blend-next-slate-950" />
       </ViewportMount>
 
       {/* 4. Live Analysis: Dark (bg-slate-950) */}
-      <ViewportMount className="bg-slate-950 min-h-[500px] lg:min-h-screen">
+      <ViewportMount
+        className="bg-slate-950 min-h-[500px] lg:min-h-screen"
+        preload={() => preloadSection(LiveSoundAnalysis)}
+      >
         <LiveSoundAnalysis className="bg-slate-950" />
       </ViewportMount>
 
       {/* 5. Features (DAW to World): Match Pipeline background */}
-      <ViewportMount className="bg-slate-900 min-h-screen">
+      <ViewportMount
+        className="bg-slate-900 min-h-screen"
+        preload={() => preloadSection(FeaturesSection)}
+      >
         <FeaturesSection className="bg-slate-900" />
       </ViewportMount>
 
       {/* 6. Tech Specs (Power & Precision): Dark (bg-slate-950) */}
-      <ViewportMount className="bg-slate-950 min-h-[520px]">
+      <ViewportMount
+        className="bg-slate-950 min-h-[520px]"
+        preload={() => preloadSection(TechSpecsSection)}
+      >
         <TechSpecsSection className="bg-slate-950" />
       </ViewportMount>
 
       {/* 7. Benefits (Hours in minutes): Light (bg-slate-900) */}
-      <ViewportMount className="bg-slate-900 min-h-[500px] lg:min-h-screen">
+      <ViewportMount
+        className="bg-slate-900 min-h-[500px] lg:min-h-screen"
+        preload={() => preloadSection(BenefitsSection)}
+      >
         <BenefitsSection className="bg-slate-900" />
       </ViewportMount>
 
@@ -98,4 +120,3 @@ export function LandingSectionsClient() {
     </>
   );
 }
-
