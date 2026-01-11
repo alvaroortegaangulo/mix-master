@@ -146,7 +146,7 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
 
 
           {/* RIGHT COLUMN: Metrics Cards */}
-          <ScrollReveal className="flex flex-col gap-3" delay={0.15}>
+          <ScrollReveal className="flex flex-col gap-3 h-full justify-between" delay={0.15}>
 
              {/* Card 1: Integrated Loudness */}
              <div className="bg-slate-900/50 rounded-2xl border border-slate-800 p-3 2xl:p-4 shadow-lg relative group overflow-hidden">
