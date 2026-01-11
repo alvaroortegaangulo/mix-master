@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { Link } from "../../i18n/routing";
 import { WaveformPlayer } from "../WaveformPlayer";
 import { ScrollReveal } from "./ScrollReveal";
+import { SonarBackground } from "./SonarBackground";
 import {
   SparklesIcon,
   BoltIcon,
@@ -19,8 +20,7 @@ import {
 
 export function ListenDifferenceSection({ className }: { className?: string }) {
   const t = useTranslations("ListenDifferenceSection");
-  const title = t("title");
-  const titlePlain = title.replace(/<[^>]+>/g, "");
+  const titlePlain = t("titlePlain");
   const examples = useTranslations("Examples");
   const [showOriginal, setShowOriginal] = useState(false);
 
@@ -92,14 +92,7 @@ export function ListenDifferenceSection({ className }: { className?: string }) {
     <section
       className={`relative overflow-hidden px-4 py-12 sm:py-16 md:py-20 lg:py-24 min-h-[100svh] sm:min-h-0 flex flex-col justify-center ${className || "bg-slate-950"}`}
     >
-      <div className="absolute inset-0 pointer-events-none z-0">
-        <div className="absolute inset-0 bg-[#050508]" />
-        <div className="absolute inset-0 grid-landing-diagonal" />
-        <div className="absolute inset-0 grid-landing-vignette" />
-        <div className="absolute -top-[30%] left-1/2 h-[50%] w-[50%] -translate-x-1/2 rounded-full bg-amber-500/15 blur-[140px]" />
-        <div className="absolute top-[30%] -right-[10%] h-[45%] w-[45%] rounded-full bg-orange-400/12 blur-[160px]" />
-        <div className="absolute bottom-[5%] -left-[10%] h-[40%] w-[40%] rounded-full bg-teal-500/10 blur-[160px]" />
-      </div>
+      <SonarBackground />
 
       <div className="relative z-10 mx-auto max-w-7xl w-full">
         <ScrollReveal className="mx-auto max-w-3xl text-center mb-10 md:mb-14" delay={0.05}>
@@ -107,7 +100,7 @@ export function ListenDifferenceSection({ className }: { className?: string }) {
             className="text-3xl sm:text-4xl md:text-5xl font-black font-['Orbitron'] tracking-tight text-white mb-4 glow-amber metallic-sheen"
             data-text={titlePlain}
           >
-            {t.rich("title", {
+            {t.rich("titleMain", {
               amber: (chunks) => <span className="text-amber-400">{chunks}</span>,
             })}
           </h2>
