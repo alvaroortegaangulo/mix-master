@@ -42,25 +42,25 @@ export function LandingPage() {
       <HeroSection onTryIt={handleTryIt} />
 
       {/* 2. Listen Difference: Highlight (bg-slate-950) */}
-      <ListenDifferenceSection className="bg-slate-950 section-blend blend-prev-slate-950 blend-next-slate-900" />
+      <ListenDifferenceSection className="bg-slate-950 section-blend blend-next-slate-900" />
 
       {/* 3. Pipeline: Light (bg-slate-900) */}
-      <PipelineInteractiveDiagram className="bg-slate-900 section-blend blend-prev-slate-950 blend-next-slate-950" />
+      <PipelineInteractiveDiagram className="bg-slate-900 section-blend blend-next-slate-950" />
 
       {/* 4. Live Analysis: Dark (bg-slate-950) */}
-      <LiveSoundAnalysis className="bg-slate-950 section-blend blend-prev-slate-900 blend-next-slate-900" />
+      <LiveSoundAnalysis className="bg-slate-950 section-blend blend-next-slate-900" />
 
       {/* 5. Features (DAW to World): Match Pipeline background */}
-      <FeaturesSection className="bg-slate-900 section-blend blend-prev-slate-950 blend-next-slate-950" />
+      <FeaturesSection className="bg-slate-900 section-blend blend-next-slate-950" />
 
       {/* 6. Tech Specs (Power & Precision): Dark (bg-slate-950) */}
-      <TechSpecsSection className="bg-slate-950 section-blend blend-prev-slate-900 blend-next-slate-900" />
+      <TechSpecsSection className="bg-slate-950 section-blend blend-next-slate-900" />
 
       {/* 7. Benefits (Hours in minutes): Light (bg-slate-900) */}
-      <BenefitsSection className="bg-slate-900 section-blend blend-prev-slate-950 blend-next-slate-950" />
+      <BenefitsSection className="bg-slate-900 section-blend blend-next-slate-950" />
 
       {/* Bottom CTA */}
-      <section className="relative py-10 md:py-14 lg:py-16 2xl:py-20 bg-slate-950 text-center px-4 overflow-hidden section-blend blend-prev-slate-900 blend-next-slate-950">
+      <section className="relative py-10 md:py-14 lg:py-16 2xl:py-20 bg-slate-950 text-center px-4 overflow-hidden section-blend blend-next-slate-950">
         <div className="absolute top-0 left-0 h-full w-full overflow-hidden pointer-events-none z-0">
           <div className="absolute -top-[20%] -left-[10%] h-[50%] w-[50%] rounded-full bg-teal-500/10 blur-[120px]" />
           <div className="absolute top-[40%] -right-[10%] h-[60%] w-[60%] rounded-full bg-violet-600/10 blur-[120px]" />
