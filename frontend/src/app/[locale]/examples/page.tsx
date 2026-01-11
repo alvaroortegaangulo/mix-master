@@ -63,8 +63,8 @@ export default function ExamplesPage() {
     summary: t(`items.${key}.summary`),
     highlights: Object.values(t.raw(`items.${key}.highlights`) as Record<string, string>),
     metrics: Object.values(t.raw(`items.${key}.metrics`) as Record<string, string>),
-    originalSrc: `/examples/${key}_original.wav`,
-    masterSrc: `/examples/${key}_mixdown.wav`,
+    originalSrc: `/examples/${key}_original.mp3`,
+    masterSrc: `/examples/${key}_mixdown.mp3`,
   }));
 
   return (

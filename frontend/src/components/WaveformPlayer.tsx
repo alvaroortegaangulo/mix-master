@@ -59,6 +59,10 @@ export const WaveformPlayer: React.FC<WaveformPlayerProps> = ({
   const [isPlaying, setIsPlaying] = useState(false);
   const [duration, setDuration] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
+  const [hasUserInteracted, setHasUserInteracted] = useState(false);
+  const [loadedMainSrc, setLoadedMainSrc] = useState<string | null>(null);
+  const [loadedCompareSrc, setLoadedCompareSrc] = useState<string | null>(null);
+  const [pendingPlay, setPendingPlay] = useState(false);
 
   // Peaks state
   const [mainPeaks, setMainPeaks] = useState<PeakArray>([]);
@@ -137,10 +141,38 @@ export const WaveformPlayer: React.FC<WaveformPlayerProps> = ({
   useEffect(() => {
     setIsPlaying(false);
     setCurrentTime(0);
+    setDuration(0);
+    setMainPeaks([]);
+    setComparePeaks([]);
+    setIsLoadingPeaks(false);
+    setHasUserInteracted(false);
+    setLoadedMainSrc(null);
+    setLoadedCompareSrc(null);
+    setPendingPlay(false);
     if (requestRef.current) {
-        cancelAnimationFrame(requestRef.current);
+      cancelAnimationFrame(requestRef.current);
     }
-  }, [src]);
+  }, [src, compareSrc]);
+
+  useEffect(() => {
+    if (isCompareActive) {
+      setHasUserInteracted(true);
+    }
+  }, [isCompareActive]);
+
+  useEffect(() => {
+    if (!hasUserInteracted) return;
+    if (!loadedMainSrc) {
+      setLoadedMainSrc(src);
+    }
+  }, [hasUserInteracted, loadedMainSrc, src]);
+
+  useEffect(() => {
+    if (!hasUserInteracted || !compareSrc || !isCompareActive) return;
+    if (!loadedCompareSrc) {
+      setLoadedCompareSrc(compareSrc);
+    }
+  }, [hasUserInteracted, compareSrc, isCompareActive, loadedCompareSrc]);
 
   // Handle Compare Audio loading (solo para estar listos)
   useEffect(() => {
@@ -195,28 +227,38 @@ export const WaveformPlayer: React.FC<WaveformPlayerProps> = ({
   useEffect(() => {
     let cancelled = false;
 
-    async function loadAllPeaks() {
-        if (!src) return;
-        setIsLoadingPeaks(true);
-
-        const pMain = await fetchPeaks(src);
-        if (cancelled) return;
-        setMainPeaks(pMain);
-
-        if (compareSrc) {
-            const pCompare = await fetchPeaks(compareSrc);
-            if (cancelled) return;
-            setComparePeaks(pCompare);
-        } else {
-            setComparePeaks([]);
-        }
-
-        setIsLoadingPeaks(false);
+    async function loadMainPeaks() {
+      if (!loadedMainSrc || mainPeaks.length > 0) return;
+      setIsLoadingPeaks(true);
+      const pMain = await fetchPeaks(loadedMainSrc);
+      if (cancelled) return;
+      setMainPeaks(pMain);
+      setIsLoadingPeaks(false);
     }
 
-    loadAllPeaks();
-    return () => { cancelled = true; };
-  }, [src, compareSrc]);
+    loadMainPeaks();
+    return () => {
+      cancelled = true;
+    };
+  }, [loadedMainSrc, mainPeaks.length]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadComparePeaks() {
+      if (!loadedCompareSrc || comparePeaks.length > 0) return;
+      setIsLoadingPeaks(true);
+      const pCompare = await fetchPeaks(loadedCompareSrc);
+      if (cancelled) return;
+      setComparePeaks(pCompare);
+      setIsLoadingPeaks(false);
+    }
+
+    loadComparePeaks();
+    return () => {
+      cancelled = true;
+    };
+  }, [loadedCompareSrc, comparePeaks.length]);
 
 
   const progress = useMemo(
@@ -521,6 +563,23 @@ export const WaveformPlayer: React.FC<WaveformPlayerProps> = ({
   // ------------------------------------------------------------
   // Interaction
   // ------------------------------------------------------------
+  const startPlayback = useCallback(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    if (audioContextRef.current && audioContextRef.current.state === "suspended") {
+      audioContextRef.current.resume();
+    }
+
+    if (isCompareActive && compareAudioRef.current && loadedCompareSrc) {
+      compareAudioRef.current.currentTime = audio.currentTime;
+      compareAudioRef.current.play().catch((e) => console.error("Compare play failed", e));
+    }
+
+    audio.play().catch((e) => console.error("Main play failed", e));
+    setIsPlaying(true);
+  }, [isCompareActive, loadedCompareSrc]);
+
   const togglePlay = () => {
     const audio = audioRef.current;
     if (!audio) return;
@@ -529,21 +588,32 @@ export const WaveformPlayer: React.FC<WaveformPlayerProps> = ({
       audio.pause();
       if (compareAudioRef.current) compareAudioRef.current.pause();
       setIsPlaying(false);
-    } else {
-      if (audioContextRef.current && audioContextRef.current.state === 'suspended') {
-          audioContextRef.current.resume();
-      }
-
-      // Ensure sync before start
-      if (compareAudioRef.current) {
-          compareAudioRef.current.currentTime = audio.currentTime;
-          compareAudioRef.current.play().catch(e => console.error("Compare play failed", e));
-      }
-
-      audio.play().catch(e => console.error("Main play failed", e));
-      setIsPlaying(true);
+      return;
     }
+
+    setHasUserInteracted(true);
+    if (!loadedMainSrc) {
+      setPendingPlay(true);
+      return;
+    }
+
+    startPlayback();
   };
+
+  useEffect(() => {
+    if (!pendingPlay || !loadedMainSrc) return;
+    startPlayback();
+    setPendingPlay(false);
+  }, [pendingPlay, loadedMainSrc, startPlayback]);
+
+  useEffect(() => {
+    if (!isPlaying || !isCompareActive || !loadedCompareSrc) return;
+    const audio = audioRef.current;
+    const compareAudio = compareAudioRef.current;
+    if (!audio || !compareAudio) return;
+    compareAudio.currentTime = audio.currentTime;
+    compareAudio.play().catch((e) => console.error("Compare play failed", e));
+  }, [isPlaying, isCompareActive, loadedCompareSrc]);
 
   const handleWaveformClick = (e: React.MouseEvent<HTMLDivElement>) => {
     const audio = audioRef.current;
@@ -616,11 +686,23 @@ export const WaveformPlayer: React.FC<WaveformPlayerProps> = ({
       ].join(" ")}
     >
       {/* Audio principal - crossOrigin anonymous is crucial for Web Audio */}
-      <audio ref={audioRef} src={src} crossOrigin="anonymous" className="hidden" />
+      <audio
+        ref={audioRef}
+        src={loadedMainSrc || undefined}
+        preload="none"
+        crossOrigin="anonymous"
+        className="hidden"
+      />
 
       {/* Audio comparativa (opcional) */}
       {compareSrc && (
-          <audio ref={compareAudioRef} src={compareSrc} crossOrigin="anonymous" className="hidden" />
+          <audio
+            ref={compareAudioRef}
+            src={loadedCompareSrc || undefined}
+            preload="none"
+            crossOrigin="anonymous"
+            className="hidden"
+          />
       )}
 
       {/* Botón Play/Pause */}

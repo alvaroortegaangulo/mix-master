@@ -2,11 +2,9 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Geist_Mono, Space_Grotesk, Orbitron, Inter } from "next/font/google";
 import "../globals.css";
-import { GoogleAnalytics } from "@next/third-parties/google";
 import Script from "next/script";
 import { GARouteTracker } from "../../components/analytics/GARouteTracker";
 import { AuthProvider } from "../../context/AuthContext";
-import { GoogleOAuthProvider } from "@react-oauth/google";
 import { GlobalLayoutClient } from "../../components/GlobalLayoutClient";
 import { NextIntlClientProvider } from 'next-intl';
 import { getMessages, getTranslations, setRequestLocale } from 'next-intl/server';
@@ -222,61 +220,72 @@ export default async function LocaleLayout({
   };
 
   const gaId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID;
-  const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "YOUR_GOOGLE_CLIENT_ID_HERE";
 
   return (
     <html lang={locale}>
       <head>
-        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
       </head>
       <body className={`${spaceGrotesk.variable} ${geistMono.variable} ${orbitron.variable} ${inter.variable} antialiased`}>
         <NextIntlClientProvider messages={messages}>
-          <GoogleOAuthProvider clientId={googleClientId}>
-            <AuthProvider>
-              <script
-                id="ld-organization"
-                type="application/ld+json"
-                dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
-              />
-              <script
-                id="ld-software-app"
-                type="application/ld+json"
-                dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareApplicationJsonLd) }}
-              />
-              <script
-                id="ld-website"
-                type="application/ld+json"
-                dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }}
-              />
-              <script
-                id="ld-site-navigation"
-                type="application/ld+json"
-                dangerouslySetInnerHTML={{ __html: JSON.stringify(siteNavigationJsonLd) }}
-              />
+          <AuthProvider>
+            <script
+              id="ld-organization"
+              type="application/ld+json"
+              dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationJsonLd) }}
+            />
+            <script
+              id="ld-software-app"
+              type="application/ld+json"
+              dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareApplicationJsonLd) }}
+            />
+            <script
+              id="ld-website"
+              type="application/ld+json"
+              dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }}
+            />
+            <script
+              id="ld-site-navigation"
+              type="application/ld+json"
+              dangerouslySetInnerHTML={{ __html: JSON.stringify(siteNavigationJsonLd) }}
+            />
 
-              <GlobalLayoutClient>
-                {children}
-              </GlobalLayoutClient>
+            <GlobalLayoutClient>
+              {children}
+            </GlobalLayoutClient>
 
-          {/* Google Analytics: solo si hay ID */}
-          {gaId && (
-            <>
-              <GoogleAnalytics gaId={gaId} />
-              <Suspense fallback={null}>
-                <GARouteTracker gaId={gaId} />
-              </Suspense>
-            </>
-          )}
+            {/* Google Analytics: solo si hay ID */}
+            {gaId && (
+              <>
+                <Script
+                  src={`https://www.googletagmanager.com/gtag/js?id=${gaId}`}
+                  strategy="lazyOnload"
+                />
+                <Script
+                  id="ga-init"
+                  strategy="lazyOnload"
+                  dangerouslySetInnerHTML={{
+                    __html: `
+                      window.dataLayer = window.dataLayer || [];
+                      function gtag(){dataLayer.push(arguments);}
+                      gtag('js', new Date());
+                      gtag('config', '${gaId}', { anonymize_ip: true });
+                    `,
+                  }}
+                />
+                <Suspense fallback={null}>
+                  <GARouteTracker gaId={gaId} />
+                </Suspense>
+              </>
+            )}
 
-              {/* CookieScript / Cookie CMP */}
-              <Script
-                id="cookie-script"
-                src="https://cdn.cookie-script.com/s/ae74c6bd8d098a84d8017855c6fba2af.js"
-                strategy="afterInteractive"
-                charSet="UTF-8"
-              />
-            </AuthProvider>
-          </GoogleOAuthProvider>
+            {/* CookieScript / Cookie CMP */}
+            <Script
+              id="cookie-script"
+              src="https://cdn.cookie-script.com/s/ae74c6bd8d098a84d8017855c6fba2af.js"
+              strategy="afterInteractive"
+              charSet="UTF-8"
+            />
+          </AuthProvider>
         </NextIntlClientProvider>
       </body>
     </html>

@@ -1,89 +1,12 @@
-"use client";
-
-import { useEffect, useRef } from "react";
 import Image from "next/image";
 import { PlayCircleIcon } from "@heroicons/react/24/solid";
-import { useTranslations } from 'next-intl';
+import { getTranslations } from "next-intl/server";
 import { Link } from '../../i18n/routing';
-import { ScrollReveal } from "./ScrollReveal";
+import { HeroWaveformCanvas } from "./HeroWaveformCanvas";
 
-export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
-  const t = useTranslations('HeroSection');
+export async function HeroSection() {
+  const t = await getTranslations('HeroSection');
   const perfectedByAI = t('perfectedByAI');
-  const waveformRef = useRef<HTMLCanvasElement | null>(null);
-
-  useEffect(() => {
-    const canvas = waveformRef.current;
-    if (!canvas) return;
-
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    let frameId = 0;
-    let width = 0;
-    let height = 0;
-    let dpr = window.devicePixelRatio || 1;
-    const resize = () => {
-      const rect = canvas.getBoundingClientRect();
-      width = Math.max(1, rect.width);
-      height = Math.max(1, rect.height);
-      dpr = window.devicePixelRatio || 1;
-      canvas.width = Math.floor(width * dpr);
-      canvas.height = Math.floor(height * dpr);
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    };
-
-    const bands = [
-      { amplitude: 18, frequency: 0.006, speed: 0.9, y: 0.45, color: "rgba(34,211,238,0.35)", phase: 0.2 },
-      { amplitude: 14, frequency: 0.008, speed: 1.15, y: 0.5, color: "rgba(139,92,246,0.28)", phase: 1.1 },
-      { amplitude: 10, frequency: 0.012, speed: 0.75, y: 0.55, color: "rgba(45,212,191,0.22)", phase: 2.4 }
-    ];
-
-    const draw = (time: number) => {
-      const t = time * 0.001;
-      ctx.clearRect(0, 0, width, height);
-      ctx.lineWidth = 1.35;
-      ctx.lineJoin = "round";
-      ctx.lineCap = "round";
-
-      for (const band of bands) {
-        ctx.beginPath();
-        const baseY = height * band.y;
-        const step = 6;
-
-        for (let x = 0; x <= width; x += step) {
-          const wave = Math.sin(x * band.frequency + t * band.speed + band.phase) * band.amplitude;
-          const shimmer = Math.sin(x * band.frequency * 2.1 - t * band.speed * 1.4) * band.amplitude * 0.35;
-          const y = baseY + wave + shimmer;
-          if (x === 0) {
-            ctx.moveTo(x, y);
-          } else {
-            ctx.lineTo(x, y);
-          }
-        }
-
-        ctx.shadowColor = band.color;
-        ctx.shadowBlur = 14;
-        ctx.strokeStyle = band.color;
-        ctx.stroke();
-      }
-
-      ctx.shadowBlur = 0;
-
-      frameId = window.requestAnimationFrame(draw);
-    };
-
-    resize();
-    window.addEventListener("resize", resize);
-    frameId = window.requestAnimationFrame(draw);
-
-    return () => {
-      window.removeEventListener("resize", resize);
-      if (frameId) {
-        window.cancelAnimationFrame(frameId);
-      }
-    };
-  }, []);
 
   return (
     <section className="relative flex min-h-[100svh] sm:min-h-[70vh] lg:min-h-screen flex-col items-center justify-center overflow-hidden bg-slate-950 px-4 text-center pt-3 pb-4 sm:py-6 md:py-10 lg:py-16 2xl:py-32">
@@ -95,7 +18,7 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
 
       <div className="relative z-10 max-w-5xl 2xl:max-w-7xl space-y-2 sm:space-y-3 lg:space-y-4 2xl:space-y-8 flex flex-col items-center">
         {/* Logo */}
-        <ScrollReveal className="mx-auto flex justify-center mb-1 2xl:mb-4">
+        <div className="mx-auto flex justify-center mb-1 2xl:mb-4">
           <Image
             src="/brand/logo.webp"
             alt="Piroola logo"
@@ -105,7 +28,7 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
             className="h-14 w-14 sm:h-16 sm:w-16 2xl:h-24 2xl:w-24"
             priority
           />
-        </ScrollReveal>
+        </div>
 
         {/* Main Heading - LCP Element (No entrance animation to minimize render delay) */}
         <h1 className="flex flex-col text-4xl font-extrabold tracking-[-0.02em] sm:text-5xl lg:text-6xl 2xl:text-8xl gap-1 2xl:gap-3 font-['Orbitron'] glow-teal">
@@ -119,27 +42,19 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
           </span>
         </h1>
 
-        <ScrollReveal delay={0.1}>
-          <p className="mx-auto max-w-3xl 2xl:max-w-4xl text-xs font-light leading-[1.5] text-slate-300 sm:text-sm lg:text-base 2xl:text-xl">
-            {t('description')}
-          </p>
-        </ScrollReveal>
+        <p className="mx-auto max-w-3xl 2xl:max-w-4xl text-xs font-light leading-[1.5] text-slate-300 sm:text-sm lg:text-base 2xl:text-xl">
+          {t('description')}
+        </p>
 
-        <ScrollReveal
-          className="beta-badge flex items-center gap-2 px-3 py-1.5 2xl:px-5 2xl:py-2.5 text-[9px] font-semibold uppercase tracking-[0.18em] text-violet-100 backdrop-blur-sm leading-none sm:text-[10px] 2xl:text-sm"
-          delay={0.15}
-        >
+        <div className="beta-badge flex items-center gap-2 px-3 py-1.5 2xl:px-5 2xl:py-2.5 text-[9px] font-semibold uppercase tracking-[0.18em] text-violet-100 backdrop-blur-sm leading-none sm:text-[10px] 2xl:text-sm">
           <span className="beta-dot" aria-hidden="true" />
           <span>{t('alertConstruction')}</span>
-        </ScrollReveal>
+        </div>
 
-        <ScrollReveal
-          className="flex flex-col items-center gap-3 sm:gap-4 2xl:gap-6 sm:flex-row sm:justify-center mt-2 sm:mt-3 2xl:mt-8 mb-4 sm:mb-0"
-          delay={0.2}
-        >
+        <div className="flex flex-col items-center gap-3 sm:gap-4 2xl:gap-6 sm:flex-row sm:justify-center mt-2 sm:mt-3 2xl:mt-8 mb-4 sm:mb-0">
           {/* Button 1: Mezclar mi Track */}
-          <button
-            onClick={onTryIt}
+          <Link
+            href="/mix"
             className="group relative inline-flex items-center justify-center gap-2 overflow-hidden rounded-full bg-teal-400 px-4 py-2 text-xs font-bold text-slate-950 transition-all hover:bg-teal-300 hover:scale-105 focus:outline-none focus:ring-4 focus:ring-teal-500/30 sm:px-5 sm:py-2.5 sm:text-sm 2xl:px-8 2xl:py-4 2xl:text-lg glow-pulse"
           >
             {/* Simple Circle Icon */}
@@ -156,7 +71,7 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
               <circle cx="12" cy="12" r="9" />
             </svg>
             <span>{t('mixMyTracks')}</span>
-          </button>
+          </Link>
 
           {/* Button 2: Escuchar Demos */}
           <Link
@@ -166,7 +81,7 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
             <PlayCircleIcon className="h-3.5 w-3.5 sm:h-4 sm:w-4 2xl:h-6 2xl:w-6 text-white" aria-hidden="true" />
             <span>{t('listenToDemos')}</span>
           </Link>
-        </ScrollReveal>
+        </div>
 
         <style jsx>{`
           .hero-faq-pop {
@@ -213,11 +128,7 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
       </div>
 
       <div className="absolute inset-0 opacity-[0.55] pointer-events-none mix-blend-screen z-[1]">
-        <canvas
-          ref={waveformRef}
-          className="h-full w-full"
-          aria-hidden="true"
-        />
+        <HeroWaveformCanvas />
       </div>
 
       <div className="relative z-30 mt-6 flex justify-center sm:absolute sm:bottom-10 sm:right-6 2xl:bottom-32 sm:mt-0 sm:justify-start">

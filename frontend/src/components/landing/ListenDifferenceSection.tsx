@@ -131,8 +131,8 @@ export function ListenDifferenceSection({ className }: { className?: string }) {
             {/* Waveform Player */}
             <div className="flex-1 flex flex-col justify-center">
               <WaveformPlayer
-                src="/examples/rock_mixdown.wav"
-                compareSrc="/examples/rock_original.wav"
+                src="/examples/rock_mixdown.mp3"
+                compareSrc="/examples/rock_original.mp3"
                 isCompareActive={showOriginal}
                 accentColor={showOriginal ? "#64748b" : "#f59e0b"}
                 className="w-full bg-slate-950/90 border border-slate-800/70 px-4 py-4 shadow-lg shadow-black/40 rounded-xl"

@@ -1,8 +1,14 @@
 "use client";
 
-import { sendGAEvent } from "@next/third-parties/google";
+declare global {
+  interface Window {
+    gtag?: (...args: any[]) => void;
+  }
+}
 
 export function gaEvent(name: string, params: Record<string, any> = {}) {
+  if (typeof window === "undefined") return;
+  if (!window.gtag) return;
   // No mandes PII (email, nombre, etc.). Usa ids internos/UUID.
-  sendGAEvent("event", name, params);
+  window.gtag("event", name, params);
 }
