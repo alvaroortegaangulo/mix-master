@@ -40,11 +40,11 @@
     "subtitle": "Nous avons simplifié le processus d'ingénierie complexe en une expérience fluide. Pas de menus infinis, seulement des résultats sonores supérieurs.",
     "steps": {
       "0": {
-        "tabStep": "01. Connexion",
-        "tabTitle": "Intégration DAW",
+        "tabStep": "01. Téléchargement",
+        "tabTitle": "Studio Cloud",
         "slideLabel": "ÉTAPE 1",
-        "title": "Analyse Intelligente",
-        "description": "Notre IA scanne vos pistes pour comprendre la tonalité, le tempo, le genre et l'instrumentation, créant une stratégie de mixage personnalisée."
+        "title": "Pas de plugins, pas de soucis",
+        "description": "Téléchargez vos stems directement depuis votre navigateur. Notre studio cloud traite votre audio instantanément sans épuiser le processeur de votre ordinateur."
       },
       "1": {
         "tabStep": "02. Processus",
@@ -76,9 +76,9 @@
       },
       "values": {
         "0": {
-          "latency": "< 1 ms",
-          "processing": "Natif",
-          "status": "Actif"
+          "latency": "Cloud",
+          "processing": "Distant",
+          "status": "Sécurisé"
         },
         "1": {
           "latency": "Noyau IA",
