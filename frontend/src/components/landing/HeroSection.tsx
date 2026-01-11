@@ -108,13 +108,12 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
         </ScrollReveal>
 
         {/* Main Heading - LCP Element (No entrance animation to minimize render delay) */}
-        <h1 className="flex flex-col text-4xl font-extrabold tracking-[-0.02em] sm:text-5xl lg:text-6xl 2xl:text-8xl gap-1 2xl:gap-3 font-['Orbitron'] glow-violet">
-          <span className="text-white leading-[0.95]">
+        <h1 className="flex flex-col text-4xl font-extrabold tracking-[-0.02em] sm:text-5xl lg:text-6xl 2xl:text-8xl gap-1 2xl:gap-3 font-['Orbitron'] glow-teal">
+          <span className="text-white leading-[0.95] shine-box py-4 -my-4 px-2 -mx-2">
             {t('studioSound')}
           </span>
           <span
-            className="bg-gradient-to-r from-teal-400 to-violet-500 bg-clip-text text-transparent leading-[0.95] metallic-sheen"
-            data-text={perfectedByAI}
+            className="text-cyan-400 leading-[0.95] shine-box shine-delayed py-4 -my-4 px-2 -mx-2"
           >
             {perfectedByAI}
           </span>
@@ -177,6 +176,10 @@ export function HeroSection({ onTryIt }: { onTryIt: () => void }) {
           .hero-faq-float {
             animation: hero-faq-float 4.2s ease-in-out 1.2s infinite;
             will-change: transform;
+          }
+
+          .shine-delayed::before {
+            animation-delay: 0.6s !important;
           }
 
           @keyframes hero-faq-pop {
