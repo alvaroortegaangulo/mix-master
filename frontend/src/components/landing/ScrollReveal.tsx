@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useReducedMotion } from "framer-motion";
 
 type ScrollRevealProps = {
@@ -18,14 +18,13 @@ export function ScrollReveal({
   children,
   className,
   delay = 0,
-  duration = 0.6,
-  y = 18,
+  duration = 0.8,
+  y = 30,
   once = true,
-  amount = 0.25,
+  amount = 0.15,
 }: ScrollRevealProps) {
   const reduceMotion = useReducedMotion();
   const elementRef = useRef<HTMLDivElement | null>(null);
-  const [isVisible, setIsVisible] = useState(reduceMotion);
 
   const revealStyle = useMemo(
     () =>
@@ -38,40 +37,42 @@ export function ScrollReveal({
   );
 
   useEffect(() => {
+    const element = elementRef.current;
+    if (!element) return;
+
+    // Immediately show if reduced motion is enabled
     if (reduceMotion) {
-      setIsVisible(true);
+      element.classList.add("active");
       return;
     }
 
-    const target = elementRef.current;
-    if (!target || typeof IntersectionObserver === "undefined") {
-      setIsVisible(true);
+    if (typeof IntersectionObserver === "undefined") {
+      element.classList.add("active");
       return;
     }
 
-    const threshold = Math.min(Math.max(amount, 0), 1);
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
-          setIsVisible(true);
+          entry.target.classList.add("active");
           if (once) observer.unobserve(entry.target);
         } else if (!once) {
-          setIsVisible(false);
+          entry.target.classList.remove("active");
         }
       },
-      { threshold }
+      { threshold: Math.min(Math.max(amount, 0), 1) }
     );
 
-    observer.observe(target);
+    observer.observe(element);
     return () => observer.disconnect();
   }, [reduceMotion, once, amount]);
 
+  // Determine base class if not provided in className
   const hasDirectionalClass =
     className?.includes("reveal-left") || className?.includes("reveal-right");
   const baseClass = hasDirectionalClass ? "" : "reveal";
-  const combinedClass = [baseClass, className, isVisible ? "active" : ""]
-    .filter(Boolean)
-    .join(" ");
+
+  const combinedClass = [baseClass, className].filter(Boolean).join(" ");
 
   return (
     <div ref={elementRef} className={combinedClass} style={revealStyle}>
