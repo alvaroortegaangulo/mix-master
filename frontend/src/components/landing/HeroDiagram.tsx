@@ -228,7 +228,7 @@ export function HeroDiagram() {
                   className={`pointer-events-none absolute w-64 scale-95 opacity-0 transition-all duration-300 group-hover:opacity-100 group-hover:scale-100 ${node.windowClass}`}
                 >
                   <div
-                    className={`rounded-xl border border-white/10 bg-slate-950/85 p-4 shadow-[0_24px_60px_rgba(15,23,42,0.7)] backdrop-blur-xl ${node.windowAccentClass || ""}`}
+                    className={`rounded-xl border border-white/10 bg-slate-950/95 p-4 shadow-[0_24px_60px_rgba(15,23,42,0.7)] backdrop-blur-xl ${node.windowAccentClass || ""}`}
                   >
                     {node.showBadge ? (
                       <div className="mb-2 flex items-center gap-2">
@@ -250,7 +250,7 @@ export function HeroDiagram() {
       </div>
 
       <div className="absolute -bottom-12 left-0 right-0 text-center">
-        <a href="#benefits" className="group inline-flex items-center gap-2 text-sm text-slate-400 transition-colors hover:text-white">
+        <a href="#listen-difference" className="group inline-flex items-center gap-2 text-sm text-slate-400 transition-colors hover:text-white">
           <span className="border-b border-transparent transition-all group-hover:border-cyan-300">Escuchar la diferencia</span>
           <ChevronDownIcon className="h-4 w-4 transition-transform group-hover:translate-y-1" aria-hidden="true" />
         </a>

@@ -139,7 +139,7 @@ export function HeroSection() {
 
               <div className="text-center">
                 <a
-                  href="#benefits"
+                  href="#listen-difference"
                   className="inline-flex items-center gap-2 text-sm text-slate-400 transition-colors hover:text-white"
                 >
                   Escuchar la diferencia

@@ -90,6 +90,7 @@ export function ListenDifferenceSection({ className }: { className?: string }) {
 
   return (
     <section
+      id="listen-difference"
       className={`relative isolate z-0 overflow-hidden px-4 py-12 sm:py-16 md:py-20 lg:py-24 min-h-[100svh] sm:min-h-0 flex flex-col justify-center ${className || "bg-slate-950"}`}
     >
       <SonarBackground />
