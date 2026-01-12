@@ -43,11 +43,17 @@ const preloadSection = (section: unknown) => {
 export function LandingSectionsClient() {
   const t = useTranslations("LandingPage");
   const readyToElevate = t("readyToElevate");
+  const viewportDefaults = {
+    rootMargin: "320px 0px",
+    prefetchMargin: "900px 0px",
+    animateOnMount: false,
+  };
 
   return (
     <>
       {/* 2. Listen Difference: Highlight (bg-slate-950) */}
       <ViewportMount
+        {...viewportDefaults}
         className="bg-slate-950 min-h-[700px]"
         preload={() => preloadSection(ListenDifferenceSection)}
       >
@@ -56,6 +62,7 @@ export function LandingSectionsClient() {
 
       {/* 3. Pipeline: Light (bg-slate-900) */}
       <ViewportMount
+        {...viewportDefaults}
         className="bg-slate-900 min-h-[400px] lg:min-h-screen"
         preload={() => preloadSection(PipelineInteractiveDiagram)}
       >
@@ -64,6 +71,7 @@ export function LandingSectionsClient() {
 
       {/* 4. Live Analysis: Dark (bg-slate-950) */}
       <ViewportMount
+        {...viewportDefaults}
         className="bg-slate-950 min-h-[500px] lg:min-h-screen"
         preload={() => preloadSection(LiveSoundAnalysis)}
       >
@@ -72,6 +80,7 @@ export function LandingSectionsClient() {
 
       {/* 5. Features (DAW to World): Match Pipeline background */}
       <ViewportMount
+        {...viewportDefaults}
         className="bg-slate-900 min-h-screen"
         preload={() => preloadSection(FeaturesSection)}
       >
@@ -80,6 +89,7 @@ export function LandingSectionsClient() {
 
       {/* 6. Tech Specs (Power & Precision): Dark (bg-slate-950) */}
       <ViewportMount
+        {...viewportDefaults}
         className="bg-slate-950 min-h-[520px]"
         preload={() => preloadSection(TechSpecsSection)}
       >
@@ -88,6 +98,7 @@ export function LandingSectionsClient() {
 
       {/* 7. Benefits (Hours in minutes): Light (bg-slate-900) */}
       <ViewportMount
+        {...viewportDefaults}
         className="bg-slate-900 min-h-[500px] lg:min-h-screen"
         preload={() => preloadSection(BenefitsSection)}
       >
@@ -95,7 +106,7 @@ export function LandingSectionsClient() {
       </ViewportMount>
 
       {/* Bottom CTA */}
-      <ViewportMount className="bg-slate-950 min-h-[260px]">
+      <ViewportMount {...viewportDefaults} className="bg-slate-950 min-h-[260px]">
         <section className="relative py-10 md:py-14 lg:py-16 2xl:py-20 bg-slate-950 text-center px-4 overflow-hidden">
           <div className="absolute top-0 left-0 h-full w-full overflow-hidden pointer-events-none z-0">
             <div className="absolute -top-[20%] -left-[10%] h-[50%] w-[50%] rounded-full bg-teal-500/10 blur-[120px]" />

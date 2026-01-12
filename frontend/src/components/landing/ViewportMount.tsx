@@ -13,6 +13,7 @@ type ViewportMountProps = {
   threshold?: number;
   unmountOnExit?: boolean;
   initiallyMounted?: boolean;
+  animateOnMount?: boolean;
   preload?: () => void;
 };
 
@@ -25,6 +26,7 @@ export function ViewportMount({
   threshold = 0.1,
   unmountOnExit = true,
   initiallyMounted = false,
+  animateOnMount = true,
   preload,
 }: ViewportMountProps) {
   const reduceMotion = useReducedMotion();
@@ -109,9 +111,10 @@ export function ViewportMount({
     return () => observer.disconnect();
   }, [shouldRender]);
 
-  const transition = reduceMotion
-    ? { duration: 0 }
-    : ({ duration: 0.75, ease: [0.22, 1, 0.36, 1] } as any);
+  const shouldAnimate = animateOnMount && !reduceMotion;
+  const transition = shouldAnimate
+    ? ({ duration: 0.75, ease: [0.22, 1, 0.36, 1] } as any)
+    : { duration: 0 };
 
   return (
     <div
@@ -121,19 +124,19 @@ export function ViewportMount({
       style={reservedHeight ? { minHeight: `${reservedHeight}px` } : undefined}
     >
       {shouldRender ? (
-        <motion.div
-          ref={contentRef}
-          initial={
-            reduceMotion
-              ? false
-              : { opacity: 0, y: 18 }
-          }
-          animate={{ opacity: 1, y: 0 }}
-          transition={transition}
-          style={{ willChange: reduceMotion ? undefined : "transform, opacity" }}
-        >
-          {children}
-        </motion.div>
+        shouldAnimate ? (
+          <motion.div
+            ref={contentRef}
+            initial={{ opacity: 0, y: 18 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={transition}
+            style={{ willChange: "transform, opacity" }}
+          >
+            {children}
+          </motion.div>
+        ) : (
+          <div ref={contentRef}>{children}</div>
+        )
       ) : null}
     </div>
   );

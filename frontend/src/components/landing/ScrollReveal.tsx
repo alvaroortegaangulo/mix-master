@@ -25,6 +25,7 @@ export function ScrollReveal({
 }: ScrollRevealProps) {
   const reduceMotion = useReducedMotion();
   const elementRef = useRef<HTMLDivElement | null>(null);
+  const activationTimeoutRef = useRef<number | null>(null);
 
   const revealStyle = useMemo(
     () =>
@@ -54,9 +55,21 @@ export function ScrollReveal({
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
-          entry.target.classList.add("active");
+          if (activationTimeoutRef.current) {
+            window.clearTimeout(activationTimeoutRef.current);
+          }
+
+          activationTimeoutRef.current = window.setTimeout(() => {
+            entry.target.classList.add("active");
+          }, 0);
+
           if (once) observer.unobserve(entry.target);
         } else if (!once) {
+          if (activationTimeoutRef.current) {
+            window.clearTimeout(activationTimeoutRef.current);
+            activationTimeoutRef.current = null;
+          }
+
           entry.target.classList.remove("active");
         }
       },
@@ -64,7 +77,13 @@ export function ScrollReveal({
     );
 
     observer.observe(element);
-    return () => observer.disconnect();
+    return () => {
+      observer.disconnect();
+      if (activationTimeoutRef.current) {
+        window.clearTimeout(activationTimeoutRef.current);
+        activationTimeoutRef.current = null;
+      }
+    };
   }, [reduceMotion, once, amount]);
 
   // Determine base class if not provided in className
