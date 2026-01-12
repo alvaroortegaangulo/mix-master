@@ -6,10 +6,10 @@ import { ScrollReveal } from "./ScrollReveal";
 import { ViewportMount } from "./ViewportMount";
 import { Link } from "../../i18n/routing";
 
-// Componentes dinámicos para optimizar el First Contentful Paint (FCP)
+// Componentes dinámicos
 const PipelineInteractiveDiagram = dynamic(
   () => import("./PipelineInteractiveDiagram").then((mod) => mod.PipelineInteractiveDiagram),
-  { loading: () => <div className="h-96 bg-slate-900 animate-pulse" /> } // Añadido animate-pulse para mejor UX
+  { loading: () => <div className="h-96 bg-slate-900 animate-pulse" /> }
 );
 
 const ListenDifferenceSection = dynamic(
@@ -37,7 +37,7 @@ const TechSpecsSection = dynamic(
   { loading: () => <div className="h-96 bg-slate-950 animate-pulse" /> }
 );
 
-// Helper para precargar componentes cuando el viewport se acerca
+// Helper para precargar
 const preloadSection = (section: any) => {
   if (section && typeof section.preload === "function") {
     section.preload();
@@ -49,77 +49,87 @@ export function LandingSectionsClient() {
   const readyToElevate = t("readyToElevate");
   
   const viewportDefaults = {
-    rootMargin: "200px 0px", // Reducido ligeramente para evitar cargas demasiado tempranas en móviles
+    rootMargin: "200px 0px",
     prefetchMargin: "500px 0px",
     animateOnMount: false,
   };
 
   return (
     <>
-      {/* 2. Listen Difference: Highlight (bg-slate-950) */}
+      {/* 2. Listen Difference: Fade Up */}
       <ViewportMount
         {...viewportDefaults}
         className="bg-slate-950 min-h-[700px]"
         preload={() => preloadSection(ListenDifferenceSection)}
       >
-        <ListenDifferenceSection className="bg-slate-950" />
+        <ScrollReveal direction="up" duration={0.8} className="w-full">
+          <ListenDifferenceSection className="bg-slate-950" />
+        </ScrollReveal>
       </ViewportMount>
 
-      {/* 3. Pipeline: Light (bg-slate-900) */}
+      {/* 3. Pipeline: Fade Up con ligero delay */}
       <ViewportMount
         {...viewportDefaults}
         className="bg-slate-900 min-h-[400px] lg:min-h-screen"
         preload={() => preloadSection(PipelineInteractiveDiagram)}
       >
-        <PipelineInteractiveDiagram className="bg-gradient-to-b from-black via-purple-900/40 to-black section-blend blend-next-slate-950" />
+        <ScrollReveal direction="up" delay={0.1} className="w-full">
+          <PipelineInteractiveDiagram className="bg-gradient-to-b from-black via-purple-900/40 to-black section-blend blend-next-slate-950" />
+        </ScrollReveal>
       </ViewportMount>
 
-      {/* 4. Live Analysis: Dark (bg-slate-950) */}
+      {/* 4. Live Analysis: Aparece desde la derecha (efecto sutil) */}
       <ViewportMount
         {...viewportDefaults}
         className="bg-slate-950 min-h-[500px] lg:min-h-screen"
         preload={() => preloadSection(LiveSoundAnalysis)}
       >
-        <LiveSoundAnalysis className="bg-slate-950" />
+        <ScrollReveal direction="right" x={50} duration={0.9} className="w-full">
+          <LiveSoundAnalysis className="bg-slate-950" />
+        </ScrollReveal>
       </ViewportMount>
 
-      {/* 5. Features (DAW to World): Match Pipeline background */}
+      {/* 5. Features: Fade Up clásico */}
       <ViewportMount
         {...viewportDefaults}
         className="bg-slate-900 min-h-screen"
         preload={() => preloadSection(FeaturesSection)}
       >
-        <FeaturesSection className="bg-slate-900" />
+        <ScrollReveal direction="up" className="w-full">
+          <FeaturesSection className="bg-slate-900" />
+        </ScrollReveal>
       </ViewportMount>
 
-      {/* 6. Tech Specs (Power & Precision): Dark (bg-slate-950) */}
+      {/* 6. Tech Specs: Aparece desde la izquierda */}
       <ViewportMount
         {...viewportDefaults}
         className="bg-slate-950 min-h-[520px]"
         preload={() => preloadSection(TechSpecsSection)}
       >
-        <TechSpecsSection className="bg-slate-950" />
+        <ScrollReveal direction="left" x={50} className="w-full">
+          <TechSpecsSection className="bg-slate-950" />
+        </ScrollReveal>
       </ViewportMount>
 
-      {/* 7. Benefits (Hours in minutes): Light (bg-slate-900) */}
+      {/* 7. Benefits: Fade Up */}
       <ViewportMount
         {...viewportDefaults}
         className="bg-slate-900 min-h-[500px] lg:min-h-screen"
         preload={() => preloadSection(BenefitsSection)}
       >
-        <BenefitsSection className="bg-slate-900" />
+        <ScrollReveal direction="up" className="w-full">
+          <BenefitsSection className="bg-slate-900" />
+        </ScrollReveal>
       </ViewportMount>
 
-      {/* Bottom CTA */}
+      {/* Bottom CTA: Elementos individuales (Ya estaba configurado, se mantiene optimizado) */}
       <ViewportMount {...viewportDefaults} className="bg-slate-950 min-h-[260px]">
         <section className="relative py-10 md:py-14 lg:py-16 2xl:py-20 bg-slate-950 text-center px-4 overflow-hidden">
-          {/* Background Effects */}
           <div className="absolute top-0 left-0 h-full w-full overflow-hidden pointer-events-none z-0">
             <div className="absolute -top-[20%] -left-[10%] h-[50%] w-[50%] rounded-full bg-teal-500/10 blur-[120px]" />
             <div className="absolute top-[40%] -right-[10%] h-[60%] w-[60%] rounded-full bg-violet-600/10 blur-[120px]" />
           </div>
-
-          {/* CTA Content con ScrollReveal */}
+          
           <div className="relative z-10 flex flex-col items-center gap-6">
             <ScrollReveal direction="up" delay={0.1}>
               <h2

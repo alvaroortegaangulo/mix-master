@@ -192,9 +192,13 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
     const panel = activePanelRef.current;
     if (!panel) return;
 
+    // Use a small timeout or requestAnimationFrame to ensure layout is settled after animation frame
+    // though for height calculation on expand, measuring after render is usually fine.
     const updateHeight = () => {
-      const nextHeight = Math.ceil(panel.getBoundingClientRect().height);
-      setPanelHeight((prev) => (prev === nextHeight ? prev : nextHeight));
+      if (panel) {
+        const nextHeight = Math.ceil(panel.getBoundingClientRect().height);
+        setPanelHeight((prev) => (prev === nextHeight ? prev : nextHeight));
+      }
     };
 
     updateHeight();
@@ -218,7 +222,8 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
       <StarBackground />
 
       <div className="relative z-10 w-full max-w-7xl 2xl:max-w-[1600px]">
-        <ScrollReveal delay={0.05}>
+        {/* 1. Header Animation */}
+        <ScrollReveal delay={0.05} direction="up">
           <header className="text-left mb-6 lg:mb-8 relative z-10 max-w-3xl">
             <h2
               className="text-3xl md:text-5xl 2xl:text-6xl font-black font-['Orbitron'] tracking-wide mb-4 text-white glow-violet metallic-sheen"
@@ -236,7 +241,8 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
           </header>
         </ScrollReveal>
 
-        <ScrollReveal delay={0.1}>
+        {/* 2. Main Panel Animation */}
+        <ScrollReveal delay={0.2} direction="up" className="w-full">
           <main
             className="w-full max-w-7xl 2xl:max-w-[1600px] flex flex-col md:flex-row gap-2 md:gap-4 relative z-10 md:items-stretch"
             style={panelHeightStyle}
@@ -282,6 +288,7 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
 
                   <div className="relative p-2 lg:p-3 flex h-full flex-col gap-[0.5cm] z-10">
                     {!isActive ? (
+                      // Collapsed State (Simple fade in for text is handled by parent transition usually, keeping simple)
                       <div className="w-full">
                         <div className="relative flex items-center py-2 md:hidden">
                           <step.icon className={`absolute left-0 w-6 h-6 ${colors.text} group-hover:scale-110 transition-transform duration-300 drop-shadow-lg`} />
@@ -299,8 +306,15 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
                         </div>
                       </div>
                     ) : (
+                      // Expanded State with Staggered Animations
                       <>
-                        <div className="flex items-center justify-start gap-2 text-left animate-fade-in">
+                        {/* 1. Icon + Title Header: Slides in from LEFT */}
+                        <ScrollReveal 
+                            className="flex items-center justify-start gap-2 text-left"
+                            direction="left"
+                            delay={0.1}
+                            x={20}
+                        >
                           <div className={`w-9 h-9 lg:w-10 lg:h-10 rounded-full border ${colors.ringBorder} flex items-center justify-center ${colors.ringBg} backdrop-blur-md icon-pulse`}>
                             <step.icon className={`w-5 h-5 lg:w-6 lg:h-6 ${colors.text}`} />
                           </div>
@@ -312,29 +326,37 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
                               {step.subtitle}
                             </p>
                           </div>
-                        </div>
+                        </ScrollReveal>
 
-                        <div className="flex flex-col items-start py-1 lg:py-2 space-y-0 text-left">
-                          <p className={`text-xs lg:text-sm 2xl:text-base text-slate-200 leading-snug max-w-2xl border-l-2 ${colors.border} pl-3 bg-gradient-to-r ${colors.gradientFrom} to-transparent p-1.5 rounded-r-lg`}>
-                            {step.description}
-                          </p>
+                        <div className="flex flex-col items-start py-1 lg:py-2 space-y-0 text-left w-full">
+                          
+                          {/* 2. Description: Fades UP */}
+                          <ScrollReveal direction="up" delay={0.2} className="w-full">
+                            <p className={`text-xs lg:text-sm 2xl:text-base text-slate-200 leading-snug max-w-2xl border-l-2 ${colors.border} pl-3 bg-gradient-to-r ${colors.gradientFrom} to-transparent p-1.5 rounded-r-lg`}>
+                              {step.description}
+                            </p>
+                          </ScrollReveal>
 
-                          <div className="grid grid-cols-3 gap-1 sm:gap-2.5 max-w-lg text-left mt-2">
-                            {step.tools.map((tool) => (
-                              <div
-                                key={tool.name}
+                          {/* 3. Tools Grid: Staggered items */}
+                          <div className="grid grid-cols-3 gap-1 sm:gap-2.5 max-w-lg text-left mt-2 w-full sm:w-auto">
+                            {step.tools.map((tool, i) => (
+                              <ScrollReveal 
+                                key={tool.name} 
+                                delay={0.3 + (i * 0.1)} // Cascading delay: 0.3, 0.4, 0.5
+                                direction="up"
                                 className={`flex flex-col items-start justify-center p-1.5 lg:p-2 rounded-xl bg-slate-800/50 ${colors.toolHoverBg} border border-slate-700/50 ${colors.toolHoverBorder} transition-all duration-300 group/tool backdrop-blur-sm`}
                               >
                                 <tool.icon className={`w-4 h-4 lg:w-5 lg:h-5 text-slate-400 ${colors.toolHoverText} mb-0.5 lg:mb-1 transition-colors`} />
                                 <span className="text-[9px] sm:text-[10px] font-semibold text-left text-slate-300 group-hover/tool:text-white uppercase leading-tight">
                                   {tool.name}
                                 </span>
-                              </div>
+                              </ScrollReveal>
                             ))}
                           </div>
                         </div>
 
-                        <div>
+                        {/* 4. Pro Tip Box: Appears LAST */}
+                        <ScrollReveal direction="up" delay={0.5} className="w-full">
                           <div className={`shine-box relative overflow-hidden rounded-lg bg-slate-800/80 border ${colors.borderSoft} p-2.5 lg:p-3 shadow-lg text-left`}>
                             <div className="flex items-start gap-2 relative z-10">
                               <LightBulbIcon className={`w-4 h-4 lg:w-5 lg:h-5 ${colors.text} mt-1`} aria-hidden="true" />
@@ -348,7 +370,7 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
                               </div>
                             </div>
                           </div>
-                        </div>
+                        </ScrollReveal>
                       </>
                     )}
                   </div>

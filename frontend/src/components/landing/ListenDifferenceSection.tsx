@@ -95,26 +95,37 @@ export function ListenDifferenceSection({ className }: { className?: string }) {
       <SonarBackground />
 
       <div className="relative z-10 mx-auto max-w-7xl w-full">
-        <ScrollReveal className="mx-auto max-w-3xl text-center mb-10 md:mb-14" delay={0.05}>
-          <h2
-            className="text-3xl sm:text-4xl md:text-5xl font-black font-['Orbitron'] tracking-tight text-white mb-4 glow-amber metallic-sheen"
-            data-text={titlePlain}
-          >
-            {t.rich("titleMain", {
-              amber: (chunks) => <span className="text-amber-400">{chunks}</span>,
-            })}
-          </h2>
-          <p className="text-sm sm:text-base md:text-lg text-slate-300 leading-relaxed max-w-2xl mx-auto">
-            {t("subtitle")}
-          </p>
-        </ScrollReveal>
+        
+        {/* 1. Title & Subtitle - Staggered */}
+        <div className="mx-auto max-w-3xl text-center mb-10 md:mb-14">
+          <ScrollReveal delay={0.1} direction="up">
+            <h2
+              className="text-3xl sm:text-4xl md:text-5xl font-black font-['Orbitron'] tracking-tight text-white mb-4 glow-amber metallic-sheen"
+              data-text={titlePlain}
+            >
+              {t.rich("titleMain", {
+                amber: (chunks) => <span className="text-amber-400">{chunks}</span>,
+              })}
+            </h2>
+          </ScrollReveal>
+          
+          <ScrollReveal delay={0.2} direction="up">
+            <p className="text-sm sm:text-base md:text-lg text-slate-300 leading-relaxed max-w-2xl mx-auto">
+              {t("subtitle")}
+            </p>
+          </ScrollReveal>
+        </div>
 
-        <ScrollReveal
-          className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch"
-          delay={0.1}
-        >
-          {/* Main Player Box */}
-          <div className="lg:col-span-8 relative rounded-[28px] border border-amber-500/20 bg-slate-900/60 p-6 sm:p-8 shadow-[0_30px_80px_rgba(0,0,0,0.55)] backdrop-blur flex flex-col justify-between min-h-[400px]">
+        {/* 2. Main Grid - Player enters left, Metrics enters right */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch">
+          
+          {/* Main Player Box - Enters from Left */}
+          <ScrollReveal 
+            className="lg:col-span-8 relative rounded-[28px] border border-amber-500/20 bg-slate-900/60 p-6 sm:p-8 shadow-[0_30px_80px_rgba(0,0,0,0.55)] backdrop-blur flex flex-col justify-between min-h-[400px]"
+            delay={0.3}
+            direction="left" // or "up" if you prefer vertical only
+            x={20} // Slight horizontal movement
+          >
             <div className="absolute inset-0 rounded-[28px] ring-1 ring-amber-500/10 pointer-events-none" />
 
             {/* Header / Info */}
@@ -170,10 +181,14 @@ export function ListenDifferenceSection({ className }: { className?: string }) {
                   </button>
                 </div>
             </div>
-          </div>
+          </ScrollReveal>
 
-          {/* Metrics Panel */}
-          <div className="lg:col-span-4 flex flex-col gap-6">
+          {/* Metrics Panel - Enters from Right/Bottom */}
+          <ScrollReveal 
+            className="lg:col-span-4 flex flex-col gap-6"
+            delay={0.4}
+            direction="up" // Keeping it up to match alignment better on mobile
+          >
             <div className="flex-1 relative rounded-[28px] border border-slate-800 bg-slate-900/60 p-6 sm:p-8 shadow-xl backdrop-blur flex flex-col justify-center">
                <h3 className="text-lg font-bold text-white mb-6 flex items-center gap-2">
                  <span className="w-2 h-2 rounded-full bg-teal-500 animate-pulse"></span>
@@ -205,32 +220,33 @@ export function ListenDifferenceSection({ className }: { className?: string }) {
                  ))}
                </div>
             </div>
-          </div>
-        </ScrollReveal>
+          </ScrollReveal>
+        </div>
 
-        {/* Improvements Grid */}
-        <ScrollReveal className="mt-12" delay={0.2} once={false}>
-          <div className="scroll-list-fade grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {improvements.map(({ icon: Icon, key, color }) => (
-              <div
-                key={key}
-                className="bg-slate-900/40 border border-slate-800 rounded-2xl p-6 hover:bg-slate-900/60 transition-colors duration-300"
-              >
-                <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-4 ${color}`}>
-                  <Icon className="w-6 h-6" />
-                </div>
-                <h3 className="text-white font-bold text-base mb-2">
-                  {t(`improvements.${key}.title`)}
-                </h3>
-                <p className="text-slate-400 text-sm leading-relaxed">
-                  {t(`improvements.${key}.description`)}
-                </p>
+        {/* 3. Improvements Grid - Individual Cards Pop In Sequentially */}
+        <div className="mt-12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {improvements.map(({ icon: Icon, key, color }, index) => (
+            <ScrollReveal
+              key={key}
+              delay={0.5 + (index * 0.05)} // Staggered delay: 0.50, 0.55, 0.60...
+              direction="up"
+              className="bg-slate-900/40 border border-slate-800 rounded-2xl p-6 hover:bg-slate-900/60 transition-colors duration-300"
+            >
+              <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-4 ${color}`}>
+                <Icon className="w-6 h-6" />
               </div>
-            ))}
-          </div>
-        </ScrollReveal>
+              <h3 className="text-white font-bold text-base mb-2">
+                {t(`improvements.${key}.title`)}
+              </h3>
+              <p className="text-slate-400 text-sm leading-relaxed">
+                {t(`improvements.${key}.description`)}
+              </p>
+            </ScrollReveal>
+          ))}
+        </div>
 
-        <ScrollReveal className="mt-12 flex justify-center" delay={0.25}>
+        {/* 4. CTA Button - Last to appear */}
+        <ScrollReveal className="mt-12 flex justify-center" delay={0.9}>
           <Link
             href="/examples"
             className="inline-flex items-center justify-center rounded-full bg-amber-400 px-8 py-3 text-sm font-bold text-slate-950 shadow-lg shadow-amber-500/20 transition hover:bg-amber-300 hover:scale-105 active:scale-95"
@@ -238,6 +254,7 @@ export function ListenDifferenceSection({ className }: { className?: string }) {
             {t("cta")}
           </Link>
         </ScrollReveal>
+
       </div>
     </section>
   );

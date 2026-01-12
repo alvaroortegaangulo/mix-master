@@ -67,8 +67,9 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
         <GridBackground />
 
       <div className="max-w-7xl 2xl:max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 2xl:px-4 relative z-10">
-        {/* Header */}
-        <ScrollReveal className="mb-6 text-right" delay={0.05}>
+        
+        {/* 1. Header - Fades Down */}
+        <ScrollReveal className="mb-6 text-right" delay={0.1} direction="down">
           <h2
             className="text-3xl md:text-5xl 2xl:text-6xl font-bold tracking-tight mb-4 font-['Orbitron'] text-white glow-teal metallic-sheen"
             data-text={titlePlain}
@@ -85,10 +86,12 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
         {/* Dashboard Container */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 lg:gap-5 font-['Orbitron']">
 
-          {/* LEFT PANEL: Frequency Spectrum */}
+          {/* 2. LEFT PANEL: Frequency Spectrum - Enters from LEFT */}
           <ScrollReveal
             className="lg:col-span-2 bg-slate-900/50 rounded-3xl border border-slate-800 p-3 md:p-4 2xl:p-6 flex flex-col justify-between min-h-[190px] md:min-h-[220px] 2xl:min-h-[500px] shadow-2xl relative overflow-hidden"
-            delay={0.1}
+            delay={0.2}
+            direction="left"
+            x={30} // Move from left
           >
 
              {/* Top Bar of Panel */}
@@ -142,11 +145,16 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
           </ScrollReveal>
 
 
-          {/* RIGHT COLUMN: Metrics Cards */}
-          <ScrollReveal className="flex flex-col gap-3 h-full justify-between" delay={0.15}>
+          {/* RIGHT COLUMN: Metrics Cards - Cascading from RIGHT */}
+          <div className="flex flex-col gap-3 h-full justify-between">
 
-             {/* Card 1: Integrated Loudness */}
-             <div className="bg-slate-900/50 rounded-2xl border border-slate-800 p-3 2xl:p-4 shadow-lg relative group overflow-hidden">
+             {/* 3. Card 1: Integrated Loudness */}
+             <ScrollReveal 
+                className="bg-slate-900/50 rounded-2xl border border-slate-800 p-3 2xl:p-4 shadow-lg relative group overflow-hidden"
+                delay={0.3}
+                direction="right"
+                x={30}
+             >
                 <div className="flex justify-between items-start mb-2">
                     <div className="text-[10px] 2xl:text-xs uppercase tracking-wider text-slate-300">{t('metrics.loudness')}</div>
                     <SpeakerWaveIcon className="w-4 h-4 text-teal-400/70 icon-float" aria-hidden="true" />
@@ -164,12 +172,16 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
                     <span>-14 ({t('metrics.target')})</span>
                     <span>-8</span>
                 </div>
-
-             </div>
+             </ScrollReveal>
 
              <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-col">
-               {/* Card 2: Stereo Image */}
-               <div className="bg-slate-900/50 rounded-2xl border border-slate-800 p-3 2xl:p-4 shadow-lg relative overflow-hidden">
+               {/* 4. Card 2: Stereo Image */}
+               <ScrollReveal 
+                  className="bg-slate-900/50 rounded-2xl border border-slate-800 p-3 2xl:p-4 shadow-lg relative overflow-hidden"
+                  delay={0.4}
+                  direction="right"
+                  x={30}
+               >
                    <div className="flex justify-between items-start gap-2">
                        <div className="min-w-0">
                           <div className="text-[9px] sm:text-[10px] uppercase tracking-wider text-slate-300 mb-1">{t('metrics.stereoImage')}</div>
@@ -179,17 +191,22 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
                           </div>
                        </div>
 
-                       {/* Visual representation of Stereo Field (Circle) */}
+                       {/* Visual representation of Stereo Field */}
                        <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-full border border-slate-700 bg-slate-950 relative flex items-center justify-center overflow-hidden stereo-icon">
                           <div className="absolute inset-0 bg-violet-500/20 animate-pulse rounded-full transform scale-75"></div>
                           <div className="w-6 h-3 sm:w-7 sm:h-3.5 border border-violet-400/50 rounded-[100%] transform -rotate-12 opacity-80 stereo-orbit"></div>
                           <div className="w-6 h-3 sm:w-7 sm:h-3.5 border border-teal-400/50 rounded-[100%] absolute transform rotate-12 opacity-80 stereo-orbit-delayed"></div>
                        </div>
                    </div>
-               </div>
+               </ScrollReveal>
 
-               {/* Card 3: Dynamic Range */}
-               <div className="bg-slate-900/50 rounded-2xl border border-slate-800 p-3 2xl:p-4 shadow-lg flex items-center justify-between gap-2">
+               {/* 5. Card 3: Dynamic Range */}
+               <ScrollReveal 
+                  className="bg-slate-900/50 rounded-2xl border border-slate-800 p-3 2xl:p-4 shadow-lg flex items-center justify-between gap-2"
+                  delay={0.5}
+                  direction="right"
+                  x={30}
+               >
                    <div className="min-w-0">
                       <div className="text-[9px] sm:text-[10px] uppercase tracking-wider text-slate-300 mb-1">{t('metrics.dynamicRange')}</div>
                       <div className="text-base sm:text-xl font-bold text-white tabular-nums">
@@ -204,10 +221,10 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
                       <div className="w-1 sm:w-1.5 bg-violet-500 h-6 sm:h-8 rounded-sm shadow-[0_0_10px_rgba(139,92,246,0.4)] histogram-bar histogram-bar-3"></div>
                       <div className="w-1 sm:w-1.5 bg-violet-800/60 h-5 sm:h-6 rounded-sm histogram-bar histogram-bar-4"></div>
                    </div>
-               </div>
+               </ScrollReveal>
              </div>
 
-          </ScrollReveal>
+          </div>
         </div>
       </div>
 

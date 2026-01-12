@@ -114,7 +114,6 @@ export function FeaturesSection({ className }: { className?: string }) {
   const manualSwitch = (index: number) => {
     setCurrentIndex(index);
     setProgress(0);
-    // Note: The effect will restart the timer naturally because state changed.
   };
 
   const currentFeature = features[currentIndex];
@@ -131,30 +130,35 @@ export function FeaturesSection({ className }: { className?: string }) {
       <AuroraBackground />
       <div className="relative z-10 max-w-7xl w-full mx-auto">
 
-        {/* Header */}
-        <ScrollReveal className="text-left mb-8 max-w-3xl" delay={0.05}>
-          <h2
-            className="text-3xl md:text-5xl font-black font-['Orbitron'] tracking-wide mb-4 glow-amber metallic-sheen"
-            data-text={titlePlain}
-          >
-            {t.rich("title", {
-              daw: (chunks) => (
-                <span className={`text-transparent bg-clip-text bg-gradient-to-r ${getGradientColors()} transition-all duration-500`}>
-                  {chunks}
-                </span>
-              ),
-              gradient: (chunks) => <span>{chunks}</span>,
-            })}
-          </h2>
-          <p className="text-slate-400 text-sm sm:text-base max-w-2xl font-light leading-relaxed">
-            {t("subtitle")}
-          </p>
-        </ScrollReveal>
+        {/* 1. Header Area - Animate Title then Subtitle */}
+        <div className="text-left mb-8 max-w-3xl">
+          <ScrollReveal delay={0.1} direction="up">
+            <h2
+              className="text-3xl md:text-5xl font-black font-['Orbitron'] tracking-wide mb-4 glow-amber metallic-sheen"
+              data-text={titlePlain}
+            >
+              {t.rich("title", {
+                daw: (chunks) => (
+                  <span className={`text-transparent bg-clip-text bg-gradient-to-r ${getGradientColors()} transition-all duration-500`}>
+                    {chunks}
+                  </span>
+                ),
+                gradient: (chunks) => <span>{chunks}</span>,
+              })}
+            </h2>
+          </ScrollReveal>
+          
+          <ScrollReveal delay={0.2} direction="up">
+            <p className="text-slate-400 text-sm sm:text-base max-w-2xl font-light leading-relaxed">
+              {t("subtitle")}
+            </p>
+          </ScrollReveal>
+        </div>
 
-        {/* Main Interactive Component */}
+        {/* 2. Main Interactive Component - The Container itself reveals */}
         <ScrollReveal
           className="relative w-full md:w-4/5 max-w-6xl mx-auto rounded-[28px] overflow-hidden border border-amber-500/20 bg-slate-950/70 shadow-[0_40px_90px_rgba(0,0,0,0.65)]"
-          delay={0.1}
+          delay={0.3} // Delay so it appears after the text
         >
 
           {/* Image Display Area */}
@@ -174,8 +178,13 @@ export function FeaturesSection({ className }: { className?: string }) {
             {/* Scanline Effect */}
             <div className="scanline"></div>
 
-            {/* Floating Content Card */}
-            <div className="absolute top-1/2 -translate-y-1/2 left-5 md:left-10 lg:left-12 z-20 w-[88%] sm:w-[70%] md:w-[440px] lg:w-[480px] 2xl:w-[600px]">
+            {/* 3. Floating Content Card - Slides in from LEFT after container appears */}
+            <ScrollReveal 
+              className="absolute top-1/2 -translate-y-1/2 left-5 md:left-10 lg:left-12 z-20 w-[88%] sm:w-[70%] md:w-[440px] lg:w-[480px] 2xl:w-[600px]"
+              delay={0.5} // High delay to let container establish first
+              direction="right" // "right" means it moves TO right (reveals from left) - or use x={-50}
+              x={-30} // Custom tweak: starts slightly left, moves to 0
+            >
               <div className="relative rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-4 md:px-6 md:py-6 shadow-[0_22px_60px_rgba(0,0,0,0.6)] backdrop-blur-xl">
                 <div className="absolute inset-0 rounded-2xl ring-1 ring-amber-500/15 pointer-events-none" />
                 <div className="relative flex items-center gap-3 mb-3">
@@ -210,11 +219,15 @@ export function FeaturesSection({ className }: { className?: string }) {
                   ))}
                 </div>
               </div>
-            </div>
+            </ScrollReveal>
           </div>
 
-          {/* Bottom Navigation Bar */}
-          <div className="grid grid-cols-2 md:grid-cols-4 bg-slate-950/90 border-t border-white/10">
+          {/* 4. Bottom Navigation Bar - Slides up last */}
+          <ScrollReveal 
+            className="grid grid-cols-2 md:grid-cols-4 bg-slate-950/90 border-t border-white/10"
+            delay={0.6}
+            direction="up"
+          >
             {features.map((feature, index) => {
               const isActive = index === currentIndex;
               return (
@@ -262,7 +275,7 @@ export function FeaturesSection({ className }: { className?: string }) {
                 </button>
               );
             })}
-          </div>
+          </ScrollReveal>
         </ScrollReveal>
       </div>
 

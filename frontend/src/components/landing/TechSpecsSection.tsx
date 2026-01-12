@@ -8,11 +8,14 @@ import { ScrollReveal } from "./ScrollReveal";
 export function TechSpecsSection({ className }: { className?: string }) {
     const t = useTranslations('TechSpecsSection');
     const title = t('title');
+    
+    // Marquee logic refs
     const marqueeRef = useRef<HTMLDivElement>(null);
     const dragStartXRef = useRef(0);
     const dragStartScrollLeftRef = useRef(0);
     const isDraggingRef = useRef(false);
     const [isDragging, setIsDragging] = useState(false);
+
     const specs = [
       { value: "96 kHz", label: t("internalProcessing") },
       { value: "32-bit", label: t("floatDepth") },
@@ -31,6 +34,7 @@ export function TechSpecsSection({ className }: { className?: string }) {
       { value: "0.2 dB", label: "TOLERANCIA RMS" },
       { value: "-90 dBFS", label: "PISO DE RUIDO" },
     ];
+
     const valueColors = [
       "text-cyan-300",
       "text-teal-300",
@@ -49,23 +53,28 @@ export function TechSpecsSection({ className }: { className?: string }) {
       "text-teal-400",
       "text-pink-400",
     ];
+
+    // Double the array for seamless infinite scroll
     const marqueeSpecs = [...specs, ...specs];
 
+    // --- Marquee Animation Logic (Optimized) ---
     useEffect(() => {
       const marquee = marqueeRef.current;
       if (!marquee) return;
 
-      const durationMs = 44000;
+      const durationMs = 44000; // Speed of scroll
       let frameId: number | null = null;
       let lastTime = performance.now();
 
       const setStartPosition = () => {
+        // Ensure we start in the middle for seamless looping
         const halfWidth = marquee.scrollWidth / 2;
         if (halfWidth > 0) {
           marquee.scrollLeft = halfWidth;
         }
       };
 
+      // Initial positioning
       setStartPosition();
 
       const step = (time: number) => {
@@ -75,8 +84,11 @@ export function TechSpecsSection({ className }: { className?: string }) {
         if (!isDraggingRef.current) {
           const halfWidth = marquee.scrollWidth / 2;
           if (halfWidth > 0) {
+            // Calculate movement based on time delta for consistent speed across refresh rates
             const move = (halfWidth * delta) / durationMs;
             marquee.scrollLeft -= move;
+
+            // Loop logic
             if (marquee.scrollLeft <= 0) {
               marquee.scrollLeft += halfWidth;
             } else if (marquee.scrollLeft >= halfWidth) {
@@ -84,12 +96,12 @@ export function TechSpecsSection({ className }: { className?: string }) {
             }
           }
         }
-
         frameId = requestAnimationFrame(step);
       };
 
       frameId = requestAnimationFrame(step);
 
+      // Handle Resize
       let resizeObserver: ResizeObserver | null = null;
       if (typeof ResizeObserver !== "undefined") {
         resizeObserver = new ResizeObserver(() => {
@@ -101,13 +113,12 @@ export function TechSpecsSection({ className }: { className?: string }) {
       }
 
       return () => {
-        if (frameId) {
-          cancelAnimationFrame(frameId);
-        }
+        if (frameId) cancelAnimationFrame(frameId);
         resizeObserver?.disconnect();
       };
     }, []);
 
+    // --- Interaction Logic (Drag to Scroll) ---
     const normalizeScroll = () => {
       const marquee = marqueeRef.current;
       if (!marquee) return;
@@ -154,12 +165,17 @@ export function TechSpecsSection({ className }: { className?: string }) {
 
     return (
       <section className={`py-10 md:py-14 lg:py-16 2xl:py-20 relative overflow-hidden ${className || 'bg-slate-950'}`}>
+        
+        {/* Background Effects (Static, no reveal needed) */}
         <div className="absolute top-0 left-0 h-full w-full overflow-hidden pointer-events-none z-0">
           <div className="absolute -top-[20%] -left-[10%] h-[50%] w-[50%] rounded-full bg-teal-500/10 blur-[120px]" />
           <div className="absolute top-[40%] -right-[10%] h-[60%] w-[60%] rounded-full bg-violet-600/10 blur-[120px]" />
         </div>
+
         <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <ScrollReveal delay={0.05}>
+          
+          {/* 1. Title - First to appear */}
+          <ScrollReveal direction="up" delay={0.1}>
             <h2
               className="text-3xl md:text-5xl font-bold mb-8 font-['Orbitron'] text-white glow-emerald metallic-sheen"
               data-text={title}
@@ -168,10 +184,15 @@ export function TechSpecsSection({ className }: { className?: string }) {
             </h2>
           </ScrollReveal>
 
-          <ScrollReveal delay={0.1}>
+          {/* 2. Marquee Container - Appears shortly after */}
+          {/* Note: We animate the CONTAINER, not individual items, to preserve scroll physics */}
+          <ScrollReveal direction="up" delay={0.3} className="w-full">
             <div className="relative max-w-5xl mx-auto">
-              <div className="pointer-events-none absolute inset-y-0 left-0 w-16 bg-gradient-to-r from-slate-950 to-transparent" />
-              <div className="pointer-events-none absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-slate-950 to-transparent" />
+              
+              {/* Fade masks for the sides */}
+              <div className="pointer-events-none absolute inset-y-0 left-0 w-16 bg-gradient-to-r from-slate-950 to-transparent z-20" />
+              <div className="pointer-events-none absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-slate-950 to-transparent z-20" />
+              
               <div
                 ref={marqueeRef}
                 className={`overflow-hidden select-none ${isDragging ? "cursor-grabbing" : "cursor-grab"}`}
@@ -186,7 +207,7 @@ export function TechSpecsSection({ className }: { className?: string }) {
                     <div
                       key={`${spec.label}-${index}`}
                       aria-hidden={index >= specs.length ? "true" : undefined}
-                      className="flex items-center gap-3 rounded-full border border-slate-800/80 bg-slate-900/60 px-4 py-2 shadow-sm"
+                      className="flex items-center gap-3 rounded-full border border-slate-800/80 bg-slate-900/60 px-4 py-2 shadow-sm hover:border-slate-700 transition-colors duration-300"
                     >
                       <span className={`text-sm sm:text-base font-semibold tabular-nums ${valueColors[index % valueColors.length]}`}>
                         {spec.value}
@@ -200,7 +221,8 @@ export function TechSpecsSection({ className }: { className?: string }) {
               </div>
             </div>
           </ScrollReveal>
+
         </div>
       </section>
     );
-  }
+}

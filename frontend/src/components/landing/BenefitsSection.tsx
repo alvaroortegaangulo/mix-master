@@ -1,3 +1,5 @@
+"use client";
+
 import { useRef, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { ScrollReveal } from "./ScrollReveal";
@@ -38,10 +40,9 @@ const drawEqualizerBars = (
     const mix = (waveA * 0.6 + waveB * 0.3 + waveC * 0.1 + 1.5) / 3;
     const barHeight = Math.max(minHeight, minHeight + mix * maxHeight);
     const x = i * (barWidth + gap);
-    const y = baseY - barHeight;
-  const hue = 345 + (i / (barCount - 1)) * 12;
-  const saturation = 68;
-  const lightness = 56;
+    const hue = 345 + (i / (barCount - 1)) * 12;
+    const saturation = 68;
+    const lightness = 56;
     const alpha = modeAlpha * (0.6 + 0.4 * Math.sin(t + i * 0.2));
 
     ctx.shadowColor = `hsla(${hue}, ${saturation}%, ${lightness}%, ${modeAlpha})`;
@@ -85,7 +86,7 @@ const drawSpectrumFlow = (
     const heightFactor = Math.min(1, Math.max(0.05, (0.12 + envelope * 0.95) * mix * pulse));
     const barHeight = minHeight + heightFactor * maxHeight;
     const x = i * (barWidth + gap);
-  const hue = 150 + (i / (barCount - 1)) * 20;
+    const hue = 150 + (i / (barCount - 1)) * 20;
     const gradient = ctx.createLinearGradient(0, baseY - barHeight, 0, baseY);
     gradient.addColorStop(0, `hsla(${hue + 10}, 82%, 70%, 0.95)`);
     gradient.addColorStop(0.55, `hsla(${hue - 6}, 78%, 52%, 0.65)`);
@@ -129,8 +130,6 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
         const canvas = canvasRef.current;
         const ctx = canvas.getContext('2d');
         if (ctx) {
-           // Handle resize or static size
-           // Note: canvas width/height attributes are set in JSX
            if (isManual) {
              drawEqualizerBars(ctx, canvas.width, canvas.height, frameCountRef.current);
            } else {
@@ -153,36 +152,42 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
 
         <div className="relative z-10 max-w-7xl 2xl:max-w-[1600px] w-full mx-auto space-y-6 px-4 sm:px-6 lg:px-8 2xl:px-4">
 
-            {/* Header */}
-            <ScrollReveal className="text-right" delay={0.05}>
-                <h2
-                    className="text-3xl md:text-5xl 2xl:text-6xl font-bold tracking-tight text-white mb-4 font-['Orbitron'] glow-burgundy metallic-sheen"
-                    data-text={headerTitlePlain}
-                >
-                    {t.rich('headerTitle', {
-                      burgundy: (chunks) => (
-                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-rose-400 via-rose-500 to-rose-600 font-bold glow-burgundy">
-                          {chunks}
-                        </span>
-                      ),
-                    })}
-                </h2>
-                <p className="text-slate-400 text-sm sm:text-base max-w-2xl ml-auto font-light">
-                    {t.rich('headerDesc', {
-                      highlight: (chunks) => (
-                        <span className="text-rose-400 font-bold">{chunks}</span>
-                      ),
-                    })}
-                </p>
-            </ScrollReveal>
+            {/* 1. Header - Enters from Right (matches text alignment) */}
+            <div className="text-right">
+                <ScrollReveal delay={0.1} direction="left" x={30}>
+                    <h2
+                        className="text-3xl md:text-5xl 2xl:text-6xl font-bold tracking-tight text-white mb-4 font-['Orbitron'] glow-burgundy metallic-sheen"
+                        data-text={headerTitlePlain}
+                    >
+                        {t.rich('headerTitle', {
+                          burgundy: (chunks) => (
+                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-rose-400 via-rose-500 to-rose-600 font-bold glow-burgundy">
+                              {chunks}
+                            </span>
+                          ),
+                        })}
+                    </h2>
+                </ScrollReveal>
+                <ScrollReveal delay={0.2} direction="left" x={30}>
+                    <p className="text-slate-400 text-sm sm:text-base max-w-2xl ml-auto font-light">
+                        {t.rich('headerDesc', {
+                          highlight: (chunks) => (
+                            <span className="text-rose-400 font-bold">{chunks}</span>
+                          ),
+                        })}
+                    </p>
+                </ScrollReveal>
+            </div>
 
             {/* Bento Grid Layout */}
             <div className="grid grid-cols-1 md:grid-cols-12 gap-3 auto-rows-[minmax(110px,auto)]">
 
-                {/* Card 1: AI Efficiency (Interactive) - Spans 7 cols */}
+                {/* Card 1: AI Efficiency (Interactive) - Enters from LEFT */}
                 <ScrollReveal
                     className="md:col-span-7 bg-slate-900/60 backdrop-blur-md border border-slate-800 rounded-3xl p-4 relative overflow-hidden group flex flex-col justify-between min-h-[160px] 2xl:min-h-[240px] transition-transform duration-300 hover:-translate-y-1 hover:border-rose-500/70 hover:ring-1 hover:ring-rose-500/35"
-                    delay={0.1}
+                    delay={0.3}
+                    direction="right" // "right" means move to right (from left)
+                    x={-30}
                 >
                     <div className="relative z-10">
                         <div className="flex items-center justify-between mb-3">
@@ -235,14 +240,15 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
                         <canvas ref={canvasRef} className="w-full h-full" width="734" height="192"></canvas>
                     </div>
 
-                    {/* Background Gradient overlay for text readability */}
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent z-0 pointer-events-none"></div>
                 </ScrollReveal>
 
-                {/* Card 2: Visual Interface Scan - Spans 5 cols */}
+                {/* Card 2: Visual Interface Scan - Enters from RIGHT */}
                 <ScrollReveal
                     className="md:col-span-5 bg-slate-900/60 backdrop-blur-md border border-slate-800 rounded-3xl relative overflow-hidden group min-h-[160px] 2xl:min-h-[240px] transition-transform duration-300 hover:-translate-y-1 hover:border-rose-500/70 hover:ring-1 hover:ring-rose-500/35"
-                    delay={0.15}
+                    delay={0.3}
+                    direction="left" // move to left (from right)
+                    x={30}
                 >
                     <img
                         src="/landing/benefits/hours_to_minutes.webp"
@@ -272,10 +278,11 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
                     </div>
                 </ScrollReveal>
 
-                {/* Card 3: Quality Spectrum - Spans 4 cols */}
+                {/* Card 3: Quality Spectrum - Enters from Bottom (Delayed) */}
                 <ScrollReveal
                     className="md:col-span-4 bg-slate-900/60 backdrop-blur-md border border-slate-800 rounded-3xl p-3 relative overflow-hidden flex flex-col justify-end min-h-[110px] group transition-transform duration-300 hover:-translate-y-1 hover:border-rose-500/70 hover:ring-1 hover:ring-rose-500/35"
-                    delay={0.2}
+                    delay={0.4}
+                    direction="up"
                 >
                     <img
                         src="/landing/benefits/accesible_quality.webp"
@@ -293,44 +300,39 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
                 </ScrollReveal>
 
                 <div className="grid grid-cols-2 gap-3 md:contents">
-                    {/* Card 4: Feature List - Spans 4 cols */}
+                    {/* Card 4: Feature List - Enters from Bottom (Delayed + Staggered items) */}
                     <ScrollReveal
                         className="md:col-span-4 bg-slate-900/60 backdrop-blur-md border border-slate-800 rounded-3xl p-2 sm:p-3 flex flex-col min-h-[120px] sm:min-h-[140px] transition-transform duration-300 hover:-translate-y-1 hover:border-rose-500/70 hover:ring-1 hover:ring-rose-500/35"
-                        delay={0.25}
+                        delay={0.5}
+                        direction="up"
                     >
                         <h3 className="text-sm sm:text-base 2xl:text-lg font-bold text-white mb-1.5 sm:mb-2 flex items-center font-['Orbitron']">
                             <AdjustmentsVerticalIcon className="w-3 h-3 sm:w-3.5 sm:h-3.5 mr-2 text-emerald-400" />
                             {t('toolkitTitle')}
                         </h3>
                         <div className="scroll-list-fade space-y-0.5 sm:space-y-1 custom-scrollbar overflow-y-hidden max-h-[110px] sm:max-h-[120px] pr-1">
-                            {/* Feature Item */}
-                            <div className="group flex items-center gap-1.5 sm:gap-2 p-0.5 sm:p-1 rounded-lg hover:bg-white/5 transition-colors cursor-default">
-                                <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0 group-hover:bg-emerald-500 group-hover:text-white transition-colors text-emerald-400">
-                                    <ArrowsRightLeftIcon className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
-                                </div>
-                                <h4 className="text-[10px] sm:text-xs 2xl:text-sm font-semibold text-slate-200">{t('toolkitItems.0.title')}</h4>
-                            </div>
-                            {/* Feature Item */}
-                            <div className="group flex items-center gap-1.5 sm:gap-2 p-0.5 sm:p-1 rounded-lg hover:bg-white/5 transition-colors cursor-default">
-                                <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0 group-hover:bg-emerald-500 group-hover:text-white transition-colors text-emerald-400">
-                                    <AdjustmentsVerticalIcon className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
-                                </div>
-                                <h4 className="text-[10px] sm:text-xs 2xl:text-sm font-semibold text-slate-200">{t('toolkitItems.1.title')}</h4>
-                            </div>
-                            {/* Feature Item */}
-                            <div className="group flex items-center gap-1.5 sm:gap-2 p-0.5 sm:p-1 rounded-lg hover:bg-white/5 transition-colors cursor-default">
-                                <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0 group-hover:bg-emerald-500 group-hover:text-white transition-colors text-emerald-400">
-                                    <SpeakerWaveIcon className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
-                                </div>
-                                <h4 className="text-[10px] sm:text-xs 2xl:text-sm font-semibold text-slate-200">{t('toolkitItems.2.title')}</h4>
-                            </div>
+                            {/* Feature Items with individual delay relative to card */}
+                            {[0, 1, 2].map((idx) => (
+                                <ScrollReveal key={idx} delay={0.6 + (idx * 0.1)} direction="left" x={10} className="w-full">
+                                    <div className="group flex items-center gap-1.5 sm:gap-2 p-0.5 sm:p-1 rounded-lg hover:bg-white/5 transition-colors cursor-default">
+                                        <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0 group-hover:bg-emerald-500 group-hover:text-white transition-colors text-emerald-400">
+                                            {idx === 0 && <ArrowsRightLeftIcon className="w-2.5 h-2.5 sm:w-3 sm:h-3" />}
+                                            {idx === 1 && <AdjustmentsVerticalIcon className="w-2.5 h-2.5 sm:w-3 sm:h-3" />}
+                                            {idx === 2 && <SpeakerWaveIcon className="w-2.5 h-2.5 sm:w-3 sm:h-3" />}
+                                        </div>
+                                        {/* @ts-ignore - dynamic key access */}
+                                        <h4 className="text-[10px] sm:text-xs 2xl:text-sm font-semibold text-slate-200">{t(`toolkitItems.${idx}.title`)}</h4>
+                                    </div>
+                                </ScrollReveal>
+                            ))}
                         </div>
                     </ScrollReveal>
 
-                    {/* Card 5: Export Targets - Spans 4 cols */}
+                    {/* Card 5: Export Targets - Enters from Bottom (Latest) */}
                     <ScrollReveal
                         className="md:col-span-4 bg-slate-900/60 backdrop-blur-md border border-slate-800 rounded-3xl p-2 sm:p-3 flex flex-col justify-between relative overflow-hidden min-h-[120px] sm:min-h-[110px] transition-transform duration-300 hover:-translate-y-1 hover:border-rose-500/70 hover:ring-1 hover:ring-rose-500/35"
-                        delay={0.3}
+                        delay={0.6}
+                        direction="up"
                     >
                         {/* Abstract BG */}
                         <div className="absolute top-0 right-0 w-32 h-32 bg-rose-500/10 rounded-full blur-3xl -mr-10 -mt-10"></div>
@@ -339,30 +341,21 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
                         <p className="text-[10px] sm:text-xs 2xl:text-sm text-slate-400 mb-2 sm:mb-3 relative z-10">{t('readyForWorldDesc')}</p>
 
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 sm:gap-2 relative z-10">
-                            <div className="flex items-center justify-center p-1.5 sm:p-2 rounded-full opacity-80 hover:opacity-100 hover:scale-105 transition-all duration-300">
-                                <svg className="w-5 h-5 sm:w-6 sm:h-6 text-[#1ED760]" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                                    <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z" />
-                                </svg>
-                                <span className="sr-only">Spotify</span>
-                            </div>
-                            <div className="flex items-center justify-center p-1.5 sm:p-2 rounded-full opacity-80 hover:opacity-100 hover:scale-105 transition-all duration-300">
-                                <svg className="w-6 h-4 sm:w-7 sm:h-5 text-[#FF1A2D]" viewBox="0 0 576 512" fill="currentColor" aria-hidden="true">
-                                    <path d="M451.46 244.71H576V172H451.46zm0-173.89v72.67H576V70.82zm0 275.06H576V273.2H451.46zM0 447.09h124.54v-72.67H0zm150.47 0H275v-72.67H150.47zm150.52 0H425.53v-72.67H301zm150.47 0H576v-72.67H451.46zM301 345.88h124.53V273.2H301zm-150.52 0H275V273.2H150.47zm0-101.17H275V172H150.47z" />
-                                </svg>
-                                <span className="sr-only">Deezer</span>
-                            </div>
-                            <div className="flex items-center justify-center p-1.5 sm:p-2 rounded-full opacity-80 hover:opacity-100 hover:scale-105 transition-all duration-300">
-                                <svg className="w-5 h-5 sm:w-6 sm:h-6 text-[#FF5500]" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                                    <path d="M23.999 14.165c-.052 1.796-1.612 3.169-3.4 3.169h-8.18a.68.68 0 0 1-.675-.683V7.862a.747.747 0 0 1 .452-.724s.75-.513 2.333-.513a5.364 5.364 0 0 1 2.763.755 5.433 5.433 0 0 1 2.57 3.54c.282-.08.574-.121.868-.12.884 0 1.73.358 2.347.992s.948 1.49.922 2.373ZM10.721 8.421c.247 2.98.427 5.697 0 8.672a.264.264 0 0 1-.53 0c-.395-2.946-.22-5.718 0-8.672a.264.264 0 0 1 .53 0ZM9.072 9.448c.285 2.659.37 4.986-.006 7.655a.277.277 0 0 1-.55 0c-.331-2.63-.256-5.02 0-7.655a.277.277 0 0 1 .556 0Zm-1.663-.257c.27 2.726.39 5.171 0 7.904a.266.266 0 0 1-.532 0c-.38-2.69-.257-5.21 0-7.904a.266.266 0 0 1 .532 0Zm-1.647.77a26.108 26.108 0 0 1-.008 7.147.272.272 0 0 1-.542 0 27.955 27.955 0 0 1 0-7.147.275.275 0 0 1 .55 0Zm-1.67 1.769c.421 1.865.228 3.5-.029 5.388a.257.257 0 0 1-.514 0c-.21-1.858-.398-3.549 0-5.389a.272.272 0 0 1 .543 0Zm-1.655-.273c.388 1.897.26 3.508-.01 5.412-.026.28-.514.283-.54 0-.244-1.878-.347-3.54-.01-5.412a.283.283 0 0 1 .56 0Zm-1.668.911c.4 1.268.257 2.292-.026 3.572a.257.257 0 0 1-.514 0c-.241-1.262-.354-2.312-.023-3.572a.283.283 0 0 1 .563 0Z" />
-                                </svg>
-                                <span className="sr-only">SoundCloud</span>
-                            </div>
-                            <div className="flex items-center justify-center p-1.5 sm:p-2 rounded-full opacity-80 hover:opacity-100 hover:scale-105 transition-all duration-300">
-                                <svg className="w-5 h-5 sm:w-6 sm:h-6 text-slate-100" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-                                    <path d="M12.012 3.992L8.008 7.996 4.004 3.992 0 7.996 4.004 12l4.004-4.004L12.012 12l-4.004 4.004 4.004 4.004 4.004-4.004L12.012 12l4.004-4.004-4.004-4.004zM16.042 7.996l3.979-3.979L24 7.996l-3.979 3.979z" />
-                                </svg>
-                                <span className="sr-only">Tidal</span>
-                            </div>
+                             {/* Icons with staggered pop-in */}
+                             {[
+                                { color: "#1ED760", path: "M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z" },
+                                { color: "#FF1A2D", viewBox: "0 0 576 512", path: "M451.46 244.71H576V172H451.46zm0-173.89v72.67H576V70.82zm0 275.06H576V273.2H451.46zM0 447.09h124.54v-72.67H0zm150.47 0H275v-72.67H150.47zm150.52 0H425.53v-72.67H301zm150.47 0H576v-72.67H451.46zM301 345.88h124.53V273.2H301zm-150.52 0H275V273.2H150.47zm0-101.17H275V172H150.47z" },
+                                { color: "#FF5500", path: "M23.999 14.165c-.052 1.796-1.612 3.169-3.4 3.169h-8.18a.68.68 0 0 1-.675-.683V7.862a.747.747 0 0 1 .452-.724s.75-.513 2.333-.513a5.364 5.364 0 0 1 2.763.755 5.433 5.433 0 0 1 2.57 3.54c.282-.08.574-.121.868-.12.884 0 1.73.358 2.347.992s.948 1.49.922 2.373ZM10.721 8.421c.247 2.98.427 5.697 0 8.672a.264.264 0 0 1-.53 0c-.395-2.946-.22-5.718 0-8.672a.264.264 0 0 1 .53 0ZM9.072 9.448c.285 2.659.37 4.986-.006 7.655a.277.277 0 0 1-.55 0c-.331-2.63-.256-5.02 0-7.655a.277.277 0 0 1 .556 0Zm-1.663-.257c.27 2.726.39 5.171 0 7.904a.266.266 0 0 1-.532 0c-.38-2.69-.257-5.21 0-7.904a.266.266 0 0 1 .532 0Zm-1.647.77a26.108 26.108 0 0 1-.008 7.147.272.272 0 0 1-.542 0 27.955 27.955 0 0 1 0-7.147.275.275 0 0 1 .55 0Zm-1.67 1.769c.421 1.865.228 3.5-.029 5.388a.257.257 0 0 1-.514 0c-.21-1.858-.398-3.549 0-5.389a.272.272 0 0 1 .543 0Zm-1.655-.273c.388 1.897.26 3.508-.01 5.412-.026.28-.514.283-.54 0-.244-1.878-.347-3.54-.01-5.412a.283.283 0 0 1 .56 0Zm-1.668.911c.4 1.268.257 2.292-.026 3.572a.257.257 0 0 1-.514 0c-.241-1.262-.354-2.312-.023-3.572a.283.283 0 0 1 .563 0Z" },
+                                { color: "#F1F5F9", path: "M12.012 3.992L8.008 7.996 4.004 3.992 0 7.996 4.004 12l4.004-4.004L12.012 12l-4.004 4.004 4.004 4.004 4.004-4.004L12.012 12l4.004-4.004-4.004-4.004zM16.042 7.996l3.979-3.979L24 7.996l-3.979 3.979z" }
+                             ].map((icon, i) => (
+                                <ScrollReveal key={i} delay={0.7 + (i * 0.1)} direction="up" className="flex items-center justify-center">
+                                    <div className="flex items-center justify-center p-1.5 sm:p-2 rounded-full opacity-80 hover:opacity-100 hover:scale-105 transition-all duration-300">
+                                        <svg className="w-5 h-5 sm:w-6 sm:h-6" style={{ color: icon.color }} viewBox={icon.viewBox || "0 0 24 24"} fill="currentColor" aria-hidden="true">
+                                            <path d={icon.path} />
+                                        </svg>
+                                    </div>
+                                </ScrollReveal>
+                             ))}
                         </div>
                     </ScrollReveal>
                 </div>
