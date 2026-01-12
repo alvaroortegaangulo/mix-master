@@ -126,9 +126,9 @@ export function ViewportMount({
           initial={
             reduceMotion
               ? false
-              : { opacity: 0, y: 18, filter: "blur(8px)" }
+              : { opacity: 0, y: 18 }
           }
-          animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+          animate={{ opacity: 1, y: 0 }}
           transition={transition}
           style={{ willChange: reduceMotion ? undefined : "transform, opacity" }}
         >
