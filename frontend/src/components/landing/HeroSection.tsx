@@ -4,16 +4,10 @@ import {
   ChevronDownIcon,
   SparklesIcon
 } from "@heroicons/react/24/outline";
-import { PlayCircleIcon, StarIcon, UserCircleIcon } from "@heroicons/react/24/solid";
+import { PlayCircleIcon } from "@heroicons/react/24/solid";
 import { Link } from "../../i18n/routing";
 import { HeroDiagram } from "./HeroDiagram";
 import { HeroWaveformCanvas } from "./HeroWaveformCanvas";
-
-const avatarGradients = [
-  "from-cyan-400/80 to-slate-900",
-  "from-violet-500/80 to-slate-900",
-  "from-emerald-400/80 to-slate-900"
-];
 
 export function HeroSection() {
   return (
@@ -24,7 +18,7 @@ export function HeroSection() {
       </div>
 
       <div className="relative z-10 mx-auto w-full max-w-6xl 2xl:max-w-7xl">
-        <div className="grid items-center gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,420px)] 2xl:grid-cols-[minmax(0,1fr)_minmax(0,540px)]">
+        <div className="grid items-start gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,420px)] 2xl:grid-cols-[minmax(0,1fr)_minmax(0,540px)]">
           <div className="flex flex-col gap-8 lg:gap-6 2xl:gap-8">
             <div
               className="floating motion-reduce:animate-none text-left space-y-6 max-w-xl"
@@ -36,15 +30,15 @@ export function HeroSection() {
               </div>
 
               <h1 className="text-4xl font-extrabold leading-[1.05] tracking-tight text-white sm:text-5xl lg:text-5xl 2xl:text-7xl font-['Orbitron']">
-                <span className="block">Tu música,</span>
+                <span className="block">Tu musica,</span>
                 <span className="block text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 to-blue-500 drop-shadow-[0_0_16px_rgba(34,211,238,0.5)]">
                   Sonido Pro.
                 </span>
-                <span className="block">Sin líos.</span>
+                <span className="block">Sin lios.</span>
               </h1>
 
-              <p className="text-base text-slate-300 leading-relaxed sm:text-lg">
-                No necesitas ser ingeniero de sonido para sonar genial en Spotify. Sube tu grabación casera y nuestra IA
+              <p className="text-sm text-slate-300 leading-relaxed sm:text-base lg:text-sm xl:text-base 2xl:text-lg">
+                No necesitas ser ingeniero de sonido para sonar genial en Spotify. Sube tu grabacion casera y nuestra IA
                 se encarga de pulirla, limpiarla y darle volumen en segundos.
               </p>
 
@@ -65,7 +59,7 @@ export function HeroSection() {
                   >
                     <circle cx="12" cy="12" r="9" />
                   </svg>
-                  Mejorar mi Canción
+                  Mejorar mi Cancion
                 </Link>
                 <Link
                   href="/examples"
@@ -74,29 +68,6 @@ export function HeroSection() {
                   <PlayCircleIcon className="h-4 w-4 text-white" aria-hidden="true" />
                   Escuchar Demo
                 </Link>
-              </div>
-
-              <div className="flex items-center gap-4 pt-2">
-                <div className="flex -space-x-3">
-                  {avatarGradients.map((gradient, index) => (
-                    <div
-                      key={`${gradient}-${index}`}
-                      className={`flex h-10 w-10 items-center justify-center rounded-full border-2 border-slate-950 bg-gradient-to-br ${gradient}`}
-                    >
-                      <UserCircleIcon className="h-6 w-6 text-white/80" aria-hidden="true" />
-                    </div>
-                  ))}
-                </div>
-                <div>
-                  <div className="mb-1 flex text-amber-400">
-                    {Array.from({ length: 5 }).map((_, index) => (
-                      <StarIcon key={index} className="h-4 w-4" aria-hidden="true" />
-                    ))}
-                  </div>
-                  <p className="text-xs text-slate-400">
-                    Usado por <span className="font-semibold text-white">+10,000</span> creadores caseros
-                  </p>
-                </div>
               </div>
             </div>
 
@@ -107,8 +78,8 @@ export function HeroSection() {
                     <AdjustmentsVerticalIcon className="h-5 w-5" aria-hidden="true" />
                   </div>
                   <div>
-                    <h3 className="text-sm font-bold text-white">Mezcla única</h3>
-                    <p className="text-xs text-slate-400">Mezcla pistas individuales automáticamente.</p>
+                    <h3 className="text-sm font-bold text-white">Mezcla unica</h3>
+                    <p className="text-xs text-slate-400">Mezcla pistas individuales automaticamente.</p>
                   </div>
                 </div>
               </div>
@@ -132,7 +103,7 @@ export function HeroSection() {
                   </div>
                   <div>
                     <h3 className="text-sm font-bold text-white">Control Total</h3>
-                    <p className="text-xs text-slate-400">Edición manual en Studio implementado.</p>
+                    <p className="text-xs text-slate-400">Edicion manual en Studio implementado.</p>
                   </div>
                 </div>
               </div>
@@ -155,34 +126,6 @@ export function HeroSection() {
 
       <div className="absolute inset-0 z-[1] opacity-[0.55] pointer-events-none mix-blend-screen">
         <HeroWaveformCanvas />
-      </div>
-
-      <div className="relative z-30 mt-8 flex justify-center sm:absolute sm:bottom-10 sm:right-6 2xl:bottom-32 sm:mt-0 sm:justify-start">
-        <div className="hero-faq-pop group w-[min(90vw,340px)] 2xl:w-[420px] origin-bottom sm:origin-bottom-right">
-          <div className="hero-faq-float relative rounded-2xl border border-slate-800 bg-slate-950/90 p-3 text-left shadow-2xl shadow-black/40 backdrop-blur sm:p-4 2xl:p-6">
-            <div className="flex items-start gap-2">
-              <span className="mt-0.5 inline-flex h-5 w-5 items-center justify-center rounded-full border border-amber-400/70 bg-amber-500/15 text-[11px] font-bold text-amber-200 2xl:h-6 2xl:w-6 2xl:text-sm">
-                i
-              </span>
-              <p className="text-[12px] font-semibold text-white sm:text-sm 2xl:text-base">
-                ¿Cuál es la diferencia entre Mezcla y Masterización?
-              </p>
-            </div>
-            <div className="mt-0 max-h-0 overflow-hidden opacity-0 transition-all duration-300 group-hover:mt-3 group-hover:max-h-64 group-hover:opacity-100">
-              <p className="text-[11px] leading-relaxed text-slate-300 2xl:text-sm">
-                La mezcla implica equilibrar pistas individuales (stems) para formar una canción, incluyendo ajustar
-                niveles, paneo y añadir efectos. La masterización es el paso final que pule la canción mezclada,
-                asegurando que suene consistente y lo suficientemente fuerte para el lanzamiento comercial.
-              </p>
-              <Link
-                href="/faq"
-                className="mt-3 inline-flex items-center justify-center rounded-full border border-amber-400/40 bg-amber-500/10 px-3 py-1.5 text-[11px] font-semibold text-amber-200 transition hover:bg-amber-500/20 2xl:px-4 2xl:py-2 2xl:text-sm"
-              >
-                Ir a FAQ
-              </Link>
-            </div>
-          </div>
-        </div>
       </div>
     </section>
   );
