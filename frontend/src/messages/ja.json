@@ -534,6 +534,7 @@
     "tracks": "Tracks",
     "masterOut": "MASTER OUT",
     "monitor": "MONITOR",
+    "speed": "速度",
     "selectedChannel": "Selected Channel",
     "noTrackSelected": "No Track Selected",
     "parametricEq": "Parametric EQ",

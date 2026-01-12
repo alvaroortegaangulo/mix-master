@@ -31,17 +31,6 @@ interface StemControl {
   };
   mute: boolean;
   solo: boolean;
-  eq: {
-    low: number;
-    mid: number;
-    high: number;
-    enabled: boolean;
-  };
-  compression: {
-    threshold: number;
-    ratio: number;
-    enabled: boolean;
-  };
   reverb: {
     amount: number;
     enabled: boolean;
@@ -100,6 +89,7 @@ export default function StudioPage() {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [masterVolume, setMasterVolume] = useState(0.8);
+  const [stemSpeed, setStemSpeed] = useState(1);
   const [downloadingStems, setDownloadingStems] = useState(false);
   const [downloadingMixdown, setDownloadingMixdown] = useState(false);
   const [studioToken, setStudioToken] = useState<string | null>(null);
@@ -203,6 +193,12 @@ export default function StudioPage() {
           );
       }
   }, [masterVolume]);
+
+  useEffect(() => {
+      audioElsRef.current.forEach((el) => {
+          el.playbackRate = stemSpeed;
+      });
+  }, [stemSpeed]);
 
 
   // Effect to load waveform data for selected stem
@@ -337,8 +333,6 @@ export default function StudioPage() {
             pan: { value: 0, enabled: false },
             mute: false,
             solo: false,
-            eq: { low: 0, mid: 0, high: 0, enabled: false },
-            compression: { threshold: -20, ratio: 2, enabled: false },
             reverb: { amount: 0, enabled: false },
             signedUrl,
             previewUrl,
@@ -356,8 +350,6 @@ export default function StudioPage() {
             pan: { value: 0, enabled: false },
             mute: false,
             solo: false,
-            eq: { low: 0, mid: 0, high: 0, enabled: false },
-            compression: { threshold: -20, ratio: 2, enabled: false },
             reverb: { amount: 0, enabled: false },
             signedUrl: undefined,
             previewUrl: null,
@@ -444,6 +436,7 @@ export default function StudioPage() {
                 audio = new Audio(stem.url || "");
                 audio.preload = "auto";
                 audio.crossOrigin = "anonymous";
+                audio.playbackRate = stemSpeed;
 
                 const ctx = audioContextRef.current;
                 // Wait for master node to be ready (useEffect runs first but safe check)
@@ -534,6 +527,7 @@ export default function StudioPage() {
                 audio.src = stem.url;
                 audio.load();
             }
+            audio.playbackRate = stemSpeed;
             return audio;
         };
 
@@ -705,9 +699,8 @@ export default function StudioPage() {
               name: s.fileName,
               volume_db: s.volume,
               pan: s.pan.enabled ? s.pan.value : 0,
-              eq: s.eq.enabled ? s.eq : undefined,
-              compression: s.compression.enabled ? s.compression : undefined,
               reverb: s.reverb.enabled ? s.reverb : undefined,
+              speed: stemSpeed,
               mute: s.mute,
               solo: s.solo
           }));
@@ -1029,6 +1022,27 @@ export default function StudioPage() {
 
           <aside className="w-80 bg-[#161b2e] border-l border-white/5 flex flex-col shrink-0 p-4 space-y-3 overflow-y-auto">
 
+              <div className="bg-[#1e2336] rounded-xl p-3 border border-white/5 shadow-lg">
+                  <div className="flex items-center justify-between mb-2">
+                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{t('speed')}</span>
+                      <span className="text-[10px] font-mono text-teal-400">{stemSpeed.toFixed(2)}x</span>
+                  </div>
+                  <input
+                      type="range"
+                      min="0.5"
+                      max="1.5"
+                      step="0.01"
+                      value={stemSpeed}
+                      onChange={(e) => setStemSpeed(parseFloat(e.target.value))}
+                      className="w-full h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-teal-500"
+                  />
+                  <div className="flex justify-between text-[9px] text-slate-600 mt-1">
+                      <span>0.5x</span>
+                      <span>1.0x</span>
+                      <span>1.5x</span>
+                  </div>
+              </div>
+
               <div>
                   <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">{t('selectedChannel')}</div>
                   <div className="flex items-center gap-3">
@@ -1041,45 +1055,6 @@ export default function StudioPage() {
 
               {selectedStem && (
                   <>
-                    {/* EQ */}
-                    <div className="bg-[#1e2336] rounded-xl p-3 border border-white/5 shadow-lg">
-                        <div className="flex justify-between items-center mb-2">
-                             <div className="flex items-center gap-2">
-                                <Toggle
-                                    checked={selectedStem.eq.enabled}
-                                    onChange={(v) => updateStem(selectedStemIndex, { eq: {...selectedStem.eq, enabled: v}})}
-                                />
-                                <span className={`text-xs font-bold ${selectedStem.eq.enabled ? 'text-teal-400' : 'text-slate-500'}`}>{t('parametricEq')}</span>
-                             </div>
-                        </div>
-                        <div className={`transition-opacity ${selectedStem.eq.enabled ? 'opacity-100' : 'opacity-40 pointer-events-none'}`}>
-                            {/* Visualizer Removed */}
-                            <div className="flex justify-between px-2">
-                                <Knob label="LOW" value={selectedStem.eq.low} min={-12} max={12} onChange={(v) => updateStem(selectedStemIndex, { eq: {...selectedStem.eq, low: v}})} />
-                                <Knob label="MID" value={selectedStem.eq.mid} min={-12} max={12} onChange={(v) => updateStem(selectedStemIndex, { eq: {...selectedStem.eq, mid: v}})} />
-                                <Knob label="HIGH" value={selectedStem.eq.high} min={-12} max={12} onChange={(v) => updateStem(selectedStemIndex, { eq: {...selectedStem.eq, high: v}})} />
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Compressor */}
-                    <div className="bg-[#1e2336] rounded-xl p-3 border border-white/5 shadow-lg">
-                        <div className="flex justify-between items-center mb-2">
-                            <div className="flex items-center gap-2">
-                                <Toggle
-                                    checked={selectedStem.compression.enabled}
-                                    onChange={(v) => updateStem(selectedStemIndex, { compression: {...selectedStem.compression, enabled: v}})}
-                                />
-                                <span className={`text-xs font-bold ${selectedStem.compression.enabled ? 'text-teal-400' : 'text-slate-500'}`}>{t('compressor')}</span>
-                             </div>
-                        </div>
-
-                        <div className={`flex justify-around mb-1 transition-opacity ${selectedStem.compression.enabled ? 'opacity-100' : 'opacity-40 pointer-events-none'}`}>
-                             <Knob label="THRESH" value={selectedStem.compression.threshold} min={-60} max={0} onChange={(v) => updateStem(selectedStemIndex, { compression: {...selectedStem.compression, threshold: v}})} />
-                             <Knob label="RATIO" value={selectedStem.compression.ratio} min={1} max={20} onChange={(v) => updateStem(selectedStemIndex, { compression: {...selectedStem.compression, ratio: v}})} />
-                        </div>
-                    </div>
-
                     <div className="flex gap-2">
                         {/* Pan */}
                         <div className="flex-1 bg-[#1e2336] rounded-xl p-3 border border-white/5 shadow-lg min-w-0">

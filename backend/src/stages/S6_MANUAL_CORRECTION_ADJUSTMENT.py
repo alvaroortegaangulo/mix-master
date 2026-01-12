@@ -13,10 +13,6 @@ import soundfile as sf
 try:
     from pedalboard import (
         Pedalboard,
-        Compressor,
-        HighShelfFilter,
-        LowShelfFilter,
-        PeakingFilter,
         Reverb,
         Gain,
     )
@@ -115,6 +111,35 @@ def _apply_simple_reverb(audio: np.ndarray, sr: int, amount: float) -> np.ndarra
     return mixed.astype(np.float32, copy=False)
 
 
+def _apply_speed(audio: np.ndarray, speed: float) -> np.ndarray:
+    """
+    Resample audio to simulate playback speed changes.
+
+    Expects audio in (samples, channels) float32.
+    speed > 1.0 = faster (shorter), speed < 1.0 = slower (longer).
+    """
+    speed = float(speed)
+    if speed <= 0 or abs(speed - 1.0) < 1e-3:
+        return audio
+
+    samples = audio.shape[0]
+    if samples < 2:
+        return audio
+
+    new_length = max(1, int(round(samples / speed)))
+    if new_length == samples:
+        return audio
+    if new_length < 2:
+        return audio[:new_length, :]
+
+    x_old = np.linspace(0.0, 1.0, num=samples, endpoint=True)
+    x_new = np.linspace(0.0, 1.0, num=new_length, endpoint=True)
+    resampled = np.empty((new_length, audio.shape[1]), dtype=np.float32)
+    for ch in range(audio.shape[1]):
+        resampled[:, ch] = np.interp(x_new, x_old, audio[:, ch]).astype(np.float32, copy=False)
+    return resampled
+
+
 def _load_corrections(stage_dir: Path) -> List[Dict[str, Any]]:
     """
     Reads <stage_dir>/changes.json
@@ -146,7 +171,7 @@ def process(context: "PipelineContext", *args) -> bool:
     S6_MANUAL_CORRECTION_ADJUSTMENT:
       1) Reads changes.json in this stage folder.
       2) Finds the best available stems source (prioritize S6_MANUAL_CORRECTION -> S11 -> S10 -> S0).
-      3) Applies EQ/Comp/Reverb/Gain/Pan/Mute/Solo.
+      3) Applies Speed/Reverb/Gain/Pan/Mute/Solo.
       4) Writes processed stems into this stage folder.
 
     This stage is not part of the default contracts sequence, but the API may
@@ -238,28 +263,12 @@ def process(context: "PipelineContext", *args) -> bool:
         if not should_play:
             audio = np.zeros_like(audio)
         else:
+            speed = _clamp(_as_float(corr.get("speed", 1.0), default=1.0), 0.5, 1.5)
+            if abs(speed - 1.0) > 1e-3:
+                audio = _apply_speed(audio, speed)
+
             if HAS_PEDALBOARD:
                 board = Pedalboard()
-
-                comp_cfg = corr.get("compression")
-                if isinstance(comp_cfg, dict) and _as_bool(comp_cfg.get("enabled", True), default=True):
-                    thresh = _as_float(comp_cfg.get("threshold", 0.0))
-                    ratio = max(1.0, _as_float(comp_cfg.get("ratio", 1.0)))
-                    if thresh < 0.0 and ratio > 1.0:
-                        board.append(Compressor(threshold_db=thresh, ratio=ratio))
-
-                eq_cfg = corr.get("eq")
-                if isinstance(eq_cfg, dict) and _as_bool(eq_cfg.get("enabled", True), default=True):
-                    low_gain = _as_float(eq_cfg.get("low", 0.0))
-                    mid_gain = _as_float(eq_cfg.get("mid", 0.0))
-                    high_gain = _as_float(eq_cfg.get("high", 0.0))
-
-                    if abs(low_gain) > 0.01:
-                        board.append(LowShelfFilter(cutoff_frequency_hz=320, gain_db=low_gain))
-                    if abs(mid_gain) > 0.01:
-                        board.append(PeakingFilter(cutoff_frequency_hz=1000, gain_db=mid_gain, q=1.0))
-                    if abs(high_gain) > 0.01:
-                        board.append(HighShelfFilter(cutoff_frequency_hz=3200, gain_db=high_gain))
 
                 verb_cfg = corr.get("reverb")
                 if isinstance(verb_cfg, dict) and _as_bool(verb_cfg.get("enabled", True), default=True):

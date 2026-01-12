@@ -586,6 +586,7 @@
     "tracks": "Pistas",
     "masterOut": "SALIDA MASTER",
     "monitor": "MONITOR",
+    "speed": "Velocidad",
     "selectedChannel": "Canal Seleccionado",
     "noTrackSelected": "Ninguna Pista Seleccionada",
     "parametricEq": "EQ Paramétrico",

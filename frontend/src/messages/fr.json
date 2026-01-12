@@ -511,6 +511,7 @@
     "tracks": "Pistes",
     "masterOut": "SORTIE MASTER",
     "monitor": "MONITEUR",
+    "speed": "Vitesse",
     "selectedChannel": "Canal Sélectionné",
     "noTrackSelected": "Aucune Piste Sélectionnée",
     "parametricEq": "EQ Paramétrique",

@@ -20,7 +20,7 @@ from utils.logger import logger as pipeline_logger
 
 # Try importing pedalboard for DSP
 try:
-    from pedalboard import Pedalboard, Compressor, HighShelfFilter, LowShelfFilter, PeakingFilter, Reverb, Gain
+    from pedalboard import Pedalboard, Reverb, Gain
     HAS_PEDALBOARD = True
 except ImportError:  # pragma: no cover
     HAS_PEDALBOARD = False
@@ -115,6 +115,35 @@ def _apply_simple_reverb(audio: np.ndarray, sr: int, amount: float) -> np.ndarra
     return mixed.astype(np.float32, copy=False)
 
 
+def _apply_speed(audio: np.ndarray, speed: float) -> np.ndarray:
+    """
+    Resample audio to simulate playback speed changes.
+
+    Expects audio in (channels, samples) float32.
+    speed > 1.0 = faster (shorter), speed < 1.0 = slower (longer).
+    """
+    speed = float(speed)
+    if speed <= 0 or abs(speed - 1.0) < 1e-3:
+        return audio
+
+    channels, samples = audio.shape
+    if samples < 2:
+        return audio
+
+    new_length = max(1, int(round(samples / speed)))
+    if new_length == samples:
+        return audio
+    if new_length < 2:
+        return audio[:, :new_length]
+
+    x_old = np.linspace(0.0, 1.0, num=samples, endpoint=True)
+    x_new = np.linspace(0.0, 1.0, num=new_length, endpoint=True)
+    resampled = np.empty((channels, new_length), dtype=np.float32)
+    for ch in range(channels):
+        resampled[ch] = np.interp(x_new, x_old, audio[ch]).astype(np.float32, copy=False)
+    return resampled
+
+
 def _detect_sample_rate(*directories: Optional[Path]) -> Optional[int]:
     """
     Infer sample rate from the first available WAV file (excluding full_song.wav).
@@ -174,7 +203,7 @@ def _pan_gains_linear(pan: float) -> tuple[float, float]:
 
 def process(context: PipelineContext, *args) -> bool:
     """
-    Applies manual corrections (volume, pan, eq, comp, reverb, mute, solo) to stems.
+    Applies manual corrections (volume, pan, reverb, speed, mute, solo) to stems.
 
     Data flow (current app):
       - Frontend calls POST /jobs/{job_id}/correction with a list of corrections.
@@ -211,7 +240,7 @@ def process(context: PipelineContext, *args) -> bool:
     stems_map: Dict[str, np.ndarray] = getattr(context, "audio_stems", {}) or {}
 
     # IMPORTANT:
-    # Corrections coming from the UI are *absolute* (volume_db/pan/eq/etc).
+    # Corrections coming from the UI are *absolute* (volume_db/pan/reverb/speed/etc).
     # To keep the stage idempotent (and avoid stacking on re-runs), we prefer
     # loading the pre-correction stems from the previous stage (S5) when present.
     if not stems_map:
@@ -272,38 +301,14 @@ def process(context: PipelineContext, *args) -> bool:
 
         processed = audio
 
+        speed = _as_float(corr.get("speed", 1.0), default=1.0)
+        speed = _clamp(speed, 0.5, 1.5)
+        if abs(speed - 1.0) > 1e-3:
+            processed = _apply_speed(processed, speed)
+
         # --- Pedalboard chain (preferred) ---
         if HAS_PEDALBOARD:
             board = Pedalboard()
-
-            # EQ (3-band)
-            eq_cfg = corr.get("eq")
-            if isinstance(eq_cfg, dict) and _as_bool(eq_cfg.get("enabled", True), default=True):
-                low = _as_float(eq_cfg.get("low", 0.0))
-                mid = _as_float(eq_cfg.get("mid", 0.0))
-                high = _as_float(eq_cfg.get("high", 0.0))
-
-                if abs(low) > 0.01:
-                    board.append(LowShelfFilter(cutoff_frequency_hz=100, gain_db=low))
-                if abs(mid) > 0.01:
-                    board.append(PeakingFilter(cutoff_frequency_hz=1000, gain_db=mid, q=1.0))
-                if abs(high) > 0.01:
-                    board.append(HighShelfFilter(cutoff_frequency_hz=5000, gain_db=high))
-
-            # Compression
-            comp_cfg = corr.get("compression")
-            if isinstance(comp_cfg, dict) and _as_bool(comp_cfg.get("enabled", True), default=True):
-                threshold_db = _as_float(comp_cfg.get("threshold", -20.0), default=-20.0)
-                ratio = _as_float(comp_cfg.get("ratio", 2.0), default=2.0)
-                ratio = max(1.0, ratio)
-                board.append(
-                    Compressor(
-                        threshold_db=threshold_db,
-                        ratio=ratio,
-                        attack_ms=10,
-                        release_ms=100,
-                    )
-                )
 
             # Reverb
             verb_cfg = corr.get("reverb")
@@ -320,13 +325,14 @@ def process(context: PipelineContext, *args) -> bool:
             if abs(vol_db) > 0.01:
                 board.append(Gain(gain_db=vol_db))
 
+            processed_input = processed
             try:
-                processed = board(processed, sr)
+                processed = board(processed_input, sr)
                 if isinstance(processed, np.ndarray) and processed.dtype != np.float32:
                     processed = processed.astype(np.float32, copy=False)
             except Exception as exc:
-                pipeline_logger.info(f"[{STAGE_ID}] Pedalboard failed for {filename}: {exc}. Using dry audio.")
-                processed = audio
+                pipeline_logger.info(f"[{STAGE_ID}] Pedalboard failed for {filename}: {exc}. Using unprocessed audio.")
+                processed = processed_input
 
         # --- Fallback DSP (no pedalboard): Volume/Pan/Reverb only ---
         else:
