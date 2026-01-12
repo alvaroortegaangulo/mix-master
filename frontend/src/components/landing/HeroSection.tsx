@@ -17,15 +17,15 @@ const avatarGradients = [
 
 export function HeroSection() {
   return (
-    <section className="relative flex min-h-[100svh] flex-col justify-center overflow-hidden bg-slate-950 px-4 pb-16 pt-12 sm:pt-16 lg:pt-20">
+    <section className="relative flex min-h-[100svh] flex-col justify-center overflow-hidden bg-slate-950 px-4 pb-16 pt-12 sm:pt-16 lg:pt-16 2xl:pt-20">
       <div className="absolute left-0 top-0 z-0 h-full w-full overflow-hidden pointer-events-none">
         <div className="absolute -top-[20%] -left-[10%] h-[50%] w-[50%] rounded-full bg-teal-500/10 blur-[120px]" />
         <div className="absolute top-[40%] -right-[10%] h-[60%] w-[60%] rounded-full bg-violet-600/10 blur-[120px]" />
       </div>
 
       <div className="relative z-10 mx-auto w-full max-w-6xl 2xl:max-w-7xl">
-        <div className="grid items-center gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,540px)]">
-          <div className="flex flex-col gap-8">
+        <div className="grid items-center gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,420px)] 2xl:grid-cols-[minmax(0,1fr)_minmax(0,540px)]">
+          <div className="flex flex-col gap-8 lg:gap-6 2xl:gap-8">
             <div
               className="floating motion-reduce:animate-none text-left space-y-6 max-w-xl"
               style={{ animationDuration: "10s" }}
@@ -35,7 +35,7 @@ export function HeroSection() {
                 Beta v2.0 disponible
               </div>
 
-              <h1 className="text-4xl font-extrabold leading-[1.05] tracking-tight text-white sm:text-5xl lg:text-6xl 2xl:text-7xl font-['Orbitron']">
+              <h1 className="text-4xl font-extrabold leading-[1.05] tracking-tight text-white sm:text-5xl lg:text-5xl 2xl:text-7xl font-['Orbitron']">
                 <span className="block">Tu música,</span>
                 <span className="block text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 to-blue-500 drop-shadow-[0_0_16px_rgba(34,211,238,0.5)]">
                   Sonido Pro.
