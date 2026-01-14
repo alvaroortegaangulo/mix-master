@@ -905,15 +905,12 @@ export default function StudioPage() {
                 audio.muted = false;
                 audio.playbackRate = safeStemSpeed;
                 audio.defaultPlaybackRate = safeStemSpeed;
-                 if (stem.url) {
-                     audio.src = stem.url;
-                     audio.load();
-                 }
 
-                 const candidates: string[] = [];
-                 if (stem.stage) candidates.push(`${stem.stage}/${stem.fileName}`);
-                 stageFallbacks.forEach((stage) => candidates.push(`${stage}/${stem.fileName}`));
-                 candidates.push(stem.fileName);
+
+                const candidates: string[] = [];
+                if (stem.stage) candidates.push(`${stem.stage}/${stem.fileName}`);
+                stageFallbacks.forEach((stage) => candidates.push(`${stage}/${stem.fileName}`));
+                candidates.push(stem.fileName);
                 let candidateIndex = 0;
 
                 const updateUrl = async (index: number) => {
@@ -923,6 +920,9 @@ export default function StudioPage() {
                     audio!.load();
                     setStems(prev => prev.map(s => s.fileName === stem.fileName ? { ...s, url: newUrl } : s));
                 };
+
+                audio.src = stem.url || "";
+                audio.load();
 
                 audio.addEventListener("loadedmetadata", () => {
                     setDuration(prev => Math.max(prev, isFinite(audio!.duration) ? audio!.duration : prev));
