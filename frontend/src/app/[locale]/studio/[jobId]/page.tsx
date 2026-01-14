@@ -20,11 +20,13 @@ import {
 } from "@heroicons/react/24/solid";
 import { useTranslations } from "next-intl";
 
+// --- Tipos e Interfaces ---
+
 interface StemControl {
-  fileName: string;     
-  cleanName?: string;   
+  fileName: string;     // Nombre original o identificador
+  cleanName?: string;   // Nombre normalizado (snake_case) para buscar en backend
   stage?: string;
-  name: string;        
+  name: string;         // Nombre para mostrar en UI
   volume: number;
   pan: {
     value: number;
@@ -59,6 +61,8 @@ interface StemControl {
   status?: "idle" | "loading" | "ready" | "error";
 }
 
+// --- Utilidades Matemáticas y DSP ---
+
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
 const normalizeStemSpeed = (value: number) => {
@@ -66,11 +70,13 @@ const normalizeStemSpeed = (value: number) => {
   return clamp(value, 0.5, 1.5);
 };
 
-// Utilidad para imitar la normalización del backend (snake_case)
+// FIX #3: Utilidad para imitar la normalización del backend (snake_case)
 const normalizeFileName = (fileName: string): string => {
   if (!fileName) return "";
   const namePart = fileName.replace(/\.wav$/i, "").replace(/\.mp3$/i, "").replace(/\.aiff?$/i, "");
+  // Reemplazar caracteres no alfanuméricos por guion bajo y pasar a minúsculas
   let cleaned = namePart.replace(/[^a-zA-Z0-9]/g, "_").toLowerCase();
+  // Eliminar guiones bajos duplicados
   cleaned = cleaned.replace(/_+/g, "_").replace(/^_|_$/g, "");
   return cleaned + ".wav"; 
 };
@@ -96,8 +102,8 @@ const formatDb = (gain: number) => {
   return clamp(db, -60, 0).toFixed(1);
 };
 
-// --- DSP CONSISTENCY FIX: Improved Reverb Algorithm ---
-// Generate a "Room" impulse response with LowPass damping to match backend implementation.
+// FIX #5: DSP Consistency - Reverb con Damping (LPF)
+// Genera una respuesta al impulso que suena más natural y similar al algoritmo de Python
 const createImpulseResponse = (ctx: AudioContext, durationSec = 2.0, decay = 2.0) => {
   const sampleRate = ctx.sampleRate;
   const length = Math.max(1, Math.floor(sampleRate * durationSec));
@@ -107,13 +113,15 @@ const createImpulseResponse = (ctx: AudioContext, durationSec = 2.0, decay = 2.0
     const data = impulse.getChannelData(channel);
     let lastOut = 0;
     for (let i = 0; i < length; i++) {
-      // White noise
+      // Ruido blanco
       const noise = (Math.random() * 2 - 1);
       
-      // Simple LowPass filter for damping (makes it sound warmer/less metallic)
-      // This mimics high-frequency absorption in a room
-      const input = noise * Math.pow(1 - i / length, decay);
-      // LPF coefficient 0.6
+      // Envelope exponencial
+      const envelope = Math.pow(1 - i / length, decay);
+      
+      // Aplicar LowPass filter simple para damping (simula absorción de agudos)
+      // Coeficiente 0.6 para suavizar
+      const input = noise * envelope;
       const current = input * 0.4 + lastOut * 0.6;
       lastOut = current;
       
@@ -123,35 +131,31 @@ const createImpulseResponse = (ctx: AudioContext, durationSec = 2.0, decay = 2.0
   return impulse;
 };
 
-// Ambience is just a shorter, darker reverb
+// Ambience: Reverb corta y oscura
 const createAmbienceImpulseResponse = (ctx: AudioContext) =>
   createImpulseResponse(ctx, 0.8, 3.0);
 
-// --- DSP CONSISTENCY FIX: Standardized Tanh Saturation ---
-// This curve exactly matches numpy.tanh used in the backend
+// FIX #5: DSP Consistency - Saturación Tanh Estandarizada
+// Coincide exactamente con np.tanh(k * x) del backend
 const buildSaturationCurve = (drive: number) => {
   const amount = clamp(drive, 0, 100);
   const n_samples = 4096;
   const curve = new Float32Array(n_samples);
   
   if (amount <= 0) {
-     // Linear bypass
+     // Lineal (bypass)
      for (let i = 0; i < n_samples; i++) {
         curve[i] = (i / (n_samples - 1)) * 2 - 1;
      }
      return curve;
   }
 
-  // Map 0-100 knob to a reasonable gain factor (e.g., 0dB to +18dB boost into tanh)
-  // k=1 means no boost, k=8 is significant drive
+  // Mapeo de 0-100 a factor de ganancia k (1 a 8)
   const k = 1 + (amount / 100) * 7; 
 
   for (let i = 0; i < n_samples; i++) {
     const x = (i * 2) / n_samples - 1;
-    // Simple tanh soft clipping
     curve[i] = Math.tanh(k * x);
-    // Optional: Output gain compensation could be added here, 
-    // but usually tanh compresses naturally.
   }
   return curve;
 };
@@ -222,6 +226,8 @@ function buildAuthHeaders(extra?: HeadersInit): HeadersInit {
   return { ...headers, ...(extra || {}) };
 }
 
+// --- Componente Principal ---
+
 export default function StudioPage() {
   const params = useParams();
   const jobId = params.jobId as string;
@@ -231,6 +237,7 @@ export default function StudioPage() {
   const { openAuthModal } = useModal();
   const t = useTranslations('Studio');
 
+  // Estados
   const [stems, setStems] = useState<StemControl[]>([]);
   const [selectedStemIndex, setSelectedStemIndex] = useState<number>(0);
   const [loadingStems, setLoadingStems] = useState(true);
@@ -244,12 +251,12 @@ export default function StudioPage() {
   const [downloadingStems, setDownloadingStems] = useState(false);
   const [downloadingMixdown, setDownloadingMixdown] = useState(false);
   const [studioToken, setStudioToken] = useState<string | null>(null);
-
   const [visualBuffer, setVisualBuffer] = useState<AudioBuffer | null>(null);
 
   const selectedStem = stems[selectedStemIndex];
   const safeStemSpeed = normalizeStemSpeed(stemSpeed);
 
+  // Referencias (Audio Context & Nodes)
   const audioContextRef = useRef<AudioContext | null>(null);
   const masterGainNodeRef = useRef<GainNode | null>(null);
   const masterAnalyserNodeRef = useRef<AnalyserNode | null>(null);
@@ -270,6 +277,7 @@ export default function StudioPage() {
   const depthConvolverNodesRef = useRef<Map<string, ConvolverNode>>(new Map());
   const depthWetGainNodesRef = useRef<Map<string, GainNode>>(new Map());
   const depthFilterNodesRef = useRef<Map<string, BiquadFilterNode>>(new Map());
+  
   const startTimeRef = useRef<number>(0);
   const pauseTimeRef = useRef<number>(0);
   const stemsRef = useRef<StemControl[]>([]);
@@ -278,17 +286,10 @@ export default function StudioPage() {
   const audioEngineModeRef = useRef<"direct" | "webaudio">("direct");
   const enableWebAudioRef = useRef<Promise<void> | null>(null);
 
-  useEffect(() => {
-    stemsRef.current = stems;
-  }, [stems]);
-
-  useEffect(() => {
-    masterVolumeRef.current = masterVolume;
-  }, [masterVolume]);
-
-  useEffect(() => {
-    stemSpeedRef.current = safeStemSpeed;
-  }, [safeStemSpeed]);
+  // Sincronización de Refs
+  useEffect(() => { stemsRef.current = stems; }, [stems]);
+  useEffect(() => { masterVolumeRef.current = masterVolume; }, [masterVolume]);
+  useEffect(() => { stemSpeedRef.current = safeStemSpeed; }, [safeStemSpeed]);
 
   const stopAllSources = () => {
       audioElsRef.current.forEach((el) => {
@@ -301,14 +302,8 @@ export default function StudioPage() {
           return Promise.resolve();
       }
       return new Promise<void>((resolve, reject) => {
-          const onReady = () => {
-              cleanup();
-              resolve();
-          };
-          const onError = () => {
-              cleanup();
-              reject(new Error("media error"));
-          };
+          const onReady = () => { cleanup(); resolve(); };
+          const onError = () => { cleanup(); reject(new Error("media error")); };
           const cleanup = () => {
               el.removeEventListener("loadedmetadata", onReady);
               el.removeEventListener("canplay", onReady);
@@ -320,10 +315,7 @@ export default function StudioPage() {
           el.addEventListener("canplaythrough", onReady);
           el.addEventListener("error", onError);
           if (timeoutMs > 0) {
-              setTimeout(() => {
-                  cleanup();
-                  resolve();
-              }, timeoutMs);
+              setTimeout(() => { cleanup(); resolve(); }, timeoutMs);
           }
       });
   };
@@ -376,6 +368,7 @@ export default function StudioPage() {
     }
   };
 
+  // FIX #4: Lógica de Mezcla Directa (HTML Audio) vs Web Audio
   const applyDirectMixToMediaElements = (stemList: StemControl[]) => {
     const anySolo = stemList.some((s) => s.solo);
 
@@ -383,12 +376,15 @@ export default function StudioPage() {
       const audio = audioElsRef.current.get(stem.fileName);
       if (!audio) return;
       
+      // Si el stem está gestionado por Web Audio, forzamos que el elemento HTML esté "abierto".
+      // Esto evita que un mute anterior bloquee la señal que entra al grafo.
       if (mediaNodesRef.current.has(stem.fileName)) {
           if (audio.muted) audio.muted = false;
           if (audio.volume !== 1) audio.volume = 1;
           return;
       }
 
+      // Lógica para modo Directo (sin Web Audio aún)
       let shouldMute = stem.mute;
       if (anySolo) shouldMute = !stem.solo;
 
@@ -459,6 +455,7 @@ export default function StudioPage() {
     if (!audio) return false;
     if (mediaNodesRef.current.has(stem.fileName)) return true;
 
+    // Asegurar estado inicial correcto para input de Web Audio
     audio.muted = false;
     audio.volume = 1;
     audio.playbackRate = stemSpeedRef.current;
@@ -486,6 +483,8 @@ export default function StudioPage() {
 
       if (ctx.audioWorklet && transientWorkletReadyRef.current) {
         try {
+          // FIX #2: Race Condition Fix
+          // Timeout de 1.5s para evitar bloqueo si el script falla o es lento
           const timeoutPromise = new Promise((_, reject) =>
             setTimeout(() => reject(new Error("Transient worklet load timeout")), 1500)
           );
@@ -542,21 +541,29 @@ export default function StudioPage() {
       gain.gain.value = stem.mute ? 0 : vol;
       panner.pan.value = stem.pan.enabled ? stem.pan.value : 0;
 
+      // Conexiones del Grafo
       mediaNode.connect(gain);
       gain.connect(saturation);
       saturation.connect(transientEntry.node);
       transientEntry.node.connect(widthNodes.input);
       widthNodes.output.connect(panner);
+      
+      // Dry Path
       panner.connect(dryGain);
       dryGain.connect(master);
+      
+      // Reverb Send
       panner.connect(convolver);
       convolver.connect(wetGain);
       wetGain.connect(master);
+      
+      // Depth Send
       panner.connect(depthFilter);
       depthFilter.connect(depthConvolver);
       depthConvolver.connect(depthWetGain);
       depthWetGain.connect(master);
 
+      // Guardar Referencias
       mediaNodesRef.current.set(stem.fileName, mediaNode);
       gainNodesRef.current.set(stem.fileName, gain);
       saturationNodesRef.current.set(stem.fileName, saturation);
@@ -574,6 +581,7 @@ export default function StudioPage() {
     } catch (err) {
       console.warn("Studio: failed to build audio graph", err);
       try {
+        // Fallback crítico: conectar directo si el procesado falla
         mediaNode?.connect(master);
         mediaNodesRef.current.set(stem.fileName, mediaNode!);
         return true;
@@ -650,6 +658,7 @@ export default function StudioPage() {
     };
   }, []);
 
+  // Update Master Volume
   useEffect(() => {
       const ctx = audioContextRef.current;
       if (masterGainNodeRef.current && ctx) {
@@ -666,9 +675,11 @@ export default function StudioPage() {
   }, [safeStemSpeed]);
 
 
+  // Effect to load waveform data for selected stem
   useEffect(() => {
     if (!selectedStem || !audioContextRef.current) return;
 
+    // Use peaks if available
     const hasPeaks = selectedStem.peaks && selectedStem.peaks.length > 0 && selectedStem.peaks.some(p => p > 0);
     if (hasPeaks) {
         setVisualBuffer(null);
@@ -710,6 +721,7 @@ export default function StudioPage() {
     return () => { active = false; };
   }, [selectedStem, jobId]);
 
+  // Carga Inicial de Stems
   useEffect(() => {
     if (!jobId) return;
 
@@ -786,6 +798,7 @@ export default function StudioPage() {
               ? entry.peaks.map((p: any) => Number(p) || 0)
               : undefined;
 
+          // Compute normalized name to help finding backend file
           const cleanName = normalizeFileName(file);
 
           return {
@@ -829,7 +842,9 @@ export default function StudioPage() {
             "S0_MIX_ORIGINAL"
         ];
 
+        // FIX #3: Búsqueda Exhaustiva de Archivos
         for (const stem of newStems) {
+            // Pruebo variantes de nombre (original, normalizado, lowercase)
             const nameVariants = [
                 stem.fileName,
                 stem.cleanName,
@@ -883,6 +898,7 @@ export default function StudioPage() {
 
         if (cancelled) return;
 
+        // Cargar peaks (también con variantes de nombre)
         const stemsWithPeaks = await Promise.all(
             resolvedStems.map(async (stem) => {
                 if (stem.peaks && stem.peaks.length) return stem;
@@ -917,16 +933,19 @@ export default function StudioPage() {
         setStems(stemsWithPeaks);
         setLoadingStems(false);
 
+        // Pre-carga de elementos de audio
         const ensureAudioForStem = async (stem: StemControl) => {
             let audio = audioElsRef.current.get(stem.fileName);
             if (!audio) {
                 audio = new Audio();
                 audio.preload = "auto";
+                // FIX #1: CORS
                 audio.crossOrigin = "anonymous";
                 audio.muted = false;
                 audio.playbackRate = safeStemSpeed;
                 audio.defaultPlaybackRate = safeStemSpeed;
 
+                // Lógica de candidatos repetida para el elemento Audio (retry)
                 const nameVariants = [
                     stem.fileName,
                     stem.cleanName,
@@ -1268,7 +1287,6 @@ export default function StudioPage() {
       );
   }
 
-  // ... (RESTO DEL RENDER JSX IDÉNTICO AL ANTERIOR, LO OMITO POR BREVEDAD, USA EL MISMO JSX QUE EL PASO 4)
   return (
     <div className="flex flex-col h-screen bg-[#0f111a] text-slate-300 font-sans overflow-hidden selection:bg-teal-500/30">
 
@@ -1627,7 +1645,9 @@ export default function StudioPage() {
     </div>
   );
 }
-// ... (RESTO DEL CÓDIGO DE COMPONENTES AUXILIARES IGUAL)
+
+// --- Componentes Auxiliares ---
+
 function Toggle({ checked, onChange, colorClass = "bg-teal-500" }: { checked: boolean, onChange: (v: boolean) => void, colorClass?: string }) {
     return (
         <div
