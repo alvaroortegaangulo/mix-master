@@ -302,6 +302,7 @@
     "generateMix": "Générer Mix IA",
     "generateMaster": "Générer Mastering IA",
     "processing": "Traitement...",
+    "processingTime": "Temps {time} min",
     "waitingQueue": "En attente dans la file…",
     "runningStage": "Exécution de l'étape",
     "stage": {

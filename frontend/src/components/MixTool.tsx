@@ -54,6 +54,12 @@ const siteUrl = (() => {
 const HOMEPAGE_DESCRIPTION =
   "Transform your tracks with Piroola. Our AI-powered mixing and mastering service delivers professional studio-quality results from your multi-track stems in minutes.";
 
+const formatProcessingTime = (totalSeconds: number) => {
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = Math.floor(totalSeconds % 60);
+  return `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+};
+
 const MixResultPanel = dynamic(
   () => import("./MixResultPanel").then((mod) => mod.MixResultPanel),
   {
@@ -329,6 +335,8 @@ export function MixTool({ resumeJobId }: MixToolProps) {
   const [busConfirmationMessage, setBusConfirmationMessage] = useState<string>("");
   const [showBusPanel, setShowBusPanel] = useState(true);
   const pipelineRef = useRef<HTMLDivElement | null>(null);
+  const processingStartRef = useRef<number | null>(null);
+  const [processingElapsedSec, setProcessingElapsedSec] = useState(0);
 
   const t = useTranslations('MixTool');
 
@@ -1092,6 +1100,28 @@ export function MixTool({ resumeJobId }: MixToolProps) {
     .trim();
 
   useEffect(() => {
+    if (!isProcessing) {
+      processingStartRef.current = null;
+      setProcessingElapsedSec(0);
+      return;
+    }
+
+    if (processingStartRef.current === null) {
+      processingStartRef.current = Date.now();
+    }
+
+    const tick = () => {
+      const start = processingStartRef.current ?? Date.now();
+      setProcessingElapsedSec(Math.floor((Date.now() - start) / 1000));
+    };
+
+    tick();
+    const intervalId = setInterval(tick, 1000);
+
+    return () => clearInterval(intervalId);
+  }, [isProcessing]);
+
+  useEffect(() => {
     if (!files.length) {
       setUploadStep(1);
     }
@@ -1177,6 +1207,10 @@ export function MixTool({ resumeJobId }: MixToolProps) {
       ? "step-transition-enter"
       : "";
 
+  const processingTimeLabel = t("processingTime", {
+    time: formatProcessingTime(processingElapsedSec),
+  });
+
   return (
     <div className="flex-1 flex flex-col">
       <Script
@@ -1237,7 +1271,12 @@ export function MixTool({ resumeJobId }: MixToolProps) {
                 {/* Center: Upload */}
                 <div className="relative z-10 w-full max-w-lg flex-1 flex flex-col justify-center">
                     <div className="mb-4 flex items-start justify-between gap-3">
-                        <div>
+                        <div className="flex flex-col items-start gap-2">
+                              {isProcessing && (
+                                  <div className="text-[12px] font-['Orbitron'] text-cyan-300 tracking-[0.08em] tabular-nums leading-none drop-shadow-[0_0_10px_rgba(56,189,248,0.55)]">
+                                      {processingTimeLabel}
+                                  </div>
+                              )}
                               <h2 className="flex flex-wrap items-center gap-3 leading-tight">
                                   {uploadStepTitle && (
                                       <>

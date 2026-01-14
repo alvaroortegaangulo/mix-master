@@ -60,6 +60,11 @@ interface StemControl {
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
+const normalizeStemSpeed = (value: number) => {
+  if (!Number.isFinite(value)) return 1;
+  return clamp(value, 0.5, 1.5);
+};
+
 const createImpulseResponse = (ctx: AudioContext, durationSec = 1.8, decay = 2.2) => {
   const sampleRate = ctx.sampleRate;
   const length = Math.max(1, Math.floor(sampleRate * durationSec));
@@ -191,6 +196,7 @@ export default function StudioPage() {
   const [visualBuffer, setVisualBuffer] = useState<AudioBuffer | null>(null);
 
   const selectedStem = stems[selectedStemIndex];
+  const safeStemSpeed = normalizeStemSpeed(stemSpeed);
 
   const audioContextRef = useRef<AudioContext | null>(null);
   const masterGainNodeRef = useRef<GainNode | null>(null);
@@ -308,9 +314,10 @@ export default function StudioPage() {
 
   useEffect(() => {
       audioElsRef.current.forEach((el) => {
-          el.playbackRate = stemSpeed;
+          el.playbackRate = safeStemSpeed;
+          el.defaultPlaybackRate = safeStemSpeed;
       });
-  }, [stemSpeed]);
+  }, [safeStemSpeed]);
 
 
   // Effect to load waveform data for selected stem
@@ -562,108 +569,121 @@ export default function StudioPage() {
                 audio = new Audio(stem.url || "");
                 audio.preload = "auto";
                 audio.crossOrigin = "anonymous";
-                audio.playbackRate = stemSpeed;
+                audio.playbackRate = safeStemSpeed;
+                audio.defaultPlaybackRate = safeStemSpeed;
 
                 const ctx = audioContextRef.current;
                 // Wait for master node to be ready (useEffect runs first but safe check)
                 if (ctx && masterGainNodeRef.current && !mediaNodesRef.current.has(stem.fileName)) {
-                    const mediaNode = ctx.createMediaElementSource(audio);
-                    const gain = ctx.createGain();
-                    const saturation = ctx.createWaveShaper();
-                    const panner = ctx.createStereoPanner();
-                    const dryGain = ctx.createGain();
-                    const convolver = ctx.createConvolver();
-                    const wetGain = ctx.createGain();
-                    const depthFilter = ctx.createBiquadFilter();
-                    const depthConvolver = ctx.createConvolver();
-                    const depthWetGain = ctx.createGain();
+                    let mediaNode: MediaElementAudioSourceNode | null = null;
+                    try {
+                        mediaNode = ctx.createMediaElementSource(audio);
+                        const gain = ctx.createGain();
+                        const saturation = ctx.createWaveShaper();
+                        const panner = ctx.createStereoPanner();
+                        const dryGain = ctx.createGain();
+                        const convolver = ctx.createConvolver();
+                        const wetGain = ctx.createGain();
+                        const depthFilter = ctx.createBiquadFilter();
+                        const depthConvolver = ctx.createConvolver();
+                        const depthWetGain = ctx.createGain();
 
-                    saturation.oversample = "4x";
-                    saturation.curve = buildSaturationCurve(stem.saturation.enabled ? stem.saturation.amount : 0);
+                        saturation.oversample = "4x";
+                        saturation.curve = buildSaturationCurve(stem.saturation.enabled ? stem.saturation.amount : 0);
 
-                    const transientFallback = () => ({ node: ctx.createGain(), param: undefined });
-                    let transientEntry = transientFallback();
-                    if (ctx.audioWorklet && transientWorkletReadyRef.current) {
-                        try {
-                            await transientWorkletReadyRef.current;
-                            const transientNode = new AudioWorkletNode(ctx, "transient-shaper", {
-                                numberOfInputs: 1,
-                                numberOfOutputs: 1,
-                                outputChannelCount: [2],
-                            });
-                            transientNode.channelCountMode = "explicit";
-                            transientNode.channelCount = 2;
-                            const punchParam = transientNode.parameters.get("punch") ?? undefined;
-                            if (punchParam) {
-                                const punch = stem.transient.enabled ? clamp(stem.transient.amount / 100, -1, 1) : 0;
-                                punchParam.value = punch;
+                        const transientFallback = () => ({ node: ctx.createGain(), param: undefined });
+                        let transientEntry = transientFallback();
+                        if (ctx.audioWorklet && transientWorkletReadyRef.current) {
+                            try {
+                                await transientWorkletReadyRef.current;
+                                const transientNode = new AudioWorkletNode(ctx, "transient-shaper", {
+                                    numberOfInputs: 1,
+                                    numberOfOutputs: 1,
+                                    outputChannelCount: [2],
+                                });
+                                transientNode.channelCountMode = "explicit";
+                                transientNode.channelCount = 2;
+                                const punchParam = transientNode.parameters.get("punch") ?? undefined;
+                                if (punchParam) {
+                                    const punch = stem.transient.enabled ? clamp(stem.transient.amount / 100, -1, 1) : 0;
+                                    punchParam.value = punch;
+                                }
+                                transientEntry = { node: transientNode, param: punchParam };
+                            } catch (err) {
+                                console.warn("Studio: transient worklet node failed", err);
+                                transientEntry = transientFallback();
                             }
-                            transientEntry = { node: transientNode, param: punchParam };
-                        } catch (err) {
-                            console.warn("Studio: transient worklet node failed", err);
-                            transientEntry = transientFallback();
                         }
+
+                        const widthNodes = createStereoWidthNodes(ctx);
+                        const widthValue = stem.stereoWidth.enabled ? clamp(stem.stereoWidth.amount / 100, 0, 2) : 1;
+                        widthNodes.widthGain.gain.value = widthValue;
+
+                        const reverbBuffer = reverbBufferRef.current || createImpulseResponse(ctx);
+                        if (!reverbBufferRef.current) {
+                            reverbBufferRef.current = reverbBuffer;
+                        }
+                        convolver.buffer = reverbBuffer;
+                        convolver.normalize = true;
+
+                        const ambienceBuffer = ambienceBufferRef.current || createAmbienceImpulseResponse(ctx);
+                        if (!ambienceBufferRef.current) {
+                            ambienceBufferRef.current = ambienceBuffer;
+                        }
+                        depthConvolver.buffer = ambienceBuffer;
+                        depthConvolver.normalize = true;
+                        depthFilter.type = "lowpass";
+                        depthFilter.frequency.value = 8000;
+                        depthFilter.Q.value = 0.7;
+
+                        const wetAmount = stem.reverb.enabled ? clamp(stem.reverb.amount / 100, 0, 1) : 0;
+                        const dryAmount = clamp(1 - wetAmount * 0.5, 0, 1);
+                        const depthAmount = stem.depth.enabled ? clamp(stem.depth.amount / 100, 0, 1) : 0;
+                        wetGain.gain.value = wetAmount;
+                        dryGain.gain.value = dryAmount;
+                        depthWetGain.gain.value = depthAmount;
+
+                        const vol = Math.pow(10, stem.volume / 20);
+                        gain.gain.value = stem.mute ? 0 : vol;
+                        panner.pan.value = stem.pan.enabled ? stem.pan.value : 0;
+
+                        mediaNode.connect(gain);
+                        gain.connect(saturation);
+                        saturation.connect(transientEntry.node);
+                        transientEntry.node.connect(widthNodes.input);
+                        widthNodes.output.connect(panner);
+                        panner.connect(dryGain);
+                        dryGain.connect(masterGainNodeRef.current);
+                        panner.connect(convolver);
+                        convolver.connect(wetGain);
+                        wetGain.connect(masterGainNodeRef.current);
+                        panner.connect(depthFilter);
+                        depthFilter.connect(depthConvolver);
+                        depthConvolver.connect(depthWetGain);
+                        depthWetGain.connect(masterGainNodeRef.current);
+
+                        mediaNodesRef.current.set(stem.fileName, mediaNode);
+                        gainNodesRef.current.set(stem.fileName, gain);
+                        saturationNodesRef.current.set(stem.fileName, saturation);
+                        transientNodesRef.current.set(stem.fileName, transientEntry);
+                        stereoWidthGainNodesRef.current.set(stem.fileName, widthNodes.widthGain);
+                        pannerNodesRef.current.set(stem.fileName, panner);
+                        reverbNodesRef.current.set(stem.fileName, convolver);
+                        reverbWetGainNodesRef.current.set(stem.fileName, wetGain);
+                        reverbDryGainNodesRef.current.set(stem.fileName, dryGain);
+                        depthConvolverNodesRef.current.set(stem.fileName, depthConvolver);
+                        depthWetGainNodesRef.current.set(stem.fileName, depthWetGain);
+                        depthFilterNodesRef.current.set(stem.fileName, depthFilter);
+                    } catch (err) {
+                        if (mediaNode) {
+                            try {
+                                mediaNode.connect(masterGainNodeRef.current);
+                            } catch (_) {
+                                // noop fallback; audio element may still output directly if node isn't connected
+                            }
+                        }
+                        console.warn("Studio: failed to build audio graph", err);
                     }
-
-                    const widthNodes = createStereoWidthNodes(ctx);
-                    const widthValue = stem.stereoWidth.enabled ? clamp(stem.stereoWidth.amount / 100, 0, 2) : 1;
-                    widthNodes.widthGain.gain.value = widthValue;
-
-                    const reverbBuffer = reverbBufferRef.current || createImpulseResponse(ctx);
-                    if (!reverbBufferRef.current) {
-                        reverbBufferRef.current = reverbBuffer;
-                    }
-                    convolver.buffer = reverbBuffer;
-                    convolver.normalize = true;
-
-                    const ambienceBuffer = ambienceBufferRef.current || createAmbienceImpulseResponse(ctx);
-                    if (!ambienceBufferRef.current) {
-                        ambienceBufferRef.current = ambienceBuffer;
-                    }
-                    depthConvolver.buffer = ambienceBuffer;
-                    depthConvolver.normalize = true;
-                    depthFilter.type = "lowpass";
-                    depthFilter.frequency.value = 8000;
-                    depthFilter.Q.value = 0.7;
-
-                    const wetAmount = stem.reverb.enabled ? clamp(stem.reverb.amount / 100, 0, 1) : 0;
-                    const dryAmount = clamp(1 - wetAmount * 0.5, 0, 1);
-                    const depthAmount = stem.depth.enabled ? clamp(stem.depth.amount / 100, 0, 1) : 0;
-                    wetGain.gain.value = wetAmount;
-                    dryGain.gain.value = dryAmount;
-                    depthWetGain.gain.value = depthAmount;
-
-                    const vol = Math.pow(10, stem.volume / 20);
-                    gain.gain.value = stem.mute ? 0 : vol;
-                    panner.pan.value = stem.pan.enabled ? stem.pan.value : 0;
-
-                    mediaNode.connect(gain);
-                    gain.connect(saturation);
-                    saturation.connect(transientEntry.node);
-                    transientEntry.node.connect(widthNodes.input);
-                    widthNodes.output.connect(panner);
-                    panner.connect(dryGain);
-                    dryGain.connect(masterGainNodeRef.current);
-                    panner.connect(convolver);
-                    convolver.connect(wetGain);
-                    wetGain.connect(masterGainNodeRef.current);
-                    panner.connect(depthFilter);
-                    depthFilter.connect(depthConvolver);
-                    depthConvolver.connect(depthWetGain);
-                    depthWetGain.connect(masterGainNodeRef.current);
-
-                    mediaNodesRef.current.set(stem.fileName, mediaNode);
-                    gainNodesRef.current.set(stem.fileName, gain);
-                    saturationNodesRef.current.set(stem.fileName, saturation);
-                    transientNodesRef.current.set(stem.fileName, transientEntry);
-                    stereoWidthGainNodesRef.current.set(stem.fileName, widthNodes.widthGain);
-                    pannerNodesRef.current.set(stem.fileName, panner);
-                    reverbNodesRef.current.set(stem.fileName, convolver);
-                    reverbWetGainNodesRef.current.set(stem.fileName, wetGain);
-                    reverbDryGainNodesRef.current.set(stem.fileName, dryGain);
-                    depthConvolverNodesRef.current.set(stem.fileName, depthConvolver);
-                    depthWetGainNodesRef.current.set(stem.fileName, depthWetGain);
-                    depthFilterNodesRef.current.set(stem.fileName, depthFilter);
                 }
 
                 const candidates: string[] = [];
@@ -713,7 +733,8 @@ export default function StudioPage() {
                 audio.src = stem.url;
                 audio.load();
             }
-            audio.playbackRate = stemSpeed;
+            audio.playbackRate = safeStemSpeed;
+            audio.defaultPlaybackRate = safeStemSpeed;
             return audio;
         };
 
@@ -910,7 +931,7 @@ export default function StudioPage() {
               saturation: s.saturation,
               transient: s.transient,
               depth: s.depth,
-              speed: stemSpeed,
+              speed: safeStemSpeed,
               mute: s.mute,
               solo: s.solo
           }));
@@ -1235,15 +1256,15 @@ export default function StudioPage() {
               <div className="bg-[#1e2336] rounded-xl p-3 border border-white/5 shadow-lg">
                   <div className="flex items-center justify-between mb-2">
                       <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">{t('speed')}</span>
-                      <span className="text-[10px] font-mono text-teal-400">{stemSpeed.toFixed(2)}x</span>
+                      <span className="text-[10px] font-mono text-teal-400">{safeStemSpeed.toFixed(2)}x</span>
                   </div>
                   <input
                       type="range"
                       min="0.5"
                       max="1.5"
                       step="0.01"
-                      value={stemSpeed}
-                      onChange={(e) => setStemSpeed(parseFloat(e.target.value))}
+                      value={safeStemSpeed}
+                      onChange={(e) => setStemSpeed(normalizeStemSpeed(parseFloat(e.target.value)))}
                       className="w-full h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-teal-500"
                   />
                   <div className="flex justify-between text-[9px] text-slate-600 mt-1">
