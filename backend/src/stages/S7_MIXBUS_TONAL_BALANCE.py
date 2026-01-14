@@ -562,7 +562,7 @@ def _top_band_changes(cumulative_eq_db: Dict[str, float], top_n: int = 5) -> Lis
 # ---------------------------------------------------------------------
 # Main stage
 # ---------------------------------------------------------------------
-def process(contract_id: str) -> bool:
+def process(context_or_contract_id: Any, *args: str) -> bool:
     """
     Lee contrato {temp_dir}/{contract_id}.json, procesa full_song.wav y escribe:
     - full_song_tonal.wav
@@ -575,9 +575,30 @@ def process(contract_id: str) -> bool:
     log = _log()
 
     try:
-        # Temp dir root configurable, fallback a /tmp
-        temp_root = Path(os.environ.get("MIXMASTER_TEMP_ROOT", "/tmp"))
-        temp_dir = temp_root / contract_id
+        context = None
+        contract_id: Optional[str] = None
+        if hasattr(context_or_contract_id, "get_stage_dir"):
+            context = context_or_contract_id
+            contract_id = str(args[0]) if args else getattr(context, "stage_id", None)
+        else:
+            contract_id = str(context_or_contract_id)
+
+        if not contract_id:
+            log.error("[S7_MIXBUS_TONAL_BALANCE] contract_id no definido en process().")
+            return True
+
+        temp_dir = None
+        if context is not None:
+            try:
+                temp_dir = context.get_stage_dir(contract_id)
+            except Exception:
+                temp_dir = None
+
+        if temp_dir is None:
+            # Temp dir root configurable, fallback a /tmp
+            temp_root = Path(os.environ.get("MIX_TEMP_ROOT") or os.environ.get("MIXMASTER_TEMP_ROOT") or "/tmp")
+            temp_dir = temp_root / contract_id
+
         contract_path = temp_dir / f"{contract_id}.json"
 
         if not contract_path.exists():
