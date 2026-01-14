@@ -30,16 +30,19 @@ export function HeroSection() {
               </div>
 
               <h1 className="text-4xl font-extrabold leading-[1.05] tracking-tight text-white sm:text-5xl lg:text-5xl 2xl:text-7xl font-['Orbitron']">
-                <span className="block">Tu musica,</span>
+                <span className="block">Tu música,</span>
                 <span className="block text-transparent bg-clip-text bg-gradient-to-r from-cyan-300 to-blue-500 drop-shadow-[0_0_16px_rgba(34,211,238,0.5)]">
-                  Sonido Pro.
+                  Al siguiente nivel.
                 </span>
-                <span className="block">Sin lios.</span>
               </h1>
 
+              <p className="text-sm font-semibold text-cyan-200/90 sm:text-base lg:text-[13px] xl:text-base 2xl:text-lg">
+                Mezcla y masterización por pistas, calidad de estudio.
+              </p>
+
               <p className="text-sm text-slate-300 leading-relaxed sm:text-base lg:text-[13px] xl:text-base 2xl:text-lg">
-                No necesitas ser ingeniero de sonido para sonar genial en Spotify. Sube tu grabacion casera y nuestra IA
-                se encarga de pulirla, limpiarla y darle volumen en segundos.
+                Sube las pistas de tus instrumentos y obtén un resultado listo para publicar en plataformas en minutos.
+                Claridad, equilibrio y potencia, con tecnología de audio propia.
               </p>
 
               <div className="flex flex-col gap-4 sm:flex-row">
@@ -47,19 +50,35 @@ export function HeroSection() {
                   href="/mix"
                   className="group inline-flex items-center justify-center gap-2 rounded-xl bg-cyan-400 px-6 py-3 text-sm font-bold text-slate-950 transition-all hover:bg-cyan-300 hover:shadow-[0_0_28px_rgba(34,211,238,0.45)]"
                 >
-                  <svg
-                    width="20"
-                    height="20"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="stroke-current stroke-2"
-                    aria-hidden="true"
-                    focusable="false"
-                  >
-                    <circle cx="12" cy="12" r="9" />
-                  </svg>
-                  Mejorar mi Cancion
+                  <span className="relative inline-flex h-5 w-5 items-center justify-center [perspective:700px]">
+                    <svg
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="hero-hoop h-5 w-5 stroke-current stroke-2"
+                      aria-hidden="true"
+                      focusable="false"
+                    >
+                      <circle cx="12" cy="12" r="9" />
+                    </svg>
+                    <span className="absolute inset-0 scale-[1.1] opacity-50">
+                      <svg
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="hero-hoop-ghost h-5 w-5 stroke-current stroke-1"
+                        aria-hidden="true"
+                        focusable="false"
+                      >
+                        <circle cx="12" cy="12" r="9" />
+                      </svg>
+                    </span>
+                  </span>
+                  Mejorar mi Canción
                 </Link>
                 <Link
                   href="/examples"
@@ -78,8 +97,8 @@ export function HeroSection() {
                     <AdjustmentsVerticalIcon className="h-5 w-5" aria-hidden="true" />
                   </div>
                   <div>
-                    <h3 className="text-sm font-bold text-white">Mezcla unica</h3>
-                    <p className="text-xs text-slate-400">Mezcla pistas individuales automaticamente.</p>
+                    <h3 className="text-sm font-bold text-white">Mezcla por pistas</h3>
+                    <p className="text-xs text-slate-400">Sube instrumentos separados y logra balance profesional en minutos.</p>
                   </div>
                 </div>
               </div>
@@ -90,8 +109,8 @@ export function HeroSection() {
                     <SparklesIcon className="h-5 w-5" aria-hidden="true" />
                   </div>
                   <div>
-                    <h3 className="text-sm font-bold text-white">Potenciado por IA</h3>
-                    <p className="text-xs text-slate-400">Limpieza y pulido inteligente.</p>
+                    <h3 className="text-sm font-bold text-white">Masterización inteligente</h3>
+                    <p className="text-xs text-slate-400">Claridad, equilibrio y potencia con tecnología propia.</p>
                   </div>
                 </div>
               </div>
@@ -102,8 +121,8 @@ export function HeroSection() {
                     <ArrowsRightLeftIcon className="h-5 w-5" aria-hidden="true" />
                   </div>
                   <div>
-                    <h3 className="text-sm font-bold text-white">Control Total</h3>
-                    <p className="text-xs text-slate-400">Edicion manual en Studio implementado.</p>
+                    <h3 className="text-sm font-bold text-white">Control total</h3>
+                    <p className="text-xs text-slate-400">Edición manual en Studio cuando lo necesites.</p>
                   </div>
                 </div>
               </div>

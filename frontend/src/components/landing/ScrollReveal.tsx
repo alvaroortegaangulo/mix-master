@@ -42,6 +42,9 @@ export function ScrollReveal({
 }: ScrollRevealProps) {
   // Respetar preferencias de accesibilidad del usuario
   const shouldReduceMotion = useReducedMotion();
+  const speedFactor = 0.75;
+  const effectiveDelay = delay * speedFactor;
+  const effectiveDuration = duration * speedFactor;
 
   // Configuración de las direcciones para imitar AOS
   const getInitialCoords = () => {
@@ -74,8 +77,8 @@ export function ScrollReveal({
       x: 0,
       filter: "blur(0px)",
       transition: {
-        duration: duration,
-        delay: delay,
+        duration: effectiveDuration,
+        delay: effectiveDelay,
         ease: "easeOut", // Curva suave similar a AOS
       },
     },

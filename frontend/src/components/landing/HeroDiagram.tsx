@@ -33,9 +33,9 @@ const nodes: HeroNode[] = [
     id: "mixing",
     positionClass: "top-[8%] left-1/2 -translate-x-1/2 -translate-y-1/2",
     icon: AdjustmentsVerticalIcon,
-    iconClassName: "h-5 w-5 2xl:h-6 2xl:w-6 text-cyan-200",
+    iconClassName: "h-5 w-5 lg:h-4 lg:w-4 xl:h-5 xl:w-5 2xl:h-6 2xl:w-6 text-cyan-200",
     iconWrapperClass:
-      "h-12 w-12 2xl:h-14 2xl:w-14 rounded-2xl border border-cyan-400/30 bg-slate-950/70 shadow-[0_0_24px_rgba(34,211,238,0.2)] group-hover:shadow-[0_0_35px_rgba(34,211,238,0.5)]",
+      "h-12 w-12 lg:h-11 lg:w-11 xl:h-12 xl:w-12 2xl:h-14 2xl:w-14 rounded-2xl border border-cyan-400/30 bg-slate-950/70 shadow-[0_0_24px_rgba(34,211,238,0.2)] group-hover:shadow-[0_0_35px_rgba(34,211,238,0.5)]",
     pulseClassName: "rounded-2xl border-cyan-400/40",
     windowClass: "left-1/2 -translate-x-1/2 mt-4 origin-top",
     windowAccentClass: "border-t border-cyan-400/20",
@@ -49,9 +49,9 @@ const nodes: HeroNode[] = [
     id: "ai-cleanup",
     positionClass: "top-[20%] right-[20%] translate-x-1/2 -translate-y-1/2",
     icon: SparklesIcon,
-    iconClassName: "h-4 w-4 2xl:h-5 2xl:w-5 text-violet-200",
+    iconClassName: "h-4 w-4 lg:h-[14px] lg:w-[14px] xl:h-4 xl:w-4 2xl:h-5 2xl:w-5 text-violet-200",
     iconWrapperClass:
-      "h-10 w-10 2xl:h-12 2xl:w-12 rounded-full border border-violet-400/30 bg-slate-950/70 shadow-[0_0_22px_rgba(139,92,246,0.2)] group-hover:shadow-[0_0_32px_rgba(139,92,246,0.5)]",
+      "h-10 w-10 lg:h-9 lg:w-9 xl:h-10 xl:w-10 2xl:h-12 2xl:w-12 rounded-full border border-violet-400/30 bg-slate-950/70 shadow-[0_0_22px_rgba(139,92,246,0.2)] group-hover:shadow-[0_0_32px_rgba(139,92,246,0.5)]",
     pulseClassName: "rounded-full border-violet-400/40",
     windowClass: "right-0 top-full mt-2 origin-top-right",
     windowAccentClass: "border-t border-violet-400/20",
@@ -64,9 +64,9 @@ const nodes: HeroNode[] = [
     id: "mastering",
     positionClass: "top-1/2 right-[8%] translate-x-1/2 -translate-y-1/2",
     icon: SpeakerWaveIcon,
-    iconClassName: "h-5 w-5 2xl:h-6 2xl:w-6 text-cyan-200",
+    iconClassName: "h-5 w-5 lg:h-4 lg:w-4 xl:h-5 xl:w-5 2xl:h-6 2xl:w-6 text-cyan-200",
     iconWrapperClass:
-      "h-12 w-12 2xl:h-14 2xl:w-14 rounded-2xl border border-cyan-400/30 bg-slate-950/70 shadow-[0_0_24px_rgba(34,211,238,0.2)] group-hover:shadow-[0_0_35px_rgba(34,211,238,0.5)]",
+      "h-12 w-12 lg:h-11 lg:w-11 xl:h-12 xl:w-12 2xl:h-14 2xl:w-14 rounded-2xl border border-cyan-400/30 bg-slate-950/70 shadow-[0_0_24px_rgba(34,211,238,0.2)] group-hover:shadow-[0_0_35px_rgba(34,211,238,0.5)]",
     pulseClassName: "rounded-2xl border-cyan-400/40",
     windowClass: "right-full top-1/2 -translate-y-1/2 mr-4 origin-right",
     windowAccentClass: "border-r border-cyan-400/20",
@@ -80,9 +80,9 @@ const nodes: HeroNode[] = [
     id: "pipeline",
     positionClass: "bottom-[20%] right-[20%] translate-x-1/2 translate-y-1/2",
     icon: Cog6ToothIcon,
-    iconClassName: "h-4 w-4 2xl:h-5 2xl:w-5 text-slate-100",
+    iconClassName: "h-4 w-4 lg:h-[14px] lg:w-[14px] xl:h-4 xl:w-4 2xl:h-5 2xl:w-5 text-slate-100",
     iconWrapperClass:
-      "h-10 w-10 2xl:h-12 2xl:w-12 rounded-full border border-white/10 bg-slate-950/70 shadow-[0_0_18px_rgba(148,163,184,0.2)] group-hover:shadow-[0_0_26px_rgba(148,163,184,0.45)]",
+      "h-10 w-10 lg:h-9 lg:w-9 xl:h-10 xl:w-10 2xl:h-12 2xl:w-12 rounded-full border border-white/10 bg-slate-950/70 shadow-[0_0_18px_rgba(148,163,184,0.2)] group-hover:shadow-[0_0_26px_rgba(148,163,184,0.45)]",
     pulseClassName: "rounded-full border-white/20",
     windowClass: "right-0 bottom-full mb-2 origin-bottom-right",
     title: "Personalizacion Absoluta",
@@ -94,9 +94,9 @@ const nodes: HeroNode[] = [
     id: "quality",
     positionClass: "bottom-[8%] left-1/2 -translate-x-1/2 translate-y-1/2",
     icon: ScaleIcon,
-    iconClassName: "h-5 w-5 2xl:h-6 2xl:w-6 text-violet-200",
+    iconClassName: "h-5 w-5 lg:h-4 lg:w-4 xl:h-5 xl:w-5 2xl:h-6 2xl:w-6 text-violet-200",
     iconWrapperClass:
-      "h-12 w-12 2xl:h-14 2xl:w-14 rounded-2xl border border-violet-400/30 bg-slate-950/70 shadow-[0_0_24px_rgba(139,92,246,0.2)] group-hover:shadow-[0_0_35px_rgba(139,92,246,0.5)]",
+      "h-12 w-12 lg:h-11 lg:w-11 xl:h-12 xl:w-12 2xl:h-14 2xl:w-14 rounded-2xl border border-violet-400/30 bg-slate-950/70 shadow-[0_0_24px_rgba(139,92,246,0.2)] group-hover:shadow-[0_0_35px_rgba(139,92,246,0.5)]",
     pulseClassName: "rounded-2xl border-violet-400/40",
     windowClass: "left-1/2 -translate-x-1/2 bottom-full mb-4 origin-bottom",
     windowAccentClass: "border-b border-violet-400/20",
@@ -110,9 +110,9 @@ const nodes: HeroNode[] = [
     id: "reports",
     positionClass: "bottom-[20%] left-[20%] -translate-x-1/2 translate-y-1/2",
     icon: LightBulbIcon,
-    iconClassName: "h-4 w-4 2xl:h-5 2xl:w-5 text-slate-100",
+    iconClassName: "h-4 w-4 lg:h-[14px] lg:w-[14px] xl:h-4 xl:w-4 2xl:h-5 2xl:w-5 text-slate-100",
     iconWrapperClass:
-      "h-10 w-10 2xl:h-12 2xl:w-12 rounded-full border border-white/10 bg-slate-950/70 shadow-[0_0_18px_rgba(148,163,184,0.2)] group-hover:shadow-[0_0_26px_rgba(148,163,184,0.45)]",
+      "h-10 w-10 lg:h-9 lg:w-9 xl:h-10 xl:w-10 2xl:h-12 2xl:w-12 rounded-full border border-white/10 bg-slate-950/70 shadow-[0_0_18px_rgba(148,163,184,0.2)] group-hover:shadow-[0_0_26px_rgba(148,163,184,0.45)]",
     pulseClassName: "rounded-full border-white/20",
     windowClass: "left-0 bottom-full mb-2 origin-bottom-left",
     title: "Informes de Mejoras",
@@ -124,9 +124,9 @@ const nodes: HeroNode[] = [
     id: "studio-control",
     positionClass: "top-1/2 left-[8%] -translate-x-1/2 -translate-y-1/2",
     icon: ArrowsRightLeftIcon,
-    iconClassName: "h-5 w-5 2xl:h-6 2xl:w-6 text-cyan-200",
+    iconClassName: "h-5 w-5 lg:h-4 lg:w-4 xl:h-5 xl:w-5 2xl:h-6 2xl:w-6 text-cyan-200",
     iconWrapperClass:
-      "h-12 w-12 2xl:h-14 2xl:w-14 rounded-2xl border border-cyan-400/30 bg-slate-950/70 shadow-[0_0_24px_rgba(34,211,238,0.2)] group-hover:shadow-[0_0_35px_rgba(34,211,238,0.5)]",
+      "h-12 w-12 lg:h-11 lg:w-11 xl:h-12 xl:w-12 2xl:h-14 2xl:w-14 rounded-2xl border border-cyan-400/30 bg-slate-950/70 shadow-[0_0_24px_rgba(34,211,238,0.2)] group-hover:shadow-[0_0_35px_rgba(34,211,238,0.5)]",
     pulseClassName: "rounded-2xl border-cyan-400/40",
     windowClass: "left-full top-1/2 -translate-y-1/2 ml-4 origin-left",
     windowAccentClass: "border-l border-cyan-400/20",
@@ -140,9 +140,9 @@ const nodes: HeroNode[] = [
     id: "styles",
     positionClass: "top-[20%] left-[20%] -translate-x-1/2 -translate-y-1/2",
     icon: FireIcon,
-    iconClassName: "h-4 w-4 2xl:h-5 2xl:w-5 text-slate-100",
+    iconClassName: "h-4 w-4 lg:h-[14px] lg:w-[14px] xl:h-4 xl:w-4 2xl:h-5 2xl:w-5 text-slate-100",
     iconWrapperClass:
-      "h-10 w-10 2xl:h-12 2xl:w-12 rounded-full border border-white/10 bg-slate-950/70 shadow-[0_0_18px_rgba(148,163,184,0.2)] group-hover:shadow-[0_0_26px_rgba(148,163,184,0.45)]",
+      "h-10 w-10 lg:h-9 lg:w-9 xl:h-10 xl:w-10 2xl:h-12 2xl:w-12 rounded-full border border-white/10 bg-slate-950/70 shadow-[0_0_18px_rgba(148,163,184,0.2)] group-hover:shadow-[0_0_26px_rgba(148,163,184,0.45)]",
     pulseClassName: "rounded-full border-white/20",
     windowClass: "left-0 top-full mt-2 origin-top-left",
     title: "Todos los Estilos",
@@ -193,7 +193,7 @@ export function HeroDiagram() {
   }, []);
 
   return (
-    <div className="relative mx-auto hidden w-full max-w-[540px] aspect-square lg:block" style={{ perspective: "1200px" }}>
+    <div className="relative mx-auto hidden w-full max-w-[540px] aspect-square lg:block lg:max-w-[480px] xl:max-w-[540px]" style={{ perspective: "1200px" }}>
       <div
         ref={containerRef}
         className="relative h-full w-full transition-transform duration-300 ease-out"
@@ -214,7 +214,7 @@ export function HeroDiagram() {
           {nodes.map((node) => {
             const Icon = node.icon;
             return (
-              <div key={node.id} className={`absolute ${node.positionClass} group z-30`}>
+              <div key={node.id} className={`absolute ${node.positionClass} group z-30 hover:z-50`}>
                 <div className="relative">
                   <div
                     className={`flex items-center justify-center transition-all duration-300 ${node.iconWrapperClass} group-hover:scale-110`}

@@ -278,6 +278,57 @@ export default async function LocaleLayout({
               </>
             )}
 
+            <Script
+              id="cookiescript-hide-badge"
+              strategy="afterInteractive"
+              dangerouslySetInnerHTML={{
+                __html: `
+                  (function () {
+                    var badgeSelector = "#cookiescript_badge";
+                    var shouldHide = function (state) {
+                      if (!state || !state.action) return false;
+                      return state.action === "accept" || state.action === "reject";
+                    };
+                    var hideBadge = function () {
+                      var badge = document.querySelector(badgeSelector);
+                      if (badge) {
+                        badge.style.display = "none";
+                      }
+                    };
+                    var updateFromState = function (state) {
+                      if (shouldHide(state)) {
+                        hideBadge();
+                      }
+                    };
+                    document.addEventListener("CookieScriptCurrentState", function (event) {
+                      updateFromState(event && event.detail);
+                    });
+                    document.addEventListener("CookieScriptAccept", hideBadge);
+                    document.addEventListener("CookieScriptAcceptAll", hideBadge);
+                    document.addEventListener("CookieScriptReject", hideBadge);
+                    document.addEventListener("CookieScriptLoaded", function () {
+                      if (window.CookieScript && typeof window.CookieScript.currentState === "function") {
+                        updateFromState(window.CookieScript.currentState());
+                      }
+                    });
+                    var attempts = 0;
+                    var maxAttempts = 10;
+                    var poll = function () {
+                      attempts += 1;
+                      if (window.CookieScript && typeof window.CookieScript.currentState === "function") {
+                        updateFromState(window.CookieScript.currentState());
+                        return;
+                      }
+                      if (attempts < maxAttempts) {
+                        setTimeout(poll, 500);
+                      }
+                    };
+                    poll();
+                  })();
+                `,
+              }}
+            />
+
             {/* CookieScript / Cookie CMP */}
             <Script
               id="cookie-script"

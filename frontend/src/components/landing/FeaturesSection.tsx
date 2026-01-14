@@ -207,7 +207,7 @@ export function FeaturesSection({ className }: { className?: string }) {
           {/* 4. Bottom Navigation Bar - Slides up last */}
           <ScrollReveal 
             className="grid grid-cols-2 md:grid-cols-4 bg-slate-950/90 border-t border-white/10"
-            delay={0.6}
+            delay={0.3}
             direction="up"
           >
             {features.map((feature, index) => {

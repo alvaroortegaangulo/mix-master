@@ -413,6 +413,43 @@ body {
     animation: float 6s ease-in-out infinite;
 }
 
+@keyframes hero-hoop-spin {
+    0% {
+        transform: rotateX(72deg) rotateY(0deg) rotateZ(0deg) translateY(0);
+    }
+    35% {
+        transform: rotateX(88deg) rotateY(12deg) rotateZ(140deg) translateY(2px);
+    }
+    70% {
+        transform: rotateX(58deg) rotateY(-10deg) rotateZ(255deg) translateY(-1px);
+    }
+    100% {
+        transform: rotateX(72deg) rotateY(0deg) rotateZ(360deg) translateY(0);
+    }
+}
+
+.hero-hoop {
+    animation: hero-hoop-spin 2.6s linear infinite;
+    transform-origin: center;
+    transform-style: preserve-3d;
+    will-change: transform;
+}
+
+.hero-hoop-ghost {
+    animation: hero-hoop-spin 2.6s linear infinite;
+    animation-delay: -1.3s;
+    transform-origin: center;
+    transform-style: preserve-3d;
+    will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .hero-hoop,
+    .hero-hoop-ghost {
+        animation: none;
+    }
+}
+
 .panel-transition {
   transition: flex 0.7s cubic-bezier(0.25, 1, 0.5, 1), filter 0.5s ease;
 }
