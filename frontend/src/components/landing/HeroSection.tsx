@@ -36,13 +36,19 @@ export function HeroSection() {
                 </span>
               </h1>
 
-              <p className="text-sm font-semibold text-cyan-200/90 sm:text-base lg:text-[13px] xl:text-base 2xl:text-lg">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.32em] text-cyan-300 sm:text-xs lg:text-[11px] xl:text-xs 2xl:text-sm">
                 Mezcla y masterización por pistas, calidad de estudio.
               </p>
 
               <p className="text-sm text-slate-300 leading-relaxed sm:text-base lg:text-[13px] xl:text-base 2xl:text-lg">
                 Sube las pistas de tus instrumentos y obtén un resultado listo para publicar en plataformas en minutos.
                 Claridad, equilibrio y potencia, con tecnología de audio propia.
+                <a
+                  href="#listen-difference"
+                  className="ml-2 inline-flex items-center rounded-full border border-teal-400/40 bg-teal-400/10 px-2.5 py-0.5 text-[11px] font-semibold text-teal-300 transition-colors hover:border-teal-300 hover:text-teal-200"
+                >
+                  Escuchar la diferencia
+                </a>
               </p>
 
               <div className="flex flex-col gap-4 sm:flex-row">
