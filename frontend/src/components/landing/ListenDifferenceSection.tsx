@@ -198,7 +198,7 @@ export function ListenDifferenceSection({ className }: { className?: string }) {
                           {t(`metrics.${key}.label`)}
                        </span>
                        <div className="group relative">
-                          <InformationCircleIcon className="w-4 h-4 lg:h-3.5 lg:w-3.5 text-slate-600 hover:text-teal-400 cursor-help transition-colors" />
+                          <InformationCircleIcon className="w-4 h-4 lg:h-3.5 lg:w-3.5 text-amber-400 hover:text-amber-300 cursor-help transition-colors" />
                           <div className="absolute bottom-full left-1/2 mb-2 hidden -translate-x-1/2 whitespace-normal rounded-lg bg-slate-800 px-3 py-2 text-xs text-white shadow-xl w-48 z-50 border border-slate-700 pointer-events-none group-hover:block">
                             {t(`metrics.${key}.tooltip`)}
                             <div className="absolute top-full left-1/2 -mt-1 -ml-1 h-2 w-2 border-r border-b border-slate-700 bg-slate-800 rotate-45"></div>
@@ -206,10 +206,10 @@ export function ListenDifferenceSection({ className }: { className?: string }) {
                        </div>
                      </div>
                      <div className="text-right">
-                       <span className={`text-base lg:text-sm xl:text-base font-mono font-bold ${showOriginal ? 'text-slate-300' : 'text-teal-400'}`}>
+                       <span className="text-base lg:text-sm xl:text-base font-mono font-bold text-amber-300">
                          {value}
                        </span>
-                       {unit && <span className="text-xs lg:text-[10px] xl:text-xs text-slate-500 ml-1">{unit}</span>}
+                       {unit && <span className="text-xs lg:text-[10px] xl:text-xs text-amber-300/80 ml-1">{unit}</span>}
                      </div>
                    </div>
                  ))}
@@ -218,30 +218,8 @@ export function ListenDifferenceSection({ className }: { className?: string }) {
           </ScrollReveal>
         </div>
 
-        {/* 3. Improvements Grid - Individual Cards Pop In Sequentially */}
-        <div className="mt-12 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {improvements.map(({ icon: Icon, key, color }, index) => (
-            <ScrollReveal
-              key={key}
-              delay={0.5 + (index * 0.05)} // Staggered delay: 0.50, 0.55, 0.60...
-              direction="up"
-              className="bg-slate-900/40 border border-slate-800 rounded-2xl p-6 hover:bg-slate-900/60 transition-colors duration-300"
-            >
-              <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-4 ${color}`}>
-                <Icon className="w-6 h-6" />
-              </div>
-              <h3 className="text-white font-bold text-base mb-2">
-                {t(`improvements.${key}.title`)}
-              </h3>
-              <p className="text-slate-400 text-sm leading-relaxed">
-                {t(`improvements.${key}.description`)}
-              </p>
-            </ScrollReveal>
-          ))}
-        </div>
-
-        {/* 4. CTA Button - Last to appear */}
-        <ScrollReveal className="mt-12 flex justify-center" delay={0.9}>
+        {/* 3. CTA Button - Above Improvements */}
+        <ScrollReveal className="mt-10 flex justify-center" delay={0.55}>
           <Link
             href="/examples"
             className="inline-flex items-center justify-center rounded-full bg-amber-400 px-8 py-3 text-sm font-bold text-slate-950 shadow-lg shadow-amber-500/20 transition hover:bg-amber-300 hover:scale-105 active:scale-95"
@@ -249,6 +227,30 @@ export function ListenDifferenceSection({ className }: { className?: string }) {
             {t("cta")}
           </Link>
         </ScrollReveal>
+
+        {/* 4. Improvements Grid - Individual Cards Pop In Sequentially */}
+        <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {improvements.map(({ icon: Icon, key, color }, index) => (
+            <ScrollReveal
+              key={key}
+              delay={0.5 + (index * 0.05)} // Staggered delay: 0.50, 0.55, 0.60...
+              direction="up"
+              className="group bg-slate-900/40 border border-slate-800 rounded-2xl p-4 hover:bg-slate-900/60 transition-colors duration-300"
+            >
+              <div className="flex items-center gap-3">
+                <div className={`h-9 w-9 rounded-lg flex items-center justify-center ${color}`}>
+                  <Icon className="h-5 w-5" />
+                </div>
+                <h3 className="text-white font-semibold text-sm">
+                  {t(`improvements.${key}.title`)}
+                </h3>
+              </div>
+              <p className="mt-3 text-slate-400 text-sm leading-relaxed max-h-0 overflow-hidden opacity-0 transition-[max-height,opacity] duration-300 ease-out group-hover:max-h-24 group-hover:opacity-100">
+                {t(`improvements.${key}.description`)}
+              </p>
+            </ScrollReveal>
+          ))}
+        </div>
 
       </div>
     </section>
