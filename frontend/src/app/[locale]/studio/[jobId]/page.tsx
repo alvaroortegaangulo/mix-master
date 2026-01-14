@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useModal } from "@/context/ModalContext";
-import { getApiBaseUrl, getStudioToken, signFileUrl } from "@/lib/mixApi";
+import { getApiBaseUrl, getBackendBaseUrl, getStudioToken, signFileUrl } from "@/lib/mixApi";
 import { CanvasWaveform } from "@/components/studio/CanvasWaveform";
 import { studioCache, AudioBufferData } from "@/lib/studioCache";
 import {
@@ -63,6 +63,27 @@ const clamp = (value: number, min: number, max: number) => Math.min(max, Math.ma
 const normalizeStemSpeed = (value: number) => {
   if (!Number.isFinite(value)) return 1;
   return clamp(value, 0.5, 1.5);
+};
+
+const normalizeSignedUrl = (rawUrl: string) => {
+  if (!rawUrl) return "";
+  try {
+    const base = typeof window !== "undefined" ? window.location.href : "http://localhost";
+    const parsed = new URL(rawUrl, base);
+    const backend = new URL(getBackendBaseUrl());
+    parsed.protocol = backend.protocol;
+    parsed.host = backend.host;
+    parsed.port = backend.port;
+    return parsed.toString();
+  } catch {
+    return rawUrl;
+  }
+};
+
+const formatDb = (gain: number) => {
+  if (!Number.isFinite(gain) || gain <= 0) return "-60.0";
+  const db = 20 * Math.log10(gain);
+  return clamp(db, -60, 0).toFixed(1);
 };
 
 const createImpulseResponse = (ctx: AudioContext, durationSec = 1.8, decay = 2.2) => {
@@ -297,7 +318,16 @@ export default function StudioPage() {
       }
     }
     return () => {
-        audioContextRef.current?.close();
+        const ctx = audioContextRef.current;
+        if (ctx && ctx.state !== "closed") {
+          ctx.close().catch(() => undefined);
+        }
+        audioContextRef.current = null;
+        masterGainNodeRef.current = null;
+        masterAnalyserNodeRef.current = null;
+        reverbBufferRef.current = null;
+        ambienceBufferRef.current = null;
+        transientWorkletReadyRef.current = null;
     };
   }, []);
 
@@ -515,13 +545,30 @@ export default function StudioPage() {
             stageFallbacks.forEach((stage) => candidates.push(`${stage}/${stem.fileName}`));
             candidates.push(stem.fileName);
 
-            let resolvedUrl = stem.signedUrl || stem.url || "";
-            if (!resolvedUrl) {
+            const primaryPath = candidates[0] || stem.fileName;
+            let resolvedUrl = "";
+            if (tokenValue) {
                 try {
-                    resolvedUrl = await signFileUrl(jobId, candidates[0] || stem.fileName, tokenValue || undefined);
+                    resolvedUrl = await signFileUrl(jobId, primaryPath, tokenValue);
                 } catch (e) {
                     resolvedUrl = "";
                 }
+            }
+            if (!resolvedUrl) {
+                const rawUrl = stem.signedUrl || stem.url || "";
+                if (rawUrl) {
+                    resolvedUrl = normalizeSignedUrl(rawUrl);
+                }
+            }
+            if (!resolvedUrl) {
+                try {
+                    resolvedUrl = await signFileUrl(jobId, primaryPath);
+                } catch (e) {
+                    resolvedUrl = "";
+                }
+            }
+            if (!resolvedUrl && stem.previewUrl) {
+                resolvedUrl = normalizeSignedUrl(stem.previewUrl);
             }
 
             resolvedStems.push({
@@ -566,11 +613,15 @@ export default function StudioPage() {
         const ensureAudioForStem = async (stem: StemControl) => {
             let audio = audioElsRef.current.get(stem.fileName);
             if (!audio) {
-                audio = new Audio(stem.url || "");
+                audio = new Audio();
                 audio.preload = "auto";
                 audio.crossOrigin = "anonymous";
                 audio.playbackRate = safeStemSpeed;
                 audio.defaultPlaybackRate = safeStemSpeed;
+                if (stem.url) {
+                    audio.src = stem.url;
+                    audio.load();
+                }
 
                 const ctx = audioContextRef.current;
                 // Wait for master node to be ready (useEffect runs first but safe check)
@@ -1166,7 +1217,7 @@ export default function StudioPage() {
                      <div className="flex flex-col gap-1 w-48">
                          <div className="flex justify-between text-[10px] text-slate-500 font-mono">
                              <span>{t('masterOut')}</span>
-                             <span>{(masterVolume * 20 - 20).toFixed(1)} dB</span>
+                             <span>{formatDb(masterVolume)} dB</span>
                          </div>
                          <div className="h-2 bg-slate-800 rounded-full overflow-hidden relative">
                              <div className="absolute top-0 left-0 bottom-0 bg-gradient-to-r from-teal-600 to-teal-400" style={{ width: `${masterVolume * 100}%` }}></div>

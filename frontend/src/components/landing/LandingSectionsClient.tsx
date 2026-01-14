@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { ScrollReveal } from "./ScrollReveal";
 import { ViewportMount } from "./ViewportMount";
@@ -47,6 +48,15 @@ const preloadSection = (section: any) => {
 export function LandingSectionsClient() {
   const t = useTranslations("LandingPage");
   const readyToElevate = t("readyToElevate");
+
+  useEffect(() => {
+    preloadSection(ListenDifferenceSection);
+    preloadSection(PipelineInteractiveDiagram);
+    preloadSection(LiveSoundAnalysis);
+    preloadSection(FeaturesSection);
+    preloadSection(TechSpecsSection);
+    preloadSection(BenefitsSection);
+  }, []);
   
   const viewportDefaults = {
     rootMargin: "200px 0px",
