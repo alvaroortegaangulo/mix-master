@@ -76,6 +76,40 @@ def compute_band_energies(y: np.ndarray, sr: int) -> Dict[str, float]:
     return band_energies
 
 
+def normalize_band_energies(band_db_abs: Dict[str, float]) -> Dict[str, float]:
+    """
+    Normalize absolute band energies by removing the mean of finite bands.
+    Returns band_id -> relative dB.
+    """
+    vals: List[float] = []
+    for v in band_db_abs.values():
+        try:
+            fv = float(v)
+        except (TypeError, ValueError):
+            continue
+        if not np.isfinite(fv):
+            continue
+        vals.append(fv)
+
+    if not vals:
+        return {k: float("-inf") for k in band_db_abs.keys()}
+
+    mean_abs = float(np.mean(vals))
+    rel: Dict[str, float] = {}
+    for k, v in band_db_abs.items():
+        try:
+            fv = float(v)
+        except (TypeError, ValueError):
+            rel[k] = float("-inf")
+            continue
+        if not np.isfinite(fv):
+            rel[k] = float("-inf")
+        else:
+            rel[k] = float(fv - mean_abs)
+
+    return rel
+
+
 def get_style_tonal_profile(style_preset: str | None) -> Dict[str, float]:
     """
     Devuelve una curva objetivo por estilo: dict band_id -> target_db (relativos).
