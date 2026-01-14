@@ -99,12 +99,47 @@ def _log():
 # ---------------------------------------------------------------------
 # Imports utils tonal
 # ---------------------------------------------------------------------
-from src.utils.tonal_balance_utils import (  # noqa: E402
-    compute_band_energies,
-    normalize_band_energies,
-    get_style_tonal_profile,
-    get_freq_bands,
-)
+try:  # noqa: E402
+    from src.utils.tonal_balance_utils import (
+        compute_band_energies,
+        normalize_band_energies,
+        get_style_tonal_profile,
+        get_freq_bands,
+    )
+except Exception:  # pragma: no cover - fallback for older utils
+    from src.utils.tonal_balance_utils import (  # noqa: E402
+        compute_band_energies,
+        get_style_tonal_profile,
+        get_freq_bands,
+    )
+
+    def normalize_band_energies(band_db_abs: Dict[str, float]) -> Dict[str, float]:
+        vals: List[float] = []
+        for v in band_db_abs.values():
+            try:
+                fv = float(v)
+            except (TypeError, ValueError):
+                continue
+            if not np.isfinite(fv):
+                continue
+            vals.append(fv)
+
+        if not vals:
+            return {k: float("-inf") for k in band_db_abs.keys()}
+
+        mean_abs = float(np.mean(vals))
+        rel: Dict[str, float] = {}
+        for k, v in band_db_abs.items():
+            try:
+                fv = float(v)
+            except (TypeError, ValueError):
+                rel[k] = float("-inf")
+                continue
+            if not np.isfinite(fv):
+                rel[k] = float("-inf")
+            else:
+                rel[k] = float(fv - mean_abs)
+        return rel
 
 # ---------------------------------------------------------------------
 # Defaults / tuning (conservadores)
