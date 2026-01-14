@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import math
 import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -16,6 +17,7 @@ if str(SRC_DIR) not in sys.path:
 
 from context import PipelineContext
 from utils.audio_utils import save_audio_stems, load_audio_stems
+from utils.color_utils import apply_soft_saturation
 from utils.logger import logger as pipeline_logger
 
 # Try importing pedalboard for DSP
@@ -144,6 +146,143 @@ def _apply_speed(audio: np.ndarray, speed: float) -> np.ndarray:
     return resampled
 
 
+def _read_effect_amount(value: Any, default: float, lo: float, hi: float) -> float:
+    """
+    Read amount from either a plain number or {amount, enabled}.
+    Returns default if disabled or missing.
+    """
+    if value is None:
+        return default
+    enabled = True
+    amount = value
+    if isinstance(value, dict):
+        enabled = _as_bool(value.get("enabled", True), default=True)
+        amount = value.get("amount", value.get("value", default))
+    if not enabled:
+        return default
+    return _clamp(_as_float(amount, default), lo, hi)
+
+
+def _parse_stereo_width(value: Any, default: float = 1.0) -> float:
+    """
+    Accepts:
+      - factor (0..2)
+      - percent (0..200)
+      - {amount, enabled}
+    """
+    if value is None:
+        return default
+    enabled = True
+    amount = value
+    if isinstance(value, dict):
+        enabled = _as_bool(value.get("enabled", True), default=True)
+        amount = value.get("amount", value.get("value", default))
+    if not enabled:
+        return default
+    raw = _as_float(amount, default)
+    if raw > 2.0:
+        raw = raw / 100.0
+    return _clamp(raw, 0.0, 2.0)
+
+
+def _apply_stereo_width(audio: np.ndarray, width: float) -> np.ndarray:
+    if audio.ndim != 2 or audio.shape[0] != 2:
+        return audio
+    width = _clamp(width, 0.0, 2.0)
+    if abs(width - 1.0) < 1e-3:
+        return audio
+
+    left = audio[0]
+    right = audio[1]
+    mid = 0.5 * (left + right)
+    side = 0.5 * (left - right)
+    side = side * width
+    out = np.vstack([mid + side, mid - side])
+    return out.astype(np.float32, copy=False)
+
+
+def _apply_simple_ambience(audio: np.ndarray, sr: int, amount: float) -> np.ndarray:
+    """
+    Short ambience send (early reflections) to push elements back.
+    Expects audio in (channels, samples) float32.
+    """
+    amount = _clamp(amount, 0.0, 1.0)
+    if amount <= 0:
+        return audio
+
+    delays_sec = [0.01, 0.02, 0.035]
+    gains = [0.45, 0.3, 0.2]
+    wet = audio.copy()
+
+    for delay_sec, gain in zip(delays_sec, gains):
+        delay = int(sr * delay_sec)
+        if delay <= 0 or delay >= wet.shape[1]:
+            continue
+        wet[:, delay:] += audio[:, :-delay] * (gain * amount)
+
+    dry_gain = 1.0 - min(0.3, amount * 0.3)
+    wet_gain = amount * 0.7
+    mixed = (audio * dry_gain) + (wet * wet_gain)
+
+    peak = float(np.max(np.abs(mixed))) if mixed.size else 0.0
+    if peak > 1.0:
+        mixed = mixed / peak
+
+    return mixed.astype(np.float32, copy=False)
+
+
+def _apply_transient_shaper(audio: np.ndarray, sr: int, punch: float) -> np.ndarray:
+    """
+    Simple transient shaper using fast/slow envelope difference.
+    punch in [-1..1], positive boosts attack, negative softens.
+    """
+    punch = _clamp(punch, -1.0, 1.0)
+    if abs(punch) < 1e-3:
+        return audio
+    if audio.ndim != 2 or audio.shape[1] < 2:
+        return audio
+
+    mono = np.mean(audio, axis=0)
+    rect = np.abs(mono)
+    if rect.size < 2:
+        return audio
+
+    stride = max(1, int(sr * 0.0025))
+    idx = np.arange(0, rect.size, stride)
+    rect_ds = rect[idx]
+
+    dt = stride / float(sr)
+    fast_attack = math.exp(-dt / 0.001) if dt > 0 else 0.0
+    fast_release = math.exp(-dt / 0.05) if dt > 0 else 0.0
+    slow_attack = math.exp(-dt / 0.01) if dt > 0 else 0.0
+    slow_release = math.exp(-dt / 0.2) if dt > 0 else 0.0
+
+    fast_env = 0.0
+    slow_env = 0.0
+    fast_vals = np.empty_like(rect_ds, dtype=np.float32)
+    slow_vals = np.empty_like(rect_ds, dtype=np.float32)
+
+    for i, x in enumerate(rect_ds):
+        if x > fast_env:
+            fast_env = fast_attack * fast_env + (1.0 - fast_attack) * x
+        else:
+            fast_env = fast_release * fast_env + (1.0 - fast_release) * x
+        if x > slow_env:
+            slow_env = slow_attack * slow_env + (1.0 - slow_attack) * x
+        else:
+            slow_env = slow_release * slow_env + (1.0 - slow_release) * x
+        fast_vals[i] = fast_env
+        slow_vals[i] = slow_env
+
+    transient = np.maximum(fast_vals - slow_vals, 0.0)
+    ratio = transient / (fast_vals + 1e-6)
+    gain_ds = 1.0 + punch * ratio
+    gain_ds = np.clip(gain_ds, 0.0, 2.0)
+    gain = np.interp(np.arange(rect.size), idx, gain_ds).astype(np.float32, copy=False)
+
+    return (audio * gain).astype(np.float32, copy=False)
+
+
 def _detect_sample_rate(*directories: Optional[Path]) -> Optional[int]:
     """
     Infer sample rate from the first available WAV file (excluding full_song.wav).
@@ -203,7 +342,8 @@ def _pan_gains_linear(pan: float) -> tuple[float, float]:
 
 def process(context: PipelineContext, *args) -> bool:
     """
-    Applies manual corrections (volume, pan, reverb, speed, mute, solo) to stems.
+    Applies manual corrections (volume, pan, stereo width, saturation, transient, depth,
+    reverb, speed, mute, solo) to stems.
 
     Data flow (current app):
       - Frontend calls POST /jobs/{job_id}/correction with a list of corrections.
@@ -306,9 +446,34 @@ def process(context: PipelineContext, *args) -> bool:
         if abs(speed - 1.0) > 1e-3:
             processed = _apply_speed(processed, speed)
 
+        width = _parse_stereo_width(corr.get("stereo_width", None))
+        sat_amount = _read_effect_amount(corr.get("saturation", None), 0.0, 0.0, 100.0)
+        transient_amount = _read_effect_amount(corr.get("transient", None), 0.0, -100.0, 100.0)
+        depth_amount = _read_effect_amount(corr.get("depth", None), 0.0, 0.0, 100.0) / 100.0
+
+        if sat_amount > 0.01:
+            drive_db = sat_amount * 0.12
+            processed = apply_soft_saturation(processed, drive_db=drive_db)
+
+        if abs(transient_amount) > 0.01:
+            processed = _apply_transient_shaper(processed, sr, transient_amount / 100.0)
+
+        if abs(width - 1.0) > 1e-3:
+            processed = _apply_stereo_width(processed, width)
+
         # --- Pedalboard chain (preferred) ---
         if HAS_PEDALBOARD:
             board = Pedalboard()
+
+            # Depth (ambience)
+            if depth_amount > 0:
+                board.append(
+                    Reverb(
+                        room_size=0.25,
+                        wet_level=_clamp(depth_amount * 0.7, 0.0, 1.0),
+                        dry_level=_clamp(1.0 - depth_amount * 0.3, 0.0, 1.0),
+                    )
+                )
 
             # Reverb
             verb_cfg = corr.get("reverb")
@@ -336,6 +501,9 @@ def process(context: PipelineContext, *args) -> bool:
 
         # --- Fallback DSP (no pedalboard): Volume/Pan/Reverb only ---
         else:
+            if depth_amount > 0:
+                processed = _apply_simple_ambience(processed, sr, depth_amount)
+
             verb_cfg = corr.get("reverb")
             if isinstance(verb_cfg, dict) and _as_bool(verb_cfg.get("enabled", False)):
                 amt_raw = _as_float(verb_cfg.get("amount", 0.0))

@@ -518,6 +518,10 @@
     "compressor": "Compresseur",
     "panning": "Panoramique",
     "reverb": "Reverb",
+    "stereoWidth": "Largeur stǸrǸo",
+    "saturation": "Saturation",
+    "transient": "Transitoires",
+    "depth": "Profondeur",
     "loading": "Chargement du Studio Piroola...",
     "loadingStems": "Chargement des stems et de la forme d'onde",
     "selectTrack": "Sélectionnez une piste pour voir la forme d'onde"

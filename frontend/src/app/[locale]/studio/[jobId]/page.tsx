@@ -35,6 +35,22 @@ interface StemControl {
     amount: number;
     enabled: boolean;
   };
+  stereoWidth: {
+    amount: number;
+    enabled: boolean;
+  };
+  saturation: {
+    amount: number;
+    enabled: boolean;
+  };
+  transient: {
+    amount: number;
+    enabled: boolean;
+  };
+  depth: {
+    amount: number;
+    enabled: boolean;
+  };
   signedUrl?: string;
   previewUrl?: string | null;
   peaks?: number[];
@@ -58,6 +74,84 @@ const createImpulseResponse = (ctx: AudioContext, durationSec = 1.8, decay = 2.2
   }
 
   return impulse;
+};
+
+const createAmbienceImpulseResponse = (ctx: AudioContext) =>
+  createImpulseResponse(ctx, 0.8, 3.4);
+
+const buildSaturationCurve = (drive: number) => {
+  const amount = clamp(drive, 0, 100);
+  const samples = 1024;
+  const curve = new Float32Array(samples);
+  if (amount <= 0) {
+    for (let i = 0; i < samples; i += 1) {
+      const x = (i * 2) / samples - 1;
+      curve[i] = x;
+    }
+    return curve;
+  }
+  const k = 1 + (amount / 100) * 5;
+  const norm = Math.tanh(k);
+  for (let i = 0; i < samples; i += 1) {
+    const x = (i * 2) / samples - 1;
+    curve[i] = Math.tanh(k * x) / norm;
+  }
+  return curve;
+};
+
+type StereoWidthNodes = {
+  input: GainNode;
+  output: ChannelMergerNode;
+  widthGain: GainNode;
+};
+
+const createStereoWidthNodes = (ctx: AudioContext): StereoWidthNodes => {
+  const input = ctx.createGain();
+  const splitter = ctx.createChannelSplitter(2);
+  const merger = ctx.createChannelMerger(2);
+
+  const midSum = ctx.createGain();
+  const sideSum = ctx.createGain();
+  const sideGain = ctx.createGain();
+  const leftOut = ctx.createGain();
+  const rightOut = ctx.createGain();
+
+  const lMid = ctx.createGain();
+  lMid.gain.value = 0.5;
+  const rMid = ctx.createGain();
+  rMid.gain.value = 0.5;
+
+  const lSide = ctx.createGain();
+  lSide.gain.value = 0.5;
+  const rSide = ctx.createGain();
+  rSide.gain.value = -0.5;
+
+  const sideInvert = ctx.createGain();
+  sideInvert.gain.value = -1;
+
+  input.connect(splitter);
+
+  splitter.connect(lMid, 0);
+  splitter.connect(rMid, 1);
+  lMid.connect(midSum);
+  rMid.connect(midSum);
+
+  splitter.connect(lSide, 0);
+  splitter.connect(rSide, 1);
+  lSide.connect(sideSum);
+  rSide.connect(sideSum);
+
+  sideSum.connect(sideGain);
+  sideGain.connect(leftOut);
+  sideGain.connect(sideInvert);
+  sideInvert.connect(rightOut);
+  midSum.connect(leftOut);
+  midSum.connect(rightOut);
+
+  leftOut.connect(merger, 0, 0);
+  rightOut.connect(merger, 0, 1);
+
+  return { input, output: merger, widthGain: sideGain };
 };
 
 function buildAuthHeaders(extra?: HeadersInit): HeadersInit {
@@ -102,14 +196,22 @@ export default function StudioPage() {
   const masterGainNodeRef = useRef<GainNode | null>(null);
   const masterAnalyserNodeRef = useRef<AnalyserNode | null>(null);
   const reverbBufferRef = useRef<AudioBuffer | null>(null);
+  const ambienceBufferRef = useRef<AudioBuffer | null>(null);
+  const transientWorkletReadyRef = useRef<Promise<void> | null>(null);
 
   const audioElsRef = useRef<Map<string, HTMLAudioElement>>(new Map());
   const mediaNodesRef = useRef<Map<string, MediaElementAudioSourceNode>>(new Map());
   const gainNodesRef = useRef<Map<string, GainNode>>(new Map());
   const pannerNodesRef = useRef<Map<string, StereoPannerNode>>(new Map());
+  const saturationNodesRef = useRef<Map<string, WaveShaperNode>>(new Map());
+  const transientNodesRef = useRef<Map<string, { node: AudioNode; param?: AudioParam }>>(new Map());
+  const stereoWidthGainNodesRef = useRef<Map<string, GainNode>>(new Map());
   const reverbNodesRef = useRef<Map<string, ConvolverNode>>(new Map());
   const reverbWetGainNodesRef = useRef<Map<string, GainNode>>(new Map());
   const reverbDryGainNodesRef = useRef<Map<string, GainNode>>(new Map());
+  const depthConvolverNodesRef = useRef<Map<string, ConvolverNode>>(new Map());
+  const depthWetGainNodesRef = useRef<Map<string, GainNode>>(new Map());
+  const depthFilterNodesRef = useRef<Map<string, BiquadFilterNode>>(new Map());
   const startTimeRef = useRef<number>(0);
   const pauseTimeRef = useRef<number>(0);
 
@@ -172,6 +274,16 @@ export default function StudioPage() {
         masterAnalyserNodeRef.current = analyser;
         if (!reverbBufferRef.current) {
           reverbBufferRef.current = createImpulseResponse(ctx);
+        }
+        if (!ambienceBufferRef.current) {
+          ambienceBufferRef.current = createAmbienceImpulseResponse(ctx);
+        }
+        if (ctx.audioWorklet && !transientWorkletReadyRef.current) {
+          transientWorkletReadyRef.current = ctx.audioWorklet
+            .addModule("/worklets/transient-shaper.js")
+            .catch((err) => {
+              console.warn("Studio: transient worklet failed to load", err);
+            });
         }
 
       } catch (e) {
@@ -270,9 +382,15 @@ export default function StudioPage() {
         mediaNodesRef.current.clear();
         gainNodesRef.current.clear();
         pannerNodesRef.current.clear();
+        saturationNodesRef.current.clear();
+        transientNodesRef.current.clear();
+        stereoWidthGainNodesRef.current.clear();
         reverbNodesRef.current.clear();
         reverbWetGainNodesRef.current.clear();
         reverbDryGainNodesRef.current.clear();
+        depthConvolverNodesRef.current.clear();
+        depthWetGainNodesRef.current.clear();
+        depthFilterNodesRef.current.clear();
         pauseTimeRef.current = 0;
         setIsPlaying(false);
         setCurrentTime(0);
@@ -334,6 +452,10 @@ export default function StudioPage() {
             mute: false,
             solo: false,
             reverb: { amount: 0, enabled: false },
+            stereoWidth: { amount: 100, enabled: false },
+            saturation: { amount: 0, enabled: false },
+            transient: { amount: 0, enabled: false },
+            depth: { amount: 0, enabled: false },
             signedUrl,
             previewUrl,
             peaks,
@@ -351,6 +473,10 @@ export default function StudioPage() {
             mute: false,
             solo: false,
             reverb: { amount: 0, enabled: false },
+            stereoWidth: { amount: 100, enabled: false },
+            saturation: { amount: 0, enabled: false },
+            transient: { amount: 0, enabled: false },
+            depth: { amount: 0, enabled: false },
             signedUrl: undefined,
             previewUrl: null,
             peaks: undefined,
@@ -443,10 +569,45 @@ export default function StudioPage() {
                 if (ctx && masterGainNodeRef.current && !mediaNodesRef.current.has(stem.fileName)) {
                     const mediaNode = ctx.createMediaElementSource(audio);
                     const gain = ctx.createGain();
+                    const saturation = ctx.createWaveShaper();
                     const panner = ctx.createStereoPanner();
                     const dryGain = ctx.createGain();
                     const convolver = ctx.createConvolver();
                     const wetGain = ctx.createGain();
+                    const depthFilter = ctx.createBiquadFilter();
+                    const depthConvolver = ctx.createConvolver();
+                    const depthWetGain = ctx.createGain();
+
+                    saturation.oversample = "4x";
+                    saturation.curve = buildSaturationCurve(stem.saturation.enabled ? stem.saturation.amount : 0);
+
+                    const transientFallback = () => ({ node: ctx.createGain(), param: undefined });
+                    let transientEntry = transientFallback();
+                    if (ctx.audioWorklet && transientWorkletReadyRef.current) {
+                        try {
+                            await transientWorkletReadyRef.current;
+                            const transientNode = new AudioWorkletNode(ctx, "transient-shaper", {
+                                numberOfInputs: 1,
+                                numberOfOutputs: 1,
+                                outputChannelCount: [2],
+                            });
+                            transientNode.channelCountMode = "explicit";
+                            transientNode.channelCount = 2;
+                            const punchParam = transientNode.parameters.get("punch") ?? undefined;
+                            if (punchParam) {
+                                const punch = stem.transient.enabled ? clamp(stem.transient.amount / 100, -1, 1) : 0;
+                                punchParam.value = punch;
+                            }
+                            transientEntry = { node: transientNode, param: punchParam };
+                        } catch (err) {
+                            console.warn("Studio: transient worklet node failed", err);
+                            transientEntry = transientFallback();
+                        }
+                    }
+
+                    const widthNodes = createStereoWidthNodes(ctx);
+                    const widthValue = stem.stereoWidth.enabled ? clamp(stem.stereoWidth.amount / 100, 0, 2) : 1;
+                    widthNodes.widthGain.gain.value = widthValue;
 
                     const reverbBuffer = reverbBufferRef.current || createImpulseResponse(ctx);
                     if (!reverbBufferRef.current) {
@@ -455,29 +616,54 @@ export default function StudioPage() {
                     convolver.buffer = reverbBuffer;
                     convolver.normalize = true;
 
+                    const ambienceBuffer = ambienceBufferRef.current || createAmbienceImpulseResponse(ctx);
+                    if (!ambienceBufferRef.current) {
+                        ambienceBufferRef.current = ambienceBuffer;
+                    }
+                    depthConvolver.buffer = ambienceBuffer;
+                    depthConvolver.normalize = true;
+                    depthFilter.type = "lowpass";
+                    depthFilter.frequency.value = 8000;
+                    depthFilter.Q.value = 0.7;
+
                     const wetAmount = stem.reverb.enabled ? clamp(stem.reverb.amount / 100, 0, 1) : 0;
                     const dryAmount = clamp(1 - wetAmount * 0.5, 0, 1);
+                    const depthAmount = stem.depth.enabled ? clamp(stem.depth.amount / 100, 0, 1) : 0;
                     wetGain.gain.value = wetAmount;
                     dryGain.gain.value = dryAmount;
+                    depthWetGain.gain.value = depthAmount;
 
                     const vol = Math.pow(10, stem.volume / 20);
                     gain.gain.value = stem.mute ? 0 : vol;
                     panner.pan.value = stem.pan.enabled ? stem.pan.value : 0;
 
                     mediaNode.connect(gain);
-                    gain.connect(panner);
+                    gain.connect(saturation);
+                    saturation.connect(transientEntry.node);
+                    transientEntry.node.connect(widthNodes.input);
+                    widthNodes.output.connect(panner);
                     panner.connect(dryGain);
                     dryGain.connect(masterGainNodeRef.current);
                     panner.connect(convolver);
                     convolver.connect(wetGain);
                     wetGain.connect(masterGainNodeRef.current);
+                    panner.connect(depthFilter);
+                    depthFilter.connect(depthConvolver);
+                    depthConvolver.connect(depthWetGain);
+                    depthWetGain.connect(masterGainNodeRef.current);
 
                     mediaNodesRef.current.set(stem.fileName, mediaNode);
                     gainNodesRef.current.set(stem.fileName, gain);
+                    saturationNodesRef.current.set(stem.fileName, saturation);
+                    transientNodesRef.current.set(stem.fileName, transientEntry);
+                    stereoWidthGainNodesRef.current.set(stem.fileName, widthNodes.widthGain);
                     pannerNodesRef.current.set(stem.fileName, panner);
                     reverbNodesRef.current.set(stem.fileName, convolver);
                     reverbWetGainNodesRef.current.set(stem.fileName, wetGain);
                     reverbDryGainNodesRef.current.set(stem.fileName, dryGain);
+                    depthConvolverNodesRef.current.set(stem.fileName, depthConvolver);
+                    depthWetGainNodesRef.current.set(stem.fileName, depthWetGain);
+                    depthFilterNodesRef.current.set(stem.fileName, depthFilter);
                 }
 
                 const candidates: string[] = [];
@@ -670,8 +856,12 @@ export default function StudioPage() {
       stems.forEach(stem => {
           const gainNode = gainNodesRef.current.get(stem.fileName);
           const pannerNode = pannerNodesRef.current.get(stem.fileName);
+          const saturationNode = saturationNodesRef.current.get(stem.fileName);
+          const transientEntry = transientNodesRef.current.get(stem.fileName);
+          const widthGainNode = stereoWidthGainNodesRef.current.get(stem.fileName);
           const wetGainNode = reverbWetGainNodesRef.current.get(stem.fileName);
           const dryGainNode = reverbDryGainNodesRef.current.get(stem.fileName);
+          const depthWetGainNode = depthWetGainNodesRef.current.get(stem.fileName);
 
           if (gainNode) {
               let shouldMute = stem.mute;
@@ -683,11 +873,27 @@ export default function StudioPage() {
           if (pannerNode) {
                pannerNode.pan.setTargetAtTime(stem.pan.enabled ? stem.pan.value : 0, now, 0.05);
           }
+          if (saturationNode) {
+              const drive = stem.saturation.enabled ? stem.saturation.amount : 0;
+              saturationNode.curve = buildSaturationCurve(drive);
+          }
+          if (transientEntry?.param) {
+              const punch = stem.transient.enabled ? clamp(stem.transient.amount / 100, -1, 1) : 0;
+              transientEntry.param.setTargetAtTime(punch, now, 0.05);
+          }
+          if (widthGainNode) {
+              const widthValue = stem.stereoWidth.enabled ? clamp(stem.stereoWidth.amount / 100, 0, 2) : 1;
+              widthGainNode.gain.setTargetAtTime(widthValue, now, 0.05);
+          }
           if (wetGainNode && dryGainNode) {
               const wetAmount = stem.reverb.enabled ? clamp(stem.reverb.amount / 100, 0, 1) : 0;
               const dryAmount = clamp(1 - wetAmount * 0.5, 0, 1);
               wetGainNode.gain.setTargetAtTime(wetAmount, now, 0.05);
               dryGainNode.gain.setTargetAtTime(dryAmount, now, 0.05);
+          }
+          if (depthWetGainNode) {
+              const depthAmount = stem.depth.enabled ? clamp(stem.depth.amount / 100, 0, 1) : 0;
+              depthWetGainNode.gain.setTargetAtTime(depthAmount, now, 0.05);
           }
       });
   }, [stems]); // Removed masterVolume dependency here as it's handled in its own effect on masterGain
@@ -700,6 +906,10 @@ export default function StudioPage() {
               volume_db: s.volume,
               pan: s.pan.enabled ? s.pan.value : 0,
               reverb: s.reverb.enabled ? s.reverb : undefined,
+              stereo_width: s.stereoWidth,
+              saturation: s.saturation,
+              transient: s.transient,
+              depth: s.depth,
               speed: stemSpeed,
               mute: s.mute,
               solo: s.solo
@@ -1085,8 +1295,94 @@ export default function StudioPage() {
                                     <span className={`text-xs font-bold truncate ${selectedStem.reverb.enabled ? 'text-purple-400' : 'text-slate-500'}`}>{t('reverb')}</span>
                                 </div>
                             </div>
-                            <div className={`flex justify-center transition-opacity ${selectedStem.reverb.enabled ? 'opacity-100' : 'opacity-40 pointer-events-none'}`}>
+                        <div className={`flex justify-center transition-opacity ${selectedStem.reverb.enabled ? 'opacity-100' : 'opacity-40 pointer-events-none'}`}>
                                 <Knob label="AMOUNT" value={selectedStem.reverb.amount} min={0} max={100} onChange={(v) => updateStem(selectedStemIndex, { reverb: {...selectedStem.reverb, amount: v}})} />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex gap-2">
+                        {/* Stereo Width */}
+                        <div className="flex-1 bg-[#1e2336] rounded-xl p-3 border border-white/5 shadow-lg min-w-0">
+                            <div className="flex justify-between items-center mb-2">
+                                <div className="flex items-center gap-2 overflow-hidden">
+                                    <Toggle
+                                        checked={selectedStem.stereoWidth.enabled}
+                                        onChange={(v) => updateStem(selectedStemIndex, { stereoWidth: {...selectedStem.stereoWidth, enabled: v}})}
+                                        colorClass="bg-cyan-500"
+                                    />
+                                    <span className={`text-xs font-bold truncate ${selectedStem.stereoWidth.enabled ? 'text-cyan-400' : 'text-slate-500'}`}>{t('stereoWidth')}</span>
+                                </div>
+                                <span className="text-[10px] font-mono text-cyan-400">{Math.round(selectedStem.stereoWidth.amount)}%</span>
+                            </div>
+                            <div className={`transition-opacity ${selectedStem.stereoWidth.enabled ? 'opacity-100' : 'opacity-40 pointer-events-none'}`}>
+                                <input
+                                    type="range"
+                                    min="0"
+                                    max="200"
+                                    step="1"
+                                    value={selectedStem.stereoWidth.amount}
+                                    onChange={(e) => updateStem(selectedStemIndex, { stereoWidth: {...selectedStem.stereoWidth, amount: parseFloat(e.target.value)}})}
+                                    className="w-full h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-cyan-500"
+                                />
+                                <div className="flex justify-between text-[9px] text-slate-600 mt-1">
+                                    <span>0%</span>
+                                    <span>100%</span>
+                                    <span>200%</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Saturation */}
+                        <div className="flex-1 bg-[#1e2336] rounded-xl p-3 border border-white/5 shadow-lg min-w-0">
+                            <div className="flex justify-between items-center mb-2">
+                                <div className="flex items-center gap-2 overflow-hidden">
+                                    <Toggle
+                                        checked={selectedStem.saturation.enabled}
+                                        onChange={(v) => updateStem(selectedStemIndex, { saturation: {...selectedStem.saturation, enabled: v}})}
+                                        colorClass="bg-rose-500"
+                                    />
+                                    <span className={`text-xs font-bold truncate ${selectedStem.saturation.enabled ? 'text-rose-400' : 'text-slate-500'}`}>{t('saturation')}</span>
+                                </div>
+                            </div>
+                            <div className={`flex justify-center transition-opacity ${selectedStem.saturation.enabled ? 'opacity-100' : 'opacity-40 pointer-events-none'}`}>
+                                <Knob label="DRIVE" value={selectedStem.saturation.amount} min={0} max={100} step={1} onChange={(v) => updateStem(selectedStemIndex, { saturation: {...selectedStem.saturation, amount: v}})} />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="flex gap-2">
+                        {/* Transient */}
+                        <div className="flex-1 bg-[#1e2336] rounded-xl p-3 border border-white/5 shadow-lg min-w-0">
+                            <div className="flex justify-between items-center mb-2">
+                                <div className="flex items-center gap-2 overflow-hidden">
+                                    <Toggle
+                                        checked={selectedStem.transient.enabled}
+                                        onChange={(v) => updateStem(selectedStemIndex, { transient: {...selectedStem.transient, enabled: v}})}
+                                        colorClass="bg-amber-500"
+                                    />
+                                    <span className={`text-xs font-bold truncate ${selectedStem.transient.enabled ? 'text-amber-400' : 'text-slate-500'}`}>{t('transient')}</span>
+                                </div>
+                            </div>
+                            <div className={`flex justify-center transition-opacity ${selectedStem.transient.enabled ? 'opacity-100' : 'opacity-40 pointer-events-none'}`}>
+                                <Knob label="PUNCH" value={selectedStem.transient.amount} min={-100} max={100} step={1} onChange={(v) => updateStem(selectedStemIndex, { transient: {...selectedStem.transient, amount: v}})} />
+                            </div>
+                        </div>
+
+                        {/* Depth */}
+                        <div className="flex-1 bg-[#1e2336] rounded-xl p-3 border border-white/5 shadow-lg min-w-0">
+                            <div className="flex justify-between items-center mb-2">
+                                <div className="flex items-center gap-2 overflow-hidden">
+                                    <Toggle
+                                        checked={selectedStem.depth.enabled}
+                                        onChange={(v) => updateStem(selectedStemIndex, { depth: {...selectedStem.depth, enabled: v}})}
+                                        colorClass="bg-emerald-500"
+                                    />
+                                    <span className={`text-xs font-bold truncate ${selectedStem.depth.enabled ? 'text-emerald-400' : 'text-slate-500'}`}>{t('depth')}</span>
+                                </div>
+                            </div>
+                            <div className={`flex justify-center transition-opacity ${selectedStem.depth.enabled ? 'opacity-100' : 'opacity-40 pointer-events-none'}`}>
+                                <Knob label="DEPTH" value={selectedStem.depth.amount} min={0} max={100} step={1} onChange={(v) => updateStem(selectedStemIndex, { depth: {...selectedStem.depth, amount: v}})} />
                             </div>
                         </div>
                     </div>

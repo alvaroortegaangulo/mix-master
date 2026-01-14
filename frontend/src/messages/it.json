@@ -541,6 +541,10 @@
     "compressor": "Compressor",
     "panning": "Panning",
     "reverb": "Reverb",
+    "stereoWidth": "Larghezza stereo",
+    "saturation": "Saturazione",
+    "transient": "Transitori",
+    "depth": "Profondità",
     "loading": "Loading Piroola Studio...",
     "loadingStems": "Loading stems and waveform",
     "selectTrack": "Select a track to view waveform"

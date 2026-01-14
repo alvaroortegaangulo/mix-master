@@ -209,7 +209,7 @@ export function ListenDifferenceSection({ className }: { className?: string }) {
                        <span className="text-base lg:text-sm xl:text-base font-mono font-bold text-amber-300">
                          {value}
                        </span>
-                       {unit && <span className="text-xs lg:text-[10px] xl:text-xs text-amber-300/80 ml-1">{unit}</span>}
+                       {unit && <span className="text-xs lg:text-[10px] xl:text-xs text-slate-400/80 ml-1">{unit}</span>}
                      </div>
                    </div>
                  ))}
@@ -229,7 +229,7 @@ export function ListenDifferenceSection({ className }: { className?: string }) {
         </ScrollReveal>
 
         {/* 4. Improvements Grid - Individual Cards Pop In Sequentially */}
-        <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 items-start gap-4">
           {improvements.map(({ icon: Icon, key, color }, index) => (
             <ScrollReveal
               key={key}

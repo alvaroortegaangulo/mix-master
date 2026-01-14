@@ -593,6 +593,10 @@
     "compressor": "Compresor",
     "panning": "Paneo",
     "reverb": "Reverb",
+    "stereoWidth": "Ancho Estゼreo",
+    "saturation": "SaturaciИn",
+    "transient": "Pegada",
+    "depth": "Profundidad",
     "loading": "Cargando Estudio Piroola...",
     "loadingStems": "Cargando pistas y forma de onda",
     "selectTrack": "Selecciona una pista para ver la forma de onda"
