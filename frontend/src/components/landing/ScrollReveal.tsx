@@ -36,13 +36,14 @@ export function ScrollReveal({
   y = 30,
   x = 30,
   once = true,
-  amount = 0.2, // Equivale a tu threshold antiguo
+  amount = 0.12, // Equivale a tu threshold antiguo
   direction = "up",
+  viewportMargin = "0px 0px 120px 0px",
   blur = false, // Nuevo: añade un fade con blur si quieres
 }: ScrollRevealProps) {
   // Respetar preferencias de accesibilidad del usuario
   const shouldReduceMotion = useReducedMotion();
-  const speedFactor = 0.75;
+  const speedFactor = 0.6;
   const effectiveDelay = delay * speedFactor;
   const effectiveDuration = duration * speedFactor;
 
@@ -92,7 +93,7 @@ export function ScrollReveal({
       viewport={{
         once: once,
         amount: amount,
-        margin: "0px 0px -100px 0px", // Ajuste fino para que no active justo al borde
+        margin: viewportMargin,
       }}
       className={className}
     >

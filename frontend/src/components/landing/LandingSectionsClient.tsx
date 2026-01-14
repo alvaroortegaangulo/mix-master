@@ -59,6 +59,7 @@ export function LandingSectionsClient() {
       {/* 2. Listen Difference: Fade Up */}
       <ViewportMount
         {...viewportDefaults}
+        id="listen-difference"
         className="bg-slate-950 min-h-[700px]"
         preload={() => preloadSection(ListenDifferenceSection)}
       >

@@ -43,12 +43,12 @@ export function HeroSection() {
               <p className="text-sm text-slate-300 leading-relaxed sm:text-base lg:text-[13px] xl:text-base 2xl:text-lg">
                 Sube las pistas de tus instrumentos y obtén un resultado listo para publicar en plataformas en minutos.
                 Claridad, equilibrio y potencia, con tecnología de audio propia.
-                <Link
-                  href="/#listen-difference"
+                <a
+                  href="#listen-difference"
                   className="ml-2 inline-flex items-center rounded-full border border-teal-400/40 bg-teal-400/10 px-2.5 py-0.5 text-[11px] font-semibold text-teal-300 transition-colors hover:border-teal-300 hover:text-teal-200"
                 >
                   Escuchar la diferencia
-                </Link>
+                </a>
               </p>
 
               <div className="flex flex-col gap-4 sm:flex-row">
