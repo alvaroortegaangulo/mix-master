@@ -86,6 +86,13 @@ const formatDb = (gain: number) => {
   return clamp(db, -60, 0).toFixed(1);
 };
 
+const resumeAudioContext = (ctx: AudioContext | null) => {
+  if (!ctx) return;
+  if (ctx.state !== "running") {
+    ctx.resume().catch(() => undefined);
+  }
+};
+
 const createImpulseResponse = (ctx: AudioContext, durationSec = 1.8, decay = 2.2) => {
   const sampleRate = ctx.sampleRate;
   const length = Math.max(1, Math.floor(sampleRate * durationSec));
@@ -616,6 +623,7 @@ export default function StudioPage() {
                 audio = new Audio();
                 audio.preload = "auto";
                 audio.crossOrigin = "anonymous";
+                audio.muted = false;
                 audio.playbackRate = safeStemSpeed;
                 audio.defaultPlaybackRate = safeStemSpeed;
                 if (stem.url) {
@@ -820,7 +828,7 @@ export default function StudioPage() {
       const ctx = audioContextRef.current;
       if (!ctx || stems.length === 0) return;
 
-      if (ctx.state === 'suspended') await ctx.resume();
+      resumeAudioContext(ctx);
 
       const activeAudios = stems
         .map((s) => audioElsRef.current.get(s.fileName))
@@ -846,10 +854,13 @@ export default function StudioPage() {
           try { a.currentTime = offset; } catch (_) { /* noop */ }
       });
 
-      try {
-          await Promise.all(activeAudios.map(a => a.play().catch(() => undefined)));
-      } catch (_) {
-          // ignore play errors (e.g. autoplay policies)
+      const playResults = await Promise.all(
+          activeAudios.map((a) => a.play().then(() => true).catch(() => false))
+      );
+      if (!playResults.some(Boolean)) {
+          console.warn("Studio: playback blocked or failed to start.");
+          setIsPlaying(false);
+          return;
       }
 
       startTimeRef.current = ctx.currentTime - offset;
@@ -882,7 +893,7 @@ export default function StudioPage() {
       if (wasPlaying) {
           setIsPlaying(false);
           setTimeout(async () => {
-              if (ctx.state === 'suspended') await ctx.resume();
+              resumeAudioContext(ctx);
               try {
                   await Promise.all(activeAudios.map(a => a.play().catch(() => undefined)));
                   setIsPlaying(true);
