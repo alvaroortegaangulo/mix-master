@@ -21,9 +21,10 @@ import {
 import { useTranslations } from "next-intl";
 
 interface StemControl {
-  fileName: string;
+  fileName: string;     
+  cleanName?: string;   
   stage?: string;
-  name: string;
+  name: string;        
   volume: number;
   pan: {
     value: number;
@@ -65,6 +66,15 @@ const normalizeStemSpeed = (value: number) => {
   return clamp(value, 0.5, 1.5);
 };
 
+// Utilidad para imitar la normalización del backend (snake_case)
+const normalizeFileName = (fileName: string): string => {
+  if (!fileName) return "";
+  const namePart = fileName.replace(/\.wav$/i, "").replace(/\.mp3$/i, "").replace(/\.aiff?$/i, "");
+  let cleaned = namePart.replace(/[^a-zA-Z0-9]/g, "_").toLowerCase();
+  cleaned = cleaned.replace(/_+/g, "_").replace(/^_|_$/g, "");
+  return cleaned + ".wav"; 
+};
+
 const normalizeSignedUrl = (rawUrl: string) => {
   if (!rawUrl) return "";
   try {
@@ -86,48 +96,62 @@ const formatDb = (gain: number) => {
   return clamp(db, -60, 0).toFixed(1);
 };
 
-const resumeAudioContext = (ctx: AudioContext | null) => {
-  if (!ctx) return;
-  if (ctx.state !== "running") {
-    ctx.resume().catch(() => undefined);
-  }
-};
-
-const createImpulseResponse = (ctx: AudioContext, durationSec = 1.8, decay = 2.2) => {
+// --- DSP CONSISTENCY FIX: Improved Reverb Algorithm ---
+// Generate a "Room" impulse response with LowPass damping to match backend implementation.
+const createImpulseResponse = (ctx: AudioContext, durationSec = 2.0, decay = 2.0) => {
   const sampleRate = ctx.sampleRate;
   const length = Math.max(1, Math.floor(sampleRate * durationSec));
   const impulse = ctx.createBuffer(2, length, sampleRate);
 
-  for (let channel = 0; channel < impulse.numberOfChannels; channel += 1) {
+  for (let channel = 0; channel < impulse.numberOfChannels; channel++) {
     const data = impulse.getChannelData(channel);
-    for (let i = 0; i < length; i += 1) {
-      const t = i / length;
-      data[i] = (Math.random() * 2 - 1) * Math.pow(1 - t, decay);
+    let lastOut = 0;
+    for (let i = 0; i < length; i++) {
+      // White noise
+      const noise = (Math.random() * 2 - 1);
+      
+      // Simple LowPass filter for damping (makes it sound warmer/less metallic)
+      // This mimics high-frequency absorption in a room
+      const input = noise * Math.pow(1 - i / length, decay);
+      // LPF coefficient 0.6
+      const current = input * 0.4 + lastOut * 0.6;
+      lastOut = current;
+      
+      data[i] = current;
     }
   }
-
   return impulse;
 };
 
+// Ambience is just a shorter, darker reverb
 const createAmbienceImpulseResponse = (ctx: AudioContext) =>
-  createImpulseResponse(ctx, 0.8, 3.4);
+  createImpulseResponse(ctx, 0.8, 3.0);
 
+// --- DSP CONSISTENCY FIX: Standardized Tanh Saturation ---
+// This curve exactly matches numpy.tanh used in the backend
 const buildSaturationCurve = (drive: number) => {
   const amount = clamp(drive, 0, 100);
-  const samples = 1024;
-  const curve = new Float32Array(samples);
+  const n_samples = 4096;
+  const curve = new Float32Array(n_samples);
+  
   if (amount <= 0) {
-    for (let i = 0; i < samples; i += 1) {
-      const x = (i * 2) / samples - 1;
-      curve[i] = x;
-    }
-    return curve;
+     // Linear bypass
+     for (let i = 0; i < n_samples; i++) {
+        curve[i] = (i / (n_samples - 1)) * 2 - 1;
+     }
+     return curve;
   }
-  const k = 1 + (amount / 100) * 5;
-  const norm = Math.tanh(k);
-  for (let i = 0; i < samples; i += 1) {
-    const x = (i * 2) / samples - 1;
-    curve[i] = Math.tanh(k * x) / norm;
+
+  // Map 0-100 knob to a reasonable gain factor (e.g., 0dB to +18dB boost into tanh)
+  // k=1 means no boost, k=8 is significant drive
+  const k = 1 + (amount / 100) * 7; 
+
+  for (let i = 0; i < n_samples; i++) {
+    const x = (i * 2) / n_samples - 1;
+    // Simple tanh soft clipping
+    curve[i] = Math.tanh(k * x);
+    // Optional: Output gain compensation could be added here, 
+    // but usually tanh compresses naturally.
   }
   return curve;
 };
@@ -341,6 +365,7 @@ export default function StudioPage() {
           .addModule("/worklets/transient-shaper.js")
           .catch((err) => {
             console.warn("Studio: transient worklet failed to load", err);
+            throw err;
           });
       }
 
@@ -357,8 +382,12 @@ export default function StudioPage() {
     stemList.forEach((stem) => {
       const audio = audioElsRef.current.get(stem.fileName);
       if (!audio) return;
-      // If this stem is already routed to WebAudio, don't apply HTML volume scaling.
-      if (mediaNodesRef.current.has(stem.fileName)) return;
+      
+      if (mediaNodesRef.current.has(stem.fileName)) {
+          if (audio.muted) audio.muted = false;
+          if (audio.volume !== 1) audio.volume = 1;
+          return;
+      }
 
       let shouldMute = stem.mute;
       if (anySolo) shouldMute = !stem.solo;
@@ -430,7 +459,6 @@ export default function StudioPage() {
     if (!audio) return false;
     if (mediaNodesRef.current.has(stem.fileName)) return true;
 
-    // Avoid double scaling (HTMLMediaElement volume affects the WebAudio graph output).
     audio.muted = false;
     audio.volume = 1;
     audio.playbackRate = stemSpeedRef.current;
@@ -455,9 +483,14 @@ export default function StudioPage() {
 
       const transientFallback = () => ({ node: ctx.createGain(), param: undefined as AudioParam | undefined });
       let transientEntry = transientFallback();
+
       if (ctx.audioWorklet && transientWorkletReadyRef.current) {
         try {
-          await transientWorkletReadyRef.current;
+          const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error("Transient worklet load timeout")), 1500)
+          );
+          await Promise.race([transientWorkletReadyRef.current, timeoutPromise]);
+
           const transientNode = new AudioWorkletNode(ctx, "transient-shaper", {
             numberOfInputs: 1,
             numberOfOutputs: 1,
@@ -472,7 +505,7 @@ export default function StudioPage() {
           }
           transientEntry = { node: transientNode, param: punchParam };
         } catch (err) {
-          console.warn("Studio: transient worklet node failed", err);
+          console.warn("Studio: transient worklet node failed or timed out, using bypass", err);
           transientEntry = transientFallback();
         }
       }
@@ -541,7 +574,6 @@ export default function StudioPage() {
     } catch (err) {
       console.warn("Studio: failed to build audio graph", err);
       try {
-        // Best-effort: if MediaElementSource exists, connect directly to master so audio can flow.
         mediaNode?.connect(master);
         mediaNodesRef.current.set(stem.fileName, mediaNode!);
         return true;
@@ -558,7 +590,6 @@ export default function StudioPage() {
 
     let built = 0;
     for (const stem of stemsRef.current) {
-      // eslint-disable-next-line no-await-in-loop
       const ok = await buildWebAudioGraphForStem(stem);
       if (ok) built += 1;
     }
@@ -619,7 +650,6 @@ export default function StudioPage() {
     };
   }, []);
 
-  // Update Master Volume
   useEffect(() => {
       const ctx = audioContextRef.current;
       if (masterGainNodeRef.current && ctx) {
@@ -636,11 +666,9 @@ export default function StudioPage() {
   }, [safeStemSpeed]);
 
 
-  // Effect to load waveform data for selected stem
   useEffect(() => {
     if (!selectedStem || !audioContextRef.current) return;
 
-    // If we have valid peaks (sum > 0), use them
     const hasPeaks = selectedStem.peaks && selectedStem.peaks.length > 0 && selectedStem.peaks.some(p => p > 0);
     if (hasPeaks) {
         setVisualBuffer(null);
@@ -648,12 +676,11 @@ export default function StudioPage() {
     }
 
     let active = true;
-    setVisualBuffer(null); // Clear while loading
+    setVisualBuffer(null); 
 
     const loadAudio = async () => {
         try {
             const cacheKey = `${jobId}/${selectedStem.fileName}`;
-            // Try cache first
             const cachedData = await studioCache.getAudioBuffer(cacheKey);
             if (active && cachedData) {
                 const buffer = dataToAudioBuffer(audioContextRef.current!, cachedData);
@@ -661,16 +688,13 @@ export default function StudioPage() {
                 return;
             }
 
-            // Fetch and decode
             if (!selectedStem.url) return;
             const resp = await fetch(selectedStem.url);
             if (!resp.ok) return;
             const arrayBuffer = await resp.arrayBuffer();
 
             if (active && audioContextRef.current) {
-                // Decode
                 const audioBuffer = await audioContextRef.current.decodeAudioData(arrayBuffer);
-                // Cache
                 await studioCache.setAudioBuffer(cacheKey, audioBufferToData(audioBuffer));
 
                 if (active) {
@@ -739,8 +763,10 @@ export default function StudioPage() {
           if (Array.isArray(data.stems)) {
             stemsFromApi = data.stems;
           }
-        } else {
-          stemsFromApi = ["vocals.wav", "drums.wav", "bass.wav", "other.wav"];
+        }
+        
+        if (stemsFromApi.length === 0) {
+            console.warn("Studio: No stems found via API.");
         }
 
         const newStems: StemControl[] = stemsFromApi.map((entry: any) => {
@@ -760,8 +786,11 @@ export default function StudioPage() {
               ? entry.peaks.map((p: any) => Number(p) || 0)
               : undefined;
 
+          const cleanName = normalizeFileName(file);
+
           return {
             fileName: file,
+            cleanName: cleanName,
             stage: typeof entry === "object" && entry?.stage ? entry.stage : undefined,
             name:
               file
@@ -787,28 +816,7 @@ export default function StudioPage() {
           };
         });
 
-        const fallbackStems: StemControl[] = ["vocals.wav", "drums.wav", "bass.wav", "other.wav"].map(
-          (file) => ({
-            fileName: file,
-            name: file.replace(".wav", "").replace(/_/g, " ") || file,
-            volume: 0,
-            pan: { value: 0, enabled: false },
-            mute: false,
-            solo: false,
-            reverb: { amount: 0, enabled: false },
-            stereoWidth: { amount: 100, enabled: false },
-            saturation: { amount: 0, enabled: false },
-            transient: { amount: 0, enabled: false },
-            depth: { amount: 0, enabled: false },
-            signedUrl: undefined,
-            previewUrl: null,
-            peaks: undefined,
-            url: undefined,
-            status: "idle" as const
-          }),
-        );
-
-        const finalStems: StemControl[] = newStems.length ? newStems : fallbackStems;
+        const resolvedStems: StemControl[] = [];
 
         const stageFallbacks = [
             "S6_MANUAL_CORRECTION",
@@ -821,15 +829,25 @@ export default function StudioPage() {
             "S0_MIX_ORIGINAL"
         ];
 
-        const resolvedStems: StemControl[] = [];
-
-        for (const stem of finalStems) {
+        for (const stem of newStems) {
+            const nameVariants = [
+                stem.fileName,
+                stem.cleanName,
+                stem.fileName.toLowerCase()
+            ].filter((v): v is string => !!v);
+            
+            const uniqueVariants = Array.from(new Set(nameVariants));
             const candidates: string[] = [];
+
             if (stem.stage) {
-                candidates.push(`${stem.stage}/${stem.fileName}`);
+                 uniqueVariants.forEach(v => candidates.push(`${stem.stage}/${v}`));
             }
-            stageFallbacks.forEach((stage) => candidates.push(`${stage}/${stem.fileName}`));
-            candidates.push(stem.fileName);
+
+            stageFallbacks.forEach((stage) => {
+                 uniqueVariants.forEach(v => candidates.push(`${stage}/${v}`));
+            });
+
+            uniqueVariants.forEach(v => candidates.push(v));
 
             const primaryPath = candidates[0] || stem.fileName;
             let resolvedUrl = "";
@@ -865,13 +883,18 @@ export default function StudioPage() {
 
         if (cancelled) return;
 
-        // Asegurar peaks para la waveform (si no vienen en payload)
         const stemsWithPeaks = await Promise.all(
             resolvedStems.map(async (stem) => {
                 if (stem.peaks && stem.peaks.length) return stem;
-                const stemBase = stem.fileName.replace(/\.wav$/i, "");
+                
+                const basesToCheck = new Set<string>();
+                basesToCheck.add(stem.fileName.replace(/\.wav$/i, ""));
+                if (stem.cleanName) basesToCheck.add(stem.cleanName.replace(/\.wav$/i, ""));
+                
                 const peakCandidates: string[] = [];
-                if (stem.stage) peakCandidates.push(`${stem.stage}/peaks/${stemBase}.peaks.json`);
+                basesToCheck.forEach(base => {
+                    if (stem.stage) peakCandidates.push(`${stem.stage}/peaks/${base}.peaks.json`);
+                });
 
                 for (const rel of peakCandidates) {
                     try {
@@ -884,7 +907,6 @@ export default function StudioPage() {
                             }
                         }
                     } catch (_) {
-                        // continuar con siguiente candidato
                     }
                 }
                 return { ...stem, peaks: undefined };
@@ -893,7 +915,6 @@ export default function StudioPage() {
 
         if (cancelled) return;
         setStems(stemsWithPeaks);
-        // Mostrar UI aunque sigamos preparando audio; waveform puede usar peaks ya.
         setLoadingStems(false);
 
         const ensureAudioForStem = async (stem: StemControl) => {
@@ -906,11 +927,21 @@ export default function StudioPage() {
                 audio.playbackRate = safeStemSpeed;
                 audio.defaultPlaybackRate = safeStemSpeed;
 
-
+                const nameVariants = [
+                    stem.fileName,
+                    stem.cleanName,
+                    stem.fileName.toLowerCase()
+                ].filter((v): v is string => !!v);
+                const uniqueVariants = Array.from(new Set(nameVariants));
                 const candidates: string[] = [];
-                if (stem.stage) candidates.push(`${stem.stage}/${stem.fileName}`);
-                stageFallbacks.forEach((stage) => candidates.push(`${stage}/${stem.fileName}`));
-                candidates.push(stem.fileName);
+                if (stem.stage) {
+                     uniqueVariants.forEach(v => candidates.push(`${stem.stage}/${v}`));
+                }
+                stageFallbacks.forEach((stage) => {
+                     uniqueVariants.forEach(v => candidates.push(`${stage}/${v}`));
+                });
+                uniqueVariants.forEach(v => candidates.push(v));
+
                 let candidateIndex = 0;
 
                 const updateUrl = async (index: number) => {
@@ -968,7 +999,6 @@ export default function StudioPage() {
             try {
                 await waitForMediaReady(el, 4000);
             } catch {
-                // ignore timeout
             }
         });
 
@@ -988,8 +1018,6 @@ export default function StudioPage() {
     return () => { cancelled = true; };
   }, [jobId]);
 
-  // Removed WaveSurfer setup effect
- 
   const togglePlay = async () => {
       if (stems.length === 0) return;
 
@@ -1067,7 +1095,6 @@ export default function StudioPage() {
                   );
                   setIsPlaying(playResults.some(Boolean));
               } catch (_) {
-                  // ignore
               }
           }, 0);
       }
@@ -1139,7 +1166,6 @@ export default function StudioPage() {
                 "S11_REPORT_GENERATION"
             ];
         } else {
-            // Resume from correction stage to apply corrections and continue
             stagesPayload.start_from_stage = "S6_MANUAL_CORRECTION";
         }
 
@@ -1227,9 +1253,7 @@ export default function StudioPage() {
       });
   };
 
-  // Waveform: use visualBuffer (client-side generated) or peaks (server-side)
   const currentVisualBuffer = visualBuffer;
-  // Ensure we don't pass zero-filled peaks to CanvasWaveform, which would suppress AudioBuffer calculation
   const currentVisualPeaks = (selectedStem?.peaks && selectedStem.peaks.some(p => p > 0)) ? selectedStem.peaks : null;
 
   if (authLoading) return <div className="h-screen bg-[#0f111a]"></div>;
@@ -1244,6 +1268,7 @@ export default function StudioPage() {
       );
   }
 
+  // ... (RESTO DEL RENDER JSX IDÉNTICO AL ANTERIOR, LO OMITO POR BREVEDAD, USA EL MISMO JSX QUE EL PASO 4)
   return (
     <div className="flex flex-col h-screen bg-[#0f111a] text-slate-300 font-sans overflow-hidden selection:bg-teal-500/30">
 
@@ -1602,7 +1627,7 @@ export default function StudioPage() {
     </div>
   );
 }
-
+// ... (RESTO DEL CÓDIGO DE COMPONENTES AUXILIARES IGUAL)
 function Toggle({ checked, onChange, colorClass = "bg-teal-500" }: { checked: boolean, onChange: (v: boolean) => void, colorClass?: string }) {
     return (
         <div

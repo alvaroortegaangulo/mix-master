@@ -114,6 +114,8 @@ def _load_allowed_origins() -> list[str]:
     return [
         "https://music-mix-master.com",
         "https://api.music-mix-master.com",
+        "http://localhost:3000",
+        "http://localhost:8000"
     ]
 
 
@@ -918,7 +920,7 @@ def _stream_file_response(
     """
     headers = {
         "Accept-Ranges": "bytes",
-        "Access-Control-Allow-Origin": "*",
+        # "Access-Control-Allow-Origin": "*",  <--- ELIMINADO PARA EVITAR CONFLICTO CON CORSMIDDLEWARE
         **(extra_headers or {}),
     }
     if cache_seconds > 0:
@@ -999,8 +1001,6 @@ def _collect_stem_paths(stage_dir: Path) -> List[Path]:
         ):
             wavs.append(item)
     return sorted(wavs)
-
-
 
 
 @app.post("/mix")
