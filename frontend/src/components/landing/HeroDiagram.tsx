@@ -249,12 +249,6 @@ export function HeroDiagram() {
         </div>
       </div>
 
-      <div className="absolute -bottom-12 left-0 right-0 text-center">
-        <a href="#listen-difference" className="group inline-flex items-center gap-2 text-sm text-slate-400 transition-colors hover:text-white">
-          <span className="border-b border-transparent transition-all group-hover:border-cyan-300">Escuchar la diferencia</span>
-          <ChevronDownIcon className="h-4 w-4 transition-transform group-hover:translate-y-1" aria-hidden="true" />
-        </a>
-      </div>
     </div>
   );
 }
