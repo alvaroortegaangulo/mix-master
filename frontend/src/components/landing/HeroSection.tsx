@@ -11,7 +11,7 @@ import { HeroWaveformCanvas } from "./HeroWaveformCanvas";
 
 export function HeroSection() {
   return (
-    <section className="relative flex min-h-[100svh] flex-col justify-center overflow-hidden bg-slate-950 px-4 pb-16 pt-12 sm:pt-16 lg:pt-16 2xl:pt-20">
+    <section className="relative flex min-h-[100svh] flex-col justify-center overflow-hidden bg-slate-950 px-4 pb-16 pt-10 sm:pt-14 lg:pt-12 2xl:pt-16">
       <div className="absolute left-0 top-0 z-0 h-full w-full overflow-hidden pointer-events-none">
         <div className="absolute -top-[20%] -left-[10%] h-[50%] w-[50%] rounded-full bg-teal-500/10 blur-[120px]" />
         <div className="absolute top-[40%] -right-[10%] h-[60%] w-[60%] rounded-full bg-violet-600/10 blur-[120px]" />
@@ -24,7 +24,7 @@ export function HeroSection() {
               className="floating motion-reduce:animate-none text-left space-y-6 max-w-xl"
               style={{ animationDuration: "10s" }}
             >
-              <div className="inline-flex items-center gap-2 rounded-full border border-cyan-400/30 bg-cyan-500/10 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-cyan-200 shadow-[0_0_12px_rgba(34,211,238,0.2)]">
+              <div className="inline-flex items-center gap-2 rounded-full border border-cyan-400/30 bg-cyan-500/10 px-3 py-1 text-[9px] lg:text-[8.5px] 2xl:text-[10px] font-semibold uppercase tracking-[0.22em] text-cyan-200 shadow-[0_0_12px_rgba(34,211,238,0.2)]">
                 <span className="h-2 w-2 rounded-full bg-cyan-300 shadow-[0_0_10px_rgba(34,211,238,0.6)]" />
                 Beta v2.0 disponible
               </div>
@@ -37,7 +37,7 @@ export function HeroSection() {
                 <span className="block">Sin lios.</span>
               </h1>
 
-              <p className="text-sm text-slate-300 leading-relaxed sm:text-base lg:text-sm xl:text-base 2xl:text-lg">
+              <p className="text-sm text-slate-300 leading-relaxed sm:text-base lg:text-[13px] xl:text-base 2xl:text-lg">
                 No necesitas ser ingeniero de sonido para sonar genial en Spotify. Sube tu grabacion casera y nuestra IA
                 se encarga de pulirla, limpiarla y darle volumen en segundos.
               </p>

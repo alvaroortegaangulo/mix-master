@@ -10,11 +10,16 @@ export function TechSpecsSection({ className }: { className?: string }) {
     const title = t('title');
     
     // Marquee logic refs
+    const sectionRef = useRef<HTMLElement | null>(null);
     const marqueeRef = useRef<HTMLDivElement>(null);
     const dragStartXRef = useRef(0);
     const dragStartScrollLeftRef = useRef(0);
     const isDraggingRef = useRef(false);
     const [isDragging, setIsDragging] = useState(false);
+    const animationRef = useRef<number | null>(null);
+    const lastTimeRef = useRef(0);
+    const isRunningRef = useRef(false);
+    const isInViewRef = useRef(false);
 
     const specs = [
       { value: "96 kHz", label: t("internalProcessing") },
@@ -63,8 +68,6 @@ export function TechSpecsSection({ className }: { className?: string }) {
       if (!marquee) return;
 
       const durationMs = 44000; // Speed of scroll
-      let frameId: number | null = null;
-      let lastTime = performance.now();
 
       const setStartPosition = () => {
         // Ensure we start in the middle for seamless looping
@@ -74,12 +77,10 @@ export function TechSpecsSection({ className }: { className?: string }) {
         }
       };
 
-      // Initial positioning
-      setStartPosition();
-
       const step = (time: number) => {
-        const delta = time - lastTime;
-        lastTime = time;
+        if (!isRunningRef.current) return;
+        const delta = time - lastTimeRef.current;
+        lastTimeRef.current = time;
 
         if (!isDraggingRef.current) {
           const halfWidth = marquee.scrollWidth / 2;
@@ -96,10 +97,35 @@ export function TechSpecsSection({ className }: { className?: string }) {
             }
           }
         }
-        frameId = requestAnimationFrame(step);
+        animationRef.current = requestAnimationFrame(step);
       };
 
-      frameId = requestAnimationFrame(step);
+      const start = () => {
+        if (isRunningRef.current) return;
+        isRunningRef.current = true;
+        lastTimeRef.current = performance.now();
+        animationRef.current = requestAnimationFrame(step);
+      };
+
+      const stop = () => {
+        if (!isRunningRef.current) return;
+        isRunningRef.current = false;
+        if (animationRef.current !== null) {
+          cancelAnimationFrame(animationRef.current);
+          animationRef.current = null;
+        }
+      };
+
+      const handleVisibility = () => {
+        if (document.hidden) {
+          stop();
+        } else if (isInViewRef.current) {
+          start();
+        }
+      };
+
+      // Initial positioning
+      setStartPosition();
 
       // Handle Resize
       let resizeObserver: ResizeObserver | null = null;
@@ -112,9 +138,32 @@ export function TechSpecsSection({ className }: { className?: string }) {
         resizeObserver.observe(marquee);
       }
 
+      let observer: IntersectionObserver | null = null;
+      if (typeof IntersectionObserver !== "undefined" && sectionRef.current) {
+        observer = new IntersectionObserver(
+          ([entry]) => {
+            isInViewRef.current = entry.isIntersecting;
+            if (entry.isIntersecting && !document.hidden) {
+              start();
+            } else {
+              stop();
+            }
+          },
+          { threshold: 0.1 }
+        );
+        observer.observe(sectionRef.current);
+      } else {
+        isInViewRef.current = true;
+        start();
+      }
+
+      document.addEventListener("visibilitychange", handleVisibility);
+
       return () => {
-        if (frameId) cancelAnimationFrame(frameId);
+        stop();
+        observer?.disconnect();
         resizeObserver?.disconnect();
+        document.removeEventListener("visibilitychange", handleVisibility);
       };
     }, []);
 
@@ -164,7 +213,7 @@ export function TechSpecsSection({ className }: { className?: string }) {
     };
 
     return (
-      <section className={`py-10 md:py-14 lg:py-16 2xl:py-20 relative overflow-hidden ${className || 'bg-slate-950'}`}>
+      <section ref={sectionRef} className={`py-10 md:py-14 lg:py-16 2xl:py-20 relative overflow-hidden ${className || 'bg-slate-950'}`}>
         
         {/* Background Effects (Static, no reveal needed) */}
         <div className="absolute top-0 left-0 h-full w-full overflow-hidden pointer-events-none z-0">

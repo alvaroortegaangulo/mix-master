@@ -36,84 +36,66 @@ const GlobeAmericasIcon = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
+const SLIDE_DURATION_MS = 6000;
+
+// Logical mapping of existing content (S0-S3) to new visual themes
+const FEATURES = [
+  {
+    // Step 0: Cloud Studio (Sky)
+    // Matches "Estudio en la Nube" in es.json
+    id: "cloud",
+    Icon: CloudArrowUpIcon,
+    imageUrl: "/landing/features/integration.webp",
+    color: "14, 165, 233", // Sky-500
+    glowColor: "14, 165, 233",
+  },
+  {
+    // Step 1: Intelligent Analysis -> Neural (Purple)
+    // Matches "Inteligencia Sonora" in es.json
+    id: "analysis",
+    Icon: CpuChipIcon,
+    imageUrl: "/landing/features/neural.webp",
+    color: "245, 158, 11", // Amber-500
+    glowColor: "245, 158, 11",
+  },
+  {
+    // Step 2: Mastering -> Mastering Grade (Amber)
+    // Matches "Pulido de Grado Mastering" in es.json
+    id: "mastering",
+    Icon: ChartBarIcon,
+    imageUrl: "/landing/features/mastering_grade.webp",
+    color: "217, 119, 6", // Amber-600
+    glowColor: "217, 119, 6",
+  },
+  {
+    // Step 3: Export -> Ready World (Emerald)
+    // Matches "Listo para el Mundo" in es.json
+    id: "export",
+    Icon: GlobeAmericasIcon,
+    imageUrl: "/landing/features/ready_world.webp",
+    color: "234, 88, 12", // Orange-600
+    glowColor: "234, 88, 12",
+  },
+] as const;
+
 export function FeaturesSection({ className }: { className?: string }) {
   const t = useTranslations("FeaturesSection");
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [progress, setProgress] = useState(0);
   const titleText = t("title");
   const titlePlain = titleText.replace(/<[^>]+>/g, "");
 
-  // Logical mapping of existing content (S0-S3) to new visual themes
-  const features = [
-    {
-      // Step 0: Cloud Studio (Sky)
-      // Matches "Estudio en la Nube" in es.json
-      id: "cloud",
-      Icon: CloudArrowUpIcon,
-      imageUrl: "/landing/features/integration.webp",
-      color: "14, 165, 233", // Sky-500
-      glowColor: "14, 165, 233",
-    },
-    {
-      // Step 1: Intelligent Analysis -> Neural (Purple)
-      // Matches "Inteligencia Sonora" in es.json
-      id: "analysis",
-      Icon: CpuChipIcon,
-      imageUrl: "/landing/features/neural.webp",
-      color: "245, 158, 11", // Amber-500
-      glowColor: "245, 158, 11",
-    },
-    {
-      // Step 2: Mastering -> Mastering Grade (Amber)
-      // Matches "Pulido de Grado Mastering" in es.json
-      id: "mastering",
-      Icon: ChartBarIcon,
-      imageUrl: "/landing/features/mastering_grade.webp",
-      color: "217, 119, 6", // Amber-600
-      glowColor: "217, 119, 6",
-    },
-    {
-      // Step 3: Export -> Ready World (Emerald)
-      // Matches "Listo para el Mundo" in es.json
-      id: "export",
-      Icon: GlobeAmericasIcon,
-      imageUrl: "/landing/features/ready_world.webp",
-      color: "234, 88, 12", // Orange-600
-      glowColor: "234, 88, 12",
-    },
-  ];
-
-  const duration = 6000; // 6 seconds per slide
+  const features = FEATURES;
 
   useEffect(() => {
-    let animationFrameId: number;
-    let startTime: number | null = null;
-
-    const animate = (timestamp: number) => {
-      if (!startTime) startTime = timestamp;
-      const elapsed = timestamp - startTime;
-      const newProgress = Math.min((elapsed / duration) * 100, 100);
-
-      setProgress(newProgress);
-
-      if (elapsed < duration) {
-        animationFrameId = requestAnimationFrame(animate);
-        return;
-      }
-
+    const timeoutId = window.setTimeout(() => {
       setCurrentIndex((prev) => (prev + 1) % features.length);
-      setProgress(0);
-      startTime = null;
-      animationFrameId = requestAnimationFrame(animate);
-    };
+    }, SLIDE_DURATION_MS);
 
-    animationFrameId = requestAnimationFrame(animate);
-    return () => cancelAnimationFrame(animationFrameId);
-  }, [currentIndex, duration, features.length]);
+    return () => window.clearTimeout(timeoutId);
+  }, [currentIndex, features.length]);
 
   const manualSwitch = (index: number) => {
     setCurrentIndex(index);
-    setProgress(0);
   };
 
   const currentFeature = features[currentIndex];
@@ -264,13 +246,15 @@ export function FeaturesSection({ className }: { className?: string }) {
 
                 {/* Progress Bar for this tab */}
                 <div className="absolute bottom-0 left-0 h-[2px] w-full bg-slate-800/70">
-                  <div
-                    className="h-full w-0 transition-none"
-                    style={{
-                      backgroundColor: `rgb(${feature.color})`,
-                      width: isActive ? `${progress}%` : "0%",
-                    }}
-                  />
+                  {isActive ? (
+                    <div
+                      className="h-full features-progress"
+                      style={{
+                        backgroundColor: `rgb(${feature.color})`,
+                        animationDuration: `${SLIDE_DURATION_MS}ms`,
+                      }}
+                    />
+                  ) : null}
                 </div>
                 </button>
               );

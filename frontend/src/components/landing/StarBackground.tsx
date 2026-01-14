@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { memo, useEffect, useState } from "react";
 import Particles, { initParticlesEngine } from "@tsparticles/react";
 import { loadSlim } from "@tsparticles/slim";
 
-export function StarBackground() {
+export const StarBackground = memo(function StarBackground() {
   const [init, setInit] = useState(false);
 
   useEffect(() => {
@@ -29,7 +29,7 @@ export function StarBackground() {
         value: "transparent",
       },
     },
-    fpsLimit: 120,
+    fpsLimit: 60,
     particles: {
       color: {
         value: "#ffffff",
@@ -107,4 +107,4 @@ export function StarBackground() {
       />
     </div>
   );
-}
+});

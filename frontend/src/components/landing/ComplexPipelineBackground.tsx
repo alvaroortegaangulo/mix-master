@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { memo, useEffect, useState } from "react";
 import { motion } from "framer-motion";
 
-export function ComplexPipelineBackground() {
+export const ComplexPipelineBackground = memo(function ComplexPipelineBackground() {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -140,4 +140,4 @@ export function ComplexPipelineBackground() {
       <div className="absolute inset-0 bg-gradient-to-t from-[#020408] via-transparent to-[#020408] opacity-80" />
     </div>
   );
-}
+});

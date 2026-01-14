@@ -1,8 +1,9 @@
 "use client";
 
+import { memo } from "react";
 import { motion } from "framer-motion";
 
-export function AuroraBackground({ className }: { className?: string }) {
+export const AuroraBackground = memo(function AuroraBackground({ className }: { className?: string }) {
   return (
     <div className={`absolute inset-0 overflow-hidden pointer-events-none -z-10 bg-[#020408] ${className || ""}`}>
 
@@ -93,4 +94,4 @@ export function AuroraBackground({ className }: { className?: string }) {
 
     </div>
   );
-}
+});

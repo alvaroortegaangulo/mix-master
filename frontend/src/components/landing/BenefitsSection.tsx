@@ -114,39 +114,100 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
   const headerTitle = t('headerTitle');
   const headerTitlePlain = headerTitle.replace(/<[^>]+>/g, "");
   const [isManual, setIsManual] = useState(true);
+  const sectionRef = useRef<HTMLElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const requestRef = useRef<number>(0);
+  const requestRef = useRef<number | null>(null);
   const frameCountRef = useRef<number>(0);
+  const isManualRef = useRef(isManual);
+  const isInViewRef = useRef(false);
+  const isRunningRef = useRef(false);
 
   // Toggle Handler
   const toggleAI = () => {
     setIsManual(!isManual);
   };
 
+  useEffect(() => {
+    isManualRef.current = isManual;
+  }, [isManual]);
+
   // Canvas Animation Loop
   useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
     const animate = () => {
-      if (canvasRef.current) {
-        const canvas = canvasRef.current;
-        const ctx = canvas.getContext('2d');
-        if (ctx) {
-           if (isManual) {
-             drawEqualizerBars(ctx, canvas.width, canvas.height, frameCountRef.current);
-           } else {
-             drawSpectrumFlow(ctx, canvas.width, canvas.height, frameCountRef.current);
-           }
-        }
+      if (!isRunningRef.current) return;
+
+      if (isManualRef.current) {
+        drawEqualizerBars(ctx, canvas.width, canvas.height, frameCountRef.current);
+      } else {
+        drawSpectrumFlow(ctx, canvas.width, canvas.height, frameCountRef.current);
       }
+
       frameCountRef.current += 1;
       requestRef.current = requestAnimationFrame(animate);
     };
 
-    requestRef.current = requestAnimationFrame(animate);
-    return () => cancelAnimationFrame(requestRef.current);
-  }, [isManual]);
+    const start = () => {
+      if (isRunningRef.current) return;
+      isRunningRef.current = true;
+      requestRef.current = requestAnimationFrame(animate);
+    };
+
+    const stop = () => {
+      if (!isRunningRef.current) return;
+      isRunningRef.current = false;
+      if (requestRef.current !== null) {
+        cancelAnimationFrame(requestRef.current);
+        requestRef.current = null;
+      }
+    };
+
+    const handleVisibility = () => {
+      if (document.hidden) {
+        stop();
+      } else if (isInViewRef.current) {
+        start();
+      }
+    };
+
+    let observer: IntersectionObserver | null = null;
+    if (typeof IntersectionObserver !== "undefined") {
+      const target = sectionRef.current ?? canvas;
+      if (target) {
+        observer = new IntersectionObserver(
+          ([entry]) => {
+            isInViewRef.current = entry.isIntersecting;
+            if (entry.isIntersecting && !document.hidden) {
+              start();
+            } else {
+              stop();
+            }
+          },
+          { threshold: 0.15 }
+        );
+        observer.observe(target);
+      }
+    } else {
+      isInViewRef.current = true;
+      start();
+    }
+
+    document.addEventListener("visibilitychange", handleVisibility);
+
+    return () => {
+      stop();
+      observer?.disconnect();
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
+  }, []);
 
   return (
-    <section id="benefits" className={`lg:min-h-screen flex flex-col justify-center py-12 md:py-14 lg:py-16 2xl:py-20 relative isolate z-0 overflow-hidden ${className || 'bg-slate-950'}`}>
+    <section ref={sectionRef} id="benefits" className={`lg:min-h-screen flex flex-col justify-center py-12 md:py-14 lg:py-16 2xl:py-20 relative isolate z-0 overflow-hidden ${className || 'bg-slate-950'}`}>
         {/* Fondo Animado Pro */}
         <ComplexPipelineBackground />
 

@@ -1,6 +1,8 @@
 "use client";
 
-export function GridBackground() {
+import { memo } from "react";
+
+export const GridBackground = memo(function GridBackground() {
   return (
     <div className="absolute inset-0 overflow-hidden pointer-events-none z-0">
       {/* Background Gradient: Black -> Teal -> Black */}
@@ -32,4 +34,4 @@ export function GridBackground() {
       <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-transparent to-transparent" />
     </div>
   );
-}
+});

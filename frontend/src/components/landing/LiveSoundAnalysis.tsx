@@ -1,10 +1,17 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
 import { SpeakerWaveIcon } from "@heroicons/react/24/outline";
 import { useTranslations } from "next-intl";
 import { ScrollReveal } from "./ScrollReveal";
 import { GridBackground } from "./GridBackground";
+
+type LiveMetrics = {
+  spectrumData: number[];
+  lufs: number;
+  correlation: number;
+  dynamicRange: number;
+};
 
 export function LiveSoundAnalysis({ className }: { className?: string }) {
   const t = useTranslations('LiveSoundAnalysis');
@@ -12,59 +19,97 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
   const titlePlain = title.replace(/<[^>]+>/g, "");
 
   // State for animations
-  const [spectrumData, setSpectrumData] = useState<number[]>([]);
-  const [lufs, setLufs] = useState(-13.2);
-  const [correlation, setCorrelation] = useState(0.80);
-  const [dynamicRange, setDynamicRange] = useState(13);
-
-  // Initialize spectrum bars
-  useEffect(() => {
-    // Generate 32 bars
-    setSpectrumData(Array.from({ length: 32 }, () => Math.random() * 100));
-  }, []);
+  const [metrics, setMetrics] = useState<LiveMetrics>(() => ({
+    spectrumData: Array.from({ length: 32 }, () => Math.random() * 100),
+    lufs: -13.2,
+    correlation: 0.80,
+    dynamicRange: 13,
+  }));
+  const sectionRef = useRef<HTMLElement | null>(null);
+  const intervalRef = useRef<number | null>(null);
+  const isInViewRef = useRef(false);
 
   // Animation Loop
   useEffect(() => {
-    const interval = setInterval(() => {
-      // Animate Spectrum
-      setSpectrumData((prev) =>
-        prev.map((val) => {
+    const tick = () => {
+      setMetrics((prev) => {
+        const spectrumData = prev.spectrumData.map((val) => {
           const delta = (Math.random() - 0.5) * 30; // Random change
-          const newVal = Math.max(10, Math.min(100, val + delta)); // Clamp between 10 and 100
-          return newVal;
-        })
+          return Math.max(10, Math.min(100, val + delta)); // Clamp between 10 and 100
+        });
+
+        const lufs = Number((-13.2 + (Math.random() - 0.5) * 0.2).toFixed(1));
+        const correlation = Number((0.80 + (Math.random() - 0.5) * 0.02).toFixed(2));
+
+        let dynamicRange = prev.dynamicRange;
+        if (Math.random() > 0.7) {
+          const jitter = Math.floor(Math.random() * 3) - 1; // -1, 0, 1
+          dynamicRange = Math.max(10, Math.min(16, 13 + jitter));
+        }
+
+        return {
+          spectrumData,
+          lufs,
+          correlation,
+          dynamicRange,
+        };
+      });
+    };
+
+    const start = () => {
+      if (intervalRef.current !== null) return;
+      intervalRef.current = window.setInterval(tick, 150);
+    };
+
+    const stop = () => {
+      if (intervalRef.current === null) return;
+      window.clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    };
+
+    const handleVisibility = () => {
+      if (document.hidden) {
+        stop();
+        return;
+      }
+      if (isInViewRef.current) {
+        start();
+      }
+    };
+
+    let observer: IntersectionObserver | null = null;
+    if (typeof IntersectionObserver !== "undefined" && sectionRef.current) {
+      observer = new IntersectionObserver(
+        ([entry]) => {
+          isInViewRef.current = entry.isIntersecting;
+          if (entry.isIntersecting && !document.hidden) {
+            start();
+          } else {
+            stop();
+          }
+        },
+        { threshold: 0.2 }
       );
+      observer.observe(sectionRef.current);
+    } else {
+      isInViewRef.current = true;
+      start();
+    }
 
-      // Animate LUFS (jitter around -13.2)
-      setLufs((prev) => {
-        const jitter = (Math.random() - 0.5) * 0.2;
-        return Number((-13.2 + jitter).toFixed(1));
-      });
+    document.addEventListener("visibilitychange", handleVisibility);
 
-      // Animate Correlation (jitter around 0.80)
-      setCorrelation((prev) => {
-        const jitter = (Math.random() - 0.5) * 0.02;
-        return Number((0.80 + jitter).toFixed(2));
-      });
-
-      // Animate Dynamic Range (jitter around 13)
-      setDynamicRange((prev) => {
-         // Less frequent change for integer
-         if (Math.random() > 0.7) {
-             const jitter = Math.floor(Math.random() * 3) - 1; // -1, 0, 1
-             return Math.max(10, Math.min(16, 13 + jitter));
-         }
-         return prev;
-      });
-
-    }, 150);
-
-    return () => clearInterval(interval);
+    return () => {
+      stop();
+      observer?.disconnect();
+      document.removeEventListener("visibilitychange", handleVisibility);
+    };
   }, []);
 
-    return (
-    <section className={`lg:min-h-screen flex flex-col justify-center py-12 md:py-14 lg:py-16 2xl:py-20 border-t border-slate-900 relative isolate z-0 overflow-hidden ${className || 'bg-slate-950'}`}>
-        <GridBackground />
+  const { spectrumData, lufs, correlation, dynamicRange } = metrics;
+
+  return (
+    <section ref={sectionRef} className={`lg:min-h-screen flex flex-col justify-center py-12 md:py-14 lg:py-16 2xl:py-20 border-t border-slate-900 relative isolate z-0 overflow-hidden ${className || 'bg-slate-950'}`}>
+      <GridBackground />
 
       <div className="max-w-7xl 2xl:max-w-[1600px] mx-auto px-4 sm:px-6 lg:px-8 2xl:px-4 relative z-10">
         

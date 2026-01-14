@@ -383,6 +383,19 @@ body {
   animation: features-fade-in 0.9s ease-out forwards;
 }
 
+@keyframes features-progress {
+  from { width: 0%; }
+  to { width: 100%; }
+}
+
+.features-progress {
+  width: 0%;
+  animation-name: features-progress;
+  animation-timing-function: linear;
+  animation-fill-mode: forwards;
+  will-change: width;
+}
+
 @keyframes scan {
     0% { top: 0%; opacity: 0; }
     10% { opacity: 1; }
