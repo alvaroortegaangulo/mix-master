@@ -39,6 +39,8 @@ import scipy.signal as spsig  # noqa: E402
 import soundfile as sf  # noqa: E402
 
 from pedalboard import Pedalboard, LowShelfFilter, PeakFilter, HighShelfFilter  # noqa: E402
+from utils.analysis_utils import load_contract  # noqa: E402
+from utils.session_utils import load_session_config  # noqa: E402
 
 # ---------------------------------------------------------------------
 # sys.path guard (evita problemas al importar en runtime por loader)
@@ -599,22 +601,23 @@ def process(context_or_contract_id: Any, *args: str) -> bool:
             temp_root = Path(os.environ.get("MIX_TEMP_ROOT") or os.environ.get("MIXMASTER_TEMP_ROOT") or "/tmp")
             temp_dir = temp_root / contract_id
 
-        contract_path = temp_dir / f"{contract_id}.json"
-
-        if not contract_path.exists():
-            log.error("[S7_MIXBUS_TONAL_BALANCE] No existe contrato: %s", contract_path)
-            # No paramos pipeline
-            return True
-
-        with contract_path.open("r", encoding="utf-8") as f:
-            contract = json.load(f)
-
-        analysis = contract.get("analysis", {}) or {}
+        contract = load_contract(contract_id)
         metrics = contract.get("metrics", {}) or {}
         limits = contract.get("limits", {}) or {}
 
-        # style preset
+        analysis: Dict[str, Any] = {}
+        analysis_path = temp_dir / f"analysis_{contract_id}.json"
+        if analysis_path.exists():
+            try:
+                analysis = json.loads(analysis_path.read_text(encoding="utf-8"))
+            except Exception:
+                analysis = {}
+
+        # style preset (prefer analysis; fallback to session config)
         style_preset_raw = str(analysis.get("style_preset", "balanced"))
+        if not style_preset_raw or style_preset_raw.lower() in {"unknown", "none"}:
+            session_cfg = load_session_config(contract_id)
+            style_preset_raw = str(session_cfg.get("style_preset", "balanced"))
         style_preset = style_preset_raw
 
         # Alias razonables sin tocar utils:
