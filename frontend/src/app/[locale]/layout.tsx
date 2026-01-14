@@ -285,34 +285,72 @@ export default async function LocaleLayout({
                 __html: `
                   (function () {
                     var badgeSelector = "#cookiescript_badge";
+                    var consentedClass = "cookiescript-consented";
+                    var consentedKey = "cookiescript_hide_badge";
+                    var normalizeState = function (state) {
+                      if (!state) return "";
+                      if (typeof state === "string") return state;
+                      if (typeof state.action === "string") return state.action;
+                      if (typeof state.state === "string") return state.state;
+                      if (typeof state.status === "string") return state.status;
+                      return "";
+                    };
                     var shouldHide = function (state) {
-                      if (!state || !state.action) return false;
-                      return state.action === "accept" || state.action === "reject";
+                      var action = normalizeState(state).toLowerCase();
+                      return action === "accept" || action === "reject" || action === "acceptall" || action === "accept_all";
                     };
                     var hideBadge = function () {
                       var badge = document.querySelector(badgeSelector);
                       if (badge) {
-                        badge.style.display = "none";
+                        badge.style.setProperty("display", "none", "important");
+                        badge.style.setProperty("visibility", "hidden", "important");
+                        badge.style.setProperty("opacity", "0", "important");
+                        badge.style.setProperty("pointer-events", "none", "important");
                       }
+                    };
+                    var markConsented = function () {
+                      document.documentElement.classList.add(consentedClass);
+                      try {
+                        localStorage.setItem(consentedKey, "1");
+                      } catch (error) {
+                        // ignore
+                      }
+                    };
+                    var applyConsented = function () {
+                      markConsented();
+                      hideBadge();
                     };
                     var updateFromState = function (state) {
                       if (shouldHide(state)) {
-                        hideBadge();
+                        applyConsented();
                       }
                     };
+                    var restoreConsented = function () {
+                      try {
+                        if (localStorage.getItem(consentedKey) === "1") {
+                          document.documentElement.classList.add(consentedClass);
+                        }
+                      } catch (error) {
+                        // ignore
+                      }
+                    };
+                    restoreConsented();
+                    if (document.documentElement.classList.contains(consentedClass)) {
+                      hideBadge();
+                    }
                     document.addEventListener("CookieScriptCurrentState", function (event) {
                       updateFromState(event && event.detail);
                     });
-                    document.addEventListener("CookieScriptAccept", hideBadge);
-                    document.addEventListener("CookieScriptAcceptAll", hideBadge);
-                    document.addEventListener("CookieScriptReject", hideBadge);
+                    document.addEventListener("CookieScriptAccept", applyConsented);
+                    document.addEventListener("CookieScriptAcceptAll", applyConsented);
+                    document.addEventListener("CookieScriptReject", applyConsented);
                     document.addEventListener("CookieScriptLoaded", function () {
                       if (window.CookieScript && typeof window.CookieScript.currentState === "function") {
                         updateFromState(window.CookieScript.currentState());
                       }
                     });
                     var attempts = 0;
-                    var maxAttempts = 10;
+                    var maxAttempts = 20;
                     var poll = function () {
                       attempts += 1;
                       if (window.CookieScript && typeof window.CookieScript.currentState === "function") {
@@ -324,6 +362,14 @@ export default async function LocaleLayout({
                       }
                     };
                     poll();
+                    if (window.MutationObserver) {
+                      var observer = new MutationObserver(function () {
+                        if (document.documentElement.classList.contains(consentedClass)) {
+                          hideBadge();
+                        }
+                      });
+                      observer.observe(document.documentElement, { childList: true, subtree: true });
+                    }
                   })();
                 `,
               }}

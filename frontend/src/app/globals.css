@@ -79,6 +79,12 @@ body {
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
 }
 
+.cookiescript-consented #cookiescript_badge {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
 
 @layer utilities {
   .custom-scrollbar::-webkit-scrollbar {
@@ -428,9 +434,15 @@ body {
     }
 }
 
+@keyframes hero-hoop-dash {
+    0% { stroke-dashoffset: 0; }
+    100% { stroke-dashoffset: -64; }
+}
+
 .hero-hoop {
     animation: hero-hoop-spin 2.6s linear infinite;
-    transform-origin: center;
+    transform-box: fill-box;
+    transform-origin: 50% 50%;
     transform-style: preserve-3d;
     will-change: transform;
 }
@@ -438,14 +450,25 @@ body {
 .hero-hoop-ghost {
     animation: hero-hoop-spin 2.6s linear infinite;
     animation-delay: -1.3s;
-    transform-origin: center;
+    transform-box: fill-box;
+    transform-origin: 50% 50%;
     transform-style: preserve-3d;
     will-change: transform;
+}
+
+.hero-hoop-ghost circle {
+    stroke-dasharray: 44 12;
+    stroke-linecap: round;
+    animation: hero-hoop-dash 1.7s linear infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
     .hero-hoop,
     .hero-hoop-ghost {
+        animation: none;
+    }
+
+    .hero-hoop-ghost circle {
         animation: none;
     }
 }
