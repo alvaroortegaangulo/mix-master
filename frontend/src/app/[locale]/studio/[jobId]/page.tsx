@@ -135,28 +135,35 @@ const createImpulseResponse = (ctx: AudioContext, durationSec = 2.0, decay = 2.0
 const createAmbienceImpulseResponse = (ctx: AudioContext) =>
   createImpulseResponse(ctx, 0.8, 3.0);
 
+const saturationCurveCache = new Map<number, Float32Array>();
+
 // FIX #5: DSP Consistency - Saturación Tanh Estandarizada
 // Coincide exactamente con np.tanh(k * x) del backend
 const buildSaturationCurve = (drive: number) => {
   const amount = clamp(drive, 0, 100);
+
+  const cachedCurve = saturationCurveCache.get(amount);
+  if (cachedCurve) return cachedCurve;
+
   const n_samples = 4096;
   const curve = new Float32Array(n_samples);
-  
+
   if (amount <= 0) {
-     // Lineal (bypass)
-     for (let i = 0; i < n_samples; i++) {
-        curve[i] = (i / (n_samples - 1)) * 2 - 1;
-     }
-     return curve;
+    // Lineal (bypass)
+    for (let i = 0; i < n_samples; i++) {
+      curve[i] = (i / (n_samples - 1)) * 2 - 1;
+    }
+  } else {
+    // Mapeo de 0-100 a factor de ganancia k (1 a 8)
+    const k = 1 + (amount / 100) * 7;
+
+    for (let i = 0; i < n_samples; i++) {
+      const x = (i * 2) / n_samples - 1;
+      curve[i] = Math.tanh(k * x);
+    }
   }
 
-  // Mapeo de 0-100 a factor de ganancia k (1 a 8)
-  const k = 1 + (amount / 100) * 7; 
-
-  for (let i = 0; i < n_samples; i++) {
-    const x = (i * 2) / n_samples - 1;
-    curve[i] = Math.tanh(k * x);
-  }
+  saturationCurveCache.set(amount, curve);
   return curve;
 };
 
