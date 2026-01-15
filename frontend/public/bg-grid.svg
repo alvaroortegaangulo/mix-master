@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="160" height="160" viewBox="0 0 160 160" preserveAspectRatio="none">
+  <defs>
+    <pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse">
+      <path d="M32 0H0V32" fill="none" stroke="#ffffff1a" stroke-width="1"/>
+      <path d="M0 0H32" fill="none" stroke="#ffffff10" stroke-width="0.5"/>
+    </pattern>
+    <linearGradient id="glow" x1="0" y1="0" x2="160" y2="160">
+      <stop offset="0%" stop-color="#0f172a" />
+      <stop offset="100%" stop-color="#020617" />
+    </linearGradient>
+  </defs>
+  <rect width="160" height="160" fill="url(#glow)"/>
+  <rect width="160" height="160" fill="url(#grid)"/>
+</svg>

@@ -61,6 +61,9 @@ COPY --from=builder /app/package*.json ./
 # Copiamos node_modules ya instalados
 COPY --from=deps /app/node_modules ./node_modules
 
+# Guarantee the cache directory exists before Next tries to write into it
+RUN mkdir -p /app/.next/cache
+
 # Permisos correctos
 RUN chown -R nextjs:nodejs /app
 

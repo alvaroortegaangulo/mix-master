@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useModal } from "@/context/ModalContext";
@@ -277,6 +277,7 @@ export default function StudioPage() {
   const depthConvolverNodesRef = useRef<Map<string, ConvolverNode>>(new Map());
   const depthWetGainNodesRef = useRef<Map<string, GainNode>>(new Map());
   const depthFilterNodesRef = useRef<Map<string, BiquadFilterNode>>(new Map());
+  const playbackUrlMap = useRef<Map<string, string>>(new Map());
   
   const startTimeRef = useRef<number>(0);
   const pauseTimeRef = useRef<number>(0);
@@ -295,6 +296,36 @@ export default function StudioPage() {
       audioElsRef.current.forEach((el) => {
           try { el.pause(); } catch (e) { /* noop */ }
       });
+  };
+
+  const revokePlaybackUrl = (fileName: string) => {
+      const existing = playbackUrlMap.current.get(fileName);
+      if (existing) {
+          URL.revokeObjectURL(existing);
+          playbackUrlMap.current.delete(fileName);
+      }
+  };
+
+  const clearPlaybackUrls = useCallback(() => {
+      playbackUrlMap.current.forEach((url) => URL.revokeObjectURL(url));
+      playbackUrlMap.current.clear();
+  }, []);
+
+  const createLocalPlaybackUrl = async (remoteUrl: string, fileName: string): Promise<string> => {
+      try {
+          const resp = await fetch(remoteUrl, { cache: "no-store" });
+          if (!resp.ok) {
+              throw new Error(`Playback fetch failed (${resp.status})`);
+          }
+          const blob = await resp.blob();
+          const objectUrl = URL.createObjectURL(blob);
+          revokePlaybackUrl(fileName);
+          playbackUrlMap.current.set(fileName, objectUrl);
+          return objectUrl;
+      } catch (err) {
+          console.warn("Studio: fallback to remote stem URL for playback", fileName, err);
+          return remoteUrl;
+      }
   };
 
   const waitForMediaReady = (el: HTMLAudioElement, timeoutMs = 5000) => {
@@ -655,8 +686,9 @@ export default function StudioPage() {
       transientWorkletReadyRef.current = null;
       enableWebAudioRef.current = null;
       audioEngineModeRef.current = "direct";
+      clearPlaybackUrls();
     };
-  }, []);
+  }, [clearPlaybackUrls]);
 
   // Update Master Volume
   useEffect(() => {
@@ -738,6 +770,7 @@ export default function StudioPage() {
             try { el.src = ""; el.load(); } catch (_) { /* noop */ }
         });
         audioElsRef.current.clear();
+        clearPlaybackUrls();
         mediaNodesRef.current.clear();
         gainNodesRef.current.clear();
         pannerNodesRef.current.clear();
@@ -966,12 +999,22 @@ export default function StudioPage() {
                 const updateUrl = async (index: number) => {
                     const path = candidates[index] || stem.fileName;
                     const newUrl = await signFileUrl(jobId, path, tokenValue || undefined);
-                    audio!.src = newUrl;
+                    const playbackSrc = newUrl ? await createLocalPlaybackUrl(newUrl, stem.fileName) : "";
+                    audio!.src = playbackSrc || "";
                     audio!.load();
-                    setStems(prev => prev.map(s => s.fileName === stem.fileName ? { ...s, url: newUrl } : s));
+                    if (newUrl) {
+                        setStems(prev => prev.map(s => s.fileName === stem.fileName ? { ...s, url: newUrl } : s));
+                    }
                 };
 
-                audio.src = stem.url || "";
+                let playbackSrc = stem.url || "";
+                if (stem.url) {
+                    playbackSrc = await createLocalPlaybackUrl(stem.url, stem.fileName);
+                }
+                if (!playbackSrc && stem.previewUrl) {
+                    playbackSrc = stem.previewUrl;
+                }
+                audio.src = playbackSrc || "";
                 audio.load();
 
                 audio.addEventListener("loadedmetadata", () => {
@@ -1035,7 +1078,7 @@ export default function StudioPage() {
 
     load();
     return () => { cancelled = true; };
-  }, [jobId]);
+  }, [jobId, clearPlaybackUrls]);
 
   const togglePlay = async () => {
       if (stems.length === 0) return;
