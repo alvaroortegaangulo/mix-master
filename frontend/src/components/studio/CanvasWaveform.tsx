@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState, useCallback } from "react";
+import React, { useEffect, useRef, useState, useCallback, MutableRefObject } from "react";
 
 type CanvasWaveformProps = {
   audioBuffer: AudioBuffer | null;
@@ -14,6 +14,7 @@ type CanvasWaveformProps = {
   cursorColor?: string;
   analyser?: AnalyserNode | null;
   isPlaying?: boolean;
+  playbackRef?: MutableRefObject<number>;
 };
 
 export const CanvasWaveform: React.FC<CanvasWaveformProps> = ({
@@ -28,11 +29,15 @@ export const CanvasWaveform: React.FC<CanvasWaveformProps> = ({
   cursorColor = "#fbbf24",
   analyser = null,
   isPlaying = false,
+  playbackRef,
 }) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const requestRef = useRef<number | null>(null);
-  const [peaks, setPeaks] = useState<number[]>([]);
+  const [internalPeaks, setInternalPeaks] = useState<number[]>([]);
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
+
+  // Use props peaks if available, otherwise internal
+  const peaks = (peaksData && peaksData.length > 0) ? peaksData : internalPeaks;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -55,12 +60,13 @@ export const CanvasWaveform: React.FC<CanvasWaveformProps> = ({
   // Calculate peaks when audioBuffer changes (unless provided)
   useEffect(() => {
     if (peaksData && peaksData.length > 0) {
-      setPeaks(peaksData);
+      // If props provide peaks, we don't calculate internal ones.
+      // And we don't set state to avoid loop.
       return;
     }
 
     if (!audioBuffer) {
-      setPeaks([]);
+      setInternalPeaks([]);
       return;
     }
 
@@ -73,7 +79,7 @@ export const CanvasWaveform: React.FC<CanvasWaveformProps> = ({
 
     if (samplesPerBar < 1) {
         // Audio is too short or weird
-        setPeaks([]);
+        setInternalPeaks([]);
         return;
     }
 
@@ -95,7 +101,7 @@ export const CanvasWaveform: React.FC<CanvasWaveformProps> = ({
       newPeaks.push(rms);
     }
 
-    setPeaks(newPeaks);
+    setInternalPeaks(newPeaks);
   }, [audioBuffer, peaksData]);
 
   const setupCanvas = useCallback((ctx: CanvasRenderingContext2D, width: number, height: number) => {
@@ -113,7 +119,7 @@ export const CanvasWaveform: React.FC<CanvasWaveformProps> = ({
     // Clear handled by caller usually, but setting fillStyle helpful
   }, []);
 
-  const drawStaticWaveform = useCallback(() => {
+  const renderStaticFrame = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -142,7 +148,9 @@ export const CanvasWaveform: React.FC<CanvasWaveformProps> = ({
     const totalBars = peaks.length;
 
     // Normalized progress
-    const progress = duration > 0 ? currentTime / duration : 0;
+    // Use playbackRef only if playing (high frequency updates), otherwise use prop (source of truth when paused/seeking)
+    const time = (isPlaying && playbackRef) ? playbackRef.current : currentTime;
+    const progress = duration > 0 ? time / duration : 0;
     const progressX = width * progress;
 
     // We draw mirrored bars
@@ -178,9 +186,10 @@ export const CanvasWaveform: React.FC<CanvasWaveformProps> = ({
              ctx.fillRect(x, y, barWidth, h);
         }
     }
-  }, [canvasSize, peaks, currentTime, duration, waveColor, progressColor, setupCanvas]);
+  }, [canvasSize, peaks, currentTime, duration, waveColor, progressColor, setupCanvas, playbackRef, isPlaying]);
 
-  const drawSpectrum = useCallback(() => {
+
+  const renderSpectrumFrame = useCallback(() => {
     if (!analyser || !canvasRef.current) return;
 
     const canvas = canvasRef.current;
@@ -220,7 +229,8 @@ export const CanvasWaveform: React.FC<CanvasWaveformProps> = ({
     const binsPerBar = Math.floor(usableBins / maxBars) || 1;
 
     // Progress based coloring: Amber vs White
-    const progress = duration > 0 ? currentTime / duration : 0;
+    const time = (isPlaying && playbackRef) ? playbackRef.current : currentTime;
+    const progress = duration > 0 ? time / duration : 0;
 
     // Unplayed color: White (as requested)
     const unplayedColor = "#ffffff";
@@ -256,36 +266,54 @@ export const CanvasWaveform: React.FC<CanvasWaveformProps> = ({
         ctx.fillStyle = isPlayed ? playedReflection : unplayedReflection;
         ctx.fillRect(x, midY + 1, barWidth, barHeightBottom);
     }
+  }, [analyser, canvasSize, currentTime, duration, progressColor, setupCanvas, playbackRef, isPlaying]);
 
-    requestRef.current = requestAnimationFrame(drawSpectrum);
-  }, [analyser, canvasSize, currentTime, duration, progressColor, setupCanvas]);
 
   // Main Effect Loop
   useEffect(() => {
-    if (isPlaying && analyser) {
-      drawSpectrum();
+    // Helper to stop loop
+    const stopLoop = () => {
+        if (requestRef.current) {
+            cancelAnimationFrame(requestRef.current);
+            requestRef.current = null;
+        }
+    };
+
+    if (isPlaying) {
+        if (analyser) {
+            // Spectrum Loop
+            const loopSpectrum = () => {
+                renderSpectrumFrame();
+                requestRef.current = requestAnimationFrame(loopSpectrum);
+            };
+            stopLoop();
+            loopSpectrum();
+        } else {
+            // Static Progress Loop
+            const loopStatic = () => {
+                renderStaticFrame();
+                requestRef.current = requestAnimationFrame(loopStatic);
+            };
+            stopLoop();
+            loopStatic();
+        }
     } else {
-      if (requestRef.current) {
-        cancelAnimationFrame(requestRef.current);
-        requestRef.current = null;
-      }
-      drawStaticWaveform();
+        stopLoop();
+        renderStaticFrame();
     }
 
     return () => {
-      if (requestRef.current) {
-        cancelAnimationFrame(requestRef.current);
-        requestRef.current = null;
-      }
+        stopLoop();
     };
-  }, [isPlaying, analyser, drawSpectrum, drawStaticWaveform]);
+  }, [isPlaying, analyser, renderSpectrumFrame, renderStaticFrame]);
 
   // Redraw static when params change and not playing
+  // Note: if isPlaying is true, the loop above handles updates.
   useEffect(() => {
       if (!isPlaying) {
-          drawStaticWaveform();
+          renderStaticFrame();
       }
-  }, [peaks, currentTime, canvasSize, isPlaying, drawStaticWaveform]);
+  }, [peaks, currentTime, canvasSize, isPlaying, renderStaticFrame]);
 
 
   const handleClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
