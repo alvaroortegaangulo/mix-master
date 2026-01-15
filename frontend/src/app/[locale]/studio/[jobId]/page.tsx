@@ -1065,7 +1065,7 @@ export default function StudioPage() {
       });
 
       applyDirectMixToMediaElements(stemsRef.current);
-      requestEnableWebAudio();
+      await requestEnableWebAudio();
 
       const playResults = await Promise.all(
           activeAudios.map((a) => a.play().then(() => true).catch(() => false))
@@ -1107,7 +1107,7 @@ export default function StudioPage() {
           setIsPlaying(false);
           setTimeout(async () => {
               applyDirectMixToMediaElements(stemsRef.current);
-              requestEnableWebAudio();
+              await requestEnableWebAudio();
               try {
                   const playResults = await Promise.all(
                       activeAudios.map((a) => a.play().then(() => true).catch(() => false))
