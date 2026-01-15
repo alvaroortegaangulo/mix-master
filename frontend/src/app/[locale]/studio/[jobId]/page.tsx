@@ -158,7 +158,7 @@ const buildSaturationCurve = (drive: number) => {
     const k = 1 + (amount / 100) * 7;
 
     for (let i = 0; i < n_samples; i++) {
-      const x = (i * 2) / n_samples - 1;
+      const x = (i / (n_samples - 1)) * 2 - 1;
       curve[i] = Math.tanh(k * x);
     }
   }
