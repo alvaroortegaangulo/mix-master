@@ -73,11 +73,24 @@ const normalizeStemSpeed = (value: number) => {
 // FIX #3: Utilidad para imitar la normalización del backend (snake_case)
 const normalizeFileName = (fileName: string): string => {
   if (!fileName) return "";
-  const namePart = fileName.replace(/\.wav$/i, "").replace(/\.mp3$/i, "").replace(/\.aiff?$/i, "");
+
+  let namePart = fileName
+    .replace(/\.wav$/i, "")
+    .replace(/\.mp3$/i, "")
+    .replace(/\.aiff?$/i, "");
+
+  // Handle CamelCase: Insert underscore before capital letters that follow lowercase letters
+  namePart = namePart.replace(/([a-z])([A-Z])/g, "$1_$2");
+
+  // Normalize accents (NFD decomposition and remove diacritics)
+  namePart = namePart.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
   // Reemplazar caracteres no alfanuméricos por guion bajo y pasar a minúsculas
   let cleaned = namePart.replace(/[^a-zA-Z0-9]/g, "_").toLowerCase();
+
   // Eliminar guiones bajos duplicados
   cleaned = cleaned.replace(/_+/g, "_").replace(/^_|_$/g, "");
+
   return cleaned + ".wav"; 
 };
 
