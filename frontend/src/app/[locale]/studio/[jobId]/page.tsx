@@ -102,27 +102,32 @@ const formatDb = (gain: number) => {
   return clamp(db, -60, 0).toFixed(1);
 };
 
-// FIX #5: DSP Consistency - Reverb con Damping (LPF)
+// DSP Consistency - Reverb con Damping (LPF)
 // Genera una respuesta al impulso que suena más natural y similar al algoritmo de Python
 const createImpulseResponse = (ctx: AudioContext, durationSec = 2.0, decay = 2.0) => {
   const sampleRate = ctx.sampleRate;
   const length = Math.max(1, Math.floor(sampleRate * durationSec));
   const impulse = ctx.createBuffer(2, length, sampleRate);
 
+  // Coefficients for the simple LowPass filter (damping)
+  // 0.6 provides a good balance for simulating high-frequency absorption
+  const alpha = 0.6;
+  const beta = 1.0 - alpha; // 0.4
+
   for (let channel = 0; channel < impulse.numberOfChannels; channel++) {
     const data = impulse.getChannelData(channel);
     let lastOut = 0;
     for (let i = 0; i < length; i++) {
-      // Ruido blanco
+      // White noise generation
       const noise = (Math.random() * 2 - 1);
       
-      // Envelope exponencial
+      // Exponential envelope for reverb tail
       const envelope = Math.pow(1 - i / length, decay);
       
-      // Aplicar LowPass filter simple para damping (simula absorción de agudos)
-      // Coeficiente 0.6 para suavizar
+      // Apply LowPass filter for damping
+      // y[n] = x[n] * beta + y[n-1] * alpha
       const input = noise * envelope;
-      const current = input * 0.4 + lastOut * 0.6;
+      const current = input * beta + lastOut * alpha;
       lastOut = current;
       
       data[i] = current;
