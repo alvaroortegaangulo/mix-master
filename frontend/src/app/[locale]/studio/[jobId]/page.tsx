@@ -293,6 +293,12 @@ export default function StudioPage() {
   const audioEngineModeRef = useRef<"direct" | "webaudio">("direct");
   const enableWebAudioRef = useRef<Promise<void> | null>(null);
 
+  // Refs para optimización de renderizado (evitar setState en loop)
+  const playbackTimeRef = useRef(0);
+  const timeDisplayRef = useRef<HTMLDivElement>(null);
+  const progressBarRef = useRef<HTMLDivElement>(null);
+  const scrubberHandleRef = useRef<HTMLDivElement>(null);
+
   // Sincronización de Refs
   useEffect(() => { stemsRef.current = stems; }, [stems]);
   useEffect(() => { masterVolumeRef.current = masterVolume; }, [masterVolume]);
@@ -1058,6 +1064,8 @@ export default function StudioPage() {
       if (isPlaying) {
           activeAudios.forEach((a) => a.pause());
           pauseTimeRef.current = master.currentTime;
+          // Sincronizar estado React al pausar
+          setCurrentTime(master.currentTime);
           setIsPlaying(false);
           return;
       }
@@ -1067,6 +1075,9 @@ export default function StudioPage() {
       }
 
       const offset = pauseTimeRef.current;
+      // Actualizar ref inmediatamente para que UI responda
+      playbackTimeRef.current = offset;
+
       activeAudios.forEach((a) => {
           try { a.currentTime = offset; } catch (_) { /* noop */ }
       });
@@ -1109,6 +1120,8 @@ export default function StudioPage() {
 
       pauseTimeRef.current = t;
       setCurrentTime(t);
+      // Sync ref for CanvasWaveform visibility
+      playbackTimeRef.current = t;
 
       if (wasPlaying) {
           setIsPlaying(false);
@@ -1136,11 +1149,34 @@ export default function StudioPage() {
       let raf: number;
       const update = () => {
           if (isPlaying) {
-              const master = stems
+              // Use stemsRef to avoid stale closure
+              const master = stemsRef.current
                 .map((s) => audioElsRef.current.get(s.fileName))
                 .find((a) => !!a) as HTMLAudioElement | undefined;
+
               if (master) {
-                  setCurrentTime(master.currentTime || 0);
+                  const t = master.currentTime || 0;
+                  // Use actual duration from element or state, preferring element to avoid stale state in closure
+                  const d = (isFinite(master.duration) && master.duration > 0) ? master.duration : duration;
+
+                  // Actualizar Refs en lugar de Estado React
+                  playbackTimeRef.current = t;
+
+                  // Actualizar DOM directamente
+                  if (timeDisplayRef.current) {
+                      timeDisplayRef.current.textContent = `${formatTime(t)} / ${formatTime(d)}`;
+                  }
+
+                  if (d > 0) {
+                      const pct = (t / d) * 100;
+                      if (progressBarRef.current) {
+                          progressBarRef.current.style.width = `${pct}%`;
+                      }
+                      if (scrubberHandleRef.current) {
+                          scrubberHandleRef.current.style.left = `${pct}%`;
+                      }
+                  }
+
                   if (isFinite(master.duration) && master.duration > 0) {
                       setDuration((prev) => Math.max(prev, master.duration));
                   }
@@ -1411,11 +1447,14 @@ export default function StudioPage() {
 
                      <div className="flex flex-col items-center gap-2">
                         {/* Time Display added to controls */}
-                        <div className="text-[10px] font-mono text-teal-500 mb-1">
+                        <div
+                            ref={timeDisplayRef}
+                            className="text-[10px] font-mono text-teal-500 mb-1"
+                        >
                              {formatTime(currentTime)} / {formatTime(duration)}
                         </div>
                          <div className="flex items-center gap-4">
-                            <button onClick={() => { setIsPlaying(false); stopAllSources(); setCurrentTime(0); pauseTimeRef.current = 0; }} className="text-slate-500 hover:text-white transition-colors"><StopIcon className="w-4 h-4" /></button>
+                            <button onClick={() => { setIsPlaying(false); stopAllSources(); setCurrentTime(0); pauseTimeRef.current = 0; playbackTimeRef.current = 0; }} className="text-slate-500 hover:text-white transition-colors"><StopIcon className="w-4 h-4" /></button>
                             <button
                                 onClick={togglePlay}
                                 className="w-10 h-10 rounded-full bg-white text-black flex items-center justify-center hover:scale-105 transition-transform shadow-[0_0_15px_rgba(255,255,255,0.2)]"
@@ -1446,12 +1485,14 @@ export default function StudioPage() {
 
                      {/* Progress Fill */}
                      <div
+                         ref={progressBarRef}
                          className="absolute top-0 left-0 bottom-0 bg-white group-hover:bg-teal-400 transition-colors"
                          style={{ width: `${duration ? (currentTime / duration) * 100 : 0}%` }}
                      ></div>
 
                      {/* Scrubber Handle (Circle) */}
                      <div
+                         ref={scrubberHandleRef}
                          className="absolute top-1/2 -translate-y-1/2 w-3 h-3 bg-white rounded-full shadow-lg opacity-100 group-hover:scale-125 transition-transform"
                           style={{ left: `${duration ? (currentTime / duration) * 100 : 0}%`, marginLeft: '-6px' }}
                      ></div>
@@ -1476,6 +1517,7 @@ export default function StudioPage() {
                     onSeek={seek}
                     analyser={masterAnalyserNodeRef.current}
                     isPlaying={isPlaying}
+                    playbackRef={playbackTimeRef}
                  />
                  </div>
 
