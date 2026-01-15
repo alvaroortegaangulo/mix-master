@@ -528,7 +528,7 @@ export default function StudioPage() {
 
       if (ctx.audioWorklet && transientWorkletReadyRef.current) {
         try {
-          // FIX #2: Race Condition Fix
+          // FIX #2: Race Condition Fix (Implemented)
           // Timeout de 1.5s para evitar bloqueo si el script falla o es lento
           const timeoutPromise = new Promise((_, reject) =>
             setTimeout(() => reject(new Error("Transient worklet load timeout")), 1500)
