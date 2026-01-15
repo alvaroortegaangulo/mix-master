@@ -381,7 +381,7 @@ export default function StudioPage() {
     }
   };
 
-  // FIX #4: Lógica de Mezcla Directa (HTML Audio) vs Web Audio
+  // Logic for Direct Mix (HTML Audio) vs Web Audio
   const applyDirectMixToMediaElements = (stemList: StemControl[]) => {
     const anySolo = stemList.some((s) => s.solo);
 
@@ -389,21 +389,22 @@ export default function StudioPage() {
       const audio = audioElsRef.current.get(stem.fileName);
       if (!audio) return;
       
-      // Si el stem está gestionado por Web Audio, forzamos que el elemento HTML esté "abierto".
-      // Esto evita que un mute anterior bloquee la señal que entra al grafo.
+      // If the stem is managed by Web Audio, force the HTML element to be "open".
+      // This prevents a previous mute from blocking the signal entering the graph.
       if (mediaNodesRef.current.has(stem.fileName)) {
           if (audio.muted) audio.muted = false;
           if (audio.volume !== 1) audio.volume = 1;
           return;
       }
 
-      // Lógica para modo Directo (sin Web Audio aún)
+      // Logic for Direct Mode (without Web Audio yet)
       let shouldMute = stem.mute;
       if (anySolo) shouldMute = !stem.solo;
 
       const stemGain = Math.pow(10, stem.volume / 20);
       const combined = shouldMute ? 0 : clamp(stemGain * masterVolumeRef.current, 0, 1);
 
+      // Apply calculated state to the audio element
       audio.muted = false;
       audio.volume = combined;
     });
