@@ -911,28 +911,35 @@ export default function StudioPage() {
 
             uniqueVariants.forEach(v => candidates.push(v));
 
-            const primaryPath = candidates[0] || stem.fileName;
             let resolvedUrl = "";
-            if (tokenValue) {
+
+            // FIX #3: Búsqueda exhaustiva (probando candidatos)
+            for (const path of candidates) {
                 try {
-                    resolvedUrl = await signFileUrl(jobId, primaryPath, tokenValue);
+                    // Si hay token, signFileUrl es síncrono (solo construye URL).
+                    // Si no hay token, hace request a /sign (que podría validar existencia).
+                    const url = await signFileUrl(jobId, path, tokenValue || undefined);
+
+                    // Verificación de existencia (HEAD)
+                    // Necesario porque con token no sabemos si el archivo existe
+                    const res = await fetch(url, { method: "HEAD", cache: "no-store" });
+                    if (res.ok) {
+                        resolvedUrl = url;
+                        break;
+                    }
                 } catch (e) {
-                    resolvedUrl = "";
+                    // 404 o error de firma, probar siguiente
                 }
             }
+
             if (!resolvedUrl) {
                 const rawUrl = stem.signedUrl || stem.url || "";
                 if (rawUrl) {
                     resolvedUrl = normalizeSignedUrl(rawUrl);
                 }
             }
-            if (!resolvedUrl) {
-                try {
-                    resolvedUrl = await signFileUrl(jobId, primaryPath);
-                } catch (e) {
-                    resolvedUrl = "";
-                }
-            }
+
+            // Fallback final
             if (!resolvedUrl && stem.previewUrl) {
                 resolvedUrl = normalizeSignedUrl(stem.previewUrl);
             }
