@@ -986,7 +986,7 @@ export default function StudioPage() {
             if (!audio) {
                 audio = new Audio();
                 audio.preload = "auto";
-                // FIX #1: CORS
+                // FIX #1: CORS - Allow cross-origin playback
                 audio.crossOrigin = "anonymous";
                 audio.muted = false;
                 audio.playbackRate = safeStemSpeed;
