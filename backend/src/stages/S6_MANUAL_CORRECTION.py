@@ -20,7 +20,7 @@ from utils.logger import logger as pipeline_logger
 
 # Try importing pedalboard for DSP
 try:
-    from pedalboard import Pedalboard, Reverb, Gain
+    from pedalboard import Pedalboard, Reverb, Gain, Distortion
     HAS_PEDALBOARD = True
 except ImportError:  # pragma: no cover
     HAS_PEDALBOARD = False
@@ -309,6 +309,16 @@ def process(context: PipelineContext, *args) -> bool:
         # --- Pedalboard chain (preferred) ---
         if HAS_PEDALBOARD:
             board = Pedalboard()
+
+            # Saturation / Distortion
+            sat_cfg = corr.get("saturation")
+            if isinstance(sat_cfg, dict) and _as_bool(sat_cfg.get("enabled", False)):
+                amt_raw = _as_float(sat_cfg.get("amount", 0.0))
+                # Map 0-100 to 0-30 dB drive
+                drive_db = (amt_raw / 100.0) * 30.0
+                drive_db = _clamp(drive_db, 0.0, 60.0) # Safety clamp
+                if drive_db > 0:
+                    board.append(Distortion(drive_db=drive_db))
 
             # Reverb
             verb_cfg = corr.get("reverb")

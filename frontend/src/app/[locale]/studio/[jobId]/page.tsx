@@ -35,6 +35,10 @@ interface StemControl {
     amount: number;
     enabled: boolean;
   };
+  saturation: {
+    amount: number;
+    enabled: boolean;
+  };
   signedUrl?: string;
   previewUrl?: string | null;
   peaks?: number[];
@@ -43,6 +47,39 @@ interface StemControl {
 }
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
+
+// Cache saturation curves to avoid re-calculation
+const saturationCurves = new Map<number, Float32Array>();
+
+const buildSaturationCurve = (amount: number) => {
+  // Map 0-100 amount to drive
+  // amount=0 => drive=0 (linear)
+  // amount=100 => drive=much higher
+  // k is the "drive" factor.
+  // Standard sigmoid distortion: y = (2 / (1 + e^(-k*x))) - 1
+  // Or Tanh: y = tanh(k * x)
+
+  // Let's use a normalized tanh approach that feels "analog"
+  // k=1 is linear-ish for small x.
+  // We map amount 0-100 to k=1..10
+
+  if (saturationCurves.has(amount)) return saturationCurves.get(amount)!;
+
+  const k = 1 + (amount / 100) * 20;
+  const n_samples = 8192;
+  const curve = new Float32Array(n_samples);
+
+  for (let i = 0; i < n_samples; ++i) {
+    const x = (i / (n_samples - 1)) * 2 - 1;
+    // Simple soft clipping with tanh
+    // To maintain unity gain at low levels, we divide by tanh(k)? No, that boosts noise.
+    // We just want character.
+    curve[i] = Math.tanh(k * x);
+  }
+
+  saturationCurves.set(amount, curve);
+  return curve;
+};
 
 const createImpulseResponse = (ctx: AudioContext, durationSec = 1.8, decay = 2.2) => {
   const sampleRate = ctx.sampleRate;
@@ -110,6 +147,7 @@ export default function StudioPage() {
   const reverbNodesRef = useRef<Map<string, ConvolverNode>>(new Map());
   const reverbWetGainNodesRef = useRef<Map<string, GainNode>>(new Map());
   const reverbDryGainNodesRef = useRef<Map<string, GainNode>>(new Map());
+  const saturationNodesRef = useRef<Map<string, WaveShaperNode>>(new Map());
   const startTimeRef = useRef<number>(0);
   const pauseTimeRef = useRef<number>(0);
 
@@ -273,6 +311,7 @@ export default function StudioPage() {
         reverbNodesRef.current.clear();
         reverbWetGainNodesRef.current.clear();
         reverbDryGainNodesRef.current.clear();
+        saturationNodesRef.current.clear();
         pauseTimeRef.current = 0;
         setIsPlaying(false);
         setCurrentTime(0);
@@ -334,6 +373,7 @@ export default function StudioPage() {
             mute: false,
             solo: false,
             reverb: { amount: 0, enabled: false },
+            saturation: { amount: 0, enabled: false },
             signedUrl,
             previewUrl,
             peaks,
@@ -351,6 +391,7 @@ export default function StudioPage() {
             mute: false,
             solo: false,
             reverb: { amount: 0, enabled: false },
+            saturation: { amount: 0, enabled: false },
             signedUrl: undefined,
             previewUrl: null,
             peaks: undefined,
@@ -442,6 +483,16 @@ export default function StudioPage() {
                 // Wait for master node to be ready (useEffect runs first but safe check)
                 if (ctx && masterGainNodeRef.current && !mediaNodesRef.current.has(stem.fileName)) {
                     const mediaNode = ctx.createMediaElementSource(audio);
+                    // Insert Saturation before volume
+                    const saturationNode = ctx.createWaveShaper();
+                    if (stem.saturation.enabled) {
+                        saturationNode.curve = buildSaturationCurve(stem.saturation.amount);
+                        saturationNode.oversample = '4x';
+                    } else {
+                        saturationNode.curve = null; // Linear / Bypass
+                        saturationNode.oversample = 'none';
+                    }
+
                     const gain = ctx.createGain();
                     const panner = ctx.createStereoPanner();
                     const dryGain = ctx.createGain();
@@ -464,7 +515,9 @@ export default function StudioPage() {
                     gain.gain.value = stem.mute ? 0 : vol;
                     panner.pan.value = stem.pan.enabled ? stem.pan.value : 0;
 
-                    mediaNode.connect(gain);
+                    // Graph: Media -> Saturation -> Gain (Volume) -> Panner -> (Dry + Reverb) -> Master
+                    mediaNode.connect(saturationNode);
+                    saturationNode.connect(gain);
                     gain.connect(panner);
                     panner.connect(dryGain);
                     dryGain.connect(masterGainNodeRef.current);
@@ -473,6 +526,7 @@ export default function StudioPage() {
                     wetGain.connect(masterGainNodeRef.current);
 
                     mediaNodesRef.current.set(stem.fileName, mediaNode);
+                    saturationNodesRef.current.set(stem.fileName, saturationNode);
                     gainNodesRef.current.set(stem.fileName, gain);
                     pannerNodesRef.current.set(stem.fileName, panner);
                     reverbNodesRef.current.set(stem.fileName, convolver);
@@ -672,6 +726,17 @@ export default function StudioPage() {
           const pannerNode = pannerNodesRef.current.get(stem.fileName);
           const wetGainNode = reverbWetGainNodesRef.current.get(stem.fileName);
           const dryGainNode = reverbDryGainNodesRef.current.get(stem.fileName);
+          const saturationNode = saturationNodesRef.current.get(stem.fileName);
+
+          if (saturationNode) {
+             if (stem.saturation.enabled) {
+                 saturationNode.curve = buildSaturationCurve(stem.saturation.amount);
+                 saturationNode.oversample = '4x';
+             } else {
+                 saturationNode.curve = null;
+                 saturationNode.oversample = 'none';
+             }
+          }
 
           if (gainNode) {
               let shouldMute = stem.mute;
@@ -700,6 +765,7 @@ export default function StudioPage() {
               volume_db: s.volume,
               pan: s.pan.enabled ? s.pan.value : 0,
               reverb: s.reverb.enabled ? s.reverb : undefined,
+              saturation: s.saturation.enabled ? s.saturation : undefined,
               speed: stemSpeed,
               mute: s.mute,
               solo: s.solo
@@ -1089,6 +1155,23 @@ export default function StudioPage() {
                                 <Knob label="AMOUNT" value={selectedStem.reverb.amount} min={0} max={100} onChange={(v) => updateStem(selectedStemIndex, { reverb: {...selectedStem.reverb, amount: v}})} />
                             </div>
                         </div>
+                    </div>
+
+                    {/* Saturation Row */}
+                    <div className="bg-[#1e2336] rounded-xl p-3 border border-white/5 shadow-lg min-w-0 mt-2">
+                         <div className="flex justify-between items-center mb-2">
+                             <div className="flex items-center gap-2 overflow-hidden">
+                                 <Toggle
+                                     checked={selectedStem.saturation.enabled}
+                                     onChange={(v) => updateStem(selectedStemIndex, { saturation: {...selectedStem.saturation, enabled: v}})}
+                                     colorClass="bg-orange-500"
+                                 />
+                                 <span className={`text-xs font-bold truncate ${selectedStem.saturation.enabled ? 'text-orange-400' : 'text-slate-500'}`}>COLOR / SAT</span>
+                             </div>
+                         </div>
+                         <div className={`flex justify-center transition-opacity ${selectedStem.saturation.enabled ? 'opacity-100' : 'opacity-40 pointer-events-none'}`}>
+                             <Knob label="DRIVE" value={selectedStem.saturation.amount} min={0} max={100} onChange={(v) => updateStem(selectedStemIndex, { saturation: {...selectedStem.saturation, amount: v}})} />
+                         </div>
                     </div>
 
                   </>
