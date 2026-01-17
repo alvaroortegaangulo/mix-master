@@ -319,6 +319,8 @@ def process(context: PipelineContext, *args) -> bool:
                 drive_db = _clamp(drive_db, 0.0, 60.0) # Safety clamp
                 if drive_db > 0:
                     board.append(Distortion(drive_db=drive_db))
+                    # Automatic Gain Compensation: reduce volume by the same amount we drove it
+                    board.append(Gain(gain_db=-drive_db))
 
             # Reverb
             verb_cfg = corr.get("reverb")
