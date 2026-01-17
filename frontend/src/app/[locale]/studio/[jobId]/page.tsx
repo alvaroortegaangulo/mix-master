@@ -148,6 +148,7 @@ export default function StudioPage() {
   const reverbWetGainNodesRef = useRef<Map<string, GainNode>>(new Map());
   const reverbDryGainNodesRef = useRef<Map<string, GainNode>>(new Map());
   const saturationNodesRef = useRef<Map<string, WaveShaperNode>>(new Map());
+  const saturationCompensationNodesRef = useRef<Map<string, GainNode>>(new Map());
   const startTimeRef = useRef<number>(0);
   const pauseTimeRef = useRef<number>(0);
 
@@ -312,6 +313,7 @@ export default function StudioPage() {
         reverbWetGainNodesRef.current.clear();
         reverbDryGainNodesRef.current.clear();
         saturationNodesRef.current.clear();
+        saturationCompensationNodesRef.current.clear();
         pauseTimeRef.current = 0;
         setIsPlaying(false);
         setCurrentTime(0);
@@ -485,12 +487,17 @@ export default function StudioPage() {
                     const mediaNode = ctx.createMediaElementSource(audio);
                     // Insert Saturation before volume
                     const saturationNode = ctx.createWaveShaper();
+                    const satCompNode = ctx.createGain(); // Auto Gain Compensation
+
                     if (stem.saturation.enabled) {
                         saturationNode.curve = buildSaturationCurve(stem.saturation.amount);
                         saturationNode.oversample = '4x';
+                        const k = 1 + (stem.saturation.amount / 100) * 20;
+                        satCompNode.gain.value = 1 / k;
                     } else {
                         saturationNode.curve = null; // Linear / Bypass
                         saturationNode.oversample = 'none';
+                        satCompNode.gain.value = 1.0;
                     }
 
                     const gain = ctx.createGain();
@@ -515,9 +522,10 @@ export default function StudioPage() {
                     gain.gain.value = stem.mute ? 0 : vol;
                     panner.pan.value = stem.pan.enabled ? stem.pan.value : 0;
 
-                    // Graph: Media -> Saturation -> Gain (Volume) -> Panner -> (Dry + Reverb) -> Master
+                    // Graph: Media -> Saturation -> SatComp -> Gain (Volume) -> Panner -> (Dry + Reverb) -> Master
                     mediaNode.connect(saturationNode);
-                    saturationNode.connect(gain);
+                    saturationNode.connect(satCompNode);
+                    satCompNode.connect(gain);
                     gain.connect(panner);
                     panner.connect(dryGain);
                     dryGain.connect(masterGainNodeRef.current);
@@ -527,6 +535,7 @@ export default function StudioPage() {
 
                     mediaNodesRef.current.set(stem.fileName, mediaNode);
                     saturationNodesRef.current.set(stem.fileName, saturationNode);
+                    saturationCompensationNodesRef.current.set(stem.fileName, satCompNode);
                     gainNodesRef.current.set(stem.fileName, gain);
                     pannerNodesRef.current.set(stem.fileName, panner);
                     reverbNodesRef.current.set(stem.fileName, convolver);
@@ -727,14 +736,18 @@ export default function StudioPage() {
           const wetGainNode = reverbWetGainNodesRef.current.get(stem.fileName);
           const dryGainNode = reverbDryGainNodesRef.current.get(stem.fileName);
           const saturationNode = saturationNodesRef.current.get(stem.fileName);
+          const satCompNode = saturationCompensationNodesRef.current.get(stem.fileName);
 
-          if (saturationNode) {
+          if (saturationNode && satCompNode) {
              if (stem.saturation.enabled) {
                  saturationNode.curve = buildSaturationCurve(stem.saturation.amount);
                  saturationNode.oversample = '4x';
+                 const k = 1 + (stem.saturation.amount / 100) * 20;
+                 satCompNode.gain.setTargetAtTime(1 / k, now, 0.05);
              } else {
                  saturationNode.curve = null;
                  saturationNode.oversample = 'none';
+                 satCompNode.gain.setTargetAtTime(1.0, now, 0.05);
              }
           }
 
