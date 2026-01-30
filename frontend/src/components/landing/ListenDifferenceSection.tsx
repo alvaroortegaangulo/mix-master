@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { memo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Link } from "../../i18n/routing";
 import { WaveformPlayer } from "../WaveformPlayer";
@@ -18,7 +18,7 @@ import {
   InformationCircleIcon
 } from "@heroicons/react/24/outline";
 
-export function ListenDifferenceSection({ className }: { className?: string }) {
+function ListenDifferenceSectionComponent({ className }: { className?: string }) {
   const t = useTranslations("ListenDifferenceSection");
   const titlePlain = t("titlePlain");
   const examples = useTranslations("Examples");
@@ -256,3 +256,5 @@ export function ListenDifferenceSection({ className }: { className?: string }) {
     </section>
   );
 }
+
+export const ListenDifferenceSection = memo(ListenDifferenceSectionComponent);

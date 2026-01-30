@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { memo, useState, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { ScrollReveal } from "./ScrollReveal";
 import { AuroraBackground } from "./AuroraBackground";
@@ -78,7 +78,7 @@ const FEATURES = [
   },
 ] as const;
 
-export function FeaturesSection({ className }: { className?: string }) {
+function FeaturesSectionComponent({ className }: { className?: string }) {
   const t = useTranslations("FeaturesSection");
   const [currentIndex, setCurrentIndex] = useState(0);
   const titleText = t("title");
@@ -266,3 +266,5 @@ export function FeaturesSection({ className }: { className?: string }) {
     </section>
   );
 }
+
+export const FeaturesSection = memo(FeaturesSectionComponent);

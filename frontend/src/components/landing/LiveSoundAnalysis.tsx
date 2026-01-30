@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import { SpeakerWaveIcon } from "@heroicons/react/24/outline";
 import { useTranslations } from "next-intl";
 import { ScrollReveal } from "./ScrollReveal";
@@ -13,7 +13,7 @@ type LiveMetrics = {
   dynamicRange: number;
 };
 
-export function LiveSoundAnalysis({ className }: { className?: string }) {
+function LiveSoundAnalysisComponent({ className }: { className?: string }) {
   const t = useTranslations('LiveSoundAnalysis');
   const title = t('title');
   const titlePlain = title.replace(/<[^>]+>/g, "");
@@ -361,3 +361,5 @@ export function LiveSoundAnalysis({ className }: { className?: string }) {
     </section>
   );
 }
+
+export const LiveSoundAnalysis = memo(LiveSoundAnalysisComponent);

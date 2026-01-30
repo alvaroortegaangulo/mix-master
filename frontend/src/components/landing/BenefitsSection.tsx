@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect, useState } from "react";
+import { memo, useRef, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { ScrollReveal } from "./ScrollReveal";
 import { ComplexPipelineBackground } from "./ComplexPipelineBackground";
@@ -109,7 +109,7 @@ type BenefitsSectionProps = {
   className?: string;
 };
 
-export function BenefitsSection({ className }: BenefitsSectionProps) {
+function BenefitsSectionComponent({ className }: BenefitsSectionProps) {
   const t = useTranslations('BenefitsSection');
   const headerTitle = t('headerTitle');
   const headerTitlePlain = headerTitle.replace(/<[^>]+>/g, "");
@@ -425,3 +425,5 @@ export function BenefitsSection({ className }: BenefitsSectionProps) {
     </section>
   );
 }
+
+export const BenefitsSection = memo(BenefitsSectionComponent);

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useLayoutEffect, useMemo, useRef, useState } from 'react';
+import React, { memo, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { ScrollReveal } from "./ScrollReveal";
 import { StarBackground } from "./StarBackground";
@@ -102,7 +102,7 @@ const buildParticles = (seed: number) =>
     };
   });
 
-export function PipelineInteractiveDiagram({ className }: { className?: string }) {
+function PipelineInteractiveDiagramComponent({ className }: { className?: string }) {
   const [activeStep, setActiveStep] = useState(0);
   const [panelHeight, setPanelHeight] = useState<number | null>(null);
   const activePanelRef = useRef<HTMLButtonElement | null>(null);
@@ -384,3 +384,5 @@ export function PipelineInteractiveDiagram({ className }: { className?: string }
     </section>
   );
 }
+
+export const PipelineInteractiveDiagram = memo(PipelineInteractiveDiagramComponent);

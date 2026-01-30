@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import type { PointerEvent } from "react";
 import { useTranslations } from "next-intl";
 import { ScrollReveal } from "./ScrollReveal";
 
-export function TechSpecsSection({ className }: { className?: string }) {
+function TechSpecsSectionComponent({ className }: { className?: string }) {
     const t = useTranslations('TechSpecsSection');
     const title = t('title');
     
@@ -275,3 +275,5 @@ export function TechSpecsSection({ className }: { className?: string }) {
       </section>
     );
 }
+
+export const TechSpecsSection = memo(TechSpecsSectionComponent);

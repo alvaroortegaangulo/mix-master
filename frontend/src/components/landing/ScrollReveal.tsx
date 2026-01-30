@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { memo } from "react";
 import { motion, useReducedMotion, type Variants } from "framer-motion";
 
 type RevealDirection = "up" | "down" | "left" | "right";
@@ -26,61 +27,71 @@ type ScrollRevealProps = {
   direction?: RevealDirection;
   /** Blur opcional para efecto moderno */
   blur?: boolean;
+  /** Disable animation completely for performance */
+  disabled?: boolean;
 };
 
-export function ScrollReveal({
+function ScrollRevealComponent({
   children,
   className = "",
   delay = 0,
-  duration = 0.6,
-  y = 30,
-  x = 30,
+  duration = 0.4, // Reducido de 0.6 a 0.4 para más fluidez
+  y = 20, // Reducido de 30 a 20 para animación más sutil
+  x = 20, // Reducido de 30 a 20
   once = true,
-  amount = 0.12, // Equivale a tu threshold antiguo
+  amount = 0.05, // Reducido de 0.12 a 0.05 para activar antes
   direction = "up",
-  viewportMargin = "0px 0px 120px 0px",
-  blur = false, // Nuevo: añade un fade con blur si quieres
+  viewportMargin = "0px 0px 200px 0px", // Aumentado para activar más temprano
+  blur = false,
+  disabled = false,
 }: ScrollRevealProps) {
   // Respetar preferencias de accesibilidad del usuario
   const shouldReduceMotion = useReducedMotion();
-  const speedFactor = 0.6;
+
+  // Si está deshabilitado o reduce motion, no animar
+  if (disabled || shouldReduceMotion) {
+    return <div className={className}>{children}</div>;
+  }
+
+  const speedFactor = 0.7; // Aumentado de 0.6 a 0.7 para animaciones más rápidas
   const effectiveDelay = delay * speedFactor;
   const effectiveDuration = duration * speedFactor;
 
-  // Configuración de las direcciones para imitar AOS
-  const getInitialCoords = () => {
+  // Configuración de las direcciones (optimizado con switch directo)
+  const getInitialCoords = (): { y: number; x: number } => {
     switch (direction) {
       case "up":
-        return { y: y, x: 0 }; // Empieza abajo, sube a 0
+        return { y, x: 0 };
       case "down":
-        return { y: -y, x: 0 }; // Empieza arriba, baja a 0
+        return { y: -y, x: 0 };
       case "left":
-        return { x: x, y: 0 }; // Empieza a la derecha, va a izq (0)
+        return { x, y: 0 };
       case "right":
-        return { x: -x, y: 0 }; // Empieza a la izquierda, va a der (0)
+        return { x: -x, y: 0 };
       default:
-        return { y: y, x: 0 };
+        return { y, x: 0 };
     }
   };
 
   const coords = getInitialCoords();
 
+  // Variants optimizados sin blur por defecto (mejor rendimiento)
   const variants: Variants = {
     hidden: {
       opacity: 0,
-      y: shouldReduceMotion ? 0 : coords.y,
-      x: shouldReduceMotion ? 0 : coords.x,
-      filter: blur ? "blur(4px)" : "blur(0px)",
+      y: coords.y,
+      x: coords.x,
+      ...(blur && { filter: "blur(4px)" }),
     },
     visible: {
       opacity: 1,
       y: 0,
       x: 0,
-      filter: "blur(0px)",
+      ...(blur && { filter: "blur(0px)" }),
       transition: {
         duration: effectiveDuration,
         delay: effectiveDelay,
-        ease: "easeOut", // Curva suave similar a AOS
+        ease: [0.25, 0.1, 0.25, 1], // ease-out optimizado
       },
     },
   };
@@ -91,13 +102,19 @@ export function ScrollReveal({
       initial="hidden"
       whileInView="visible"
       viewport={{
-        once: once,
-        amount: amount,
+        once,
+        amount,
         margin: viewportMargin,
       }}
       className={className}
+      style={{
+        willChange: "opacity, transform",
+      }}
     >
       {children}
     </motion.div>
   );
 }
+
+// Memoizar para evitar re-renders innecesarios
+export const ScrollReveal = memo(ScrollRevealComponent);
