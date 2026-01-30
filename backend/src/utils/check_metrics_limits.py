@@ -12,7 +12,7 @@ SRC_DIR = THIS_DIR.parent                          # .../src
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-from utils.profiles_utils import get_instrument_profile  # noqa: E402
+from utils.profiles_utils import get_instrument_profile, get_spectral_validation_thresholds  # noqa: E402
 from utils.analysis_utils import get_temp_dir
 
 try:
@@ -654,9 +654,8 @@ def _check_S4_STEM_HPF_LPF(data: Dict[str, Any]) -> bool:
     contract_id = data.get("contract_id", "S4_STEM_HPF_LPF")
     stems: List[Dict[str, Any]] = data.get("stems", []) or []
 
-    # umbrales de limpieza espectral (puedes endurecerlos si quieres)
-    LOW_REL_MAX_DB = -30.0   # energía por debajo del HPF <= -30 dB respecto al total
-    HIGH_REL_MAX_DB = -30.0  # energía por encima del LPF <= -30 dB respecto al total
+    # NOTA: Los thresholds ahora son dinámicos por instrumento.
+    # Se obtienen dentro del loop para cada stem usando get_spectral_validation_thresholds().
     MIN_TOTAL_RMS_DB = -60.0  # por debajo de esto consideramos la pista casi silencio
 
     if not stems:
@@ -671,6 +670,7 @@ def _check_S4_STEM_HPF_LPF(data: Dict[str, Any]) -> bool:
         total_rms_db = stem.get("total_rms_db")
         low_rel_db = stem.get("low_rel_db")
         high_rel_db = stem.get("high_rel_db")
+        inst_profile = stem.get("instrument_profile", "Other")
 
         try:
             total_rms_db = float(total_rms_db)
@@ -685,6 +685,11 @@ def _check_S4_STEM_HPF_LPF(data: Dict[str, Any]) -> bool:
 
         useful_stems += 1
 
+        # Obtener thresholds dinámicos según el perfil del instrumento
+        thresholds = get_spectral_validation_thresholds(inst_profile)
+        LOW_REL_MAX_DB = thresholds["low_rel_max_db"]
+        HIGH_REL_MAX_DB = thresholds["high_rel_max_db"]
+
         # low_rel_db
         if low_rel_db is None:
             logger.print_metric(f"{name} Low Rel", "Missing", status="FAIL")
@@ -697,7 +702,12 @@ def _check_S4_STEM_HPF_LPF(data: Dict[str, Any]) -> bool:
                 ok = False
             else:
                 if low_rel_db > LOW_REL_MAX_DB:
-                    logger.print_metric(f"{name} Low Rel", low_rel_db, target=f"<= {LOW_REL_MAX_DB}", status="FAIL")
+                    logger.print_metric(
+                        f"{name} Low Rel",
+                        f"{low_rel_db:.2f}",
+                        target=f"<= {LOW_REL_MAX_DB:.1f}",
+                        status="FAIL"
+                    )
                     ok = False
 
         # high_rel_db
@@ -712,8 +722,13 @@ def _check_S4_STEM_HPF_LPF(data: Dict[str, Any]) -> bool:
                 ok = False
             else:
                 if high_rel_db > HIGH_REL_MAX_DB:
-                     logger.print_metric(f"{name} High Rel", high_rel_db, target=f"<= {HIGH_REL_MAX_DB}", status="FAIL")
-                     ok = False
+                    logger.print_metric(
+                        f"{name} High Rel",
+                        f"{high_rel_db:.2f}",
+                        target=f"<= {HIGH_REL_MAX_DB:.1f}",
+                        status="FAIL"
+                    )
+                    ok = False
 
     if useful_stems == 0:
         logger.print_metric("HPF/LPF Check", "No useful stems", status="PASS")

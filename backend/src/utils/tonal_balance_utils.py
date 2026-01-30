@@ -193,3 +193,63 @@ def compute_tonal_error(
     diffs_arr = np.asarray(diffs, dtype=np.float32)
     rms = float(np.sqrt(np.mean(diffs_arr**2)))
     return errors, rms
+
+
+def normalize_band_energies(band_abs_db: Dict[str, float]) -> Dict[str, float]:
+    """
+    Normaliza energías absolutas por banda (dBFS) a valores relativos.
+
+    La normalización resta la media de todas las bandas válidas,
+    produciendo valores centrados en 0 dB que se pueden comparar
+    directamente con los perfiles de estilo (get_style_tonal_profile).
+
+    Args:
+        band_abs_db: Dict con energías absolutas por banda.
+                     Ej: {"sub": -45.2, "bass": -38.1, "mid": -35.0, ...}
+
+    Returns:
+        Dict con energías relativas (centradas en media=0).
+        Ej: {"sub": -5.8, "bass": +1.3, "mid": +4.4, ...}
+
+        Bandas con valor -inf se mantienen como -inf.
+
+    Ejemplo:
+        >>> abs_db = {"sub": -50, "bass": -40, "mid": -30}
+        >>> rel_db = normalize_band_energies(abs_db)
+        >>> # media = (-50 + -40 + -30) / 3 = -40
+        >>> # rel_db = {"sub": -10, "bass": 0, "mid": +10}
+    """
+    # Filtrar valores válidos (excluir -inf, inf, NaN)
+    valid_values: List[float] = []
+    for v in band_abs_db.values():
+        try:
+            fv = float(v)
+        except (TypeError, ValueError):
+            continue
+        # Verificar si es un número válido y no es infinito
+        if fv == fv and fv != float("-inf") and fv != float("inf"):  # fv == fv es check para NaN
+            valid_values.append(fv)
+
+    # Si no hay valores válidos, devolver todo -inf
+    if not valid_values:
+        return {k: float("-inf") for k in band_abs_db.keys()}
+
+    # Calcular media de valores válidos
+    mean_abs = sum(valid_values) / float(len(valid_values))
+
+    # Normalizar: restar media a cada valor válido, mantener -inf para inválidos
+    rel: Dict[str, float] = {}
+    for k, v in band_abs_db.items():
+        try:
+            fv = float(v)
+        except (TypeError, ValueError):
+            rel[k] = float("-inf")
+            continue
+
+        # Si el valor no es válido o es -inf/inf/NaN, poner -inf
+        if not (fv == fv) or fv == float("-inf") or fv == float("inf"):
+            rel[k] = float("-inf")
+        else:
+            rel[k] = float(fv - mean_abs)
+
+    return rel

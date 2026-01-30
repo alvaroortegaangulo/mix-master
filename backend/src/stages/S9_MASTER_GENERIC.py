@@ -326,6 +326,93 @@ def _choose_clipper_shave_db(
     return shave
 
 
+def _find_optimal_gain_for_lra(
+    y: np.ndarray,
+    sr: int,
+    initial_gain_db: float,
+    target_lufs: float,
+    target_lra_min: float,
+    target_ceiling: float,
+    clipper_shave_db: float,
+    clipper_mode: str,
+    max_iterations: int = 5,
+    gain_step_db: float = 1.0,
+) -> Tuple[float, Dict[str, float]]:
+    """
+    Busca iterativamente el gain máximo que no destruya el LRA.
+
+    Algoritmo:
+    1. test_gain = initial_gain_db
+    2. Loop hasta max_iterations:
+       a. Aplicar gain al audio
+       b. Aplicar clipper si clipper_shave_db >= 0.5
+       c. Aplicar limiter con target_ceiling
+       d. Medir LUFS y LRA
+       e. Si LRA >= target_lra_min: encontrado, break
+       f. Si no: test_gain -= gain_step_db
+       g. Si test_gain <= 0: usar 0, break
+    3. Return (test_gain, metrics)
+
+    Nota: No modifica el audio original, solo simula para encontrar el gain óptimo.
+    """
+    test_gain = float(initial_gain_db)
+    best_gain = test_gain
+    best_lra = 0.0
+    best_lufs = float("-inf")
+    iterations = 0
+
+    for i in range(max_iterations):
+        iterations = i + 1
+
+        # Simular cadena de procesamiento
+        y_test = _apply_gain_only(y, sr, test_gain)
+
+        if clipper_shave_db >= 0.5:
+            y_test, _ = _clipper_to_target_shave(
+                y_test,
+                target_shave_db=clipper_shave_db,
+                mode=clipper_mode,
+            )
+
+        y_test = _apply_limiter_only(y_test, sr, target_ceiling)
+
+        test_lufs, test_lra = compute_lufs_and_lra(y_test, sr)
+
+        # Guardar mejor resultado
+        if test_lra >= target_lra_min:
+            best_gain = test_gain
+            best_lra = test_lra
+            best_lufs = test_lufs
+            break
+
+        # Guardar incluso si no cumple (por si ninguno cumple)
+        if test_lra > best_lra:
+            best_gain = test_gain
+            best_lra = test_lra
+            best_lufs = test_lufs
+
+        # Reducir gain para próxima iteración
+        test_gain -= gain_step_db
+        if test_gain <= 0:
+            test_gain = 0.0
+            # Una última prueba con gain 0
+            y_test = _apply_limiter_only(y, sr, target_ceiling)
+            test_lufs, test_lra = compute_lufs_and_lra(y_test, sr)
+            if test_lra > best_lra:
+                best_gain = 0.0
+                best_lra = test_lra
+                best_lufs = test_lufs
+            break
+
+    return best_gain, {
+        "lufs_achieved": float(best_lufs),
+        "lra_achieved": float(best_lra),
+        "iterations_used": int(iterations),
+        "lra_protected": bool(best_gain < initial_gain_db),
+        "gain_reduction_db": float(initial_gain_db - best_gain),
+    }
+
+
 def _process_master(
     full_song_path: Path,
     max_limiter_gr_db: float,
@@ -407,6 +494,37 @@ def _process_master(
         f"headroom_eff≈{headroom_eff_db:+.2f} dB, "
         f"pre_gain_aplicado={pre_gain_db:+.2f} dB (GRmax={max_limiter_gr_db:.2f} dB)."
     )
+
+    # ------------------------------------------------------------
+    # 1.5) LRA Protection
+    # ------------------------------------------------------------
+    # Si el pre_gain es agresivo, verificar que no destruya el LRA
+    lra_was_protected = False
+    lra_protection_gain_reduction_db = 0.0
+    initial_pre_gain_db = float(pre_gain_db)
+
+    if pre_gain_db > 2.0 and target_lra_min > 0:
+        optimal_gain, lra_metrics = _find_optimal_gain_for_lra(
+            y=y,
+            sr=sr,
+            initial_gain_db=pre_gain_db,
+            target_lufs=target_lufs,
+            target_lra_min=target_lra_min,
+            target_ceiling=target_ceiling,
+            clipper_shave_db=clipper_target_shave_db,
+            clipper_mode=clipper_mode,
+            max_iterations=5,
+            gain_step_db=1.0,
+        )
+
+        if optimal_gain < pre_gain_db:
+            logger.logger.info(
+                f"[S9_MASTER_GENERIC] LRA protection: gain reducido de {pre_gain_db:+.2f} a {optimal_gain:+.2f} dB "
+                f"para mantener LRA >= {target_lra_min:.1f} LU (LRA logrado: {lra_metrics['lra_achieved']:.2f} LU)"
+            )
+            lra_protection_gain_reduction_db = float(pre_gain_db - optimal_gain)
+            pre_gain_db = optimal_gain
+            lra_was_protected = True
 
     # ------------------------------------------------------------
     # 2) Gain -> (Clipper) -> Limiter
@@ -501,6 +619,13 @@ def _process_master(
         f"width_ratio_pre={width_ratio_pre:.3f}, width_ratio_post={width_ratio_post:.3f}."
     )
 
+    # Verificar si LRA final cumple con el target
+    if target_lra_min > 0 and post_lra < target_lra_min:
+        logger.logger.warning(
+            f"[S9_MASTER_GENERIC] LRA final ({post_lra:.2f} LU) está por debajo del target mínimo "
+            f"({target_lra_min:.1f} LU). El material original puede estar muy comprimido."
+        )
+
     # ------------------------------------------------------------
     # 5) Escritura FLOAT para evitar clip por PCM
     # ------------------------------------------------------------
@@ -513,6 +638,9 @@ def _process_master(
         "pre_lufs_integrated": float(pre_lufs),
         "pre_lra": float(pre_lra),
         "pre_gain_db": float(pre_gain_db),
+
+        "lra_protection_applied": float(1.0 if lra_was_protected else 0.0),
+        "lra_protection_gain_reduction_db": float(lra_protection_gain_reduction_db),
 
         "clipper_enabled": float(1.0 if clipper_target_shave_db >= 0.5 else 0.0),
         "clipper_target_shave_db": float(clipper_target_shave_db),

@@ -151,3 +151,37 @@ def get_hpf_lpf_targets(instrument_profile_id: str) -> tuple[float | None, float
         hpf, lpf = 20.0, 20000.0
 
     return float(hpf), float(lpf)
+
+
+def get_spectral_validation_thresholds(instrument_profile_id: str) -> Dict[str, float]:
+    """
+    Devuelve thresholds de validación espectral por familia de instrumento.
+
+    Args:
+        instrument_profile_id: ID del perfil (ej: "Kick", "Lead_Vocal_Melodic")
+
+    Returns:
+        Dict con:
+          - low_rel_max_db: máxima energía permitida por debajo del HPF (relativa al total)
+          - high_rel_max_db: máxima energía permitida por encima del LPF (relativa al total)
+
+    Valores más altos (menos negativos) = más permisivo.
+    Valores más bajos (más negativos) = más estricto.
+    """
+    family = get_instrument_family(instrument_profile_id)
+
+    # Thresholds por familia (dB relativo al total de energía)
+    THRESHOLDS_BY_FAMILY = {
+        "Drums": {"low_rel_max_db": -15.0, "high_rel_max_db": -25.0},
+        "Bass": {"low_rel_max_db": -12.0, "high_rel_max_db": -35.0},
+        "Guitars": {"low_rel_max_db": -20.0, "high_rel_max_db": -30.0},
+        "KeysSynths": {"low_rel_max_db": -20.0, "high_rel_max_db": -30.0},
+        "LeadVox": {"low_rel_max_db": -30.0, "high_rel_max_db": -30.0},
+        "BGV": {"low_rel_max_db": -30.0, "high_rel_max_db": -30.0},
+        "Winds": {"low_rel_max_db": -25.0, "high_rel_max_db": -30.0},
+        "FX": {"low_rel_max_db": -20.0, "high_rel_max_db": -25.0},
+        "Ambience": {"low_rel_max_db": -15.0, "high_rel_max_db": -20.0},
+        "Other": {"low_rel_max_db": -25.0, "high_rel_max_db": -30.0},
+    }
+
+    return THRESHOLDS_BY_FAMILY.get(family, THRESHOLDS_BY_FAMILY["Other"])
