@@ -1,0 +1,42 @@
+name: Deploy to VPS
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: 22
+          script: |
+            # 1. Definir rutas (coincidiendo con tu script)
+            APP_DIR="/home/deploy/apps/mix-master"
+            
+            # 2. Ir a la carpeta
+            cd $APP_DIR
+
+            # 3. Descargar últimos cambios de código
+            echo "📥 Descargando cambios de Git..."
+            git pull origin main
+
+            # 4. INYECTAR LOS SECRETOS (Crear los archivos .env reales)
+            echo "🔐 Creando backend/.env..."
+            echo "${{ secrets.PROD_ENV_BACKEND }}" > backend/.env
+            chmod 600 backend/.env
+
+            echo "🔐 Creando frontend/.env.production..."
+            echo "${{ secrets.PROD_ENV_FRONTEND }}" > frontend/.env.production
+            chmod 600 frontend/.env.production
+
+            # 5. Ejecutar tu script de deploy (que ya está en el VPS)
+            echo "🚀 Ejecutando deploy.sh..."
+            # Asumimos que deploy.sh está en la raíz del proyecto
+            bash deploy.sh

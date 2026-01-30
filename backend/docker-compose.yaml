@@ -12,7 +12,7 @@ services:
         "--bind",
         "0.0.0.0",
         "--requirepass",
-        "${REDIS_PASSWORD}",
+        "${REDIS_PASSWORD:?REDIS_PASSWORD is required in .env}",
       ]
     healthcheck:
       test: ["CMD", "sh", "-c", "redis-cli -a \"$REDIS_PASSWORD\" ping"]
@@ -26,13 +26,13 @@ services:
     image: postgres:15-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-mixmaster}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-securepassword}
-      POSTGRES_DB: ${POSTGRES_DB:-mixmaster}
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required in .env}
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required in .env}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-mixmaster}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -55,10 +55,10 @@ services:
         --error-logfile -
         --log-level info
     environment:
-      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required in .env}
       CELERY_BROKER_URL: redis://default:${REDIS_PASSWORD}@redis:6379/0
       CELERY_RESULT_BACKEND: redis://default:${REDIS_PASSWORD}@redis:6379/0
-      DATABASE_URL: postgresql://${POSTGRES_USER:-mixmaster}:${POSTGRES_PASSWORD:-securepassword}@db:5432/${POSTGRES_DB:-mixmaster}
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       MIX_TEMP_ROOT: /app/temp
       MPLCONFIGDIR: /tmp/mplconfig
       XDG_CACHE_HOME: /tmp/.cache
@@ -86,10 +86,10 @@ services:
     env_file:
       - .env
     environment:
-      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?REDIS_PASSWORD is required in .env}
       CELERY_BROKER_URL: redis://default:${REDIS_PASSWORD}@redis:6379/0
       CELERY_RESULT_BACKEND: redis://default:${REDIS_PASSWORD}@redis:6379/0
-      DATABASE_URL: postgresql://${POSTGRES_USER:-mixmaster}:${POSTGRES_PASSWORD:-securepassword}@db:5432/${POSTGRES_DB:-mixmaster}
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       MIX_TEMP_ROOT: /app/temp
       MPLCONFIGDIR: /tmp/mplconfig
       XDG_CACHE_HOME: /tmp/.cache

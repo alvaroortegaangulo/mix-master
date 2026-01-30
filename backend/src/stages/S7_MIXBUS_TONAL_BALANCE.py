@@ -527,7 +527,50 @@ def _top_band_changes(cumulative_eq_db: Dict[str, float], top_n: int = 5) -> Lis
 # ---------------------------------------------------------------------
 # Main stage
 # ---------------------------------------------------------------------
-def process(contract_id: str) -> bool:
+def _coerce_contract_id(obj: Any) -> Optional[str]:
+    """
+    Extrae contract_id de diferentes tipos de objetos.
+    Compatible con: str, Path, dict/Mapping, PipelineContext.
+    """
+    if obj is None:
+        return None
+    if isinstance(obj, str):
+        s = obj.strip()
+        return s if s else None
+    if isinstance(obj, Path):
+        s = obj.name.strip()
+        return s if s else None
+    # Si es un objeto con atributos (como PipelineContext)
+    if hasattr(obj, "contract_id"):
+        return getattr(obj, "contract_id", None)
+    # Si es un dict o Mapping
+    if hasattr(obj, "get"):
+        for k in ("contract_id", "contractId", "stage_id", "stageId", "id"):
+            val = obj.get(k)  # type: ignore
+            if val and isinstance(val, str):
+                return val.strip()
+    return None
+
+
+def _resolve_contract_id(args: Tuple[Any, ...]) -> Optional[str]:
+    """
+    Resuelve contract_id desde los argumentos pasados a process().
+    Intenta extraer de cada argumento en orden.
+    """
+    if args:
+        for a in args:
+            cid = _coerce_contract_id(a)
+            if cid:
+                return cid
+    # Fallback: intentar desde sys.argv (cuando se ejecuta como script)
+    if len(sys.argv) >= 2:
+        cid = _coerce_contract_id(sys.argv[1])
+        if cid:
+            return cid
+    return None
+
+
+def process(*args) -> bool:
     """
     Lee contrato {temp_dir}/{contract_id}.json, procesa full_song.wav y escribe:
     - full_song_tonal.wav
@@ -536,8 +579,19 @@ def process(contract_id: str) -> bool:
     - tonal_interactive_{contract_id}.json
 
     IMPORTANTE: nunca devuelve False para no detener pipeline.
+
+    Args:
+        *args: Acepta múltiples formatos:
+               - contract_id (str) cuando se llama desde CLI
+               - context (PipelineContext) cuando se llama desde pipeline
     """
     log = _log()
+
+    # Resolver contract_id desde los argumentos
+    contract_id = _resolve_contract_id(args)
+    if not contract_id:
+        log.error("[S7_MIXBUS_TONAL_BALANCE] ERROR: No se pudo resolver contract_id de los argumentos.")
+        return True  # No detener pipeline
 
     try:
         # Temp dir root configurable, fallback a /tmp
